@@ -8,3 +8,4 @@ target/*
 */*/*/target/*
 oops-web/node_modules/*
 oops-web/dist/*
+oops-web/package-lock.json
