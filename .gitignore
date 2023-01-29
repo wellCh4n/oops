@@ -1,0 +1,10 @@
+.idea/*
+build
+target/*
+*.iml
+*.lst
+*/target/*
+*/*/target/*
+*/*/*/target/*
+oops-web/node_modules/*
+oops-web/dist/*
