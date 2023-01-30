@@ -1,44 +1,57 @@
-# element-plus-vite-starter
+# Ant Design Pro
 
-> A starter kit for Element Plus with Vite
+This project is initialized with [Ant Design Pro](https://pro.ant.design). Follow is the quick guide for how to use.
 
-<img width="800" alt="Element Plus" src="https://user-images.githubusercontent.com/10731096/97282764-0726eb80-187a-11eb-9658-6dc98ccb8f8d.png">
+## Environment Prepare
 
-- Preview: <https://vite-starter.element-plus.org>
-
-This is an example of on-demand element-plus with [unplugin-vue-components](https://github.com/antfu/unplugin-vue-components).
-
-> If you want to import all, it may be so simple that no examples are needed. Just follow [quickstart | Docs](https://element-plus.org/zh-CN/guide/quickstart.html) and import them.
-
-If you just want an on-demand import example `manually`, you can check [unplugin-element-plus/examples/vite](https://github.com/element-plus/unplugin-element-plus/tree/main/examples/vite).
-
-## Project setup
+Install `node_modules`:
 
 ```bash
 npm install
 ```
 
-### Compiles and hot-reloads for development
+or
 
 ```bash
-npm run dev
+yarn
 ```
 
-### Compiles and minifies for production
+## Provided Scripts
+
+Ant Design Pro provides some useful script to help you quick start and build with web project, code style check and test.
+
+Scripts provided in `package.json`. It's safe to modify or add additional script:
+
+### Start project
+
+```bash
+npm start
+```
+
+### Build project
 
 ```bash
 npm run build
 ```
 
-## Usage
+### Check code style
 
 ```bash
-git clone https://github.com/element-plus/element-plus-vite-starter
-cd element-plus-vite-starter
-npm i
-npm run dev
+npm run lint
 ```
 
-### Custom theme
+You can also use script to auto fix some lint error:
 
-See `src/styles/element/index.scss`.
+```bash
+npm run lint:fix
+```
+
+### Test code
+
+```bash
+npm test
+```
+
+## More
+
+You can view full document on our [official website](https://pro.ant.design). And welcome any feedback in our [github](https://github.com/ant-design/ant-design-pro).

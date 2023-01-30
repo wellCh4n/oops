@@ -9,3 +9,5 @@ target/*
 oops-web/node_modules/*
 oops-web/dist/*
 oops-web/package-lock.json
+oops-web/src/.umi
+oops-web/.husky
