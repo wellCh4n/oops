@@ -32,19 +32,4 @@ public class Application implements Serializable {
      * 应用描述
      */
     private String namespace;
-
-    /**
-     * 仓库地址
-     */
-    private String repository;
-
-    /**
-     * 编译命令
-     */
-    private String buildCommand;
-
-    /**
-     * 镜像文件路径
-     */
-    private String makeFilePath;
 }
