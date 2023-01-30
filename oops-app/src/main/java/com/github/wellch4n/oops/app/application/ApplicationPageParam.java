@@ -1,26 +1,28 @@
 package com.github.wellch4n.oops.app.application;
 
+import com.github.wellch4n.oops.common.objects.PageParam;
+
 /**
  * @author wellCh4n
  * @date 2023/1/30
  */
-public class ApplicationPageParam {
-    private Integer size = 15;
-    private Integer current = 1;
+public class ApplicationPageParam extends PageParam {
+    private String appName;
+    private String namespace;
 
-    public Integer getSize() {
-        return size;
+    public String getAppName() {
+        return appName;
     }
 
-    public void setSize(Integer size) {
-        this.size = size;
+    public void setAppName(String appName) {
+        this.appName = appName;
     }
 
-    public Integer getCurrent() {
-        return current;
+    public String getNamespace() {
+        return namespace;
     }
 
-    public void setCurrent(Integer current) {
-        this.current = current;
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
     }
 }

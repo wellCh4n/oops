@@ -1,8 +1,10 @@
 package com.github.wellch4n.oops.app.application;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.wellch4n.oops.common.objects.PageResult;
 import com.github.wellch4n.oops.common.objects.Result;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 
 @RestController
-@RequestMapping(value = "/api/application")
+@RequestMapping(value = "/oops/api/application")
 public class ApplicationServer {
 
     private final ApplicationService applicationService;
@@ -46,12 +48,20 @@ public class ApplicationServer {
     }
 
     @PostMapping(value = "/page")
-    public Result<PageResult<Application>> page(@RequestBody ApplicationPageParam param) {
-        Page<Application> page = new Page<>(param.getCurrent(), param.getSize());
-        Page<Application> result = applicationService.page(page);
-        PageResult<Application> pageResult = new PageResult<>(result.getRecords(), result.getTotal(),
-                                                              result.getCurrent(), result.getSize());
-        return Result.success(pageResult);
+    public PageResult<Application> page(@RequestBody ApplicationPageParam param) {
+        Page<Application> page = new Page<>(param.getCurrent(), param.getPageSize());
+
+        LambdaQueryWrapper<Application> query = new LambdaQueryWrapper<>();
+
+        if (StringUtils.isNotEmpty(param.getNamespace())) {
+            query.eq(Application::getNamespace, param.getNamespace());
+        }
+        if (StringUtils.isNotEmpty(param.getAppName())) {
+            query.like(Application::getAppName, "%" + param.getAppName() + "%");
+        }
+
+        Page<Application> result = applicationService.page(page, query);
+        return new PageResult<>(result.getRecords(), result.getTotal(), result.getCurrent(), result.getSize());
     }
 
 }

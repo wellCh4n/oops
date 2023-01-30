@@ -20,6 +20,12 @@
     component: './Welcome',
   },
   {
+    path: '/application',
+    name: 'application',
+    icon: 'appstoreAdd',
+    component: './Application'
+  },
+  {
     path: '/admin',
     name: 'admin',
     icon: 'crown',
@@ -44,7 +50,7 @@
   },
   {
     path: '/',
-    redirect: '/welcome',
+    redirect: '/application',
   },
   {
     component: './404',

@@ -16,6 +16,10 @@ export default {
       // 依赖 origin 的功能可能需要这个，比如 cookie
       changeOrigin: true,
     },
+    '/oops/api/': {
+      target: 'http://0.0.0.0:8080',
+      changeOrigin: true,
+    },
   },
   test: {
     '/api/': {

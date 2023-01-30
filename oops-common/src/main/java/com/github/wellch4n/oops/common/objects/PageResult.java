@@ -10,13 +10,13 @@ public class PageResult<T> {
     private List<T> data;
     private Long total;
     private Long current;
-    private Long size;
+    private Long pageSize;
 
-    public PageResult(List<T> data, Long total, Long current, Long size) {
+    public PageResult(List<T> data, Long total, Long current, Long pageSize) {
         this.data = data;
         this.total = total;
         this.current = current;
-        this.size = size;
+        this.pageSize = pageSize;
     }
 
     public List<T> getData() {
@@ -43,11 +43,11 @@ public class PageResult<T> {
         this.current = current;
     }
 
-    public Long getSize() {
-        return size;
+    public Long getPageSize() {
+        return pageSize;
     }
 
-    public void setSize(Long size) {
-        this.size = size;
+    public void setPageSize(Long pageSize) {
+        this.pageSize = pageSize;
     }
 }
