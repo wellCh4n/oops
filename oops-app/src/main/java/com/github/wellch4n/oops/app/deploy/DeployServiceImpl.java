@@ -3,8 +3,8 @@ package com.github.wellch4n.oops.app.deploy;
 import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.application.ApplicationService;
 import com.github.wellch4n.oops.app.k8s.K8SClient;
-import com.github.wellch4n.oops.app.pipline.ApplicationPipe;
-import com.github.wellch4n.oops.app.pipline.ApplicationPipeService;
+import com.github.wellch4n.oops.app.application.pipe.ApplicationPipe;
+import com.github.wellch4n.oops.app.application.pipe.ApplicationPipeService;
 import com.github.wellch4n.oops.app.pipline.Pipeline;
 import org.springframework.stereotype.Service;
 

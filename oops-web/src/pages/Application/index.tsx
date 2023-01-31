@@ -2,8 +2,12 @@ import { PageContainer, ProTable, ProColumns } from '@ant-design/pro-components'
 import React from 'react';
 import request from 'umi-request';
 import type { App } from './data';
-// import { FormattedMessage, useIntl } from 'umi';
+import { FormattedMessage, Link, useIntl } from 'umi';
+import { Button } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 // import styles from './Welcome.less';
+
+const pageUrl = '/oops/api/application/page';
 
 const columns: ProColumns<App>[] = [
   {
@@ -23,7 +27,7 @@ const columns: ProColumns<App>[] = [
     title: '操作',
     valueType: 'option',
     render: (text, record, _, action) => [
-      <a>编辑</a>,
+      <Link to={`/application/edit/${record.id}`}>编辑</Link>,
       <a>发布</a>
     ]
   }
@@ -39,12 +43,17 @@ const Application: React.FC = () => {
           showSizeChanger: true
         }}
         request={async (params = {}, sorter, filter) => {
-          return request.post('/oops/api/application/page', {
+          return request.post(pageUrl, {
             data: {
               ...params
             }
           })
         }}
+        toolBarRender={() => [
+          <Link to={`/application/add`}>
+            <Button icon={<PlusOutlined />} type='primary'>创建应用</Button>
+          </Link>
+        ]}
       />
     </PageContainer>
   );

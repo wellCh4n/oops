@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.app.pipline.impl;
 
 import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.pipline.Pipe;
+import com.github.wellch4n.oops.app.pipline.PipeName;
 import com.github.wellch4n.oops.app.pipline.PipeParam;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -15,6 +16,8 @@ import java.util.Set;
  * @author wellCh4n
  * @date 2023/1/28
  */
+
+@PipeName(value = "GIT")
 public class GitPipe extends Pipe {
     public static final Set<PipeParam> PARAMS = new HashSet<>();
     static {

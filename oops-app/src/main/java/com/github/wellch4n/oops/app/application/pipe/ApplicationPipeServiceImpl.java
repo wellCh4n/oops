@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.app.application.pipe;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -17,6 +17,8 @@ public class ApplicationPipeServiceImpl extends ServiceImpl<ApplicationPipeRepos
     public List<ApplicationPipe> listByApplicationId(Long appId) {
         LambdaQueryWrapper<ApplicationPipe> query = new LambdaQueryWrapper<>();
         query.eq(ApplicationPipe::getAppId, appId);
-        return this.baseMapper.selectList(query);
+        query.orderByAsc(ApplicationPipe::getOrder);
+        List<ApplicationPipe> applicationPipes = this.baseMapper.selectList(query);
+        return applicationPipes;
     }
 }

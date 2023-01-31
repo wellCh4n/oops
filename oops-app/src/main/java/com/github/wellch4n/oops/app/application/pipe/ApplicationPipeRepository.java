@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.app.application.pipe;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;

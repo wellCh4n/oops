@@ -22,8 +22,22 @@
   {
     path: '/application',
     name: 'application',
-    icon: 'appstoreAdd',
+    icon: 'AppstoreOutlined',
     component: './Application'
+  },
+  {
+    path: '/application/edit/:id',
+    name: 'application-edit',
+    icon: 'appstoreAdd',
+    hideInMenu: true,
+    component: './Application/Edit'
+  },
+  {
+    path: '/application/add',
+    name: 'application-add',
+    icon: 'appstoreAdd',
+    hideInMenu: true,
+    component: './Application/Edit'
   },
   {
     path: '/admin',

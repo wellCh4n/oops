@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.app.pipline;
 
 import com.github.wellch4n.oops.app.application.Application;
+import com.github.wellch4n.oops.app.application.pipe.ApplicationPipe;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
 

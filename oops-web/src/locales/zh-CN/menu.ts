@@ -1,5 +1,8 @@
 export default {
   'menu.application': '应用',
+  'menu.application-edit': '应用编辑',
+  'menu.application-add': '应用新增',
+  'menu.pipeline': '流水线',
   'menu.welcome': '欢迎',
   'menu.more-blocks': '更多区块',
   'menu.home': '首页',

@@ -1,10 +1,13 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.app.application.pipe;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.github.wellch4n.oops.app.pipline.Pipe;
+import com.github.wellch4n.oops.app.pipline.PipeName;
 import com.github.wellch4n.oops.app.system.MapTypeHandler;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -13,16 +16,20 @@ import java.util.Map;
  * @date 2023/1/30
  */
 
-@TableName(value = "oops_application_pipe")
+@TableName(value = "oops_application_pipe", autoResultMap = true)
 public class ApplicationPipe {
 
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
     private Long appId;
     private String pipeClass;
+    @TableField(exist = false)
+    private String pipeName;
+
+    @TableField(value = "`order`")
     private Integer order;
 
-    @TableField(typeHandler = MapTypeHandler.class)
+    @TableField(value = "`params`", typeHandler = MapTypeHandler.class)
     private Map<String, Object> params;
 
     public Long getId() {
@@ -63,5 +70,24 @@ public class ApplicationPipe {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    public String getPipeName() {
+        try {
+            if (StringUtils.isEmpty(pipeName)) {
+                Class<? extends Pipe> pipeClass = (Class<? extends Pipe>) Class.forName(getPipeClass());
+                PipeName pipeNameAnnotation = pipeClass.getAnnotation(PipeName.class);
+                return pipeNameAnnotation.value();
+            }
+        } catch (Exception ignored) {}
+        return pipeName;
+    }
+
+    public void setPipeName(String pipeName) {
+        try {
+            Class<? extends Pipe> pipeClass = (Class<? extends Pipe>) Class.forName(getPipeClass());
+            PipeName pipeNameAnnotation = pipeClass.getAnnotation(PipeName.class);
+            this.pipeName = pipeNameAnnotation.value();
+        } catch (Exception ignored){}
     }
 }
