@@ -31,6 +31,6 @@ public class ApplicationPipeServer {
 
     @PostMapping(value = "/put")
     public Result<Boolean> put() {
-
+        return Result.success(true);
     }
 }
