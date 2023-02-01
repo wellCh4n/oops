@@ -18,5 +18,6 @@ public abstract class Pipe {
 
     public abstract String description();
     public abstract Set<PipeParam> params();
-    public abstract V1Container build(Application application, final V1Pod pod, SystemConfig config);
+    public abstract V1Container build(Application application, final V1Pod pod, PipelineContext pipelineContext,
+                                      SystemConfig config, int index);
 }

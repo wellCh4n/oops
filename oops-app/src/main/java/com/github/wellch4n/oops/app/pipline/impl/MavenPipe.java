@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.pipline.Pipe;
 import com.github.wellch4n.oops.app.pipline.PipeName;
 import com.github.wellch4n.oops.app.pipline.PipeParam;
+import com.github.wellch4n.oops.app.pipline.PipelineContext;
 import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -19,11 +20,13 @@ import java.util.Set;
 @PipeName(value = "Maven")
 public class MavenPipe extends Pipe {
 
-    private final String mavenVersion;
+    private String image;
+    private String workPathKey;
 
     public MavenPipe(Map<String, Object> params) {
         super(params);
-        mavenVersion = (String) params.get("mavenVersion");
+        image = (String) params.get("image");
+        workPathKey = (String) params.get("workPathKey");
     }
 
     @Override
@@ -37,8 +40,25 @@ public class MavenPipe extends Pipe {
     }
 
     @Override
-    public V1Container build(Application application, V1Pod pod, SystemConfig config) {
+    public V1Container build(Application application, V1Pod pod, PipelineContext context,
+                             SystemConfig config, int index) {
         V1Container container = new V1Container();
+        container.setName("maven");
+        container.setImage(image);
+        container.addCommandItem("/bin/sh");
+        container.addArgsItem("-c");
+
+        StringBuilder commandBuilder = new StringBuilder();
+
+        if (index >= 0) {
+            commandBuilder.append("while [ ! -f ./").append(index - 1).append(".step ]; do sleep 1; done;");
+        }
+
+        String path = (String) context.get(workPathKey);
+        commandBuilder.append("mvn -version;").append("mvn package -f ").append(path).append("/pom.xml;");
+        commandBuilder.append("echo -e finished > ").append("\"").append(index).append(".step").append("\";");
+        container.addArgsItem(commandBuilder.toString());
+        container.setImagePullPolicy("IfNotPresent");
         return container;
     }
 

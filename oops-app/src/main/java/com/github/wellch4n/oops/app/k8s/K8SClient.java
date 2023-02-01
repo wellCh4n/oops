@@ -41,28 +41,26 @@ public class K8SClient {
     }
 
     public boolean createPod(Application application, Pipeline pipeline) throws Exception {
-        String publishId = UUID.randomUUID().toString().replace("-", "");
-
         CoreV1Api coreV1Api = new CoreV1Api(apiClient);
         V1Pod pod = new V1Pod();
         pod.setApiVersion("v1");
         pod.setKind("Pod");
+
         V1ObjectMeta meta = new V1ObjectMeta();
         meta.setName(application.getAppName());
         pod.setMetadata(meta);
 
-        V1PodSpec v1PodSpec = new V1PodSpec();
+        V1PodSpec spec = new V1PodSpec();
         List<V1Container> containers = pipeline.generate(application);
-        v1PodSpec.setContainers(containers);
+        spec.setContainers(containers);
 
-        List<V1Volume> volumes = new ArrayList<>();
-        V1Volume v1Volume = new V1Volume();
-        v1Volume.setName("build-workspace");
-        v1Volume.setEmptyDir(new V1EmptyDirVolumeSource());
-        volumes.add(v1Volume);
-        v1PodSpec.setVolumes(volumes);
+        V1Volume volume = new V1Volume();
+        volume.setName("build-workspace");
+        volume.setEmptyDir(new V1EmptyDirVolumeSource());
+        spec.addVolumesItem(volume);
+        spec.setRestartPolicy("Never");
 
-        pod.setSpec(v1PodSpec);
+        pod.setSpec(spec);
         coreV1Api.createNamespacedPod(application.getNamespace(), pod, "true", null, null, null);
         return true;
     }

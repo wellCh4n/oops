@@ -42,8 +42,10 @@ public class Pipeline extends LinkedList<Pipe> {
     public List<V1Container> generate(Application application) {
         final V1Pod pod = new V1Pod();
         List<V1Container> containers = new ArrayList<>();
+        PipelineContext pipelineContext = new PipelineContext();
+        int index = 0;
         for (Pipe pipe : this) {
-            V1Container container = pipe.build(application, pod, systemConfig);
+            V1Container container = pipe.build(application, pod, pipelineContext, systemConfig, index);
             container.workingDir(systemConfig.getWorkspacePath());
 
             V1VolumeMount workspace = new V1VolumeMount();
@@ -52,6 +54,7 @@ public class Pipeline extends LinkedList<Pipe> {
             container.addVolumeMountsItem(workspace);
 
             containers.add(container);
+            index++;
         }
 
         return containers;
