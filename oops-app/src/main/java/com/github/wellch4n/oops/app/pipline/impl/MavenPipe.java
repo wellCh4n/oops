@@ -21,12 +21,12 @@ import java.util.Set;
 public class MavenPipe extends Pipe {
 
     private String image;
-    private String workPathKey;
+    private String workPath;
 
-    public MavenPipe(Map<String, Object> params) {
-        super(params);
+    public MavenPipe(String name, Map<String, Object> params) {
+        super(name, params);
         image = (String) params.get("image");
-        workPathKey = (String) params.get("workPathKey");
+        workPath = (String) params.get("workPath");
     }
 
     @Override
@@ -54,7 +54,8 @@ public class MavenPipe extends Pipe {
             commandBuilder.append("while [ ! -f ./").append(index - 1).append(".step ]; do sleep 1; done;");
         }
 
-        String path = (String) context.get(workPathKey);
+        String path = (String) context.get(workPath);
+
         commandBuilder.append("mvn -version;").append("mvn package -f ").append(path).append("/pom.xml;");
         commandBuilder.append("echo -e finished > ").append("\"").append(index).append(".step").append("\";");
         container.addArgsItem(commandBuilder.toString());

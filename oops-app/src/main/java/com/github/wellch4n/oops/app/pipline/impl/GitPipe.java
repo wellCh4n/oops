@@ -30,8 +30,8 @@ public class GitPipe extends Pipe {
     private String image;
     private String repoPath;
 
-    public GitPipe(Map<String, Object> params) {
-        super(params);
+    public GitPipe(String name ,Map<String, Object> params) {
+        super(name, params);
         this.repository = (String) params.get("repository");
         this.image = (String) params.get("image");
         this.repoPath = (String) params.get("repoPath");
@@ -56,8 +56,6 @@ public class GitPipe extends Pipe {
         container.addCommandItem("/bin/sh");
         container.addArgsItem("-c");
 
-
-
         String commandTemplate = """
                                     rm -rf *
                                     git config --global http.version HTTP/1.1;
@@ -66,8 +64,6 @@ public class GitPipe extends Pipe {
                                  """;
         String command = String.format(commandTemplate, repository, index);
         container.addArgsItem(command);
-
-        context.put("REPO_PATH", repoPath);
 
         container.setImagePullPolicy("IfNotPresent");
         return container;

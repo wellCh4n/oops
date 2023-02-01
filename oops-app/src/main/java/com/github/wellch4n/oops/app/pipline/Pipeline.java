@@ -31,8 +31,8 @@ public class Pipeline extends LinkedList<Pipe> {
         for (ApplicationPipe applicationPipe : applicationPipes) {
             try {
                 Constructor<? extends Pipe> pipeConstructor = (Constructor<? extends Pipe>) Class
-                        .forName(applicationPipe.getPipeClass()).getConstructor(Map.class);
-                Pipe pipe = pipeConstructor.newInstance(applicationPipe.getParams());
+                        .forName(applicationPipe.getPipeClass()).getConstructor(String.class, Map.class);
+                Pipe pipe = pipeConstructor.newInstance(applicationPipe.getPipeName(), applicationPipe.getParams());
                 this.add(pipe);
             } catch (Exception ignore) {}
         }
@@ -46,6 +46,7 @@ public class Pipeline extends LinkedList<Pipe> {
         int index = 0;
         for (Pipe pipe : this) {
             V1Container container = pipe.build(application, pod, pipelineContext, systemConfig, index);
+            pipelineContext.putAll(pipe.params);
             container.workingDir(systemConfig.getWorkspacePath());
 
             V1VolumeMount workspace = new V1VolumeMount();

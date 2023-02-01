@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +14,17 @@ import java.util.Set;
  * @date 2023/1/25
  */
 public abstract class Pipe {
-    public Pipe(Map<String, Object> params) {
+
+    public Map<String, Object> params;
+    public String name;
+    public Pipe(String name, Map<String, Object> params) {
+        this.name = name;
+        for (Map.Entry<String, Object> entry : params.entrySet()) {
+            if (this.params == null) {
+                this.params = new HashMap<>();
+            }
+            this.params.put(name + "#" + entry.getKey(), entry.getValue());
+        }
     }
 
     public abstract String description();
