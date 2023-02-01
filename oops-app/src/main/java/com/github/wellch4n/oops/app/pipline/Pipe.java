@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.app.pipline;
 
 import com.github.wellch4n.oops.app.application.Application;
+import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
 
@@ -17,5 +18,5 @@ public abstract class Pipe {
 
     public abstract String description();
     public abstract Set<PipeParam> params();
-    public abstract V1Container build(Application application, final V1Pod pod);
+    public abstract V1Container build(Application application, final V1Pod pod, SystemConfig config);
 }

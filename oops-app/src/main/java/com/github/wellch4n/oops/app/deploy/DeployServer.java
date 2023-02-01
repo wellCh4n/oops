@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @date 2023/1/30
  */
 @RestController
-@RequestMapping(value = "/api/deploy")
+@RequestMapping(value = "/oops/api/deploy")
 public class DeployServer {
 
     private final DeployService deployService;

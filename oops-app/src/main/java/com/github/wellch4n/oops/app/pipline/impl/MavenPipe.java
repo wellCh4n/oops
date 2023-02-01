@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.pipline.Pipe;
 import com.github.wellch4n.oops.app.pipline.PipeName;
 import com.github.wellch4n.oops.app.pipline.PipeParam;
+import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
 
@@ -36,7 +37,7 @@ public class MavenPipe extends Pipe {
     }
 
     @Override
-    public V1Container build(Application application, V1Pod pod) {
+    public V1Container build(Application application, V1Pod pod, SystemConfig config) {
         V1Container container = new V1Container();
         return container;
     }

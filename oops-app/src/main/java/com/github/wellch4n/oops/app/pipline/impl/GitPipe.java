@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.pipline.Pipe;
 import com.github.wellch4n.oops.app.pipline.PipeName;
 import com.github.wellch4n.oops.app.pipline.PipeParam;
+import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
 import io.kubernetes.client.openapi.models.V1Pod;
 import lombok.Setter;
@@ -24,12 +25,13 @@ public class GitPipe extends Pipe {
         PARAMS.add(new PipeParam("repository", String.class));
     }
 
-    @Setter
     private String repository;
+    private String image;
 
     public GitPipe(Map<String, Object> params) {
         super(params);
         this.repository = (String) params.get("repository");
+        this.image = (String) params.get("image");
     }
 
     @Override
@@ -43,8 +45,15 @@ public class GitPipe extends Pipe {
     }
 
     @Override
-    public V1Container build(Application application, V1Pod pod) {
+    public V1Container build(Application application, V1Pod pod, SystemConfig config) {
         V1Container container = new V1Container();
+        container.setName("git");
+        container.setImage(image);
+        container.workingDir(config.getWorkspacePath());
+        container.addCommandItem("/bin/sh");
+        container.addArgsItem("-c");
+        container.addArgsItem("git clone " + repository);
+
         return container;
     }
 }

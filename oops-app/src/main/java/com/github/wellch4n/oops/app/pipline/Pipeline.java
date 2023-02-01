@@ -2,8 +2,13 @@ package com.github.wellch4n.oops.app.pipline;
 
 import com.github.wellch4n.oops.app.application.Application;
 import com.github.wellch4n.oops.app.application.pipe.ApplicationPipe;
+import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.V1Volume;
+import io.kubernetes.client.openapi.models.V1VolumeMount;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
@@ -11,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -19,7 +25,9 @@ import java.util.stream.Collectors;
  */
 public class Pipeline extends LinkedList<Pipe> {
 
-    public Pipeline(List<ApplicationPipe> applicationPipes) {
+    private final SystemConfig systemConfig;
+
+    public Pipeline(List<ApplicationPipe> applicationPipes, SystemConfig systemConfig) {
         for (ApplicationPipe applicationPipe : applicationPipes) {
             try {
                 Constructor<? extends Pipe> pipeConstructor = (Constructor<? extends Pipe>) Class
@@ -28,15 +36,25 @@ public class Pipeline extends LinkedList<Pipe> {
                 this.add(pipe);
             } catch (Exception ignore) {}
         }
+        this.systemConfig = systemConfig;
     }
 
     public List<V1Container> generate(Application application) {
+        String publishId = UUID.randomUUID().toString().replace("-", "");
+
         final V1Pod pod = new V1Pod();
         List<V1Container> containers = new ArrayList<>();
         for (Pipe pipe : this) {
-            V1Container container = pipe.build(application, pod);
+            V1Container container = pipe.build(application, pod, systemConfig);
+
+            V1VolumeMount workspace = new V1VolumeMount();
+            workspace.setMountPath(systemConfig.getWorkspacePath() + publishId);
+            workspace.setName("build-workspace");
+            container.addVolumeMountsItem(workspace);
+
             containers.add(container);
         }
+
         return containers;
     }
 

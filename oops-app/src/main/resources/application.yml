@@ -7,3 +7,8 @@ spring:
 
 mybatis-plus:
   type-aliases-package: com.github.wellch4n.oops.app
+
+oops:
+  mode: external
+  external-file: /Users/wellch4n/Env/kube_config.yaml
+  workspace-path: /temp/build_workspace/
