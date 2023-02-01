@@ -49,11 +49,19 @@ public class GitPipe extends Pipe {
         V1Container container = new V1Container();
         container.setName("git");
         container.setImage(image);
-        container.workingDir(config.getWorkspacePath());
         container.addCommandItem("/bin/sh");
         container.addArgsItem("-c");
-        container.addArgsItem("git clone " + repository);
 
+        String commandTemplate = """
+                                    git config --global http.version HTTP/1.1;
+                                    rm -rf .git; git clone %s;
+                                    while true; do echo hello;
+                                    sleep 10;done
+                                 """;
+        String command = String.format(commandTemplate, repository);
+        container.addArgsItem(command);
+
+        container.setImagePullPolicy("IfNotPresent");
         return container;
     }
 }

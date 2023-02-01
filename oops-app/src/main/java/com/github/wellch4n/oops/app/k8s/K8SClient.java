@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.app.pipline.Pipeline;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1EmptyDirVolumeSource;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -57,9 +58,7 @@ public class K8SClient {
         List<V1Volume> volumes = new ArrayList<>();
         V1Volume v1Volume = new V1Volume();
         v1Volume.setName("build-workspace");
-        V1PersistentVolumeClaimVolumeSource v1PersistentVolumeClaimVolumeSource = new V1PersistentVolumeClaimVolumeSource();
-        v1PersistentVolumeClaimVolumeSource.setClaimName("test");
-        v1Volume.setPersistentVolumeClaim(v1PersistentVolumeClaimVolumeSource);
+        v1Volume.setEmptyDir(new V1EmptyDirVolumeSource());
         volumes.add(v1Volume);
         v1PodSpec.setVolumes(volumes);
 

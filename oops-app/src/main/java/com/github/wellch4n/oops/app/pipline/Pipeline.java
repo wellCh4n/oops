@@ -40,15 +40,14 @@ public class Pipeline extends LinkedList<Pipe> {
     }
 
     public List<V1Container> generate(Application application) {
-        String publishId = UUID.randomUUID().toString().replace("-", "");
-
         final V1Pod pod = new V1Pod();
         List<V1Container> containers = new ArrayList<>();
         for (Pipe pipe : this) {
             V1Container container = pipe.build(application, pod, systemConfig);
+            container.workingDir(systemConfig.getWorkspacePath());
 
             V1VolumeMount workspace = new V1VolumeMount();
-            workspace.setMountPath(systemConfig.getWorkspacePath() + publishId);
+            workspace.setMountPath(systemConfig.getWorkspacePath());
             workspace.setName("build-workspace");
             container.addVolumeMountsItem(workspace);
 
