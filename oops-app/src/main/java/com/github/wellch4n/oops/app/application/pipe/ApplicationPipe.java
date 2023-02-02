@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.github.wellch4n.oops.common.core.Pipe;
-import com.github.wellch4n.oops.common.core.PipeName;
 import com.github.wellch4n.oops.app.system.MapTypeHandler;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Map;
 
@@ -23,9 +20,6 @@ public class ApplicationPipe {
     private Long id;
     private Long appId;
     private String pipeClass;
-    @TableField(exist = false)
-    private String pipeName;
-
     @TableField(value = "`order`")
     private Integer order;
 
@@ -70,24 +64,5 @@ public class ApplicationPipe {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
-    }
-
-    public String getPipeName() {
-        try {
-            if (StringUtils.isEmpty(pipeName)) {
-                Class<? extends Pipe> pipeClass = (Class<? extends Pipe>) Class.forName(getPipeClass());
-                PipeName pipeNameAnnotation = pipeClass.getAnnotation(PipeName.class);
-                return pipeNameAnnotation.value();
-            }
-        } catch (Exception ignored) {}
-        return pipeName;
-    }
-
-    public void setPipeName(String pipeName) {
-        try {
-            Class<? extends Pipe> pipeClass = (Class<? extends Pipe>) Class.forName(getPipeClass());
-            PipeName pipeNameAnnotation = pipeClass.getAnnotation(PipeName.class);
-            this.pipeName = pipeNameAnnotation.value();
-        } catch (Exception ignored){}
     }
 }

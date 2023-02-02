@@ -11,18 +11,20 @@ import java.util.Map;
  */
 public abstract class Pipe {
 
-    public Map<String, Map<String, Object>> params;
-    public String name;
-    public String image;
+    public final Map<String, Map<String, Object>> params;
+    public final String name;
+    public static final String NAME_KEY = "name";
+    public final String image;
+    public static final String IMAGE_KEY = "image";
+
     public Pipe(Map<String, Object> initParams) {
-        this.name = (String) initParams.get("name");
-        this.image = (String) initParams.get("image");
+        this.name = (String) initParams.get(NAME_KEY);
+        this.image = (String) initParams.get(IMAGE_KEY);
         this.params = new HashMap<>();
         this.params.put(name, initParams);
     }
 
-    public abstract void build(final V1Container container, PipelineContext pipelineContext,
-                                      StringBuilder commandBuilder);
+    public abstract void build(final V1Container container, PipelineContext context, StringBuilder commandBuilder);
 
     public V1Container build(PipelineContext pipelineContext, int index) {
         V1Container container = new V1Container();

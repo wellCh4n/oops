@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.pipe;
 
 import com.github.wellch4n.oops.common.core.Pipe;
-import com.github.wellch4n.oops.common.core.PipeName;
 import com.github.wellch4n.oops.common.core.PipelineContext;
 import io.kubernetes.client.openapi.models.V1Container;
 
@@ -12,20 +11,18 @@ import java.util.Map;
  * @date 2023/1/28
  */
 
-@PipeName(value = "Maven")
 public class MavenPipe extends Pipe {
 
-    private final String workPath;
+    private final String command;
 
     public MavenPipe(Map<String, Object> initParams) {
         super(initParams);
-        image = (String) initParams.get("image");
-        workPath = (String) initParams.get("workPath");
+        command = (String) initParams.get("command");
     }
 
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
-        String path = (String) context.get(workPath);
-        commandBuilder.append("mvn -version;").append("mvn package -f ").append(path).append("/pom.xml;");
+        String cmd = (String) context.get(command);
+        commandBuilder.append("mvn -version;").append(cmd).append(";");
     }
 }
