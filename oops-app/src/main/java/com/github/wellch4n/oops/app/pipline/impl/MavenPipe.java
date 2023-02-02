@@ -40,27 +40,9 @@ public class MavenPipe extends Pipe {
     }
 
     @Override
-    public V1Container build(Application application, V1Pod pod, PipelineContext context,
-                             SystemConfig config, int index) {
-        V1Container container = new V1Container();
-        container.setName("maven");
+    public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
         container.setImage(image);
-        container.addCommandItem("/bin/sh");
-        container.addArgsItem("-c");
-
-        StringBuilder commandBuilder = new StringBuilder();
-
-        if (index >= 0) {
-            commandBuilder.append("while [ ! -f ./").append(index - 1).append(".step ]; do sleep 1; done;");
-        }
-
         String path = (String) context.get(workPath);
-
         commandBuilder.append("mvn -version;").append("mvn package -f ").append(path).append("/pom.xml;");
-        commandBuilder.append("echo -e finished > ").append("\"").append(index).append(".step").append("\";");
-        container.addArgsItem(commandBuilder.toString());
-        container.setImagePullPolicy("IfNotPresent");
-        return container;
     }
-
 }

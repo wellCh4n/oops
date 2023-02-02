@@ -45,8 +45,8 @@ public class Pipeline extends LinkedList<Pipe> {
         PipelineContext pipelineContext = new PipelineContext();
         int index = 0;
         for (Pipe pipe : this) {
-            V1Container container = pipe.build(application, pod, pipelineContext, systemConfig, index);
-            pipelineContext.putAll(pipe.params);
+            V1Container container = pipe.build(pipelineContext, systemConfig, index);
+
             container.workingDir(systemConfig.getWorkspacePath());
 
             V1VolumeMount workspace = new V1VolumeMount();

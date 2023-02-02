@@ -15,20 +15,38 @@ import java.util.Set;
  */
 public abstract class Pipe {
 
-    public Map<String, Object> params;
+    public Map<String, Map<String, Object>> params;
     public String name;
-    public Pipe(String name, Map<String, Object> params) {
+    public Pipe(String name, Map<String, Object> initParams) {
         this.name = name;
-        for (Map.Entry<String, Object> entry : params.entrySet()) {
-            if (this.params == null) {
-                this.params = new HashMap<>();
-            }
-            this.params.put(name + "#" + entry.getKey(), entry.getValue());
-        }
+        this.params = new HashMap<>();
+        this.params.put(name, initParams);
     }
 
     public abstract String description();
     public abstract Set<PipeParam> params();
-    public abstract V1Container build(Application application, final V1Pod pod, PipelineContext pipelineContext,
-                                      SystemConfig config, int index);
+    public abstract void build(final V1Container container, PipelineContext pipelineContext,
+                                      StringBuilder commandBuilder);
+
+    public V1Container build(PipelineContext pipelineContext, SystemConfig config, int index) {
+        V1Container container = new V1Container();
+        container.setName(name);
+        container.addCommandItem("/bin/sh");
+        container.addArgsItem("-c");
+
+        StringBuilder commandBuilder = new StringBuilder();
+        if (index >= 1) {
+            commandBuilder.append("while [ ! -f ./").append(index - 1).append(".step ]; do sleep 1; done;");
+        }
+
+        build(container, pipelineContext, commandBuilder);
+
+        commandBuilder.append("echo -e finished > ").append(index).append(".step;");
+        container.addArgsItem(commandBuilder.toString());
+
+        container.setImagePullPolicy("IfNotPresent");
+
+        pipelineContext.putAll(this.params);
+        return container;
+    }
 }
