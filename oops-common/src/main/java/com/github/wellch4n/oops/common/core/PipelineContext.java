@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.common.core;
 
 import org.apache.commons.lang3.tuple.Pair;
 

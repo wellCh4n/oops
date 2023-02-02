@@ -19,6 +19,7 @@
         <module>oops-common</module>
         <module>oops-app</module>
         <module>oops-web</module>
+        <module>oops-pipe</module>
     </modules>
 
     <properties>
@@ -43,6 +44,16 @@
                 <groupId>com.github.wellch4n</groupId>
                 <artifactId>oops-common</artifactId>
                 <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.wellch4n</groupId>
+                <artifactId>oops-pipe</artifactId>
+                <version>1.0-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>io.kubernetes</groupId>
+                <artifactId>client-java</artifactId>
+                <version>15.0.1</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

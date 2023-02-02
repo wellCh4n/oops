@@ -1,13 +1,9 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.common.core;
 
-import com.github.wellch4n.oops.app.application.Application;
-import com.github.wellch4n.oops.app.system.SystemConfig;
 import io.kubernetes.client.openapi.models.V1Container;
-import io.kubernetes.client.openapi.models.V1Pod;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * @author wellCh4n
@@ -17,19 +13,20 @@ public abstract class Pipe {
 
     public Map<String, Map<String, Object>> params;
     public String name;
-    public Pipe(String name, Map<String, Object> initParams) {
-        this.name = name;
+    public String image;
+    public Pipe(Map<String, Object> initParams) {
+        this.name = (String) initParams.get("name");
+        this.image = (String) initParams.get("image");
         this.params = new HashMap<>();
         this.params.put(name, initParams);
     }
 
-    public abstract String description();
-    public abstract Set<PipeParam> params();
     public abstract void build(final V1Container container, PipelineContext pipelineContext,
                                       StringBuilder commandBuilder);
 
-    public V1Container build(PipelineContext pipelineContext, SystemConfig config, int index) {
+    public V1Container build(PipelineContext pipelineContext, int index) {
         V1Container container = new V1Container();
+        container.setImage(image);
         container.setName(name);
         container.addCommandItem("/bin/sh");
         container.addArgsItem("-c");

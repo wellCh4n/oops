@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.app.pipline;
+package com.github.wellch4n.oops.common.core;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

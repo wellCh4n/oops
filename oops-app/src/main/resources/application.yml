@@ -10,5 +10,5 @@ mybatis-plus:
 
 oops:
   mode: external
-  external-file: /Users/wellch4n/.kube/config.local
+  external-file: /Users/wellch4n/Env/kube_config.yaml
   workspace-path: /temp/build_workspace/

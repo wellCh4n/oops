@@ -9,7 +9,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>oops-app</artifactId>
+    <artifactId>oops-pipe</artifactId>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -19,20 +19,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.kubernetes</groupId>
-            <artifactId>client-java</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.github.wellch4n</groupId>
             <artifactId>oops-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.github.wellch4n</groupId>
-            <artifactId>oops-pipe</artifactId>
         </dependency>
     </dependencies>
 
