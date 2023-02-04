@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.pipe;
 
+import com.github.wellch4n.oops.common.core.DescriptionPipeParam;
 import com.github.wellch4n.oops.common.core.Pipe;
 import com.github.wellch4n.oops.common.core.PipelineContext;
 import io.kubernetes.client.openapi.models.V1Container;
@@ -11,12 +12,12 @@ import java.util.Map;
  * @date 2023/1/28
  */
 
-public class GitPipe extends Pipe {
+public class GitPipe extends Pipe<GitPipe.Input> {
     private final String repository;
 
     public GitPipe(Map<String, Object> initParams) {
         super(initParams);
-        this.repository = (String) initParams.get("repository");
+        this.repository = (String) getParam(Input.repository);
     }
 
     @Override
@@ -29,5 +30,19 @@ public class GitPipe extends Pipe {
                 """;
         String command = String.format(commandTemplate, repository);
         commandBuilder.append(command);
+    }
+
+    public enum Input implements DescriptionPipeParam {
+        repository {
+            @Override
+            public String description() {
+                return "仓库地址";
+            }
+
+            @Override
+            public Class<?> clazz() {
+                return String.class;
+            }
+        }
     }
 }

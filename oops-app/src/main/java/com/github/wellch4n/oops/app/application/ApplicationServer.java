@@ -2,6 +2,8 @@ package com.github.wellch4n.oops.app.application;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.wellch4n.oops.common.core.Pipe;
+import com.github.wellch4n.oops.common.core.PipeInput;
 import com.github.wellch4n.oops.common.objects.PageResult;
 import com.github.wellch4n.oops.common.objects.Result;
 import org.apache.commons.lang3.StringUtils;
@@ -11,6 +13,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.lang.reflect.Constructor;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author wellCh4n
@@ -62,6 +69,15 @@ public class ApplicationServer {
 
         Page<Application> result = applicationService.page(page, query);
         return new PageResult<>(result.getRecords(), result.getTotal(), result.getCurrent(), result.getSize());
+    }
+
+    @GetMapping(value = "/pipeInputsStruct")
+    public Result<Set<PipeInput>> pipeInputResult(@Param(value = "pipeClass") String pipeClass) {
+        try {
+            return Result.success(Pipe.getPipeInputs(pipeClass));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
 }

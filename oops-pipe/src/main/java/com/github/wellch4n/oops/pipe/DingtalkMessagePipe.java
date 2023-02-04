@@ -1,11 +1,9 @@
 package com.github.wellch4n.oops.pipe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.wellch4n.oops.common.core.DescriptionPipeParam;
 import com.github.wellch4n.oops.common.core.Pipe;
 import com.github.wellch4n.oops.common.core.PipelineContext;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import io.kubernetes.client.openapi.models.V1Container;
 import lombok.Data;
 
@@ -15,13 +13,13 @@ import java.util.Map;
  * @author wellCh4n
  * @date 2023/2/2
  */
-public class DingtalkMessagePipe extends Pipe {
+public class DingtalkMessagePipe extends Pipe<DingtalkMessagePipe.Input> {
 
     private final String webhookUrl;
     private final ObjectMapper objectMapper = new ObjectMapper();
     public DingtalkMessagePipe(Map<String, Object> initParams) {
         super(initParams);
-        this.webhookUrl = (String) initParams.get("webhook");
+        this.webhookUrl = (String) getParam(Input.webhook);
     }
 
     @Override
@@ -59,6 +57,20 @@ public class DingtalkMessagePipe extends Pipe {
                 text = new MessageText();
             }
             text.setContent(content);
+        }
+    }
+
+    public enum Input implements DescriptionPipeParam {
+        webhook {
+            @Override
+            public String description() {
+                return "钉钉webhook";
+            }
+
+            @Override
+            public Class<?> clazz() {
+                return String.class;
+            }
         }
     }
 }

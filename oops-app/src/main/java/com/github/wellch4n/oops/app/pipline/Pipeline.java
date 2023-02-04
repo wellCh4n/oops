@@ -25,7 +25,7 @@ public class Pipeline extends LinkedList<Pipe> {
     public Pipeline(List<ApplicationPipe> applicationPipes, SystemConfig systemConfig) {
         for (ApplicationPipe applicationPipe : applicationPipes) {
             try {
-                Constructor<? extends Pipe> pipeConstructor = (Constructor<? extends Pipe>) Class
+                Constructor<Pipe> pipeConstructor = (Constructor<Pipe>) Class
                         .forName(applicationPipe.getPipeClass()).getConstructor(Map.class);
                 Pipe pipe = pipeConstructor.newInstance(applicationPipe.getParams());
                 this.add(pipe);
