@@ -13,11 +13,9 @@ import java.util.Map;
  */
 
 public class GitPipe extends Pipe<GitPipe.Input> {
-    private final String repository;
 
     public GitPipe(Map<String, Object> initParams) {
         super(initParams);
-        this.repository = (String) getParam(Input.repository);
     }
 
     @Override
@@ -28,6 +26,7 @@ public class GitPipe extends Pipe<GitPipe.Input> {
                    git config --global http.version HTTP/1.1;
                    git clone %s;
                 """;
+        String repository = (String) getParam(Input.repository);
         String command = String.format(commandTemplate, repository);
         commandBuilder.append(command);
     }

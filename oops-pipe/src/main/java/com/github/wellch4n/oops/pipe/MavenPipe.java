@@ -14,16 +14,14 @@ import java.util.Map;
 
 public class MavenPipe extends Pipe<MavenPipe.Input> {
 
-    private final String command;
 
     public MavenPipe(Map<String, Object> initParams) {
         super(initParams);
-        command = (String) getParam(Input.command);
     }
 
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
-        String cmd = (String) context.get(command);
+        String cmd = (String) getParam(Input.command);
         commandBuilder.append("mvn -version;").append(cmd).append(";");
     }
 

@@ -15,11 +15,9 @@ import java.util.Map;
  */
 public class DingtalkMessagePipe extends Pipe<DingtalkMessagePipe.Input> {
 
-    private final String webhookUrl;
     private final ObjectMapper objectMapper = new ObjectMapper();
     public DingtalkMessagePipe(Map<String, Object> initParams) {
         super(initParams);
-        this.webhookUrl = (String) getParam(Input.webhook);
     }
 
     @Override
@@ -38,6 +36,8 @@ public class DingtalkMessagePipe extends Pipe<DingtalkMessagePipe.Input> {
                 --header 'Content-Type: application/json' \\
                 --data-raw '%s ';
                 """;
+
+        String webhookUrl = (String) getParam(Input.webhook);
         String cmd = String.format(commandTemplate, webhookUrl, content);
         commandBuilder.append(cmd);
     }
