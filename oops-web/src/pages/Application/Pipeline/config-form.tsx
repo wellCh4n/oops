@@ -8,8 +8,6 @@ export function delay(ms: number) {
   return new Promise(resolve => setTimeout(() => resolve(true), ms))
 }
 
-let i = 0
-
 const pipeStructUrl = '/oops/api/application/pipeStruct';
 
 export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args => {
@@ -32,8 +30,8 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
     })
     let data = response.data as PipeStuct;
 
-    console.log(targetData.data.pipeParams);
     if (targetData.data.pipeParams) {
+      console.log(targetData.data.pipeParams);
       return {
         tabs: [
           {
@@ -91,7 +89,11 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
 }
 
 export const formValueUpdateService: NsJsonSchemaForm.IFormValueUpdateService = async args => {
-  console.log('formValueUpdateService', args)
+  let input: any = {} 
+  args.allFields.map((field) => {
+    input[field.name[0]] = field.value;
+  })
+  args.targetData!.data.pipeParams = input;
 }
 
 export { controlMapService }
