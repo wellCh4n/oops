@@ -1,9 +1,9 @@
-import { Form, Input, Tabs, TabsProps } from 'antd';
+import { Button, Form, Input, Tabs, TabsProps } from 'antd';
 import React, { useEffect, useState } from 'react';
 import request from 'umi-request'
 import { App } from '../data';
 import { RouteComponentProps } from 'react-router';
-import Pipeline from '../Pipeline';
+import { Pipeline } from '../Pipeline';
 
 const deatilUrl = '/oops/api/application/detail'
 
@@ -27,15 +27,18 @@ const ApplicationEdit: React.FC<RouteComponentProps> = (props) => {
           <Form.Item label='应用描述' name='description'>
             <Input.TextArea/>
           </Form.Item>
+          <Form.Item >
+            <Button htmlType='submit' type='primary'>保存</Button>
+          </Form.Item>
         </Form>
       </>,
     },
     {
       key: 'pipeline',
       label: `流水线`,
-      children: <>
-        <Pipeline id={app?.id}></Pipeline>
-      </>
+      children: <div style={{height: '666px'}}>
+        <Pipeline meta={{flowId: '1'}}></Pipeline>
+      </div>
     },
     {
       key: 'config',

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.pipe;
 
+import com.github.wellch4n.oops.common.core.Description;
 import com.github.wellch4n.oops.common.core.DescriptionPipeParam;
 import com.github.wellch4n.oops.common.core.Pipe;
 import com.github.wellch4n.oops.common.core.PipelineContext;
@@ -12,6 +13,7 @@ import java.util.Map;
  * @date 2023/1/28
  */
 
+@Description(title = "git克隆")
 public class GitPipe extends Pipe<GitPipe.Input> {
 
     public GitPipe(Map<String, Object> initParams) {

@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.app.application;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.wellch4n.oops.common.core.Pipe;
-import com.github.wellch4n.oops.common.core.PipeInput;
+import com.github.wellch4n.oops.common.core.PipeStruct;
 import com.github.wellch4n.oops.common.objects.PageResult;
 import com.github.wellch4n.oops.common.objects.Result;
 import org.apache.commons.lang3.StringUtils;
@@ -14,9 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.lang.reflect.Constructor;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -27,6 +25,13 @@ import java.util.Set;
 @RestController
 @RequestMapping(value = "/oops/api/application")
 public class ApplicationServer {
+    private static Set<String> PIPE_CLAZZ_NAMES = new HashSet<>();
+
+    static {
+        PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.DingtalkMessagePipe");
+        PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.GitPipe");
+        PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.MavenPipe");
+    }
 
     private final ApplicationService applicationService;
 
@@ -71,10 +76,24 @@ public class ApplicationServer {
         return new PageResult<>(result.getRecords(), result.getTotal(), result.getCurrent(), result.getSize());
     }
 
-    @GetMapping(value = "/pipeInputsStruct")
-    public Result<Set<PipeInput>> pipeInputResult(@Param(value = "pipeClass") String pipeClass) {
+    @GetMapping(value = "/pipeStruct")
+    public Result<PipeStruct> pipeInputResult(@Param(value = "pipeClass") String pipeClass) {
         try {
-            return Result.success(Pipe.getPipeInputs(pipeClass));
+            return Result.success(Pipe.getPipeStruct(pipeClass));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @GetMapping(value = "/pipeStructs")
+    public Result<Set<PipeStruct>> pipeInputResults() {
+        try {
+            Set<PipeStruct> pipeStructs = new HashSet<>();
+            for (String clazzName : PIPE_CLAZZ_NAMES) {
+                PipeStruct pipeStruct = Pipe.getPipeStruct(clazzName);
+                pipeStructs.add(pipeStruct);
+            }
+            return Result.success(pipeStructs);
         } catch (Exception e) {
             return null;
         }

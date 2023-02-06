@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.pipe;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.common.core.Description;
 import com.github.wellch4n.oops.common.core.DescriptionPipeParam;
 import com.github.wellch4n.oops.common.core.Pipe;
 import com.github.wellch4n.oops.common.core.PipelineContext;
@@ -13,6 +14,8 @@ import java.util.Map;
  * @author wellCh4n
  * @date 2023/2/2
  */
+
+@Description(title = "钉钉消息")
 public class DingtalkMessagePipe extends Pipe<DingtalkMessagePipe.Input> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();

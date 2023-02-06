@@ -5,11 +5,10 @@ import io.kubernetes.client.openapi.models.V1Container;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  * @author wellCh4n
@@ -29,8 +28,13 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
         this.image = (String) initParams.get(IMAGE_KEY);
     }
 
-    public static Set<PipeInput> getPipeInputs(String clazzName) throws ClassNotFoundException {
+    public static PipeStruct getPipeStruct(String clazzName) throws ClassNotFoundException {
+        PipeStruct pipeStruct = new PipeStruct();
         Class<?> clazz = Class.forName(clazzName);
+
+        Description description = clazz.getAnnotation(Description.class);
+        pipeStruct.setTitle(description.title());
+        pipeStruct.setClazzName(clazzName);
 
         Set<PipeInput> pipeInputs = new LinkedHashSet<>();
         pipeInputs.add(new PipeInput(NAME_KEY, "名称", String.class));
@@ -43,11 +47,13 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
         for (Enum constant : constants) {
             String name = constant.name();
             DescriptionPipeParam descriptionPipeParam = (DescriptionPipeParam) constant;
-            String description = descriptionPipeParam.description();
+            String inputDescription = descriptionPipeParam.description();
             Class<?> clazzType = descriptionPipeParam.clazz();
-            pipeInputs.add(new PipeInput(name, description, clazzType));
+            pipeInputs.add(new PipeInput(name, inputDescription, clazzType));
         }
-        return pipeInputs;
+        pipeStruct.setInputs(pipeInputs);
+
+        return pipeStruct;
     }
 
     public abstract void build(final V1Container container, PipelineContext context, StringBuilder commandBuilder);
