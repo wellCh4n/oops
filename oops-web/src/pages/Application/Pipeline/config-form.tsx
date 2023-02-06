@@ -25,7 +25,6 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
   }
 
   if (targetData) {
-    ;
     let response = await request.get(pipeStructUrl, {
       params: {
         pipeClass: targetData.data.pipeClass
@@ -33,26 +32,52 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
     })
     let data = response.data as PipeStuct;
 
-    return {
-      tabs: [
-        {
-          name: data.title,
-          groups: [
-            {
-              name: '',
-              controls: data.inputs.map((input) => {
-                return {
-                  name: input.name,
-                  label: input.description,
-                  shape: 'Input',
-                  required: true,
-                  tooltip: input.description
-                }
-              })
-            },
-          ],
-        },
-      ],
+    console.log(targetData.data.pipeParams);
+    if (targetData.data.pipeParams) {
+      return {
+        tabs: [
+          {
+            name: data.title,
+            groups: [
+              {
+                name: '',
+                controls: data.inputs.map((input) => {
+                  return {
+                    name: input.name,
+                    label: input.description,
+                    shape: 'Input',
+                    required: true,
+                    tooltip: input.description,
+                    value: targetData.data.pipeParams[input.name]
+                  }
+                })
+              }
+            ]
+          }
+        ]
+      }
+    } else {
+      return {
+        tabs: [
+          {
+            name: data.title,
+            groups: [
+              {
+                name: '',
+                controls: data.inputs.map((input) => {
+                  return {
+                    name: input.name,
+                    label: input.description,
+                    shape: 'Input',
+                    required: true,
+                    tooltip: input.description
+                  }
+                })
+              },
+            ],
+          },
+        ],
+      }
     }
   }
 

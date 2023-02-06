@@ -33,7 +33,7 @@ export namespace MockApi {
         ...NODE_COMMON_PROPS,
         id: `${applicationPipe.order}`,
         label: applicationPipe.pipeName,
-        data: {pipeClass: applicationPipe.pipeClass},
+        data: {pipeClass: applicationPipe.pipeClass, pipeParams: applicationPipe.params},
         ports: [
           {
             id: `node${applicationPipe.appId}-input-${applicationPipe.order}`,
