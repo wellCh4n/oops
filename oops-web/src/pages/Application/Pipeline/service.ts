@@ -5,10 +5,11 @@ import type { NsRenameNodeCmd } from './cmd-extensions/cmd-rename-node-modal'
 import type { NsNodeCmd, NsEdgeCmd, NsGraphCmd } from '@antv/xflow'
 import type { NsDeployDagCmd } from './cmd-extensions/cmd-deploy'
 import request from 'umi-request';
-import { ApplicationPipe } from './data'
+import { ApplicationPipe, PipeStuct } from './data'
 
 
-const applicationPipeLineUrl = '/oops/api/application/pipe/line'
+const applicationPipeLineUrl = '/oops/api/application/pipe/line';
+const pipeStructUrl = '/oops/api/application/pipeStruct';
 /** mock 后端接口调用 */
 export namespace MockApi {
   export const NODE_COMMON_PROPS = {
@@ -30,17 +31,18 @@ export namespace MockApi {
     const nodes: NsGraph.INodeConfig[] = data.map((applicationPipe) => {
       return {
         ...NODE_COMMON_PROPS,
-        id: `${applicationPipe.id}`,
-        label: applicationPipe.params.name,
+        id: `${applicationPipe.order}`,
+        label: applicationPipe.pipeName,
+        data: {pipeClass: applicationPipe.pipeClass},
         ports: [
           {
-            id: `node${applicationPipe.appId}-input-1`,
+            id: `node${applicationPipe.appId}-input-${applicationPipe.order}`,
             type: NsGraph.AnchorType.INPUT,
             group: NsGraph.AnchorGroup.TOP,
             tooltip: '输入桩',
           },
           {
-            id: `node${applicationPipe.appId}-out-1`,
+            id: `node${applicationPipe.appId}-out-${applicationPipe.order}`,
             type: NsGraph.AnchorType.OUTPUT,
             group: NsGraph.AnchorGroup.BOTTOM,
             tooltip: '输出桩',
@@ -48,36 +50,16 @@ export namespace MockApi {
         ] as NsGraph.INodeAnchor[],
       }
     })
-    // const edges: NsGraph.IEdgeConfig[] = data.map((applicationPipe) => {
-    //   return {
-    //     id: uuidv4(),
-    //     source: `${applicationPipe.id}`,
-    //     target: ``
-    //   }
-    // })
-    const edges: NsGraph.IEdgeConfig[] = [
-      {
+    let edgesData = data.map((applicationPipe) => {
+      return {
         id: uuidv4(),
-        source: 'node1',
-        target: 'node2',
-        sourcePortId: 'node1-output-1',
-        targetPortId: 'node2-input-1',
-      },
-      {
-        id: uuidv4(),
-        source: 'node1',
-        target: 'node3',
-        sourcePortId: 'node1-output-1',
-        targetPortId: 'node3-input-1',
-      },
-      {
-        id: uuidv4(),
-        source: 'node1',
-        target: 'node4',
-        sourcePortId: 'node1-output-1',
-        targetPortId: 'node4-input-1',
-      },
-    ]
+        source: `${applicationPipe.order}`,
+        target: `${applicationPipe.order + 1}`,
+        sourcePortId: `node${applicationPipe.appId}-out-${applicationPipe.order}`,
+        targetPortId: `node${applicationPipe.appId}-input-${applicationPipe.order + 1}`
+      }
+    })
+    const edges: NsGraph.IEdgeConfig[] = edgesData.splice(0, data.length - 1)
     return { nodes, edges }
   }
   /** 保存图数据的api */
@@ -112,17 +94,7 @@ export namespace MockApi {
       {
         type: NsGraph.AnchorType.INPUT,
         group: NsGraph.AnchorGroup.TOP,
-        tooltip: '输入桩1',
-      },
-      {
-        type: NsGraph.AnchorType.INPUT,
-        group: NsGraph.AnchorGroup.TOP,
-        tooltip: '输入桩2',
-      },
-      {
-        type: NsGraph.AnchorType.INPUT,
-        group: NsGraph.AnchorGroup.TOP,
-        tooltip: '输入桩3',
+        tooltip: '输入桩',
       },
       {
         type: NsGraph.AnchorType.OUTPUT,

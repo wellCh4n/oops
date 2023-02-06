@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.github.wellch4n.oops.app.system.MapTypeHandler;
+import com.github.wellch4n.oops.common.core.Description;
 
 import java.util.Map;
 
@@ -25,6 +26,9 @@ public class ApplicationPipe {
 
     @TableField(value = "`params`", typeHandler = MapTypeHandler.class)
     private Map<String, Object> params;
+
+    @TableField(exist = false)
+    private String pipeName;
 
     public Long getId() {
         return id;
@@ -64,5 +68,19 @@ public class ApplicationPipe {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    public String getPipeName() {
+        try {
+            Class<?> pipClazz = Class.forName(pipeClass);
+            Description annotation = pipClazz.getAnnotation(Description.class);
+            return annotation.title();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public void setPipeName(String pipeName) {
+        this.pipeName = pipeName;
     }
 }

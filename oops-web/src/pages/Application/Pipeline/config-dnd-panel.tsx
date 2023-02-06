@@ -40,7 +40,7 @@ export const nodeDataService: NsNodeCollapsePanel.INodeDataService = async (meta
           label: pipeStruct.title,
           renderKey: DND_RENDER_ID,
           popoverContent: <NodeDescription name={pipeStruct.title} />,
-          data: pipeStruct
+          data: {pipeClass: pipeStruct.clazzName}
         }
       })
     }

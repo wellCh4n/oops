@@ -25,10 +25,10 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
   }
 
   if (targetData) {
-    let pipeStruct = targetData.data as PipeStuct
+    ;
     let response = await request.get(pipeStructUrl, {
       params: {
-        pipeClass: pipeStruct.clazzName
+        pipeClass: targetData.data.pipeClass
       }
     })
     let data = response.data as PipeStuct;
@@ -49,36 +49,6 @@ export const formSchemaService: NsJsonSchemaForm.IFormSchemaService = async args
                   tooltip: input.description
                 }
               })
-              // [
-              //   {
-              //     name: 'Tab3-1',
-              //     label: '算法配置1',
-              //     shape: 'Input',
-              //     disabled: false,
-              //     required: true,
-              //     tooltip: '算法配置1',
-              //     placeholder: 'please write something',
-              //     value: '',
-              //     defaultValue: '', // 可以认为是默认值
-              //     hidden: false,
-              //     options: [{ title: '', value: '' }],
-              //     originData: {}, // 原始数据
-              //   },
-              //   {
-              //     name: 'Tab3-2',
-              //     label: '算法配置2',
-              //     shape: 'Input',
-              //     disabled: false,
-              //     required: true,
-              //     tooltip: '算法配置2',
-              //     placeholder: 'please write something',
-              //     value: '',
-              //     defaultValue: '', // 可以认为是默认值
-              //     hidden: false,
-              //     options: [{ title: '', value: '' }],
-              //     originData: {}, // 原始数据
-              //   },
-              // ],
             },
           ],
         },
