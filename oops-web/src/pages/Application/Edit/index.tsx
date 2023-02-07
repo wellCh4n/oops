@@ -37,7 +37,7 @@ const ApplicationEdit: React.FC<RouteComponentProps> = (props) => {
       key: 'pipeline',
       label: `流水线`,
       children: <div style={{height: '666px'}}>
-        <Pipeline meta={{flowId: '1'}}></Pipeline>
+        <Pipeline meta={{flowId: props.match.params.id}}></Pipeline>
       </div>
     },
     {
