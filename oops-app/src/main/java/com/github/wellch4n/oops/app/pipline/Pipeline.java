@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.app.pipline;
 
 import com.github.wellch4n.oops.app.application.Application;
-import com.github.wellch4n.oops.app.application.pipe.ApplicationPipe;
+import com.github.wellch4n.oops.app.application.pipe.ApplicationPipeVertex;
 import com.github.wellch4n.oops.app.system.SystemConfig;
 import com.github.wellch4n.oops.common.core.Pipe;
 import com.github.wellch4n.oops.common.core.PipelineContext;
@@ -22,12 +22,12 @@ public class Pipeline extends LinkedList<Pipe> {
 
     private final SystemConfig systemConfig;
 
-    public Pipeline(List<ApplicationPipe> applicationPipes, SystemConfig systemConfig) {
-        for (ApplicationPipe applicationPipe : applicationPipes) {
+    public Pipeline(List<ApplicationPipeVertex> applicationPipeVertices, SystemConfig systemConfig) {
+        for (ApplicationPipeVertex applicationPipeVertex : applicationPipeVertices) {
             try {
                 Constructor<Pipe> pipeConstructor = (Constructor<Pipe>) Class
-                        .forName(applicationPipe.getPipeClass()).getConstructor(Map.class);
-                Pipe pipe = pipeConstructor.newInstance(applicationPipe.getParams());
+                        .forName(applicationPipeVertex.getPipeClass()).getConstructor(Map.class);
+                Pipe pipe = pipeConstructor.newInstance(applicationPipeVertex.getParams());
                 this.add(pipe);
             } catch (Exception ignore) {}
         }

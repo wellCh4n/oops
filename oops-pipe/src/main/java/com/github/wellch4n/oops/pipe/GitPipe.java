@@ -13,7 +13,7 @@ import java.util.Map;
  * @date 2023/1/28
  */
 
-@Description(title = "git克隆")
+@Description(title = "Git克隆")
 public class GitPipe extends Pipe<GitPipe.Input> {
 
     public GitPipe(Map<String, Object> initParams) {

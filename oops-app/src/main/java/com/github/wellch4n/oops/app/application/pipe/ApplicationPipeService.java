@@ -1,14 +1,15 @@
 package com.github.wellch4n.oops.app.application.pipe;
 
-import com.baomidou.mybatisplus.extension.service.IService;
-
 import java.util.List;
 
 /**
  * @author wellCh4n
- * @date 2023/1/30
+ * @date 2023/2/7
  */
-public interface ApplicationPipeService extends IService<ApplicationPipe> {
+public interface ApplicationPipeService {
+    ApplicationPipeRelation line(Long appid);
 
-    List<ApplicationPipe> listByApplicationId(Long appId);
+    boolean put(ApplicationPipeRelation relation);
+
+    List<ApplicationPipeVertex> listByApplicationId(Long appId);
 }

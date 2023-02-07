@@ -5,8 +5,9 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author wellCh4n
- * @date 2023/1/30
+ * @date 2023/2/7
  */
+
 @Mapper
-public interface ApplicationPipeRepository extends BaseMapper<ApplicationPipe> {
+public interface ApplicationPipeVertexRepository extends BaseMapper<ApplicationPipeVertex> {
 }

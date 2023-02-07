@@ -4,14 +4,13 @@ import com.github.wellch4n.oops.common.objects.Result;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 /**
  * @author wellCh4n
- * @date 2023/1/31
+ * @date 2023/2/7
  */
 
 @RestController
@@ -25,12 +24,12 @@ public class ApplicationPipeServer {
     }
 
     @GetMapping(value = "/line")
-    public Result<List<ApplicationPipe>> line(@Param(value = "id") Long id) {
-        return Result.success(applicationPipeService.listByApplicationId(id));
+    public Result<ApplicationPipeRelation> line(@Param(value = "id") Long id) {
+        return Result.success(applicationPipeService.line(id));
     }
 
     @PostMapping(value = "/put")
-    public Result<Boolean> put() {
-        return Result.success(true);
+    public Result<Boolean> put(@RequestBody ApplicationPipeRelation relation) {
+        return Result.success(applicationPipeService.put(relation));
     }
 }

@@ -1,10 +1,22 @@
-export type ApplicationPipe = {
-  id: number,
+export type ApplicationPipeRelation = {
+  appId: number,
+  vertex: ApplicationPipeVertex[],
+  edges: ApplicationPipeEdge[]
+}
+
+export type ApplicationPipeVertex = {
+  id: string,
   appId: number,
   pipeClass: string,
-  pipeName: string,
-  order: number,
-  params: any
+  params: any,
+  pipeName: string
+}
+
+export type ApplicationPipeEdge = {
+  id: number,
+  startVertex: string,
+  endVertex: string,
+  appId: number
 }
 
 export type PipeStuct = {

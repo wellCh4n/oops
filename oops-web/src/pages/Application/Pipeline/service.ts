@@ -5,11 +5,12 @@ import type { NsRenameNodeCmd } from './cmd-extensions/cmd-rename-node-modal'
 import type { NsNodeCmd, NsEdgeCmd, NsGraphCmd } from '@antv/xflow'
 import type { NsDeployDagCmd } from './cmd-extensions/cmd-deploy'
 import request from 'umi-request';
-import { ApplicationPipe, PipeStuct } from './data'
+import { message } from 'antd'
+import {ApplicationPipeEdge, ApplicationPipeRelation, ApplicationPipeVertex} from './data'
 
 
 const applicationPipeLineUrl = '/oops/api/application/pipe/line';
-const pipeStructUrl = '/oops/api/application/pipeStruct';
+const putPipeLineUrl = '/oops/api/application/pipe/put';
 /** mock 后端接口调用 */
 export namespace MockApi {
   export const NODE_COMMON_PROPS = {
@@ -26,23 +27,23 @@ export namespace MockApi {
   /** 加载图数据的api */
   export const loadGraphData = async (meta: NsGraph.IGraphMeta) => { 
     let response = await request.get(applicationPipeLineUrl, {params: {id: meta.flowId}});
-    let data = response.data as ApplicationPipe[];
+    let data = response.data as ApplicationPipeRelation;
     console.log('loadGraphData', response);
-    const nodes: NsGraph.INodeConfig[] = data.map((applicationPipe) => {
+    const nodes: NsGraph.INodeConfig[] = data.vertex.map((vertx) => {
       return {
         ...NODE_COMMON_PROPS,
-        id: `${applicationPipe.order}`,
-        label: applicationPipe.pipeName,
-        data: {pipeClass: applicationPipe.pipeClass, pipeParams: applicationPipe.params},
+        id: `${vertx.id}`,
+        label: vertx.pipeName,
+        data: {pipeClass: vertx.pipeClass, pipeParams: vertx.params},
         ports: [
           {
-            id: `node${applicationPipe.appId}-input-${applicationPipe.order}`,
+            id: `${vertx.id}-input`,
             type: NsGraph.AnchorType.INPUT,
             group: NsGraph.AnchorGroup.TOP,
             tooltip: '输入桩',
           },
           {
-            id: `node${applicationPipe.appId}-out-${applicationPipe.order}`,
+            id: `${vertx.id}-out`,
             type: NsGraph.AnchorType.OUTPUT,
             group: NsGraph.AnchorGroup.BOTTOM,
             tooltip: '输出桩',
@@ -50,16 +51,15 @@ export namespace MockApi {
         ] as NsGraph.INodeAnchor[],
       }
     })
-    let edgesData = data.map((applicationPipe) => {
+    const edges: NsGraph.IEdgeConfig[] = data.edges.map((edge) => {
       return {
         id: uuidv4(),
-        source: `${applicationPipe.order}`,
-        target: `${applicationPipe.order + 1}`,
-        sourcePortId: `node${applicationPipe.appId}-out-${applicationPipe.order}`,
-        targetPortId: `node${applicationPipe.appId}-input-${applicationPipe.order + 1}`
+        source: `${edge.startVertex}`,
+        target: `${edge.endVertex}`,
+        sourcePortId: `${edge.startVertex}-out`,
+        targetPortId: `${edge.endVertex}-input`
       }
     })
-    const edges: NsGraph.IEdgeConfig[] = edgesData.splice(0, data.length - 1)
     return { nodes, edges }
   }
   /** 保存图数据的api */
@@ -67,11 +67,30 @@ export namespace MockApi {
     meta: NsGraph.IGraphMeta,
     graphData: NsGraph.IGraphData,
   ) => {
-    console.log('saveGraphData api', meta, graphData)
-    return {
-      success: true,
-      data: graphData,
-    }
+    let edges = graphData.edges.map((edge) => {
+      return {
+        startVertex: edge.source,
+        endVertex: edge.target,
+        appId: Number(meta.flowId)
+      } as ApplicationPipeEdge;
+    })
+    let vertex = graphData.nodes.map((node) => {
+      return {
+        id: node.id,
+        pipeClass: node.data.pipeClass,
+        params: node.data.pipeParams,
+        appId: Number(meta.flowId)
+      } as ApplicationPipeVertex
+    })
+    let relation = {
+      appId: Number(meta.flowId),
+      vertex: vertex,
+      edges: edges
+    } as ApplicationPipeRelation
+    console.log(relation);
+    await request.post(putPipeLineUrl, {
+      data: relation
+    })
   }
   /** 部署图数据的api */
   export const deployDagService: NsDeployDagCmd.IDeployDagService = async (
