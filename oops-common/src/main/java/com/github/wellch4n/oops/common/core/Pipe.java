@@ -79,35 +79,8 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
         return container;
     }
 
-    public V1Container build(PipelineContext pipelineContext, int index) {
-        V1Container container = new V1Container();
-        container.setImage(image);
-        container.setName(name);
-        container.addCommandItem("/bin/sh");
-        container.addArgsItem("-c");
-
-        StringBuilder commandBuilder = new StringBuilder();
-        if (index >= 1) {
-            commandBuilder.append("while [ ! -f ./").append(index - 1).append(".step ]; do sleep 1; done;");
-        }
-
-        build(container, pipelineContext, commandBuilder);
-
-        commandBuilder.append("echo -e finished > ").append(index).append(".step;");
-        container.addArgsItem(commandBuilder.toString());
-
-        container.setImagePullPolicy(K8S.POD_SPEC_CONTAINER_IMAGE_PULL_POLICY_IF_NOT_PRESENT);
-
-        pipelineContext.put(name, initParams);
-        return container;
-    }
-
     public Object getParam(IN in) {
         Object data = initParams.get(in.name());
-        if (data.getClass() == in.clazz()) {
-            return data;
-        } else {
-            return null;
-        }
+        return in.clazz().cast(data);
     }
 }

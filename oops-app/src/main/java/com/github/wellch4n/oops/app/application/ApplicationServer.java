@@ -31,6 +31,7 @@ public class ApplicationServer {
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.DingtalkMessagePipe");
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.GitPipe");
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.MavenPipe");
+        PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.DockerPushPipe");
     }
 
     private final ApplicationService applicationService;
