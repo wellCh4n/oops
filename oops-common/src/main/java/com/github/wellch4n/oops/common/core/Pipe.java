@@ -7,7 +7,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.Set;
 
 /**
@@ -57,6 +56,28 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
     }
 
     public abstract void build(final V1Container container, PipelineContext context, StringBuilder commandBuilder);
+
+    public V1Container build(PipelineContext pipelineContext, String id, Set<String> prevIds) {
+        V1Container container = new V1Container();
+        container.setImage(image);
+        container.setName(name);
+        container.addCommandItem("/bin/sh");
+        container.addArgsItem("-c");
+
+        StringBuilder commandBuilder = new StringBuilder();
+
+        for (String prevId : prevIds) {
+            commandBuilder.append("while [ ! -f ./").append(prevId).append(".step ]; do sleep 1; done;");
+        }
+
+        build(container, pipelineContext, commandBuilder);
+
+        commandBuilder.append("echo -e finished > ").append(id).append(".step;");
+        container.addArgsItem(commandBuilder.toString());
+        container.setImagePullPolicy(K8S.POD_SPEC_CONTAINER_IMAGE_PULL_POLICY_IF_NOT_PRESENT);
+        pipelineContext.put(name, initParams);
+        return container;
+    }
 
     public V1Container build(PipelineContext pipelineContext, int index) {
         V1Container container = new V1Container();

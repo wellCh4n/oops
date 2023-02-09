@@ -11,5 +11,4 @@ public interface ApplicationPipeService {
 
     boolean put(ApplicationPipeRelation relation);
 
-    List<ApplicationPipeVertex> listByApplicationId(Long appId);
 }

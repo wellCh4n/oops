@@ -65,11 +65,4 @@ public class ApplicationPipeServiceImpl implements ApplicationPipeService {
             return true;
         }));
     }
-
-    @Override
-    public List<ApplicationPipeVertex> listByApplicationId(Long appId) {
-        LambdaQueryWrapper<ApplicationPipeVertex> vertexLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        vertexLambdaQueryWrapper.eq(ApplicationPipeVertex::getAppId, appId);
-        return vertexRepository.selectList(vertexLambdaQueryWrapper);
-    }
 }

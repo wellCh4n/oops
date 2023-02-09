@@ -25,12 +25,11 @@ public class DingtalkMessagePipe extends Pipe<DingtalkMessagePipe.Input> {
 
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
-        String projectName = (String) context.get("${git.repoPath}");
 
         String content = "";
         try {
             MessageBody messageBody = new MessageBody();
-            messageBody.setMessageContent(projectName + " finished");
+            messageBody.setMessageContent("finished");
             content = objectMapper.writeValueAsString(messageBody);
         } catch (Exception ignored) {}
 
