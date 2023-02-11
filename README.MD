@@ -1,7 +1,5 @@
-# oops
-> 一站式开发运维平台
-
-oops —— One Ops
+# oops —— One Ops
+> 让天下没有难部署的应用
 
 ## 截图
 ![image](https://github.com/wellCh4n/oops/blob/main/docs/pipeline.png)
