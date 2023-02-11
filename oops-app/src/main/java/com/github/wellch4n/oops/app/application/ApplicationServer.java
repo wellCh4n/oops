@@ -32,6 +32,7 @@ public class ApplicationServer {
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.GitPipe");
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.MavenPipe");
         PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.DockerPushPipe");
+        PIPE_CLAZZ_NAMES.add("com.github.wellch4n.oops.pipe.DryRunPipe");
     }
 
     private final ApplicationService applicationService;

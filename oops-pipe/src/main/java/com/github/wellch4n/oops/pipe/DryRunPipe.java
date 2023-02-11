@@ -10,35 +10,34 @@ import java.util.Map;
 
 /**
  * @author wellCh4n
- * @date 2023/1/28
+ * @date 2023/2/12
  */
 
-@Description(title = "Maven编译")
-public class MavenPipe extends Pipe<MavenPipe.Input> {
+@Description(title = "调试节点")
+public class DryRunPipe extends Pipe<DryRunPipe.Input> {
 
 
-    public MavenPipe(Map<String, Object> initParams) {
+    public DryRunPipe(Map initParams) {
         super(initParams);
     }
 
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
-        container.setImage("liumiaocn/maven");
-        String cmd = (String) getParam(Input.command);
-        commandBuilder.append("mvn -version;").append(cmd).append(";");
+        container.setImage("alpine");
+        commandBuilder.append("while true; do echo dryRun; sleep 10;done;");
     }
 
     public enum Input implements DescriptionPipeParam {
-        command {
-            @Override
-            public String description() {
-                return "构建命令";
-            }
+        ;
 
-            @Override
-            public Class<?> clazz() {
-                return String.class;
-            }
+        @Override
+        public String description() {
+            return null;
+        }
+
+        @Override
+        public Class<?> clazz() {
+            return null;
         }
     }
 }

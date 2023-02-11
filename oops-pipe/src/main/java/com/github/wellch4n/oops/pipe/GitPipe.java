@@ -22,6 +22,7 @@ public class GitPipe extends Pipe<GitPipe.Input> {
 
     @Override
     public void build(V1Container container, PipelineContext pipelineContext, StringBuilder commandBuilder) {
+        container.setImage("alpine/git");
         String commandTemplate =
                 """
                    rm -rf *;

@@ -16,15 +16,12 @@ import java.util.Set;
 public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
 
     public final String name;
-    public final String image;
     public final Map<String, Object> initParams;
     private static final String NAME_KEY = "name";
-    private static final String IMAGE_KEY = "image";
 
     public Pipe(Map<String, Object> initParams) {
         this.initParams = initParams;
         this.name = (String) initParams.get(NAME_KEY);
-        this.image = (String) initParams.get(IMAGE_KEY);
     }
 
     public static PipeStruct getPipeStruct(String clazzName) throws ClassNotFoundException {
@@ -37,7 +34,6 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
 
         Set<PipeInput> pipeInputs = new LinkedHashSet<>();
         pipeInputs.add(new PipeInput(NAME_KEY, "名称", String.class));
-        pipeInputs.add(new PipeInput(IMAGE_KEY, "镜像", String.class));
         ParameterizedType genericSuperclass = (ParameterizedType) (clazz.getGenericSuperclass());
         Type[] actualTypeArguments = genericSuperclass.getActualTypeArguments();
         Type actualTypeArgument = actualTypeArguments[0];
@@ -59,7 +55,6 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
 
     public V1Container build(PipelineContext pipelineContext, String id, Set<String> prevIds) {
         V1Container container = new V1Container();
-        container.setImage(image);
         container.setName(name);
         container.addCommandItem("/bin/sh");
         container.addArgsItem("-c");
