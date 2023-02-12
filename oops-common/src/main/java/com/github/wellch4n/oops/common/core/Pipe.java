@@ -59,6 +59,8 @@ public abstract class Pipe<IN extends Enum<?> & DescriptionPipeParam> {
         container.addCommandItem("/bin/sh");
         container.addArgsItem("-c");
 
+        pipelineContext.put("NAME", name);
+
         StringBuilder commandBuilder = new StringBuilder();
 
         for (String prevId : prevIds) {

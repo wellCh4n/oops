@@ -23,11 +23,14 @@ public class DockerPushPipe extends Pipe<DockerPushPipe.Input> {
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
         container.setImage("gcr.io/kaniko-project/executor:debug");
+        commandBuilder.append("while true; do echo hello; sleep 10;done;");
         String dockerFilePath = (String) getParam(Input.dockerFilePath);
         String dockerFileName = (String) getParam(Input.dockerFileName);
+        String repositoryUrl = (String) getParam(Input.repositoryUrl);
+        String name = (String) context.get("NAME");
         commandBuilder.append("/kaniko/executor --context ").append(dockerFilePath);
         commandBuilder.append(" --dockerfile ").append(dockerFilePath).append("/").append(dockerFileName)
-                .append(" --no-push").append(";");
+                .append(" --destination=").append(repositoryUrl).append("/").append(name).append(";");
     }
 
     public enum Input implements DescriptionPipeParam {
@@ -46,6 +49,17 @@ public class DockerPushPipe extends Pipe<DockerPushPipe.Input> {
             @Override
             public String description() {
                 return "dockerFile文件名";
+            }
+
+            @Override
+            public Class<?> clazz() {
+                return String.class;
+            }
+        },
+        repositoryUrl {
+            @Override
+            public String description() {
+                return "仓库地址";
             }
 
             @Override

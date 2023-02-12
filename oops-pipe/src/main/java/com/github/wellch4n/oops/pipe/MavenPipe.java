@@ -23,7 +23,7 @@ public class MavenPipe extends Pipe<MavenPipe.Input> {
 
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
-        container.setImage("liumiaocn/maven");
+        container.setImage("maven:3.8.7-eclipse-temurin-17-alpine");
         String cmd = (String) getParam(Input.command);
         commandBuilder.append("mvn -version;").append(cmd).append(";");
     }
