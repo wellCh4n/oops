@@ -23,7 +23,6 @@ public class DockerPushPipe extends Pipe<DockerPushPipe.Input> {
     @Override
     public void build(V1Container container, PipelineContext context, StringBuilder commandBuilder) {
         container.setImage("gcr.io/kaniko-project/executor:debug");
-        commandBuilder.append("while true; do echo hello; sleep 10;done;");
         String dockerFilePath = (String) getParam(Input.dockerFilePath);
         String dockerFileName = (String) getParam(Input.dockerFileName);
         String repositoryUrl = (String) getParam(Input.repositoryUrl);

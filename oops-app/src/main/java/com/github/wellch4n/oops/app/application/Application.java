@@ -32,4 +32,24 @@ public class Application implements Serializable {
      * 应用描述
      */
     private String namespace;
+
+    /**
+     * CPU请求核数
+     */
+    private Integer requestCoreCount;
+
+    /**
+     * CPU最大核数
+     */
+    private Integer limitCoreCount;
+
+    /**
+     * 内存请求MB
+     */
+    private Integer requestMemoryCount;
+
+    /**
+     * 内存最大MB
+     */
+    private Integer limitMemoryCount;
 }
