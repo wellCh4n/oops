@@ -5,6 +5,8 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import io.kubernetes.client.openapi.models.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +17,10 @@ import java.util.Map;
  * @date 2025/7/7
  */
 public class PipelineBuildPod extends V1Pod {
+
+    @Getter
+    @Setter
+    private String artifact;
 
     public PipelineBuildPod(Application application, Pipeline pipeline,
                             List<BaseContainer> stepContainers, BaseContainer finishContainer) {

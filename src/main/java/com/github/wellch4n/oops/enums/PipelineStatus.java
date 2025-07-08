@@ -6,5 +6,6 @@ package com.github.wellch4n.oops.enums;
  */
 public enum PipelineStatus {
     INITIALIZED, PENDING, RUNNING,
-    STOPED
+    STOPED,
+    SUCCEEDED, ERROR
 }

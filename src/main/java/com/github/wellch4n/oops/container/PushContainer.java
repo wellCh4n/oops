@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
+import lombok.Getter;
 
 import java.util.List;
 
@@ -11,13 +12,18 @@ import java.util.List;
  */
 public class PushContainer extends BaseContainer {
 
+    @Getter
+    private final String artifact;
+
     public PushContainer(Application application, Pipeline pipeline, String repositoryUrl, String pushImage) {
-        String imageRepository = repositoryUrl + "/" + application.getName();
+        String artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
+        this.artifact = artifact;
+
         this.name("push")
                 .image(pushImage)
                 .workingDir("/workspace")
                 .args(List.of(
-                        "--destination=" + imageRepository + ":" + pipeline.getId(),
+                        "--destination=" + artifact,
                         "--dockerfile=Dockerfile"
                 ));
     }

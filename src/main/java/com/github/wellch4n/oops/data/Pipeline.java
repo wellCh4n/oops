@@ -26,6 +26,8 @@ public class Pipeline extends BaseDataObject {
     @Enumerated(EnumType.STRING)
     private PipelineStatus status;
 
+    private String artifact;
+
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, id);
     }

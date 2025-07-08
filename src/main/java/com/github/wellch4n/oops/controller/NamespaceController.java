@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.config.KubernetesContext;
+import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.objects.Result;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,7 +22,7 @@ public class NamespaceController {
     @GetMapping
     public Result<Set<String>> getNamespaces() {
         try {
-            V1NamespaceList v1NamespaceList = KubernetesContext.getApi().listNamespace().execute();
+            V1NamespaceList v1NamespaceList = KubernetesClientFactory.getCoreApi().listNamespace().execute();
             Set<String> namespaces = v1NamespaceList.getItems().stream()
                     .map(namespace -> namespace.getMetadata().getName())
                     .collect(Collectors.toSet());

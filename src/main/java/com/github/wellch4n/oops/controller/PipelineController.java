@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.config.KubernetesContext;
+import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
@@ -55,12 +55,12 @@ public class PipelineController {
                 String pipelineName = pipeline.getName();
 
                 List<String> containers = Lists.newArrayList();
-                V1Pod v1Pod = KubernetesContext.getApi().readNamespacedPod(pipelineName, "oops").execute();
+                V1Pod v1Pod = KubernetesClientFactory.getCoreApi().readNamespacedPod(pipelineName, "oops").execute();
                 v1Pod.getSpec().getInitContainers().forEach(container -> containers.add(container.getName()));
                 v1Pod.getSpec().getContainers().forEach(container -> containers.add(container.getName()));
 
                 for (String containerName : containers) {
-                    PodLogs logs = new PodLogs(KubernetesContext.getApiClient());
+                    PodLogs logs = new PodLogs(KubernetesClientFactory.getClient());
                     try (InputStream is = logs.streamNamespacedPodLog("oops", pipelineName, containerName)) {
                         BufferedReader br = new BufferedReader(
                                 new InputStreamReader(is, StandardCharsets.UTF_8));
@@ -94,9 +94,9 @@ public class PipelineController {
         }
 
         try {
-            V1Pod pod = KubernetesContext.getApi().readNamespacedPod(pipeline.getName(), namespace).execute();
+            V1Pod pod = KubernetesClientFactory.getCoreApi().readNamespacedPod(pipeline.getName(), namespace).execute();
             if (pod != null) {
-                KubernetesContext.getApi().deleteNamespacedPod(pipeline.getName(), "oops").execute();
+                KubernetesClientFactory.getCoreApi().deleteNamespacedPod(pipeline.getName(), "oops").execute();
                 pipeline.setStatus(PipelineStatus.STOPED);
                 pipelineRepository.save(pipeline);
                 return Result.success(true);

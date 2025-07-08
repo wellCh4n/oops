@@ -1,11 +1,10 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.config.KubernetesContext;
+import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.objects.ApplicationCrudRequest;
 import com.github.wellch4n.oops.objects.Result;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import org.apache.commons.lang3.StringUtils;
@@ -33,7 +32,7 @@ public class ApplicationController {
     public Result<V1Pod> getApplication(@PathVariable String namespace, @PathVariable String name) {
         try {
             String labelSelector = String.format("app=%s", name);
-            V1PodList v1PodList = KubernetesContext.getApi().listNamespacedPod(namespace).labelSelector(labelSelector).execute();
+            V1PodList v1PodList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace).labelSelector(labelSelector).execute();
             V1Pod pod = v1PodList
                     .getItems().stream()
                     .findFirst()
@@ -47,7 +46,7 @@ public class ApplicationController {
     @GetMapping
     public Result<Set<String>> getApplications(@PathVariable String namespace) {
         try {
-            V1PodList podList = KubernetesContext.getApi().listNamespacedPod(namespace).execute();
+            V1PodList podList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace).execute();
 
             Set<String> pods = podList.getItems().stream()
                     .map(pod -> pod.getMetadata().getLabels().get("app"))

@@ -5,5 +5,6 @@ package com.github.wellch4n.oops.enums;
  * @date 2025/7/8
  */
 public enum OopsTypes {
-    PIPELINE
+    PIPELINE,
+    APPLICATION
 }

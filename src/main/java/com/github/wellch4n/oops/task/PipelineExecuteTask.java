@@ -1,7 +1,7 @@
-package com.github.wellch4n.oops.job;
+package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.DeploymentConfig;
-import com.github.wellch4n.oops.config.KubernetesContext;
+import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
@@ -20,7 +20,7 @@ import java.util.concurrent.Callable;
  * @author wellCh4n
  * @date 2025/7/5
  */
-public class PipelineExecuteJob implements Callable<PipelineBuildPod> {
+public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Pipeline pipeline;
     private final Application application;
@@ -29,7 +29,7 @@ public class PipelineExecuteJob implements Callable<PipelineBuildPod> {
 
     private final String repositoryUrl;
 
-    public PipelineExecuteJob(Pipeline pipeline) {
+    public PipelineExecuteTask(Pipeline pipeline) {
         this.pipeline = pipeline;
 
         ApplicationRepository applicationRepository = SpringContext.getBean(ApplicationRepository.class);
@@ -38,7 +38,7 @@ public class PipelineExecuteJob implements Callable<PipelineBuildPod> {
                 pipeline.getApplicationName()
         );
 
-        this.api = KubernetesContext.getApi();
+        this.api = KubernetesClientFactory.getCoreApi();
 
         this.deploymentConfig = SpringContext.getBean(DeploymentConfig.class);
 
@@ -70,13 +70,14 @@ public class PipelineExecuteJob implements Callable<PipelineBuildPod> {
         PushContainer push = new PushContainer(application, pipeline, repositoryUrl, deploymentConfig.getPush().getImage());
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(push);
+        String artifact = push.getArtifact();
 
         DoneContainer done = new DoneContainer();
         done.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
-
+        pipelineBuildPod.setArtifact(artifact);
 
         try {
             api.createNamespacedPod("oops", pipelineBuildPod).execute();

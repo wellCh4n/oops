@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
-import com.github.wellch4n.oops.job.PipelineExecuteJob;
+import com.github.wellch4n.oops.task.PipelineExecuteTask;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,16 +45,17 @@ public class DeploymentController {
             pipeline.setStatus(PipelineStatus.INITIALIZED);
             pipelineRepository.save(pipeline);
 
-            PipelineExecuteJob pipelineExecuteJob = new PipelineExecuteJob(pipeline);
-            FutureTask<PipelineBuildPod> pipelineExecutorJobTask = new FutureTask<>(pipelineExecuteJob);
+            PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline);
+            FutureTask<PipelineBuildPod> pipelineExecutorJobTask = new FutureTask<>(pipelineExecuteTask);
             Thread.ofVirtual().start(pipelineExecutorJobTask);
 
-            PipelineBuildPod v1Pod = pipelineExecutorJobTask.get();
+            PipelineBuildPod pipelineBuildPod = pipelineExecutorJobTask.get();
 
+            pipeline.setArtifact(pipelineBuildPod.getArtifact());
             pipeline.setStatus(PipelineStatus.RUNNING);
             pipelineRepository.save(pipeline);
 
-            return Result.success(v1Pod);
+            return Result.success(pipelineBuildPod);
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }
