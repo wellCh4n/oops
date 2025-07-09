@@ -77,7 +77,6 @@ public class PipelineController {
                 emitter.complete();
             } catch (Exception e) {
                 emitter.completeWithError(e);
-                throw new RuntimeException("Failed to watch pipeline logs: " + e.getMessage());
             }
         });
 

@@ -14,4 +14,5 @@ public class ApplicationCrudRequest {
     private String dockerFile;
     private String buildImage;
     private String buildCommand;
+    private Integer replicas = 0;
 }

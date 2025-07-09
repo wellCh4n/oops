@@ -3,15 +3,22 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRepository;
+import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationCrudRequest;
+import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
-import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodList;
-import org.apache.commons.lang3.StringUtils;
+import io.kubernetes.client.PodLogs;
+import io.kubernetes.client.openapi.models.*;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author wellCh4n
@@ -29,30 +36,20 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}")
-    public Result<V1Pod> getApplication(@PathVariable String namespace, @PathVariable String name) {
+    public Result<Application> getApplication(@PathVariable String namespace, @PathVariable String name) {
         try {
-            String labelSelector = String.format("app=%s", name);
-            V1PodList v1PodList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace).labelSelector(labelSelector).execute();
-            V1Pod pod = v1PodList
-                    .getItems().stream()
-                    .findFirst()
-                    .orElse(null);
-            return Result.success(pod);
+            Application application = repository.findByNamespaceAndName(namespace, name);
+            return Result.success(application);
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }
     }
 
     @GetMapping
-    public Result<Set<String>> getApplications(@PathVariable String namespace) {
+    public Result<List<Application>> getApplications(@PathVariable String namespace) {
         try {
-            V1PodList podList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace).execute();
-
-            Set<String> pods = podList.getItems().stream()
-                    .map(pod -> pod.getMetadata().getLabels().get("app"))
-                    .filter(StringUtils::isNotEmpty)
-                    .collect(Collectors.toSet());
-            return Result.success(pods);
+            List<Application> applications = repository.findByNamespace(namespace);
+            return Result.success(applications);
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }
@@ -68,7 +65,9 @@ public class ApplicationController {
         application.setDockerFile(request.getDockerFile());
         application.setBuildImage(request.getBuildImage());
         application.setBuildCommand(request.getBuildCommand());
+        application.setReplicas(request.getReplicas());
         repository.save(application);
+
         return Result.success(true);
     }
 
@@ -82,7 +81,69 @@ public class ApplicationController {
         }
         application.setDockerFile(request.getDockerFile());
         application.setRepository(request.getRepository());
+        application.setReplicas(request.getReplicas());
         repository.save(application);
+
         return Result.success(true);
+    }
+
+    @GetMapping("/{name}/status")
+    public Result<List<ApplicationPodStatusResponse>> getApplicationStatus(@PathVariable String namespace,
+                                                                           @PathVariable String name) {
+        try {
+            String labelSelector = "oops.type=%s,oops.app.name=%s".formatted(OopsTypes.APPLICATION.name(), name);
+            V1PodList podList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace)
+                    .labelSelector(labelSelector)
+                    .execute();
+
+            List<ApplicationPodStatusResponse> podStatusList = new ArrayList<>();
+            for (V1Pod pod : podList.getItems()) {
+                podStatusList.add(new ApplicationPodStatusResponse(pod));
+            }
+
+            return Result.success(podStatusList);
+        } catch (Exception e) {
+            return Result.failure(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{name}/pods/{pod}/restart")
+    public Result<Boolean> restartApplication(@PathVariable String namespace,
+                                              @PathVariable String name,
+                                              @PathVariable String pod) {
+        try {
+            KubernetesClientFactory.getCoreApi().deleteNamespacedPod(pod, namespace).execute();
+            return Result.success(true);
+        } catch (Exception e) {
+            return Result.failure(e.getMessage());
+        }
+    }
+
+    @GetMapping(value = "/{name}/pods/{pod}/log", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter getApplicationPodLogs(@PathVariable String namespace,
+                                            @PathVariable String name,
+                                            @PathVariable String pod) {
+        SseEmitter emitter = new SseEmitter(0L);
+
+        Thread.startVirtualThread(() -> {
+            PodLogs logs = new PodLogs(KubernetesClientFactory.getClient());
+            try(InputStream is = logs.streamNamespacedPodLog(namespace, pod, name)) {
+                BufferedReader br = new BufferedReader(
+                        new InputStreamReader(is, StandardCharsets.UTF_8));
+                String line;
+                while ((line = br.readLine()) != null) {
+                    SseEmitter.SseEventBuilder event = SseEmitter.event()
+                            .name("log")
+                            .data(line);
+                    emitter.send(event);
+                }
+
+                emitter.complete();
+            } catch (Exception e) {
+                emitter.completeWithError(e);
+            }
+        });
+
+        return emitter;
     }
 }

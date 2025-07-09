@@ -31,4 +31,6 @@ public class Application extends BaseDataObject {
     private String buildImage;
 
     private String buildCommand;
+
+    private Integer replicas;
 }

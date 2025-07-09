@@ -19,7 +19,13 @@ import org.apache.commons.lang3.StringUtils;
 @Slf4j
 public class KubernetesClientFactory {
 
+    private static ApiClient apiClient;
+
     public static ApiClient getClient() {
+        if (apiClient != null) {
+            return apiClient;
+        }
+
         SystemConfigRepository systemConfigRepository = SpringContext.getBean(SystemConfigRepository.class);
 
         SystemConfig apiServer = systemConfigRepository.findByConfigKey(SystemConfigKeys.KUBERNETES_API_SERVER_URL);
@@ -30,7 +36,9 @@ public class KubernetesClientFactory {
             return null;
         }
 
-        return Config.fromToken(apiServer.getConfigValue(), token.getConfigValue(), false);
+        ApiClient newApiClient = Config.fromToken(apiServer.getConfigValue(), token.getConfigValue(), false);
+        KubernetesClientFactory.apiClient = newApiClient;
+        return newApiClient;
     }
 
     public static CoreV1Api getCoreApi() {

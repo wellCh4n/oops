@@ -4,12 +4,11 @@ import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
+import io.kubernetes.client.custom.V1Patch;
+import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -18,7 +17,7 @@ import java.util.concurrent.Callable;
  * @author wellCh4n
  * @date 2025/7/9
  */
-public class ArtifactDeployTask implements Callable<String> {
+public class ArtifactDeployTask implements Callable<Boolean> {
 
     private final Pipeline pipeline;
     private final Application application;
@@ -29,7 +28,7 @@ public class ArtifactDeployTask implements Callable<String> {
     }
 
     @Override
-    public String call() throws Exception {
+    public Boolean call() throws Exception {
         AppsV1Api appsApi = KubernetesClientFactory.getAppsApi();
         String namespace = application.getNamespace();
         String applicationName = application.getName();
@@ -47,7 +46,7 @@ public class ArtifactDeployTask implements Callable<String> {
                         .namespace(namespace)
                         .labels(labels))
                 .spec(new V1StatefulSetSpec()
-                        .replicas(1)
+                        .replicas(application.getReplicas())
                         .selector(new V1LabelSelector().matchLabels(labels))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(labels))
@@ -64,7 +63,16 @@ public class ArtifactDeployTask implements Callable<String> {
                                 )
                         )
                 );
-        appsApi.createNamespacedStatefulSet(application.getNamespace(), statefulSet).execute();
-        return "";
+
+        try {
+            appsApi.replaceNamespacedStatefulSet(applicationName, namespace, statefulSet).execute();
+        } catch (ApiException apiException) {
+            if (apiException.getCode() == 404) {
+                appsApi.createNamespacedStatefulSet(namespace, statefulSet).execute();
+                return true;
+            }
+            return false;
+        }
+        return true;
     }
 }
