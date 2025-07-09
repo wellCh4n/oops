@@ -22,6 +22,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(
                 new TerminalWebSocketHandler(),
                 "/api/namespaces/{namespace}/applications/{app}/pods/{pod}/terminal"
-        );
+        ).setAllowedOrigins("*");
     }
 }

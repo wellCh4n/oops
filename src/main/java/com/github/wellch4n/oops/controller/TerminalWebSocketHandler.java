@@ -5,11 +5,13 @@ import io.kubernetes.client.Exec;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.ByteBuffer;
 
 /**
  * @author wellCh4n
@@ -70,10 +72,26 @@ public class TerminalWebSocketHandler extends BinaryWebSocketHandler {
     }
 
     @Override
-    protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
+    protected void handleBinaryMessage(@NotNull WebSocketSession session, @NotNull BinaryMessage message) throws IOException {
         if (stdin != null) {
-            stdin.write(message.getPayload().array());
+            ByteBuffer buffer = message.getPayload();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            stdin.write(bytes);
             stdin.flush();
+        }
+    }
+
+    @Override
+    protected void handleTextMessage(@NotNull WebSocketSession session, @NotNull TextMessage message) {
+        if (stdin != null) {
+            String text = message.getPayload();
+            try {
+                stdin.write(text.getBytes());
+                stdin.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
