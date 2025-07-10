@@ -55,7 +55,7 @@ export default function RootLayout({
               <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
             </Sider>
             <Layout>
-              <Header style={{ padding: 0, background: colorBgContainer }} />
+              {/* <Header style={{ padding: 0, background: colorBgContainer }} /> */}
               <Content>
                 {children}
               </Content>
