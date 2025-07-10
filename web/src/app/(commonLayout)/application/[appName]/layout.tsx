@@ -7,7 +7,7 @@ import { ApplicationContext } from "@/context/application-context";
 import {Breadcrumb, Divider, Skeleton} from "antd";
 import Link from "next/link";
 
-export const ApplicationLayout = ({ children, params }: { children: ReactNode, params: Promise<{ appName: string }> }) => {
+const ApplicationLayout = ({ children, params }: { children: ReactNode, params: Promise<{ appName: string }> }) => {
 
   const [application, setApplication] = useState<ApplicationItem>();
   const requestParams = use(params);
