@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
 import { ApplicationPodItem } from "@/types/application";
 import { CodeOutlined, FileTextOutlined, ReloadOutlined } from "@ant-design/icons";
+import {useParams} from "next/navigation";
 
 export default () => {
   const application = useApplicationContext();
   const { setHeaderContent } = useHeader();
   const [applicationPods, setApplicationPods] = useState<ApplicationPodItem[] | null>(null);
+  const { namespaceName } =  useParams();
 
   // 设置Header内容
   useEffect(() => {
@@ -27,7 +29,7 @@ export default () => {
     };
   }, [application, setHeaderContent]);
 
-  const loadApplicationStauts = () => {
+  const loadApplicationStatus = () => {
     fetchApplicationStatus(application!.name).then((data) => {
       setApplicationPods(data)
     })
@@ -36,9 +38,9 @@ export default () => {
   useEffect(() => {
     if(!application) return;
     
-    loadApplicationStauts();
-    
-    const interval = setInterval(loadApplicationStauts, 5000);
+    loadApplicationStatus();
+
+    const interval = setInterval(loadApplicationStatus, 5000);
     
     return () => clearInterval(interval);
   }, [application?.name])
@@ -83,11 +85,24 @@ export default () => {
       key: 'action',
       render: (_, record) => (
         <Space>
-          <Button icon={<FileTextOutlined />} href={`/application/${application!.name}/pod/${record.name}/log`}>Logs</Button>
-          <Button icon={<CodeOutlined />} href={`/application/${application!.name}/pod/${record.name}/terminal`}>Terminal</Button>
-          <Button icon={<ReloadOutlined />} danger onClick={() => {
-            restartApplication(application!.name, record.name)
-          }}>Restart</Button>
+          <Button
+            icon={<FileTextOutlined />}
+            href={`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/log`}
+          >
+            Logs
+          </Button>
+          <Button
+            icon={<CodeOutlined />}
+            href={`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/terminal`}>
+            Terminal
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            danger
+            onClick={() => restartApplication(application!.name, record.name)}
+          >
+            Restart
+          </Button>
         </Space>
       )
     }

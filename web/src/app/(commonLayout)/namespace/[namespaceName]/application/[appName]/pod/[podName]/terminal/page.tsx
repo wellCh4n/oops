@@ -14,8 +14,7 @@ export default function TerminalPage() {
   const terminalInstanceRef = useRef<Terminal | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const isInitializedRef = useRef(false);
-  const params = useParams();
-  const { appName, podName } = params;
+  const { appName, podName } = useParams();
   const { setHeaderContent } = useHeader();
 
   const initializeTerminal = useCallback(() => {

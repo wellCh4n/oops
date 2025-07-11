@@ -25,7 +25,7 @@ export default () => {
           title="Metadata"
           bordered
           extra={
-            <Link href={`/application/${application?.name}/status`}>Status</Link>
+            <Link href={`/web/src/app/(commonLayout)/namespace/%5BnamespaceName%5D/application/${application?.name}/status`}>Status</Link>
           }
         >
           <ProForm.Group>

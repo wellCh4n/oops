@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { DatabaseOutlined, EditOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useEffect } from 'react';
 import { useHeader } from '@/context/header-context';
+import {useParams} from "next/navigation";
 
 export default function ApplicationPage() {
 
@@ -24,50 +25,54 @@ export default function ApplicationPage() {
   }, [setHeaderContent])
 
   return (
-    <ProTable<ApplicationItem>
-      options={false}
-      rowKey="id"
-      columns={[
-        {
-          title: 'Id',
-          dataIndex: 'id'
-        },
-        {
-          title: 'Name',
-          dataIndex: 'name',
-          render: (_, record) => 
-          <>
-            <Link href={`/application/${record.name}/status`}>{record.name}</Link>
-          </>,
-        },
-        {
-          title: 'Namespace',
-          dataIndex: 'namespace',
-        },
-        {
-          title: 'Action',
-          valueType: 'option',
-          render: (_, record) => (
-            <Space>
-              <Button icon={<EditOutlined />} href={`/application/${record.name}`}>Edit</Button>
-              <Button icon={<InfoCircleOutlined />} href={`/application/${record.name}/status`}>Status</Button>
-              <Button icon={<DatabaseOutlined />} >Config</Button>
-            </Space>
-          ),
-        },
-      ]}
-      params={{}}
-      request={async () => {
-        const data = await fetchApplicationList();
-        return {
-          data: data
-        };
-      }}
-      pagination={{
-        showSizeChanger: true,
-      }}
-      search={false}
-    />
+    <div className="p-3">
+      <ProTable<ApplicationItem>
+        options={false}
+        rowKey="id"
+        columns={[
+          {
+            title: 'Id',
+            dataIndex: 'id',
+            search: false
+          },
+          {
+            title: 'Name',
+            dataIndex: 'name',
+            render: (_, record) =>
+            <>
+              <Link href={`/namespace/${record.namespace}/application/${record.name}/status`}>{record.name}</Link>
+            </>,
+            search: true
+          },
+          {
+            title: 'Namespace',
+            dataIndex: 'namespace',
+            search: true
+          },
+          {
+            title: 'Action',
+            valueType: 'option',
+            render: (_, record) => (
+              <Space>
+                <Button icon={<EditOutlined />} href={`/namespace/${record.namespace}/application/${record.name}`}>Edit</Button>
+                <Button icon={<InfoCircleOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/status`}>Status</Button>
+                <Button icon={<DatabaseOutlined />} >Config</Button>
+              </Space>
+            ),
+          },
+        ]}
+        request={async (params, sort, filter) => {
+          console.log(params);
+          const data = await fetchApplicationList();
+          return {
+            data: data
+          };
+        }}
+        pagination
+        cardBordered
+        search={true}
+      />
+    </div>
   );
 }
 
