@@ -3,15 +3,15 @@ import request from 'umi-request';
 
 const env = process.env.NODE_ENV;
 const baseUrlMap = {
-  development: 'http://localhost:8080',
-  production: 'http://localhost:8080',
-  test: 'http://localhost:8080'
+  development: 'localhost:8080',
+  production: 'localhost:8080',
+  test: 'localhost:8080'
 };
-const baseUrl = baseUrlMap[env] || 'http://localhost:8080';
+const baseUrl = baseUrlMap[env] || 'localhost:8080';
 
 request.interceptors.request.use((url, options) => {
   return {
-    url: `${baseUrl}${url}`,
+    url: `http://${baseUrl}${url}`,
     options
   };
 });
@@ -58,4 +58,5 @@ export default {
   post,
   put,
   del,
+  baseUrl
 };

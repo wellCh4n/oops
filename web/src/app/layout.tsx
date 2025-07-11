@@ -36,7 +36,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [collapsed, setCollapsed] = useState(false);
-  const { token: { colorBgContainer, borderRadiusLG } } = theme.useToken();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -48,21 +47,21 @@ export default function RootLayout({
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <AntdRegistry>
-            <ConfigProvider locale={zhCN}>
-          <Layout style={{ minHeight: '100vh' }}>
-            <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-              <div className="demo-logo-vertical" />
-              <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
-            </Sider>
-            <Layout>
-              {/* <Header style={{ padding: 0, background: colorBgContainer }} /> */}
-              <Content>
-                {children}
-              </Content>
+          <ConfigProvider locale={zhCN}>
+            <Layout className="flex align-center justify-center h-full">
+              <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
+                <div className="flex h-15 leading-15 items-center justify-center text-white">OOPS</div>
+                <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
+              </Sider>
+              <Layout>
+                <Header className="h-15! text-white!">11</Header>
+                <Content>
+                  {children}
+                </Content>
+              </Layout>
             </Layout>
-          </Layout>
-        </ConfigProvider>
-          </AntdRegistry>
+          </ConfigProvider>
+        </AntdRegistry>
       </body>
     </html>
   );

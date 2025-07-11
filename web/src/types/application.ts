@@ -13,4 +13,6 @@ export type ApplicationPodItem = {
   name: string;
   namspace: string;
   status: string;
+  image: string[];
+  podIP: string;
 }

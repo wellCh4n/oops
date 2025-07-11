@@ -6,6 +6,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { AttachAddon } from '@xterm/addon-attach';
 import '@xterm/xterm/css/xterm.css';
+import { openApplicationPodTerminal } from '@/service/application';
 
 export default function TerminalPage() {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -40,8 +41,7 @@ export default function TerminalPage() {
     terminal.open(terminalRef.current);
     fitAddon.fit();
 
-    const socketURL = `ws://localhost:8080/api/namespaces/default/applications/${appName}/pods/${podName}/terminal`;
-    const socket = new WebSocket(socketURL);
+    const socket = openApplicationPodTerminal(`${appName}`, `${podName}`);
     socketRef.current = socket;
 
     socket.binaryType = 'arraybuffer';
@@ -49,7 +49,6 @@ export default function TerminalPage() {
     socket.onopen = () => {
       const attachAddon = new AttachAddon(socket, {bidirectional: true});
       terminal.loadAddon(attachAddon);
-      terminal.writeln('🟢 WebSocket connected');
     };
   }, [appName, podName]);
 
@@ -91,10 +90,9 @@ export default function TerminalPage() {
   }, [appName, podName, initializeTerminal, cleanup]);
 
   return (
-    <div className="h-full w-full bg-black">
-      <div 
+    <div className="h-full w-full" style={{ backgroundColor: '#1e1e1e' }}>
+      <div className='h-full p-2'
         ref={terminalRef} 
-        // className="h-full w-full"
       />
     </div>
   );
