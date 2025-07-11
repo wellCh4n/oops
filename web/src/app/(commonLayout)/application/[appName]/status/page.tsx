@@ -1,6 +1,7 @@
 "use client";
 
 import { useApplicationContext } from "@/context/application-context";
+import { useHeader } from "@/context/header-context";
 import { Button, List, Skeleton, Space, Table, TableProps, Tag } from "antd";
 import { useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
@@ -8,10 +9,23 @@ import { ApplicationPodItem } from "@/types/application";
 import { CodeOutlined, FileTextOutlined, ReloadOutlined } from "@ant-design/icons";
 
 export default () => {
-
   const application = useApplicationContext();
-
+  const { setHeaderContent } = useHeader();
   const [applicationPods, setApplicationPods] = useState<ApplicationPodItem[] | null>(null);
+
+  // 设置Header内容
+  useEffect(() => {
+    if (application) {
+      setHeaderContent(
+        `Application Status: ${application.name}`
+      );
+    }
+    
+    // 组件卸载时重置Header
+    return () => {
+      setHeaderContent('');
+    };
+  }, [application, setHeaderContent]);
 
   const loadApplicationStauts = () => {
     fetchApplicationStatus(application!.name).then((data) => {

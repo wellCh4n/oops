@@ -9,6 +9,7 @@ import 'antd/dist/reset.css';
 import './globals.css';
 import { AppstoreOutlined, SettingOutlined, RocketOutlined } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
+import { HeaderProvider, useHeader } from '@/context/header-context';
 
 const { Header, Content, Sider } = Layout;
 
@@ -30,36 +31,47 @@ const items = [
   },
 ];
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+function LayoutContent({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { headerContent } = useHeader();
 
   const handleMenuClick = (e: any) => {
     router.push(e.key);
   };
 
   return (
+    <Layout className="flex align-center justify-center h-full">
+      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
+        <div className="flex h-15 leading-15 items-center justify-center text-white">OOPS</div>
+        <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
+      </Sider>
+      <Layout>
+        <Header className="h-15! text-white! px-4!">
+          {headerContent}
+        </Header>
+        <Content>
+          {children}
+        </Content>
+      </Layout>
+    </Layout>
+  );
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <AntdRegistry>
           <ConfigProvider locale={zhCN}>
-            <Layout className="flex align-center justify-center h-full">
-              <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-                <div className="flex h-15 leading-15 items-center justify-center text-white">OOPS</div>
-                <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
-              </Sider>
-              <Layout>
-                <Header className="h-15! text-white!">11</Header>
-                <Content>
-                  {children}
-                </Content>
-              </Layout>
-            </Layout>
+            <HeaderProvider>
+              <LayoutContent>{children}</LayoutContent>
+            </HeaderProvider>
           </ConfigProvider>
         </AntdRegistry>
       </body>

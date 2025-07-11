@@ -7,6 +7,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { AttachAddon } from '@xterm/addon-attach';
 import '@xterm/xterm/css/xterm.css';
 import { openApplicationPodTerminal } from '@/service/application';
+import { useHeader } from '@/context/header-context';
 
 export default function TerminalPage() {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -15,6 +16,7 @@ export default function TerminalPage() {
   const isInitializedRef = useRef(false);
   const params = useParams();
   const { appName, podName } = params;
+  const { setHeaderContent } = useHeader();
 
   const initializeTerminal = useCallback(() => {
     if (isInitializedRef.current || !terminalRef.current) {
@@ -77,6 +79,10 @@ export default function TerminalPage() {
       cleanup();
     };
   }, [initializeTerminal, cleanup]);
+
+   useEffect(() => {
+      setHeaderContent(`Application Terminal: ${appName} - ${podName}`)
+    }, [setHeaderContent, appName, podName])
 
   useEffect(() => {
     if (isInitializedRef.current) {

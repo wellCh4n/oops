@@ -9,7 +9,7 @@ const CommonLayout = ({ children }: { children: ReactNode }) => {
 
 	return (
 		<div
-			className="h-full p-2"
+			className="h-full"
 			style={{
 				background: colorBgContainer,
 				borderRadius: borderRadiusLG,
