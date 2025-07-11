@@ -39,11 +39,10 @@ public class TerminalWebSocketHandler extends BinaryWebSocketHandler {
         this.process = exec.exec(
                 namespace,
                 pod,
-                new String[]{"/bin/sh"},
+                new String[]{"/bin/bash"},
                 app,
                 true, true
         );
-
         this.stdin = process.getOutputStream();
 
         this.thread = Thread.startVirtualThread(() -> {

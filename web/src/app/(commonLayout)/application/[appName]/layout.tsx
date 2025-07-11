@@ -4,7 +4,7 @@ import {type ReactNode, useEffect, useState, use} from "react";
 import type { ApplicationItem } from "@/types/application";
 import { fetchApplicationDetail } from "@/service/application";
 import { ApplicationContext } from "@/context/application-context";
-import {Breadcrumb, Divider, Skeleton} from "antd";
+import {Breadcrumb, Card, Divider, Skeleton} from "antd";
 import Link from "next/link";
 
 const ApplicationLayout = ({ children, params }: { children: ReactNode, params: Promise<{ appName: string }> }) => {
@@ -19,12 +19,13 @@ const ApplicationLayout = ({ children, params }: { children: ReactNode, params: 
   }, [requestParams.appName]);
 
   if (!application) {
-    return <Skeleton />;
+    return <Skeleton active/>;
   }
 
   return (
     <ApplicationContext.Provider value={application}>
       <Breadcrumb
+        separator=">"
         items={[
           {
             title: <Link href={`/application`}>Application</Link>,
@@ -34,8 +35,9 @@ const ApplicationLayout = ({ children, params }: { children: ReactNode, params: 
           }
         ]}
       />
-      <Divider type={'horizontal'} />
-      {children}
+      <Card>
+        {children}
+      </Card>
     </ApplicationContext.Provider>
   );
 };

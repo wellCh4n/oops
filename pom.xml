@@ -28,7 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <kubernetes.client.version>24.0.0</kubernetes.client.version>
+        <kubernetes.client.version>23.0.0</kubernetes.client.version>
     </properties>
     <dependencies>
         <dependency>
@@ -68,6 +68,11 @@
         <dependency>
             <groupId>io.kubernetes</groupId>
             <artifactId>client-java</artifactId>
+            <version>${kubernetes.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.kubernetes</groupId>
+            <artifactId>client-java-extended</artifactId>
             <version>${kubernetes.client.version}</version>
         </dependency>
         <dependency>

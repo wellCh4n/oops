@@ -16,17 +16,17 @@ const items = [
   {
     key: '/application',
     icon: <AppstoreOutlined />,
-    label: '应用',
+    label: 'Application',
   },
   {
     key: '/pipeline',
     icon: <RocketOutlined />,
-    label: '流水线',
+    label: 'Pipeline',
   },
   {
     key: '/system',
     icon: <SettingOutlined />,
-    label: '系统',
+    label: 'System',
   },
 ];
 

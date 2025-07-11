@@ -10,23 +10,24 @@ export default () => (
     rowKey="id"
     columns={[
       {
-        title: '应用ID',
+        title: 'Id',
         dataIndex: 'id'
       },
       {
-        title: '应用名称',
+        title: 'Application Name',
         dataIndex: 'name',
       },
       {
-        title: '命名空间',
+        title: 'Namespace',
         dataIndex: 'namespace',
       },
       {
-        title: '操作',
+        title: 'Operation',
         valueType: 'option',
         render: (_, record) => (
           <Space>
-            <Button type="link" href={`/application/${record.name}`}>编辑</Button>
+            <Button type="link" href={`/application/${record.name}`}>Edit</Button>
+            <Button type="link" href={`/application/${record.name}/status`}>Status</Button>
             {/*<Button type="link" danger>删除</Button>*/}
           </Space>
         ),

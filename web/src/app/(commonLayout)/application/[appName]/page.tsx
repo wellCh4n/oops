@@ -15,7 +15,6 @@ export default () => {
 
   return (
     <div>
-       <Link href={`/application/${application?.name}/status`}>Status</Link>
       <ProForm
         layout='horizontal'
         request={ async () => {
@@ -25,6 +24,9 @@ export default () => {
         <ProCard
           title="Metadata"
           bordered
+          extra={
+            <Link href={`/application/${application?.name}/status`}>Status</Link>
+          }
         >
           <ProForm.Group>
             <ProFormText name="id" label="Id" placeholder="Application Id" disabled width="md"/>
