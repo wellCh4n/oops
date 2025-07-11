@@ -14,3 +14,7 @@ body {
   margin: 16px;
   background: rgba(255, 255, 255, 0.2);
 }
+
+.ant-pro-card-body {
+  padding: 24px!important;
+}

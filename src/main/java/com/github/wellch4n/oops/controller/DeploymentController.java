@@ -34,8 +34,8 @@ public class DeploymentController {
     }
 
     @PostMapping
-    public Result<PipelineBuildPod> deployApplication(@PathVariable String namespace,
-                                           @PathVariable String name) {
+    public Result<String> deployApplication(@PathVariable String namespace,
+                                                      @PathVariable String name) {
         try {
             Application application = applicationRepository.findByNamespaceAndName(namespace, name);
 
@@ -55,7 +55,7 @@ public class DeploymentController {
             pipeline.setStatus(PipelineStatus.RUNNING);
             pipelineRepository.save(pipeline);
 
-            return Result.success(pipelineBuildPod);
+            return Result.success(pipelineBuildPod.getPipelineId());
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }

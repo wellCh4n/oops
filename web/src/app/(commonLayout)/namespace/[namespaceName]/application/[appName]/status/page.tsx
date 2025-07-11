@@ -2,7 +2,7 @@
 
 import { useApplicationContext } from "@/context/application-context";
 import { useHeader } from "@/context/header-context";
-import { Button, List, Skeleton, Space, Table, TableProps, Tag } from "antd";
+import {Button, Card, List, Skeleton, Space, Table, TableProps, Tag} from "antd";
 import { useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
 import { ApplicationPodItem } from "@/types/application";
@@ -65,7 +65,7 @@ export default () => {
       key: 'images',
       width: 300,
       render: (_, records) => (
-        <div className="flex flex-wrap gap-1 max-w-full">
+        <div className="flex flex-wrap gap-1">
           {records.image.map((image) => (
             <Tag key={image}>
               {image}
@@ -110,7 +110,10 @@ export default () => {
 
   return (
     <div >
-      <Table scroll={{ x: 'max-content' }} columns={colmus} dataSource={applicationPods} />
+      <Card>
+        <Table columns={colmus} dataSource={applicationPods} pagination={false} />
+      </Card>
+
     </div>
   );
 }

@@ -1,0 +1,66 @@
+'use client';
+
+import { useHeader } from "@/context/header-context";
+import { fetchApplicationDetail } from "@/service/application";
+import { deployApplication } from "@/service/deployment";
+import { ApplicationItem } from "@/types/application";
+import { SendOutlined } from "@ant-design/icons";
+import { Button, Card, Descriptions, DescriptionsProps } from "antd";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+
+export default () => {
+  const { setHeaderContent } = useHeader()
+  const params = useParams();
+  const appName = params?.appName as string;
+
+  const [application, setApplication] = useState<ApplicationItem | null>(null);
+
+  const handleDeploy = () => {
+    console.log('deploy')
+    deployApplication(application!.namespace, application!.name).then((data) => {
+      console.log(data)
+    })
+  }
+
+  useEffect(() => {
+    setHeaderContent('Deployment')
+    return () => {
+      setHeaderContent('')
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchApplicationDetail(appName).then((application) => {
+      setApplication(application)
+    })
+    return () => {
+      setApplication(null)
+    }
+  }, [appName])
+
+  if (!application) {
+    return <></>
+  }
+
+  return (
+    <div className="h-full">
+      <Card>
+        <Descriptions>
+          <Descriptions.Item label="Application" span={'filled'}>{application?.name}</Descriptions.Item>
+          <Descriptions.Item label="Namespace" span={'filled'}>{application?.namespace}</Descriptions.Item>
+          <Descriptions.Item label="Repository" span={'filled'}>{application?.repository}</Descriptions.Item>
+          <Descriptions.Item span={'filled'}>
+            <Button 
+              type="primary" 
+              icon={<SendOutlined />}
+              onClick={() => handleDeploy()}
+            >
+              Deploy
+            </Button>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+    </div>
+  );
+}

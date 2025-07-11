@@ -33,6 +33,13 @@ public class PipelineController {
         this.pipelineRepository = pipelineRepository;
     }
 
+    @GetMapping
+    public Result<List<Pipeline>> getPipelines(@PathVariable String namespace,
+                                               @PathVariable String name) {
+        List<Pipeline> pipelines = pipelineRepository.findByNamespaceAndApplicationName(namespace, name);
+        return Result.success(pipelines);
+    }
+
     @GetMapping("/{id}")
     public Result<Pipeline> getPipeline(@PathVariable String namespace,
                                         @PathVariable String name,

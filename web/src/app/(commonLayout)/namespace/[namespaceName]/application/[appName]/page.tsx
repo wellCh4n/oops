@@ -8,10 +8,12 @@ import {
 } from "@ant-design/pro-components";
 import { useApplicationContext } from "@/context/application-context";
 import Link from "next/link";
+import {useParams} from "next/navigation";
 
 export default () => {
   
   const application = useApplicationContext();
+  const { namespaceName } = useParams()
 
   return (
     <div>
@@ -25,7 +27,7 @@ export default () => {
           title="Metadata"
           bordered
           extra={
-            <Link href={`/web/src/app/(commonLayout)/namespace/%5BnamespaceName%5D/application/${application?.name}/status`}>Status</Link>
+            <Link href={`/namespace/${namespaceName}/application/${application?.name}/status`}>Status</Link>
           }
         >
           <ProForm.Group>

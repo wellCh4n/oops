@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { ConfigProvider, Layout, Menu, theme } from 'antd';
 import '@ant-design/v5-patch-for-react-19';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
 import 'antd/dist/reset.css';
 import './globals.css';
 import { AppstoreOutlined, SettingOutlined, RocketOutlined } from '@ant-design/icons';
@@ -68,7 +68,7 @@ export default function RootLayout({
     <html lang="zh-CN" suppressHydrationWarning>
       <body>
         <AntdRegistry>
-          <ConfigProvider locale={zhCN}>
+          <ConfigProvider locale={enUS}>
             <HeaderProvider>
               <LayoutContent>{children}</LayoutContent>
             </HeaderProvider>

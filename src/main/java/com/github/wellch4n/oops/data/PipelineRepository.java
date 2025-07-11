@@ -16,5 +16,7 @@ public interface PipelineRepository extends CrudRepository<Pipeline, String> {
 
     Pipeline findByNamespaceAndApplicationNameAndId(String namespace, String applicationName, String id);
 
+    List<Pipeline> findByNamespaceAndApplicationName(String namespace, String applicationName);
+
     List<Pipeline> findAllByStatus(PipelineStatus status);
 }

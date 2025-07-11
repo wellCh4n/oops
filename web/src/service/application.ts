@@ -1,8 +1,8 @@
 import { ApplicationItem, ApplicationPodItem } from "@/types/application"
 import request from "@/utils/request"
 
-export const fetchApplicationList = () => {
-  return request.get<ApplicationItem[]>('/api/namespaces/default/applications')
+export const fetchApplicationList = (namespace: string) => {
+  return request.get<ApplicationItem[]>(`/api/namespaces/${namespace}/applications`)
 }
 
 export const fetchApplicationDetail = (name: string) => {

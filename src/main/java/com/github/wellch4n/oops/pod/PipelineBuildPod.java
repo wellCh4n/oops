@@ -22,6 +22,9 @@ public class PipelineBuildPod extends V1Pod {
     @Setter
     private String artifact;
 
+    @Getter
+    private final String pipelineId;
+
     public PipelineBuildPod(Application application, Pipeline pipeline,
                             List<BaseContainer> stepContainers, BaseContainer finishContainer) {
 
@@ -39,6 +42,8 @@ public class PipelineBuildPod extends V1Pod {
                 "oops.pipeline.application.name", applicationName
         );
         metadata.setLabels(labels);
+
+        this.pipelineId = pipelineId;
 
         List<V1Container> initContainers = new ArrayList<>(stepContainers);
 
