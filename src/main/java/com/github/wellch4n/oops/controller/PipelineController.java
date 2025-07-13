@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
@@ -27,6 +28,7 @@ import java.util.List;
 @RequestMapping("/api/namespaces/{namespace}/applications/{name}/pipelines")
 public class PipelineController {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final PipelineRepository pipelineRepository;
 
     public PipelineController(PipelineRepository pipelineRepository) {
@@ -66,6 +68,10 @@ public class PipelineController {
                 v1Pod.getSpec().getInitContainers().forEach(container -> containers.add(container.getName()));
                 v1Pod.getSpec().getContainers().forEach(container -> containers.add(container.getName()));
 
+                SseEmitter.SseEventBuilder steps = SseEmitter.event().name("steps")
+                        .data(objectMapper.writeValueAsString(containers));
+                emitter.send(steps);
+
                 for (String containerName : containers) {
                     PodLogs logs = new PodLogs(KubernetesClientFactory.getClient());
                     try (InputStream is = logs.streamNamespacedPodLog("oops", pipelineName, containerName)) {
@@ -100,7 +106,7 @@ public class PipelineController {
         }
 
         try {
-            V1Pod pod = KubernetesClientFactory.getCoreApi().readNamespacedPod(pipeline.getName(), namespace).execute();
+            V1Pod pod = KubernetesClientFactory.getCoreApi().readNamespacedPod(pipeline.getName(), "oops").execute();
             if (pod != null) {
                 KubernetesClientFactory.getCoreApi().deleteNamespacedPod(pipeline.getName(), "oops").execute();
                 pipeline.setStatus(PipelineStatus.STOPED);

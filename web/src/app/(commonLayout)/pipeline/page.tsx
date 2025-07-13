@@ -1,7 +1,8 @@
 'use client';
 
+import { useHeader } from '@/context/header-context';
 import { fetchNamespaceList } from '@/service/namespace';
-import { fetchPipelines } from '@/service/pipeline';
+import { fetchPipelines, stopPipeline } from '@/service/pipeline';
 import { PipelineItem } from '@/types/pipeline';
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Space } from 'antd';
@@ -11,6 +12,18 @@ export default function PipelinePage() {
 
   const [namespaces, setNamespaces] = useState<string[] | null>(null);
   const [namespaceValueEnum, setNamespaceValueEnum] = useState<Record<string, { text: string }>>({})
+
+  const {setHeaderContent} = useHeader();
+
+  useEffect(() => {
+    setHeaderContent(
+      <span>Pipeline</span>
+    )
+
+    return () => {
+      setHeaderContent(null)
+    }
+  }, [])
 
   useEffect(() => {
     fetchNamespaceList().then((data) => {
@@ -28,7 +41,7 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="p-3">
+    <div className="p-3 h-full overflow-y-auto">
       <ProTable<PipelineItem>
         options={false}
         rowKey="id"
@@ -60,7 +73,12 @@ export default function PipelinePage() {
             valueType: 'option',
             render: (_, record) => (
               <Space>
-                <Button>Watch</Button>
+                <Button href={`/namespace/${record.namespace}/application/${record.applicationName}/pipeline/${record.id}`}>Watch</Button>
+                <Button onClick={() => {
+                  stopPipeline(record.namespace, record.applicationName, record.id).then((data) => {
+                    console.log(data)
+                  })
+                }}>Stop</Button>
               </Space>
             ),
           },
