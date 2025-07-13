@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.data;
 
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,7 +13,7 @@ import java.util.List;
  */
 
 @Repository
-public interface PipelineRepository extends CrudRepository<Pipeline, String> {
+public interface PipelineRepository extends CrudRepository<Pipeline, String>, JpaSpecificationExecutor<Pipeline> {
 
     Pipeline findByNamespaceAndApplicationNameAndId(String namespace, String applicationName, String id);
 

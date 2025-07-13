@@ -1,6 +1,7 @@
 'use client';
 
 import { useHeader } from '@/context/header-context';
+import { queryPipelines } from '@/service';
 import { fetchNamespaceList } from '@/service/namespace';
 import { fetchPipelines, stopPipeline } from '@/service/pipeline';
 import { PipelineItem } from '@/types/pipeline';
@@ -84,13 +85,7 @@ export default function PipelinePage() {
           },
         ]}
         request={async (params, sort, filter) => {
-          console.log(params)
-          if (!params.namespace || !params.applicationName) {
-            return {
-              data: []
-            }
-          }
-          const data = await fetchPipelines(params.namespace, params.applicationName);
+          const data = await queryPipelines(params)
           return {
             data: data
           };
