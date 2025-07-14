@@ -3,10 +3,9 @@
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Space } from 'antd';
 import { ApplicationItem } from '@/types/application';
-import { fetchApplicationList } from '@/service/application';
 import Link from 'next/link';
 import { DatabaseOutlined, EditOutlined, InfoCircleOutlined, SendOutlined } from '@ant-design/icons';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 import { useHeader } from '@/context/header-context';
 import { fetchNamespaceList } from "@/service/namespace";
 import { queryApplications } from '@/service';
@@ -82,14 +81,14 @@ export default function ApplicationPage() {
             ),
           },
         ]}
-        request={async (params, sort, filter) => {
+        request={async (params) => {
           const data = await queryApplications(params);
           return {
             data: data
           };
         }}
         toolBarRender={() => [
-          <Button type="primary" href="/application/create">Create</Button>
+          <Button key="create" type="primary" href="/application/create">Create</Button>
         ]}
         cardBordered
       />

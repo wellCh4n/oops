@@ -5,11 +5,11 @@ import { fetchApplicationDetail } from "@/service/application";
 import { deployApplication } from "@/service/deployment";
 import { ApplicationItem } from "@/types/application";
 import { SendOutlined } from "@ant-design/icons";
-import { Button, Card, Descriptions, DescriptionsProps } from "antd";
+import { Button, Card, Descriptions } from "antd";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default () => {
+const DeploymentPage = () => {
   const { setHeaderContent } = useHeader()
   const params = useParams();
   const appName = params?.appName as string;
@@ -28,7 +28,7 @@ export default () => {
     return () => {
       setHeaderContent('')
     }
-  }, [])
+  })
 
   useEffect(() => {
     fetchApplicationDetail(appName).then((application) => {
@@ -64,3 +64,7 @@ export default () => {
     </div>
   );
 }
+
+DeploymentPage.displayName = 'DeploymentPage';
+
+export default DeploymentPage;

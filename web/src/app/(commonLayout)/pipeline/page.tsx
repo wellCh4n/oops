@@ -3,7 +3,7 @@
 import { useHeader } from '@/context/header-context';
 import { queryPipelines } from '@/service';
 import { fetchNamespaceList } from '@/service/namespace';
-import { fetchPipelines, stopPipeline } from '@/service/pipeline';
+import { stopPipeline } from '@/service/pipeline';
 import { PipelineItem } from '@/types/pipeline';
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Space } from 'antd';
@@ -24,7 +24,7 @@ export default function PipelinePage() {
     return () => {
       setHeaderContent(null)
     }
-  }, [])
+  }, [ setHeaderContent ])
 
   useEffect(() => {
     fetchNamespaceList().then((data) => {
@@ -84,7 +84,7 @@ export default function PipelinePage() {
             ),
           },
         ]}
-        request={async (params, sort, filter) => {
+        request={async (params) => {
           const data = await queryPipelines(params)
           return {
             data: data

@@ -5,7 +5,7 @@ import ApplicationEditor from "@/component/ApplicationEditor";
 import { useHeader } from "@/context/header-context";
 import { useEffect } from "react";
 
-export default () => {
+const ApplicationPage = () => {
   const application = useApplicationContext();
   const { setHeaderContent } = useHeader();
 
@@ -15,10 +15,14 @@ export default () => {
         <span>Application {application?.name} Edit</span>
       </>
     )
-  }, [application])
+
+    return () => {
+      setHeaderContent('')
+    }
+  }, [application, setHeaderContent])
 
   if (!application) {
-    return <></>
+    return <></>;
   }
 
   return (
@@ -27,3 +31,7 @@ export default () => {
     </div>
   );
 }
+
+ApplicationPage.displayName = 'ApplicationPage';
+
+export default ApplicationPage;

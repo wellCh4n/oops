@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ConfigProvider, Layout, Menu, theme } from 'antd';
+import { ConfigProvider, Layout, Menu } from 'antd';
+import type { MenuProps } from 'antd';
 import '@ant-design/v5-patch-for-react-19';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import enUS from 'antd/locale/en_US';
@@ -37,7 +38,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { headerContent } = useHeader();
 
-  const handleMenuClick = (e: any) => {
+  const handleMenuClick: MenuProps['onClick'] = (e) => {
     router.push(e.key);
   };
 

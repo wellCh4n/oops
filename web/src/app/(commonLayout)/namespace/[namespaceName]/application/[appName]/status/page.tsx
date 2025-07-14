@@ -2,20 +2,19 @@
 
 import { useApplicationContext } from "@/context/application-context";
 import { useHeader } from "@/context/header-context";
-import {Button, Card, List, Skeleton, Space, Table, TableProps, Tag} from "antd";
-import { useEffect, useState } from "react";
+import {Button, Card, Skeleton, Space, Table, TableProps, Tag} from "antd";
+import { useCallback, useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
 import { ApplicationPodItem } from "@/types/application";
 import { CodeOutlined, FileTextOutlined, ReloadOutlined } from "@ant-design/icons";
 import {useParams} from "next/navigation";
 
-export default () => {
+const ApplicationStatusPage = () => {
   const application = useApplicationContext();
   const { setHeaderContent } = useHeader();
   const [applicationPods, setApplicationPods] = useState<ApplicationPodItem[] | null>(null);
   const { namespaceName } =  useParams();
 
-  // 设置Header内容
   useEffect(() => {
     if (application) {
       setHeaderContent(
@@ -23,17 +22,16 @@ export default () => {
       );
     }
     
-    // 组件卸载时重置Header
     return () => {
       setHeaderContent('');
     };
   }, [application, setHeaderContent]);
 
-  const loadApplicationStatus = () => {
+  const loadApplicationStatus = useCallback(() => {
     fetchApplicationStatus(application!.name).then((data) => {
       setApplicationPods(data)
     })
-  };
+  }, [application]);
 
   useEffect(() => {
     if(!application) return;
@@ -43,7 +41,7 @@ export default () => {
     const interval = setInterval(loadApplicationStatus, 5000);
     
     return () => clearInterval(interval);
-  }, [application?.name])
+  }, [application?.name, application, loadApplicationStatus])
 
   if(!applicationPods) {
     return <Skeleton active/>
@@ -117,3 +115,5 @@ export default () => {
     </div>
   );
 }
+
+export default ApplicationStatusPage;

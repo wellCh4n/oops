@@ -24,20 +24,20 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   const [ namespaces, setNamespaces ] = useState<string[] | null>([]);
   const [form] = ProForm.useForm();
 
-  if (createMode || editMode) {
     useEffect(() => {
-      fetchNamespaceList().then((namespaces) => {
-        setNamespaces(namespaces);
-        if (createMode && namespaces && namespaces.length > 0) {
-          form.setFieldsValue({ namespace: namespaces[0] });
-        }
-      })
+      if (createMode || editMode) {
+        fetchNamespaceList().then((namespaces) => {
+          setNamespaces(namespaces);
+          if (createMode && namespaces && namespaces.length > 0) {
+            form.setFieldsValue({ namespace: namespaces[0] });
+          }
+        })
+      }
 
       return () => {
         setNamespaces(null)
       }
     }, [ createMode, editMode, form ])
-  }
 
   if (!namespaces) {
     return <Skeleton active />

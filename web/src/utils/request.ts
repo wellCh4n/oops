@@ -53,10 +53,12 @@ function del<T = any>(url: string, data?: Record<string, any>) {
   });
 }
 
-export default {
+const requests = {
   get,
   post,
   put,
   del,
   baseUrl
 };
+
+export default requests;

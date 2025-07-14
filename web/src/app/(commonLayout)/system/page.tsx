@@ -15,7 +15,10 @@ export default function SystemPage() {
     setHeaderContent(
       <span>System</span>
     )
-  }, [])
+    return () => {
+      setHeaderContent("");
+    }
+  }, [ setHeaderContent ])
 
   useEffect(() => {
     fetchSystem().then((data) => {

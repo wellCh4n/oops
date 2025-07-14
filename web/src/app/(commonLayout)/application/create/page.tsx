@@ -3,11 +3,9 @@
 import ApplicationEditor from "@/component/ApplicationEditor";
 import { useHeader } from "@/context/header-context";
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 export default function CreateApplicationPage() {
   const { setHeaderContent } = useHeader();
-  const router = useRouter();
 
   useEffect(() => {
     setHeaderContent(

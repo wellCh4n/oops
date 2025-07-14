@@ -3,7 +3,7 @@
 import { useHeader } from "@/context/header-context";
 import { fetchPipeline, watchPipeline } from "@/service/pipeline";
 import { PipelineItem } from "@/types/pipeline";
-import { Card, Segmented, Steps } from "antd";
+import { Steps } from "antd";
 import { useParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 
@@ -31,7 +31,11 @@ export default function PipelineDetailPage() {
     setHeaderContent(
       <span>Pipeline {pipeline?.name}</span>
     )
-  }, [pipeline])
+
+    return () => {
+      setHeaderContent("")
+    }
+  }, [pipeline, setHeaderContent])
 
   useEffect(() => {
     console.log(namespaceName, appName, pipelineId);
