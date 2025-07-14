@@ -75,7 +75,7 @@ export default function PipelinePage() {
             render: (_, record) => (
               <Space>
                 <Button href={`/namespace/${record.namespace}/application/${record.applicationName}/pipeline/${record.id}`}>Watch</Button>
-                <Button onClick={() => {
+                <Button danger onClick={() => {
                   stopPipeline(record.namespace, record.applicationName, record.id).then((data) => {
                     console.log(data)
                   })

@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
+import com.github.wellch4n.oops.volume.BuildCacheVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -55,6 +56,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
 
+        BuildCacheVolume buildCacheVolume = new BuildCacheVolume();
+
         List<BaseContainer> initContainers = Lists.newArrayList();
 
         CloneContainer clone = new CloneContainer(application);
@@ -64,6 +67,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         if (StringUtils.isNotEmpty(application.getBuildImage()) && StringUtils.isNotEmpty(application.getBuildCommand())) {
             BuildContainer build = new BuildContainer(application);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
+            build.addVolumeMounts(buildCacheVolume.getVolumeMounts());
             initContainers.add(build);
         }
 
@@ -77,6 +81,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
+        pipelineBuildPod.addVolumes(buildCacheVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try {

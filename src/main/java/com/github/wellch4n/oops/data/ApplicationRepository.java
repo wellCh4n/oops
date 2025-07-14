@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.data;
 
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,7 +12,7 @@ import java.util.List;
  */
 
 @Repository
-public interface ApplicationRepository extends CrudRepository<Application, String> {
+public interface ApplicationRepository extends CrudRepository<Application, String>, JpaSpecificationExecutor<Application> {
 
     Application findByNamespaceAndName(String namespace, String name);
 

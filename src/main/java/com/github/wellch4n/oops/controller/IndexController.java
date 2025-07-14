@@ -1,7 +1,10 @@
 package com.github.wellch4n.oops.controller;
 
+import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
+import com.github.wellch4n.oops.objects.ApplicationQueryRequest;
 import com.github.wellch4n.oops.objects.PipelineQuery;
 import com.github.wellch4n.oops.objects.Result;
 import jakarta.persistence.criteria.Predicate;
@@ -20,9 +23,12 @@ import java.util.List;
 @RequestMapping("/api/index")
 public class IndexController {
 
-    public final PipelineRepository pipelineRepository;
+    private final ApplicationRepository applicationRepository;
+    private final PipelineRepository pipelineRepository;
 
-    public IndexController(PipelineRepository pipelineRepository) {
+    public IndexController(ApplicationRepository applicationRepository,
+                           PipelineRepository pipelineRepository) {
+        this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
     }
 
@@ -36,11 +42,29 @@ public class IndexController {
             }
 
             if (StringUtils.isNotEmpty(pipelineQuery.getApplicationName())) {
-                predicates.add(criteriaBuilder.equal(root.get("applicationName"), pipelineQuery.getApplicationName()));
+                predicates.add(criteriaBuilder.like(root.get("applicationName"), "%" + pipelineQuery.getApplicationName() + "%"));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         });
         return Result.success(pipelines);
+    }
+
+    @PostMapping("/applications")
+    public Result<List<Application>> queryApplication(@RequestBody ApplicationQueryRequest applicationQueryRequest) {
+        List<Application> applications = applicationRepository.findAll((root, query, criteriaBuilder) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (StringUtils.isNotEmpty(applicationQueryRequest.getName())) {
+                predicates.add(criteriaBuilder.like(root.get("name"), "%" + applicationQueryRequest.getName() + "%"));
+            }
+
+            if (StringUtils.isNotEmpty(applicationQueryRequest.getNamespace())) {
+                predicates.add(criteriaBuilder.equal(root.get("namespace"), applicationQueryRequest.getNamespace()));
+            }
+
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        });
+        return Result.success(applications);
     }
 }

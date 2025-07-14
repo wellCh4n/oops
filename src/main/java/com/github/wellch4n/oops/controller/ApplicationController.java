@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import com.github.wellch4n.oops.objects.ApplicationCrudRequest;
+import com.github.wellch4n.oops.objects.ApplicationCreateOrUpdateRequest;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import io.kubernetes.client.PodLogs;
@@ -57,7 +57,7 @@ public class ApplicationController {
 
     @PostMapping
     public Result<Boolean> createApplication(@PathVariable String namespace,
-                                             @RequestBody ApplicationCrudRequest request) {
+                                             @RequestBody ApplicationCreateOrUpdateRequest request) {
         Application application = new Application();
         application.setName(request.getName());
         application.setNamespace(namespace);
@@ -74,7 +74,7 @@ public class ApplicationController {
     @PutMapping("/{name}")
     public Result<Boolean> updateApplication(@PathVariable String namespace,
                                              @PathVariable String name,
-                                             @RequestBody ApplicationCrudRequest request) {
+                                             @RequestBody ApplicationCreateOrUpdateRequest request) {
         Application application = repository.findByNamespaceAndName(namespace, name);
         if (application == null) {
             return Result.failure("Application not found");

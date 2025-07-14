@@ -8,7 +8,7 @@ import lombok.Data;
  */
 
 @Data
-public class ApplicationCrudRequest {
+public class ApplicationCreateOrUpdateRequest {
     private String name;
     private String repository;
     private String dockerFile;

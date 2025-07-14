@@ -9,12 +9,13 @@ import { DatabaseOutlined, EditOutlined, InfoCircleOutlined, SendOutlined } from
 import {useEffect, useRef, useState} from 'react';
 import { useHeader } from '@/context/header-context';
 import { fetchNamespaceList } from "@/service/namespace";
+import { queryApplications } from '@/service';
 
 export default function ApplicationPage() {
 
-  const {setHeaderContent} = useHeader()
-  const [namespaces, setNamespaces] = useState<string[] | null>(null)
-  const [namespaceValueEnum, setNamespaceValueEnum] = useState<Record<string, { text: string }>>({})
+  const {setHeaderContent} = useHeader();
+  const [namespaces, setNamespaces] = useState<string[] | null>(null);
+  const [namespaceValueEnum, setNamespaceValueEnum] = useState<Record<string, { text: string }>>({});
 
   useEffect(() => {
     setHeaderContent(
@@ -82,11 +83,14 @@ export default function ApplicationPage() {
           },
         ]}
         request={async (params, sort, filter) => {
-          const data = await fetchApplicationList(params.namespace);
+          const data = await queryApplications(params);
           return {
             data: data
           };
         }}
+        toolBarRender={() => [
+          <Button type="primary" href="/application/create">Create</Button>
+        ]}
         cardBordered
       />
     </div>
