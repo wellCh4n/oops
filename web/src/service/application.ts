@@ -25,3 +25,11 @@ export const openApplicationPodTerminal = (name: string, podName: string) => {
 export const fetchApplicationPodLog = (name: string, podName: string) => {
     return new EventSource(`http://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/log`)
 }
+
+export const createApplication = (namespace: string, application: ApplicationItem) => {
+  return request.post(`/api/namespaces/${namespace}/applications`, application)
+}
+
+export const updateApplication = (namespace: string, application: ApplicationItem) => {
+  return request.put(`/api/namespaces/${namespace}/applications/${application.name}`, application)
+}

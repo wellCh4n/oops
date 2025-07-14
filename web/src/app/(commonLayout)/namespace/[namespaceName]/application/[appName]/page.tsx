@@ -1,20 +1,21 @@
 'use client'
 
-import {
-  ProForm,
-  ProFormText,
-  ProFormDigit,
-  ProCard,
-} from "@ant-design/pro-components";
 import { useApplicationContext } from "@/context/application-context";
-import Link from "next/link";
-import {useParams} from "next/navigation";
 import ApplicationEditor from "@/component/ApplicationEditor";
+import { useHeader } from "@/context/header-context";
+import { useEffect } from "react";
 
 export default () => {
-  
   const application = useApplicationContext();
-  const { namespaceName, appName } = useParams()
+  const { setHeaderContent } = useHeader();
+
+  useEffect(() => {
+    setHeaderContent(
+      <>
+        <span>Application {application?.name} Edit</span>
+      </>
+    )
+  }, [application])
 
   if (!application) {
     return <></>

@@ -35,7 +35,7 @@ export default function PipelineDetailPage() {
 
   useEffect(() => {
     console.log(namespaceName, appName, pipelineId);
-    let eventSource = watchPipeline(namespaceName, appName, pipelineId);
+    const eventSource = watchPipeline(namespaceName, appName, pipelineId);
 
     eventSource.addEventListener('steps', (event) => {
       const stepNames = JSON.parse(event.data)
