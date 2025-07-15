@@ -52,6 +52,8 @@ export default function PipelineDetailPage() {
             logs.push(event.data);
             return { ...prev, [stepName]: logs };
           });
+          
+          setCurrentStep(stepNames.indexOf(stepName));
         })
       })
     })

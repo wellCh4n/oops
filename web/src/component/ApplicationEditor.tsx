@@ -52,7 +52,7 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   }
 
   return (
-    <div>
+    <div className="p-3">
       <ProForm
           layout='horizontal'
           form={form}

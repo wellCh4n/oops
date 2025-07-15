@@ -22,6 +22,11 @@ export const openApplicationPodTerminal = (name: string, podName: string) => {
     return new WebSocket(url);
 }
 
+export const openApplicationPodExplorer = (name: string, podName: string) => {
+    const url = `ws://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/explorer`
+    return new WebSocket(url);
+}
+
 export const fetchApplicationPodLog = (name: string, podName: string) => {
     return new EventSource(`http://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/log`)
 }
