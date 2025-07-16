@@ -31,7 +31,7 @@ public class ExplorerWebSocketHandler extends TextWebSocketHandler {
     private Thread pingThread;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final String LS_COMMAND_TEMPLATE = "ls -lh /%s \n";
+    private static final String LS_COMMAND_TEMPLATE = "ls -lh %s \n";
 
     private static final Pattern LS_LINE_PATTERN = Pattern.compile(
             "^([\\-a-z]+)\\s+(\\d+)\\s+(\\S+)\\s+(\\S+)\\s+(\\S+)\\s+([A-Z][a-z]{2,3}\\s+\\d{1,2}\\s+(?:\\d{2}:\\d{2}|\\d{4}))\\s+(.+)$"
@@ -70,11 +70,8 @@ public class ExplorerWebSocketHandler extends TextWebSocketHandler {
                     outputBuffer.append(chunk);
 
                     if (outputBuffer.toString().matches("(?s).*\\n?[#$] ?$")) {
-                        List<FileEntryResponse> fileEntryResponses = parseFileEntries(outputBuffer.toString());
-                        if (fileEntryResponses.isEmpty()) {
-                            continue;
-                        }
-                        String content = objectMapper.writeValueAsString(fileEntryResponses);
+                        FileEntryResponse fileEntryResponse = parseFileEntries(outputBuffer.toString());
+                        String content = objectMapper.writeValueAsString(fileEntryResponse);
                         session.sendMessage(new TextMessage(content));
                         outputBuffer.setLength(0);
                     }
@@ -101,7 +98,6 @@ public class ExplorerWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(@NotNull WebSocketSession session, @NotNull TextMessage message) throws Exception {
         if (stdin != null) {
             String text = message.getPayload();
-            if (text.equals("/")) text = "";
             String command = LS_COMMAND_TEMPLATE.formatted(text);
             try {
                 stdin.write(command.getBytes(StandardCharsets.UTF_8));
@@ -133,29 +129,46 @@ public class ExplorerWebSocketHandler extends TextWebSocketHandler {
         session.close();
     }
 
-    private List<FileEntryResponse> parseFileEntries(String output) {
-        List<FileEntryResponse> result = new ArrayList<>();
+    private FileEntryResponse parseFileEntries(String output) {
+        if (output.startsWith("# ")) {
+            output = output.replaceAll("# ", "");
+        }
+
         String[] lines = output.split("\\r?\\n");
+
+        String path = "";
+
+        FileEntryResponse entry = new FileEntryResponse();
+        List<FileEntryResponse.FileEntry> files = new ArrayList<>();
         for (String line : lines) {
-            if (line.trim().isEmpty() || line.startsWith("total") || line.startsWith("#") || line.startsWith("ls -lh")) {
+            if (line.startsWith("ls -lh")) {
+                path = line.replaceAll("ls -lh ", "").trim();
+                entry.setPwd(path);
+                continue;
+            }
+
+            if (line.trim().isEmpty() || line.startsWith("total") || line.startsWith("#")) {
                 continue;
             }
 
             Matcher matcher = LS_LINE_PATTERN.matcher(line);
             if (matcher.matches()) {
-                FileEntryResponse entry = new FileEntryResponse();
-                entry.setPermissions(matcher.group(1));
-                entry.setLinks(Integer.parseInt(matcher.group(2)));
-                entry.setOwner(matcher.group(3));
-                entry.setGroup(matcher.group(4));
-                entry.setSize(matcher.group(5));
-                entry.setDate(matcher.group(6));
-                entry.setName(matcher.group(7));
-                result.add(entry);
-            } else {
-                System.err.println("无法解析行: " + line);
+                FileEntryResponse.FileEntry fileEntry = new FileEntryResponse.FileEntry();
+                fileEntry.setPermissions(matcher.group(1));
+                fileEntry.setLinks(Integer.parseInt(matcher.group(2)));
+                fileEntry.setOwner(matcher.group(3));
+                fileEntry.setGroup(matcher.group(4));
+                fileEntry.setSize(matcher.group(5));
+                fileEntry.setDate(matcher.group(6));
+                fileEntry.setName(matcher.group(7));
+
+                fileEntry.setAbsolutePath(path, fileEntry.getName());
+                files.add(fileEntry);
             }
         }
-        return result;
+
+        entry.setItems(files);
+
+        return entry;
     }
 }

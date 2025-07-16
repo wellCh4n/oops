@@ -16,3 +16,20 @@ export type ApplicationPodItem = {
   image: string[];
   podIP: string;
 }
+
+export type ApplicationPodFileDirectory = {
+  pwd: string;
+  items: ApplicationPodFileItem[];
+}
+
+export type ApplicationPodFileItem = {
+  absolutePath: string;
+  permissions: string;
+  links: number;
+  owner: string;
+  group: string;
+  size: string;
+  date: string;
+  name: string;
+  directory: boolean;
+}
