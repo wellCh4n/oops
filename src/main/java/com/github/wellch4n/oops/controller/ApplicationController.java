@@ -56,7 +56,7 @@ public class ApplicationController {
     }
 
     @PostMapping
-    public Result<Boolean> createApplication(@PathVariable String namespace,
+    public Result<String> createApplication(@PathVariable String namespace,
                                              @RequestBody ApplicationCreateOrUpdateRequest request) {
         Application application = new Application();
         application.setName(request.getName());
@@ -68,7 +68,7 @@ public class ApplicationController {
         application.setReplicas(request.getReplicas());
         repository.save(application);
 
-        return Result.success(true);
+        return Result.success(application.getId());
     }
 
     @PutMapping("/{name}")

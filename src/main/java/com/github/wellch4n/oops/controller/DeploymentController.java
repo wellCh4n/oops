@@ -35,7 +35,7 @@ public class DeploymentController {
 
     @PostMapping
     public Result<String> deployApplication(@PathVariable String namespace,
-                                                      @PathVariable String name) {
+                                            @PathVariable String name) {
         try {
             Application application = applicationRepository.findByNamespaceAndName(namespace, name);
 

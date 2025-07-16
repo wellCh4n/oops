@@ -6,6 +6,7 @@ import { ApplicationItem } from "@/types/application";
 import { ProCard, ProForm, ProFormDigit, ProFormSelect, ProFormText } from "@ant-design/pro-components";
 import { Skeleton } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState }  from "react";
 
 type EditorMode = "create" | "preview" | "edit";
@@ -23,6 +24,7 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
 
   const [ namespaces, setNamespaces ] = useState<string[] | null>([]);
   const [form] = ProForm.useForm();
+  const router = useRouter();
 
     useEffect(() => {
       if (createMode || editMode) {
@@ -44,11 +46,13 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   }
 
   const handlerCreate = (application: ApplicationItem) => {
-    createApplication(application.namespace, application);
+    createApplication(application.namespace, application).then(() => {
+      router.push(`/namespace/${application.namespace}/application/${application.name}`)
+    });
   }
 
   const handleUpdate = (application: ApplicationItem) => {
-    updateApplication(application.namespace, application);
+    updateApplication(application.namespace, application)
   }
 
   return (
