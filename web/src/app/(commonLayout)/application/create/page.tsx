@@ -22,10 +22,6 @@ export default function CreateApplicationPage() {
       <ApplicationEditor 
         mode="create" 
         application={{
-          id: "",
-          name: "",
-          namespace: "",
-          repository: "",
           replicas: 1
         }} 
       />

@@ -2,8 +2,8 @@
 
 import { createApplication, updateApplication } from "@/service/application";
 import { fetchNamespaceList } from "@/service/namespace";
-import { ApplicationItem } from "@/types/application";
-import { ProCard, ProForm, ProFormDigit, ProFormSelect, ProFormText } from "@ant-design/pro-components";
+import { ApplicationDetailItem, ApplicationItem } from "@/types/application";
+import { ProCard, ProForm, ProFormDigit, ProFormGroup, ProFormList, ProFormSelect, ProFormText } from "@ant-design/pro-components";
 import { Skeleton } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ type EditorMode = "create" | "preview" | "edit";
 
 interface ApplicationEditorProps {
   mode: EditorMode;
-  application?: ApplicationItem
+  application?: Partial<ApplicationDetailItem>
 }
 
 const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application }) => {
@@ -23,8 +23,10 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   const createMode = mode === "create";
 
   const [ namespaces, setNamespaces ] = useState<string[] | null>([]);
-  const [form] = ProForm.useForm();
+  const [ form ] = ProForm.useForm();
   const router = useRouter();
+
+  const [ existsBuildStorage, setExistsBuildStorage ] = useState<string[]>([]);
 
     useEffect(() => {
       if (createMode || editMode) {
@@ -58,12 +60,14 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   return (
     <div className="p-3">
       <ProForm
-          layout='horizontal'
           form={form}
           request={ async () => {
+            const existsBuildStorage = application?.buildStorages?.map((storage) => storage.path) || [];
+            setExistsBuildStorage(existsBuildStorage);
             return application
           }}
           onFinish={async (application) => {
+            console.log(application)
             if (createMode) {
               handlerCreate(application);
             } else {
@@ -153,6 +157,18 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
                 rules={[{ required: true, message: "Docker File Path is required" }]}
               />
             </ProForm.Group>
+            <ProFormList name="buildStorages">
+              <ProFormGroup>
+                <ProFormText
+                  name="path"
+                  label="Path"
+                />
+                <ProFormText
+                  name="volume"
+                  label="Volume"
+                />
+              </ProFormGroup>
+            </ProFormList>
           </ProCard>
 
           <ProCard
