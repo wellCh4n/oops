@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.objects.ApplicationQueryRequest;
-import com.github.wellch4n.oops.objects.PipelineQuery;
+import com.github.wellch4n.oops.objects.PipelineQueryRequest;
 import com.github.wellch4n.oops.objects.Result;
 import jakarta.persistence.criteria.Predicate;
 import org.apache.commons.lang3.StringUtils;
@@ -33,16 +33,16 @@ public class IndexController {
     }
 
     @PostMapping("/pipelines")
-    public Result<List<Pipeline>> queryPipeline(@RequestBody PipelineQuery pipelineQuery) {
+    public Result<List<Pipeline>> queryPipeline(@RequestBody PipelineQueryRequest pipelineQueryRequest) {
         List<Pipeline> pipelines = pipelineRepository.findAll((root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            if (StringUtils.isNotEmpty(pipelineQuery.getNamespace())) {
-                predicates.add(criteriaBuilder.equal(root.get("namespace"), pipelineQuery.getNamespace()));
+            if (StringUtils.isNotEmpty(pipelineQueryRequest.getNamespace())) {
+                predicates.add(criteriaBuilder.equal(root.get("namespace"), pipelineQueryRequest.getNamespace()));
             }
 
-            if (StringUtils.isNotEmpty(pipelineQuery.getApplicationName())) {
-                predicates.add(criteriaBuilder.like(root.get("applicationName"), "%" + pipelineQuery.getApplicationName() + "%"));
+            if (StringUtils.isNotEmpty(pipelineQueryRequest.getApplicationName())) {
+                predicates.add(criteriaBuilder.like(root.get("applicationName"), "%" + pipelineQueryRequest.getApplicationName() + "%"));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

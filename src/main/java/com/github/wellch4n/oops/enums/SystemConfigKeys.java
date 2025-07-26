@@ -10,5 +10,6 @@ public enum SystemConfigKeys {
 
     IMAGE_REPOSITORY_URL,
 
-    WORK_NAMESPACE
+    WORK_NAMESPACE,
+    BUILD_CACHE_STORAGE_CLASS,
 }

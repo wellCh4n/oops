@@ -76,7 +76,7 @@ export default function ApplicationPage() {
                 <Button icon={<EditOutlined />} href={`/namespace/${record.namespace}/application/${record.name}`}>Edit</Button>
                 <Button icon={<SendOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/deployment`}>Deploy</Button>
                 <Button icon={<InfoCircleOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/status`}>Status</Button>
-                <Button icon={<DatabaseOutlined />} >Config</Button>
+                <Button icon={<DatabaseOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/configmap`}>Config</Button>
               </Space>
             ),
           },

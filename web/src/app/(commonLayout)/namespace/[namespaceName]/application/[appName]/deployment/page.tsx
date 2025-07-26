@@ -13,6 +13,7 @@ const DeploymentPage = () => {
   const { setHeaderContent } = useHeader()
   const params = useParams();
   const appName = params?.appName as string;
+  const namespaceName = params?.namespaceName as string;
 
   const [application, setApplication] = useState<ApplicationItem | null>(null);
 
@@ -31,7 +32,7 @@ const DeploymentPage = () => {
   })
 
   useEffect(() => {
-    fetchApplicationDetail(appName).then((application) => {
+    fetchApplicationDetail(namespaceName, appName).then((application) => {
       setApplication(application)
     })
     return () => {

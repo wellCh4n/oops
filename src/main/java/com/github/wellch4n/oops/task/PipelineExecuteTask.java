@@ -7,7 +7,7 @@ import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
-import com.github.wellch4n.oops.volume.BuildCacheVolume;
+import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -25,6 +25,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Pipeline pipeline;
     private final Application application;
+    private final List<BuildStorage> buildStorages;
     private final CoreV1Api api;
     private final DeploymentConfig deploymentConfig;
 
@@ -38,6 +39,9 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipeline.getNamespace(),
                 pipeline.getApplicationName()
         );
+
+        BuildStorageRepository buildStorageRepository = SpringContext.getBean(BuildStorageRepository.class);
+        this.buildStorages = buildStorageRepository.findAllByApplicationId(application.getId());
 
         this.api = KubernetesClientFactory.getCoreApi();
 
@@ -55,8 +59,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     public PipelineBuildPod call() {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
-
-        BuildCacheVolume buildCacheVolume = new BuildCacheVolume();
+        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(application, buildStorages);
 
         List<BaseContainer> initContainers = Lists.newArrayList();
 
@@ -67,7 +70,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         if (StringUtils.isNotEmpty(application.getBuildImage()) && StringUtils.isNotEmpty(application.getBuildCommand())) {
             BuildContainer build = new BuildContainer(application);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
-            build.addVolumeMounts(buildCacheVolume.getVolumeMounts());
+            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);
         }
 
@@ -81,7 +84,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
-        pipelineBuildPod.addVolumes(buildCacheVolume.getVolumes());
+        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try {

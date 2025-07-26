@@ -2,6 +2,8 @@ package com.github.wellch4n.oops.objects;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @author wellCh4n
  * @date 2025/7/5
@@ -14,5 +16,14 @@ public class ApplicationCreateOrUpdateRequest {
     private String dockerFile;
     private String buildImage;
     private String buildCommand;
+
+    private List<BuildStoragePath> buildStorages;
+
     private Integer replicas = 0;
+
+    @Data
+    public static class BuildStoragePath {
+        private String path;
+        private String volume;
+    }
 }
