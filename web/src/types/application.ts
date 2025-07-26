@@ -9,6 +9,16 @@ export type ApplicationItem = {
   replicas?: number;
 }
 
+export type ApplicationDetailItem = ApplicationItem & {
+  buildStorages: BuildStorageItem[];
+}
+
+export type BuildStorageItem = {
+  id: string;
+  path: string;
+  volume: string;
+}
+
 export type ApplicationPodItem = {
   name: string;
   namspace: string;
