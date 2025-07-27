@@ -21,10 +21,11 @@ import java.util.Map;
 @Service
 public class BuildStorageService {
     public List<BuildStorage> getBuildStorages(String namespace, String applicationName) {
-        String labelSelector = "oops.type=%s,oops.storage.application.name=%s".formatted(OopsTypes.STORAGE, applicationName);
+        String labelSelector = "oops.type=%s,oops.application.namespace=%s,oops.storage.application.name=%s"
+                .formatted(OopsTypes.STORAGE, namespace, applicationName);
 
         try {
-            V1PersistentVolumeClaimList claimList = KubernetesClientFactory.getCoreApi().listNamespacedPersistentVolumeClaim(namespace)
+            V1PersistentVolumeClaimList claimList = KubernetesClientFactory.getCoreApi().listNamespacedPersistentVolumeClaim("oops")
                     .labelSelector(labelSelector)
                     .execute();
             List<V1PersistentVolumeClaim> claims = claimList.getItems();
@@ -43,6 +44,7 @@ public class BuildStorageService {
                 String path = annotations.get("oops.storage.mount.path");
                 buildStorage.setPath(path);
                 buildStorage.setCapacity(storage.toSuffixedString());
+                buildStorage.setPvcName(metadata.getName());
 
                 return buildStorage;
             }).toList();
@@ -61,9 +63,10 @@ public class BuildStorageService {
         v1PersistentVolumeClaim
                 .metadata(new V1ObjectMeta()
                         .name(name)
-                        .namespace(namespace)
+                        .namespace("oops")
                         .putLabelsItem("oops.type", OopsTypes.STORAGE.name())
                         .putLabelsItem("oops.storage.application.name", applicationName)
+                        .putLabelsItem("oops.application.namespace", namespace)
                         .putAnnotationsItem("oops.storage.mount.path", request.getPath())
                 )
                 .spec(
@@ -78,7 +81,7 @@ public class BuildStorageService {
 
         try {
             KubernetesClientFactory.getCoreApi()
-                    .createNamespacedPersistentVolumeClaim(namespace, v1PersistentVolumeClaim)
+                    .createNamespacedPersistentVolumeClaim("oops", v1PersistentVolumeClaim)
                     .execute();
             return true;
         } catch (Exception e) {
@@ -90,7 +93,7 @@ public class BuildStorageService {
         String name = getStorageName(applicationName, path);
         try {
             KubernetesClientFactory.getCoreApi()
-                    .deleteNamespacedPersistentVolumeClaim(name, namespace)
+                    .deleteNamespacedPersistentVolumeClaim(name, "oops")
                     .execute();
             return true;
         } catch (Exception e) {

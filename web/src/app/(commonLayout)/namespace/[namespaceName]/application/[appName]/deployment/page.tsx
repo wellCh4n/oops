@@ -38,7 +38,7 @@ const DeploymentPage = () => {
     return () => {
       setApplication(null)
     }
-  }, [appName])
+  }, [appName, namespaceName])
 
   if (!application) {
     return <></>

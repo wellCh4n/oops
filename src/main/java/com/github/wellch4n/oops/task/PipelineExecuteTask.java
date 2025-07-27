@@ -61,7 +61,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     public PipelineBuildPod call() {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
-        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(application, buildStorages);
+        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
 
         List<BaseContainer> initContainers = Lists.newArrayList();
 

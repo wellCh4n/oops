@@ -6,7 +6,7 @@ import { fetchNamespaceList } from "@/service/namespace";
 import { ApplicationItem } from "@/types/application";
 import { BuildStorageItem } from "@/types/build";
 import { AppstoreAddOutlined } from "@ant-design/icons";
-import { ProCard, ProForm, ProFormDigit, ProFormGroup, ProFormList, ProFormSelect, ProFormText } from "@ant-design/pro-components";
+import { ProCard, ProForm, ProFormDigit, ProFormSelect, ProFormText } from "@ant-design/pro-components";
 import { Button, Form, FormInstance, Input, Modal, Skeleton, Tag } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,7 +71,7 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
   }
 
   const handleBuildStorageAdd = async (values: BuildStorageItem) => {
-    createApplicationBuildStorage(application?.namespace || '', application?.name || '', values).then((_) => {
+    createApplicationBuildStorage(application?.namespace || '', application?.name || '', values).then(() => {
       setBuildStorageAddModalOpen(false);
       setBuildStorages([...buildStorages, values]);
     })
@@ -87,7 +87,7 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
         onOk={async () => {
           buildStorageAddFormRef.current?.validateFields().then((values) => {
             handleBuildStorageAdd(values);
-          }).catch((_) => {})
+          }).catch(() => {})
         }}
       >
         <Form
@@ -219,7 +219,7 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
                     key={buildStorage.path} 
                     closable={!previewMode}
                     onClose={async () => {
-                      deleteApplicationBuildStorage(application?.namespace || '', application?.name || '', buildStorage).then((_) => {
+                      deleteApplicationBuildStorage(application?.namespace || '', application?.name || '', buildStorage).then(() => {
                         setBuildStorages(buildStorages.filter((item) => item.path !== buildStorage.path));
                       })
                     }}

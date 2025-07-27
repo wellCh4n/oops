@@ -11,4 +11,6 @@ import lombok.Data;
 public class BuildStorage {
     private String path;
     private String capacity;
+
+    private String pvcName;
 }
