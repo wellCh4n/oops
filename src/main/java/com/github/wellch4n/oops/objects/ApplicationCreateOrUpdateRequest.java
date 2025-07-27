@@ -16,14 +16,5 @@ public class ApplicationCreateOrUpdateRequest {
     private String dockerFile;
     private String buildImage;
     private String buildCommand;
-
-    private List<BuildStoragePath> buildStorages;
-
     private Integer replicas = 0;
-
-    @Data
-    public static class BuildStoragePath {
-        private String path;
-        private String volume;
-    }
 }

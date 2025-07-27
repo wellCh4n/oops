@@ -6,7 +6,9 @@ import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.SystemConfigKeys;
+import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
+import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
@@ -40,8 +42,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipeline.getApplicationName()
         );
 
-        BuildStorageRepository buildStorageRepository = SpringContext.getBean(BuildStorageRepository.class);
-        this.buildStorages = buildStorageRepository.findAllByApplicationId(application.getId());
+        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
+        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
 
         this.api = KubernetesClientFactory.getCoreApi();
 

@@ -3,16 +3,12 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRepository;
-import com.github.wellch4n.oops.data.BuildStorage;
-import com.github.wellch4n.oops.data.BuildStorageRepository;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationCreateOrUpdateRequest;
-import com.github.wellch4n.oops.objects.ApplicationDetailResponse;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.*;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -34,24 +30,16 @@ import java.util.List;
 public class ApplicationController {
 
     private final ApplicationRepository repository;
-    private final BuildStorageRepository buildStorageRepository;
 
-    public ApplicationController(ApplicationRepository repository,
-                                 BuildStorageRepository buildStorageRepository) {
+    public ApplicationController(ApplicationRepository repository) {
         this.repository = repository;
-        this.buildStorageRepository = buildStorageRepository;
     }
 
     @GetMapping("/{name}")
-    public Result<ApplicationDetailResponse> getApplication(@PathVariable String namespace, @PathVariable String name) {
+    public Result<Application> getApplication(@PathVariable String namespace, @PathVariable String name) {
         try {
             Application application = repository.findByNamespaceAndName(namespace, name);
-
-            List<BuildStorage> buildStorages = buildStorageRepository.findAllByApplicationId(application.getId());
-            ApplicationDetailResponse applicationDetail = new ApplicationDetailResponse(application);
-            applicationDetail.setBuildStorages(buildStorages);
-
-            return Result.success(applicationDetail);
+            return Result.success(application);
         } catch (Exception e) {
             return Result.failure(e.getMessage());
         }
@@ -80,16 +68,6 @@ public class ApplicationController {
         application.setReplicas(request.getReplicas());
         repository.save(application);
 
-        if (CollectionUtils.isNotEmpty(request.getBuildStorages())) {
-            request.getBuildStorages().forEach(path -> {
-                BuildStorage buildStorage = new BuildStorage();
-                buildStorage.setApplicationId(application.getId());
-                buildStorage.setPath(path.getPath());
-                buildStorage.setVolume(path.getVolume());
-                buildStorageRepository.save(buildStorage);
-            });
-        }
-
         return Result.success(application.getId());
     }
 
@@ -105,16 +83,6 @@ public class ApplicationController {
         application.setRepository(request.getRepository());
         application.setReplicas(request.getReplicas());
         repository.save(application);
-
-        if (CollectionUtils.isNotEmpty(request.getBuildStorages())) {
-            request.getBuildStorages().forEach(path -> {
-                BuildStorage buildStorage = new BuildStorage();
-                buildStorage.setApplicationId(application.getId());
-                buildStorage.setPath(path.getPath());
-                buildStorage.setVolume(path.getVolume());
-                buildStorageRepository.save(buildStorage);
-            });
-        }
 
         return Result.success(true);
     }

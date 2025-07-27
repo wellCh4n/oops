@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.volume;
 
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.BuildStorage;
+import com.github.wellch4n.oops.objects.BuildStorage;
 import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 import io.kubernetes.client.openapi.models.V1Volume;
 import io.kubernetes.client.openapi.models.V1VolumeMount;

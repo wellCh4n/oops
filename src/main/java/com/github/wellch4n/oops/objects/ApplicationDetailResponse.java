@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.objects;
 
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.BuildStorage;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.beans.BeanUtils;
