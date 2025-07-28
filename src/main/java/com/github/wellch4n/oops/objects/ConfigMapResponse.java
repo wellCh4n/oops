@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.objects;
 
+import com.github.wellch4n.oops.enums.ConfigMapMountTypes;
 import lombok.Data;
 
 /**
@@ -11,4 +12,5 @@ import lombok.Data;
 public class ConfigMapResponse {
     private String key;
     private String value;
+    private Boolean mountAsPath;
 }

@@ -1,17 +1,21 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
+import com.github.wellch4n.oops.enums.ConfigMapMountTypes;
 import com.github.wellch4n.oops.objects.ConfigMapRequest;
 import com.github.wellch4n.oops.objects.ConfigMapResponse;
 import io.kubernetes.client.openapi.models.V1ConfigMap;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.compress.utils.Lists;
+import org.apache.commons.compress.utils.Sets;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author wellCh4n
@@ -31,16 +35,30 @@ public class ConfigMapService {
                 return Lists.newArrayList();
             }
 
+            Map<String, String> configMapData = configMap.getData();
+            String pathMountKeysString = configMapData.remove(ConfigMapMountTypes.PATH.getKey());
+
+            Set<String> pathMountKeys = Sets.newHashSet();
+            if (StringUtils.isNotEmpty(pathMountKeysString)) {
+                String[] keys = pathMountKeysString.split("\n");
+                pathMountKeys = Sets.newHashSet(keys);
+            }
+
             List<ConfigMapResponse> configMapResponses = Lists.newArrayList();
-            configMap.getData().forEach((key, value) -> {
-                if (".mounts.key".equals(key)) {
-                    return;
-                }
+
+            for (Map.Entry<String, String> entry : configMap.getData().entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
                 ConfigMapResponse response = new ConfigMapResponse();
                 response.setKey(key);
                 response.setValue(value);
+
+                if (pathMountKeys.contains(key)) {
+                    response.setMountAsPath(true);
+                }
+
                 configMapResponses.add(response);
-            });
+            }
 
             return configMapResponses;
         } catch (Exception e) {
@@ -57,19 +75,20 @@ public class ConfigMapService {
             meta.setNamespace(namespace);
             configMap.setMetadata(meta);
 
-            List<String> mountKeys = Lists.newArrayList();
+            List<String> mountPathKeys = Lists.newArrayList();
+
             Map<String, String> map = new HashMap<>();
             for (ConfigMapRequest configMapRequest : configMaps) {
                 map.put(configMapRequest.getKey(), configMapRequest.getValue());
 
-                if (configMapRequest.getMount()) {
-                    mountKeys.add(configMapRequest.getKey());
+                if (configMapRequest.getMountAsPath() != null && configMapRequest.getMountAsPath()) {
+                    mountPathKeys.add(configMapRequest.getKey());
                 }
 
             }
 
-            if (CollectionUtils.isNotEmpty(mountKeys)) {
-                map.put(".mounts.key", String.join("\n", mountKeys));
+            if (CollectionUtils.isNotEmpty(mountPathKeys)) {
+                map.put(ConfigMapMountTypes.PATH.getKey(), String.join("\n", mountPathKeys));
             }
 
             configMap.setData(map);

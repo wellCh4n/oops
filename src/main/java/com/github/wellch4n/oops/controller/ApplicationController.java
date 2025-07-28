@@ -22,12 +22,9 @@ import java.util.List;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
-    private final ApplicationRepository repository;
 
-    public ApplicationController(ApplicationService applicationService,
-                                 ApplicationRepository repository) {
+    public ApplicationController(ApplicationService applicationService) {
         this.applicationService = applicationService;
-        this.repository = repository;
     }
 
     @GetMapping("/{name}")

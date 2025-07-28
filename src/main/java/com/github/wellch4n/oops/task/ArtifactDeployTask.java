@@ -4,10 +4,13 @@ import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
+import com.github.wellch4n.oops.objects.ConfigMapResponse;
 import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.*;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.compress.utils.Lists;
 
 import java.util.List;
 import java.util.Map;
@@ -21,10 +24,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     private final Pipeline pipeline;
     private final Application application;
+    private final List<ConfigMapResponse> configMaps;
 
-    public ArtifactDeployTask(Pipeline pipeline, Application application) {
+    public ArtifactDeployTask(Pipeline pipeline, Application application, List<ConfigMapResponse> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
+        this.configMaps = configMaps;
     }
 
     @Override
@@ -37,6 +42,19 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 "oops.type", OopsTypes.APPLICATION.name(),
                 "oops.app.name", applicationName
         );
+
+        List<V1EnvVar> envVars = Lists.newArrayList();
+        if (CollectionUtils.isNotEmpty(configMaps)) {
+            for (ConfigMapResponse configMap : configMaps) {
+                if (configMap.getMountAsPath() != null && configMap.getMountAsPath()) continue;
+
+                V1EnvVar envVar = new V1EnvVar();
+                envVar.setName(configMap.getKey());
+                envVar.setValue(configMap.getValue());
+
+                envVars.add(envVar);
+            }
+        }
 
         V1StatefulSet statefulSet = new V1StatefulSet()
                 .apiVersion("apps/v1")
@@ -56,6 +74,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                         .name(applicationName)
                                                         .image(pipeline.getArtifact())
                                                         .ports(List.of(new V1ContainerPort().containerPort(8080)))
+                                                        .env(envVars)
                                         ))
                                         .imagePullSecrets(List.of(
                                                 new V1LocalObjectReference().name("dockerhub")

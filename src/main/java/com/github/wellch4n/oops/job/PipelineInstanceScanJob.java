@@ -6,6 +6,8 @@ import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.objects.ConfigMapResponse;
+import com.github.wellch4n.oops.service.ConfigMapService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodStatus;
@@ -24,11 +26,14 @@ public class PipelineInstanceScanJob {
 
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
+    private final ConfigMapService configMapService;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
-                                   PipelineRepository pipelineRepository) {
+                                   PipelineRepository pipelineRepository,
+                                   ConfigMapService configMapService) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
+        this.configMapService = configMapService;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -42,8 +47,10 @@ public class PipelineInstanceScanJob {
 
                 if ("Succeeded".equals(status)) {
 
+                    List<ConfigMapResponse> configMaps = configMapService.getConfigMaps(pipeline.getNamespace(), pipeline.getApplicationName());
+
                     Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                    ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application);
+                    ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, configMaps);
                     artifactDeployTask.call();
 
                     pipeline.setStatus(PipelineStatus.SUCCEEDED);

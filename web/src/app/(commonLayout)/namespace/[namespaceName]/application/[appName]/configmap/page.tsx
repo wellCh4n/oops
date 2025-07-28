@@ -2,7 +2,7 @@
 
 import { useHeader } from "@/context/header-context";
 import { fetchConfigMap, updateConfigMap } from "@/service/configmap";
-import { ProForm, ProFormGroup, ProFormList, ProFormText, ProFormTextArea } from "@ant-design/pro-components";
+import { ProForm, ProFormCheckbox, ProFormGroup, ProFormList, ProFormSelect, ProFormText, ProFormTextArea } from "@ant-design/pro-components";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 
@@ -37,8 +37,9 @@ const ConfigMapPage = () => {
       >
         <ProFormList name="configmap">
           <ProFormGroup>
-            <ProFormText
+            <ProFormTextArea
               name="key"
+              width="md"
               label="Key"
             />
             <ProFormTextArea
@@ -48,6 +49,11 @@ const ConfigMapPage = () => {
               fieldProps={{
                 rows: 4,
               }}
+            />
+            <ProFormCheckbox
+              name="mountAsPath"
+              label="Mount as path"
+              width="sm"
             />
           </ProFormGroup>
         </ProFormList>
