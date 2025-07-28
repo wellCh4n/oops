@@ -1,12 +1,14 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
+import com.github.wellch4n.oops.data.SystemConfig;
 import com.github.wellch4n.oops.enums.OopsTypes;
+import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.objects.BuildStorage;
-import com.github.wellch4n.oops.objects.Result;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.models.*;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -20,6 +22,13 @@ import java.util.Map;
 
 @Service
 public class BuildStorageService {
+
+    private final SystemService systemService;
+
+    public BuildStorageService(SystemService systemService) {
+        this.systemService = systemService;
+    }
+
     public List<BuildStorage> getBuildStorages(String namespace, String applicationName) {
         String labelSelector = "oops.type=%s,oops.application.namespace=%s,oops.storage.application.name=%s"
                 .formatted(OopsTypes.STORAGE, namespace, applicationName);
@@ -54,6 +63,12 @@ public class BuildStorageService {
     }
 
     public Boolean addBuildStorage(String namespace, String applicationName, BuildStorage request) throws Exception {
+
+        SystemConfig buildCacheStorageClass = systemService.getSystemConfig(SystemConfigKeys.BUILD_CACHE_STORAGE_CLASS);
+        if (buildCacheStorageClass == null || StringUtils.isEmpty(buildCacheStorageClass.getConfigValue())) {
+            throw new Exception("Build cache storage class is not configured.");
+        }
+
         HashMap<String, Quantity> requests = new HashMap<>();
         requests.put("storage", new Quantity(request.getCapacity()));
 
@@ -61,21 +76,23 @@ public class BuildStorageService {
 
         V1PersistentVolumeClaim v1PersistentVolumeClaim = new V1PersistentVolumeClaim();
         v1PersistentVolumeClaim
-                .metadata(new V1ObjectMeta()
-                        .name(name)
-                        .namespace("oops")
-                        .putLabelsItem("oops.type", OopsTypes.STORAGE.name())
-                        .putLabelsItem("oops.storage.application.name", applicationName)
-                        .putLabelsItem("oops.application.namespace", namespace)
-                        .putAnnotationsItem("oops.storage.mount.path", request.getPath())
+                .metadata(
+                        new V1ObjectMeta()
+                                .name(name)
+                                .namespace("oops")
+                                .putLabelsItem("oops.type", OopsTypes.STORAGE.name())
+                                .putLabelsItem("oops.storage.application.name", applicationName)
+                                .putLabelsItem("oops.application.namespace", namespace)
+                                .putAnnotationsItem("oops.storage.mount.path", request.getPath())
                 )
                 .spec(
                         new V1PersistentVolumeClaimSpec()
-                                .storageClassName("bc")
+                                .storageClassName(buildCacheStorageClass.getConfigValue())
                                 .accessModes(List.of("ReadWriteMany"))
                                 .volumeMode("Filesystem")
                                 .resources(
-                                        new V1VolumeResourceRequirements().requests(requests)
+                                        new V1VolumeResourceRequirements()
+                                                .requests(requests)
                                 )
                 );
 

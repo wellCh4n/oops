@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.SystemConfig;
 import com.github.wellch4n.oops.data.SystemConfigRepository;
+import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +19,10 @@ public class SystemService {
 
     public SystemService(SystemConfigRepository systemConfigRepository) {
         this.systemConfigRepository = systemConfigRepository;
+    }
+
+    public SystemConfig getSystemConfig(SystemConfigKeys key) {
+        return systemConfigRepository.findByConfigKey(key);
     }
 
     public List<SystemConfig> getSystemConfigs() {

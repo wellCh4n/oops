@@ -4,10 +4,7 @@ import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.data.SystemConfig;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.SystemService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -34,7 +31,7 @@ public class SystemController {
 
     @WithoutKubernetes
     @PutMapping
-    public Result<Boolean> updateSystemConfigs(List<SystemConfig> systemConfigs) {
+    public Result<Boolean> updateSystemConfigs(@RequestBody List<SystemConfig> systemConfigs) {
         return Result.success(systemService.updateSystemConfigs(systemConfigs));
     }
 }
