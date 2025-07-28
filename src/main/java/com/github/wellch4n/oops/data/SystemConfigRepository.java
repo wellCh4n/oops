@@ -13,6 +13,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface SystemConfigRepository extends CrudRepository<SystemConfig, String> {
 
-    @Cacheable
     SystemConfig findByConfigKey(SystemConfigKeys key);
 }

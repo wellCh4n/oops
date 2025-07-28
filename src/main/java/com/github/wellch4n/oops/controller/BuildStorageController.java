@@ -1,18 +1,11 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.config.KubernetesClientFactory;
-import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.BuildStorageService;
-import io.kubernetes.client.custom.Quantity;
-import io.kubernetes.client.openapi.models.*;
-import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author wellCh4n
@@ -30,7 +23,8 @@ public class BuildStorageController {
     }
 
     @GetMapping
-    public Result<List<BuildStorage>> getBuildStorages(@PathVariable String namespace, @PathVariable String applicationName) {
+    public Result<List<BuildStorage>> getBuildStorages(@PathVariable String namespace,
+                                                       @PathVariable String applicationName) {
         List<BuildStorage> buildStorages = buildStorageService.getBuildStorages(namespace, applicationName);
         return Result.success(buildStorages);
     }

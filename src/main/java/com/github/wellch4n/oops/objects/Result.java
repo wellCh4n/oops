@@ -10,10 +10,10 @@ public record Result<T>(
         T data
 ) {
     public static <T> Result<T> success(T data) {
-        return new Result<T>(true, null, data);
+        return new Result<>(true, null, data);
     }
 
     public static <T> Result<T> failure(String message) {
-        return new Result<T>(false, message, null);
+        return new Result<>(false, message, null);
     }
 }

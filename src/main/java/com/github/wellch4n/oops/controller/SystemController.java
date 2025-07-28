@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.data.SystemConfig;
-import com.github.wellch4n.oops.data.SystemConfigRepository;
 import com.github.wellch4n.oops.objects.Result;
+import com.github.wellch4n.oops.service.SystemService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,32 +20,21 @@ import java.util.List;
 @RequestMapping("/api/system")
 public class SystemController {
 
-    private final SystemConfigRepository systemConfigRepository;
+    private final SystemService systemService;
 
-    public SystemController(SystemConfigRepository systemConfigRepository) {
-        this.systemConfigRepository = systemConfigRepository;
+    public SystemController(SystemService systemService) {
+        this.systemService = systemService;
     }
 
     @WithoutKubernetes
     @GetMapping
     public Result<List<SystemConfig>> getSystemConfigs() {
-        List<SystemConfig> systemConfigs = (List<SystemConfig>) systemConfigRepository.findAll();
-        return Result.success(systemConfigs);
+        return Result.success(systemService.getSystemConfigs());
     }
 
     @WithoutKubernetes
     @PutMapping
     public Result<Boolean> updateSystemConfigs(List<SystemConfig> systemConfigs) {
-        for (SystemConfig config : systemConfigs) {
-            SystemConfig existingConfig = systemConfigRepository.findByConfigKey(config.getConfigKey());
-            if (existingConfig == null) {
-                existingConfig = new SystemConfig();
-                existingConfig.setConfigKey(config.getConfigKey());
-                existingConfig.setConfigValue(config.getConfigValue());
-            }
-            existingConfig.setConfigValue(config.getConfigValue());
-            systemConfigRepository.save(existingConfig);
-        }
-        return Result.success(true);
+        return Result.success(systemService.updateSystemConfigs(systemConfigs));
     }
 }
