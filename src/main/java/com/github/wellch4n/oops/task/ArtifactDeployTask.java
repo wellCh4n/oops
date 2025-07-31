@@ -5,12 +5,12 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ConfigMapResponse;
-import io.kubernetes.client.custom.V1Patch;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.compress.utils.Lists;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -46,13 +46,45 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         List<V1EnvVar> envVars = Lists.newArrayList();
         if (CollectionUtils.isNotEmpty(configMaps)) {
             for (ConfigMapResponse configMap : configMaps) {
-                if (configMap.getMountAsPath() != null && configMap.getMountAsPath()) continue;
+                if (StringUtils.isNotEmpty(configMap.getMountPath())) continue;
 
                 V1EnvVar envVar = new V1EnvVar();
-                envVar.setName(configMap.getKey());
-                envVar.setValue(configMap.getValue());
+                envVar.setName(configMap.getName());
+                envVar.setValueFrom(
+                        new V1EnvVarSource()
+                                .configMapKeyRef(
+                                        new V1ConfigMapKeySelector()
+                                                .name(applicationName)
+                                                .key(configMap.getKey())
+                                )
+                );
 
                 envVars.add(envVar);
+            }
+        }
+
+        List<V1VolumeMount> volumeMounts = Lists.newArrayList();
+        List<V1Volume> volumes = Lists.newArrayList();
+        if (CollectionUtils.isNotEmpty(configMaps)) {
+            for (ConfigMapResponse configMap : configMaps) {
+                if (StringUtils.isEmpty(configMap.getMountPath())) continue;
+
+                V1VolumeMount volumeMount = new V1VolumeMount();
+                volumeMount.setName(configMap.getName());
+                volumeMount.setMountPath(configMap.getMountPath());
+                volumeMount.setReadOnly(true);
+                volumeMounts.add(volumeMount);
+
+                V1Volume volume = new V1Volume();
+                volume.setName(configMap.getName());
+                volume.setConfigMap(new V1ConfigMapVolumeSource()
+                        .name(applicationName)
+                        .items(List.of(new V1KeyToPath()
+                                .key(configMap.getKey())
+                                .path(configMap.getKey())
+                        ))
+                );
+                volumes.add(volume);
             }
         }
 
@@ -75,10 +107,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                         .image(pipeline.getArtifact())
                                                         .ports(List.of(new V1ContainerPort().containerPort(8080)))
                                                         .env(envVars)
+                                                        .volumeMounts(volumeMounts)
                                         ))
                                         .imagePullSecrets(List.of(
                                                 new V1LocalObjectReference().name("dockerhub")
                                         ))
+                                        .volumes(volumes)
                                 )
                         )
                 );

@@ -44,16 +44,16 @@ const ConfigMapPage = () => {
             />
             <ProFormTextArea
               name="value"
-              width="xl"
+              width="md"
               label="Value"
               fieldProps={{
                 rows: 4,
               }}
             />
-            <ProFormCheckbox
-              name="mountAsPath"
-              label="Mount as path"
-              width="sm"
+            <ProFormTextArea
+              name="mountPath"
+              label="Mount Path"
+              width="md"
             />
           </ProFormGroup>
         </ProFormList>

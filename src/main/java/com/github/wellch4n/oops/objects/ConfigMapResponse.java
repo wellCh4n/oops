@@ -12,5 +12,9 @@ import lombok.Data;
 public class ConfigMapResponse {
     private String key;
     private String value;
-    private Boolean mountAsPath;
+    private String mountPath;
+
+    public String getName() {
+        return key.replace(".", "-");
+    }
 }

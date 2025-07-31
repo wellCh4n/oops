@@ -1,5 +1,7 @@
 package com.github.wellch4n.oops.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.enums.ConfigMapMountTypes;
 import com.github.wellch4n.oops.objects.ConfigMapRequest;
@@ -25,6 +27,8 @@ import java.util.Set;
 @Service
 public class ConfigMapService {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     public List<ConfigMapResponse> getConfigMaps(String namespace, String applicationName) {
         try {
             V1ConfigMap configMap = KubernetesClientFactory.getCoreApi()
@@ -38,10 +42,9 @@ public class ConfigMapService {
             Map<String, String> configMapData = configMap.getData();
             String pathMountKeysString = configMapData.remove(ConfigMapMountTypes.PATH.getKey());
 
-            Set<String> pathMountKeys = Sets.newHashSet();
+            Map<String, String> mountPathKeys = new HashMap<>();
             if (StringUtils.isNotEmpty(pathMountKeysString)) {
-                String[] keys = pathMountKeysString.split("\n");
-                pathMountKeys = Sets.newHashSet(keys);
+                mountPathKeys = objectMapper.readValue(pathMountKeysString, new TypeReference<>() {});
             }
 
             List<ConfigMapResponse> configMapResponses = Lists.newArrayList();
@@ -52,10 +55,7 @@ public class ConfigMapService {
                 ConfigMapResponse response = new ConfigMapResponse();
                 response.setKey(key);
                 response.setValue(value);
-
-                if (pathMountKeys.contains(key)) {
-                    response.setMountAsPath(true);
-                }
+                response.setMountPath(mountPathKeys.get(key));
 
                 configMapResponses.add(response);
             }
@@ -75,20 +75,19 @@ public class ConfigMapService {
             meta.setNamespace(namespace);
             configMap.setMetadata(meta);
 
-            List<String> mountPathKeys = Lists.newArrayList();
+            Map<String, String> mountPathKeys = new HashMap<>();
 
             Map<String, String> map = new HashMap<>();
             for (ConfigMapRequest configMapRequest : configMaps) {
                 map.put(configMapRequest.getKey(), configMapRequest.getValue());
 
-                if (configMapRequest.getMountAsPath() != null && configMapRequest.getMountAsPath()) {
-                    mountPathKeys.add(configMapRequest.getKey());
+                if (StringUtils.isNotEmpty(configMapRequest.getMountPath())) {
+                    mountPathKeys.put(configMapRequest.getKey(), configMapRequest.getMountPath());
                 }
-
             }
 
-            if (CollectionUtils.isNotEmpty(mountPathKeys)) {
-                map.put(ConfigMapMountTypes.PATH.getKey(), String.join("\n", mountPathKeys));
+            if (!mountPathKeys.isEmpty()) {
+                map.put(ConfigMapMountTypes.PATH.getKey(), objectMapper.writeValueAsString(mountPathKeys));
             }
 
             configMap.setData(map);
