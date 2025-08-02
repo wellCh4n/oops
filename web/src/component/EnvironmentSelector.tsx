@@ -23,10 +23,10 @@ const EnvironmentSelector = () => {
         const selectedEnv = environments.find(env => env.id === value.value);
         if (selectedEnv && selectedEnv.id !== currentEnvironment?.id) {
           Modal.confirm({
-            title: '切换环境',
-            content: '切换环境会刷新页面，确定要继续吗？',
-            okText: '确认',
-            cancelText: '取消',
+            title: 'Switch Environment',
+            content: 'Switch environment will refresh the page, are you sure to continue?',
+            okText: 'Confirm',
+            cancelText: 'Cancel',
             onOk: () => {
               setCurrentEnvironment(selectedEnv);
               window.location.reload();

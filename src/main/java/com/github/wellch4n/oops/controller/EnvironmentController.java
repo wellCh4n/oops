@@ -3,9 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.EnvironmentService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -27,5 +25,16 @@ public class EnvironmentController {
     @GetMapping
     public Result<List<Environment>> getEnvironments() {
         return Result.success(environmentService.getEnvironments());
+    }
+
+    @PutMapping("{id}")
+    public Result<Boolean> updateEnvironment(@PathVariable String id,
+                                             @RequestBody Environment environment) {
+        return Result.success(environmentService.updateEnvironment(id, environment));
+    }
+
+    @PostMapping
+    public Result<Boolean> createEnvironment(@RequestBody Environment environment) {
+        return Result.success(environmentService.createEnvironment(environment));
     }
 }

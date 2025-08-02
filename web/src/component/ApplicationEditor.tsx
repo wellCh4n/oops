@@ -79,7 +79,6 @@ const ApplicationEditor: React.FC<ApplicationEditorProps> = ({ mode, application
 
   return (
     <div className="p-3">
-
       <Modal
         title="Add Build Storage"
         open={buildStorageAddModalOpen}

@@ -58,7 +58,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             <EnvironmentSelector />
           </div>
         </Header>
-        <Content>
+        <Content className="overflow-auto">
           {children}
         </Content>
       </Layout>
