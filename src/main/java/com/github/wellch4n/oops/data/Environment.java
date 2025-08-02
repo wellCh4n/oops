@@ -11,8 +11,8 @@ import lombok.Data;
  * @date 2025/7/29
  */
 
-//@Data
-//@Entity
+@Data
+@Entity
 public class Environment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
