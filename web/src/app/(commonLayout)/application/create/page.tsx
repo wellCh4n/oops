@@ -18,7 +18,7 @@ export default function CreateApplicationPage() {
   }, [setHeaderContent])
 
   return (
-    <div className="p-3">
+    <div>
       <ApplicationEditor 
         mode="create" 
         application={{

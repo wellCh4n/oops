@@ -44,7 +44,7 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="p-3 h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto">
       <ProTable<PipelineItem>
         options={false}
         rowKey="id"

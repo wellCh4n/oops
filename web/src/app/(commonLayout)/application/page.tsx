@@ -48,7 +48,7 @@ export default function ApplicationPage() {
   }
 
   return (
-    <div className="p-3">
+    <div>
       <ProTable<ApplicationItem>
         options={false}
         rowKey="id"

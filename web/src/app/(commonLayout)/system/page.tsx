@@ -4,7 +4,7 @@ import EnvironmentEditor from '@/component/EnvironmentEditor';
 import { useHeader } from '@/context/header-context';
 import { deleteEnvironment, fetchEnvironmentList } from '@/service/environment';
 import { EnvironmentItem } from '@/types/environment';
-import { Button, Card, Modal, Table, Tabs } from 'antd';
+import { Button, Modal, Space, Table, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 
@@ -61,22 +61,25 @@ const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({ environments }) => 
             title: 'Action',
             render: (_, record) => {
               return (
-                <div className='flex'>
-                  <Button onClick={() => {
-                    Modal.confirm({
-                      title: 'Edit Environment',
-                      footer: null,
-                      content: (
-                        <EnvironmentEditor 
-                          environment={record} 
-                          onFinish={() => {
-                            window.location.reload();
-                          }}
-                          mode="edit"
-                        />
-                      )
-                    })
-                  }}>Edit</Button>
+                <Space>
+                  <Button
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Edit Environment',
+                        footer: null,
+                        content: (
+                          <EnvironmentEditor 
+                            environment={record} 
+                            onFinish={() => {
+                              window.location.reload();
+                            }}
+                            mode="edit"
+                          />
+                        )
+                      })
+                    }}>
+                      Edit
+                  </Button>
                   <Button
                     danger
                     onClick={() => {
@@ -97,7 +100,7 @@ const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({ environments }) => 
                   >
                     Delete
                   </Button>
-                </div>
+                </Space>
               )
             }
           },
@@ -128,7 +131,9 @@ export default function SystemPage() {
   }, [])
 
   return (
-    <Card>
+    <div
+      className="bg-white p-3"
+    >
       <Tabs
         items={[
           {
@@ -138,6 +143,6 @@ export default function SystemPage() {
           },
         ]}
       />
-    </Card>
+    </div>
   );
 }

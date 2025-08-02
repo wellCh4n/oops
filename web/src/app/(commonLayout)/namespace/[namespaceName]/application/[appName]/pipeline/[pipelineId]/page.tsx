@@ -81,7 +81,7 @@ export default function PipelineDetailPage() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="h-full flex flex-col">
       <Steps
           className="h-10"
           current={currentStep}

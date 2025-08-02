@@ -2,7 +2,7 @@
 
 import { useApplicationContext } from "@/context/application-context";
 import { useHeader } from "@/context/header-context";
-import {Button, Card, Skeleton, Space, Table, TableProps, Tag} from "antd";
+import {Button, Skeleton, Space, Table, TableProps, Tag} from "antd";
 import { useCallback, useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
 import { ApplicationPodItem } from "@/types/application";
@@ -109,11 +109,8 @@ const ApplicationStatusPage = () => {
   ]
 
   return (
-    <div >
-      <Card>
-        <Table columns={colmus} dataSource={applicationPods} pagination={false} />
-      </Card>
-
+    <div>
+      <Table columns={colmus} dataSource={applicationPods} pagination={false} />
     </div>
   );
 }

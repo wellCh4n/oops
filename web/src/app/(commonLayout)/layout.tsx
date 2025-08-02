@@ -1,19 +1,24 @@
 'use client';
 
 import { useEnvironmentStore } from '@/store/environment-store';
-import { Watermark } from 'antd';
+import { Skeleton, Watermark } from 'antd';
 import type { ReactNode } from 'react'
 
 const CommonLayout = ({ children }: { children: ReactNode }) => {
 
 	const { currentEnvironment } = useEnvironmentStore();
 
+	if (!currentEnvironment) {
+		return <Skeleton active />;
+	}
+
 	return (
-		<div className="h-full">
-			<Watermark className="h-full" content={`Environment: ${currentEnvironment?.name || ""}`}>
+		<Watermark className="h-full" 
+		content={`Environment: ${currentEnvironment.name}`}>
+			<div className="h-full p-3 overflow-auto">
 				{children}
-			</Watermark>
-		</div>
+			</div>
+		</Watermark>
 	)
 }
 

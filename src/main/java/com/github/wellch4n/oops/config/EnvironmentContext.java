@@ -15,4 +15,8 @@ public class EnvironmentContext {
     public static void setEnvironment(String environment) {
         EnvironmentContext.environment.set(environment);
     }
+
+    public static void clear() {
+        environment.remove();
+    }
 }

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.EnvironmentRepository;
 import org.springframework.stereotype.Service;
@@ -42,17 +43,25 @@ public class EnvironmentService {
         existingEnvironment.setWorkNamespace(environment.getWorkNamespace());
         existingEnvironment.setImageRepositoryUrl(environment.getImageRepositoryUrl());
 
+        EnvironmentContext.clear();
+
         environmentRepository.saveAndFlush(existingEnvironment);
         return true;
     }
 
     public Boolean createEnvironment(Environment environment) {
         environmentRepository.save(environment);
+
+        EnvironmentContext.clear();
+
         return true;
     }
 
     public Boolean deleteEnvironment(String id) {
         environmentRepository.deleteById(id);
+
+        EnvironmentContext.clear();
+
         return true;
     }
 }
