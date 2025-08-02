@@ -12,3 +12,7 @@ export const createEnvironment = (data: EnvironmentItem) => {
 export const updateEnvironment = (id: string, data: EnvironmentItem) => {
   return requests.put<EnvironmentItem>(`/api/environments/${id}`, data)
 }
+
+export const deleteEnvironment = (id: string) => {
+  return requests.del<EnvironmentItem>(`/api/environments/${id}`)
+}

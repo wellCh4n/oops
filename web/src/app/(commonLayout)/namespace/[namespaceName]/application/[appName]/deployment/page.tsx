@@ -6,7 +6,7 @@ import { deployApplication } from "@/service/deployment";
 import { ApplicationItem } from "@/types/application";
 import { SendOutlined } from "@ant-design/icons";
 import { Button, Card, Descriptions } from "antd";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const DeploymentPage = () => {
@@ -14,13 +14,14 @@ const DeploymentPage = () => {
   const params = useParams();
   const appName = params?.appName as string;
   const namespaceName = params?.namespaceName as string;
+  const router = useRouter();
 
   const [application, setApplication] = useState<ApplicationItem | null>(null);
 
   const handleDeploy = () => {
     console.log('deploy')
     deployApplication(application!.namespace, application!.name).then((data) => {
-      console.log(data)
+      router.push(`/namespace/${namespaceName}/application/${appName}/pipeline/${data}`)
     })
   }
 

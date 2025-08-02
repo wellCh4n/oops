@@ -37,4 +37,9 @@ public class EnvironmentController {
     public Result<Boolean> createEnvironment(@RequestBody Environment environment) {
         return Result.success(environmentService.createEnvironment(environment));
     }
+
+    @DeleteMapping("{id}")
+    public Result<Boolean> deleteEnvironment(@PathVariable String id) {
+        return Result.success(environmentService.deleteEnvironment(id));
+    }
 }

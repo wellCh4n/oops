@@ -50,4 +50,9 @@ public class EnvironmentService {
         environmentRepository.save(environment);
         return true;
     }
+
+    public Boolean deleteEnvironment(String id) {
+        environmentRepository.deleteById(id);
+        return true;
+    }
 }

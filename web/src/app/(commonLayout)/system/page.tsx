@@ -2,7 +2,7 @@
 
 import EnvironmentEditor from '@/component/EnvironmentEditor';
 import { useHeader } from '@/context/header-context';
-import { fetchEnvironmentList } from '@/service/environment';
+import { deleteEnvironment, fetchEnvironmentList } from '@/service/environment';
 import { EnvironmentItem } from '@/types/environment';
 import { Button, Card, Modal, Table, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
@@ -61,21 +61,43 @@ const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({ environments }) => 
             title: 'Action',
             render: (_, record) => {
               return (
-                <Button onClick={() => {
-                  Modal.confirm({
-                    title: 'Edit Environment',
-                    footer: null,
-                    content: (
-                      <EnvironmentEditor 
-                        environment={record} 
-                        onFinish={() => {
-                          window.location.reload();
-                        }}
-                        mode="edit"
-                      />
-                    )
-                  })
-                }}>Edit</Button>
+                <div className='flex'>
+                  <Button onClick={() => {
+                    Modal.confirm({
+                      title: 'Edit Environment',
+                      footer: null,
+                      content: (
+                        <EnvironmentEditor 
+                          environment={record} 
+                          onFinish={() => {
+                            window.location.reload();
+                          }}
+                          mode="edit"
+                        />
+                      )
+                    })
+                  }}>Edit</Button>
+                  <Button
+                    danger
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'Delete Environment',
+                        content: (
+                          <div>
+                            <p>Are you sure you want to delete {record.name}?</p>
+                          </div>
+                        ),
+                        onOk: () => {
+                          deleteEnvironment(record.id).then(() => {
+                            window.location.reload();
+                          })
+                        }
+                      })
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
               )
             }
           },
