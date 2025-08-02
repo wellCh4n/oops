@@ -11,4 +11,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EnvironmentRepository extends JpaRepository<Environment, String>, JpaSpecificationExecutor<Environment> {
+
+    Environment findFirstByName (String name);
 }

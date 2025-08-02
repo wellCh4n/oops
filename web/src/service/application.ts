@@ -6,29 +6,27 @@ export const fetchApplicationList = (namespace: string) => {
 }
 
 export const fetchApplicationDetail = (namespace: string, name: string) => {
-    return request.get<ApplicationItem>(`/api/namespaces/${namespace}/applications/${name}`)
+  return request.get<ApplicationItem>(`/api/namespaces/${namespace}/applications/${name}`)
 }
 
 export const fetchApplicationStatus = (name: string) => {
-    return request.get<ApplicationPodItem[]>(`/api/namespaces/default/applications/${name}/status`)
+  return request.get<ApplicationPodItem[]>(`/api/namespaces/default/applications/${name}/status`)
 }
 
 export const restartApplication = (name: string, podName: string) => {
-    return request.put(`/api/namespaces/default/applications/${name}/pods/${podName}/restart`)
+  return request.put(`/api/namespaces/default/applications/${name}/pods/${podName}/restart`)
 }
 
 export const openApplicationPodTerminal = (name: string, podName: string) => {
-    const url = `ws://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/terminal`
-    return new WebSocket(url);
+  return request.ws(`/api/namespaces/default/applications/${name}/pods/${podName}/terminal`)
 }
 
 export const openApplicationPodExplorer = (name: string, podName: string) => {
-    const url = `ws://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/explorer`
-    return new WebSocket(url);
+  return request.ws(`/api/namespaces/default/applications/${name}/pods/${podName}/explorer`);
 }
 
 export const fetchApplicationPodLog = (name: string, podName: string) => {
-    return new EventSource(`http://${request.baseUrl}/api/namespaces/default/applications/${name}/pods/${podName}/log`)
+  return request.sse(`/api/namespaces/default/applications/${name}/pods/${podName}/log`)
 }
 
 export const createApplication = (namespace: string, application: ApplicationItem) => {

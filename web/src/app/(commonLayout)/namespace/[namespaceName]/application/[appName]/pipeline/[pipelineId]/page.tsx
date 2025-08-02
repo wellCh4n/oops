@@ -42,14 +42,16 @@ export default function PipelineDetailPage() {
     const eventSource = watchPipeline(namespaceName, appName, pipelineId);
 
     eventSource.addEventListener('steps', (event) => {
-      const stepNames = JSON.parse(event.data)
+      const messageEvent = event as MessageEvent;
+      const stepNames = JSON.parse(messageEvent.data)
       setSteps(stepNames)
       
       stepNames.forEach((stepName: string) => {
         eventSource.addEventListener(stepName, (event) => {
+          const messageEvent = event as MessageEvent;
           setStepLogs(prev => {
             const logs = prev[stepName] ? [...prev[stepName]] : [];
-            logs.push(event.data);
+            logs.push(messageEvent.data);
             return { ...prev, [stepName]: logs };
           });
           

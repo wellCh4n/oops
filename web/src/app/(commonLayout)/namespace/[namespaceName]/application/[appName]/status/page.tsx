@@ -7,13 +7,14 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchApplicationStatus, restartApplication } from "@/service/application";
 import { ApplicationPodItem } from "@/types/application";
 import { CodeOutlined, FileTextOutlined, ReloadOutlined } from "@ant-design/icons";
-import {useParams} from "next/navigation";
+import {useParams, useRouter} from "next/navigation";
 
 const ApplicationStatusPage = () => {
   const application = useApplicationContext();
   const { setHeaderContent } = useHeader();
   const [applicationPods, setApplicationPods] = useState<ApplicationPodItem[] | null>(null);
   const { namespaceName } =  useParams();
+  const router = useRouter();
 
   useEffect(() => {
     if (application) {
@@ -85,13 +86,14 @@ const ApplicationStatusPage = () => {
         <Space>
           <Button
             icon={<FileTextOutlined />}
-            href={`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/log`}
+            onClick={() => router.push(`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/log`)}
           >
             Logs
           </Button>
           <Button
             icon={<CodeOutlined />}
-            href={`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/terminal`}>
+            onClick={() => router.push(`/namespace/${namespaceName}/application/${application!.name}/pod/${record.name}/terminal`)}
+          >
             Terminal
           </Button>
           <Button

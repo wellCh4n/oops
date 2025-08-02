@@ -7,12 +7,14 @@ import { stopPipeline } from '@/service/pipeline';
 import { PipelineItem } from '@/types/pipeline';
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Space } from 'antd';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
 export default function PipelinePage() {
 
   const [namespaces, setNamespaces] = useState<string[] | null>(null);
   const [namespaceValueEnum, setNamespaceValueEnum] = useState<Record<string, { text: string }>>({})
+  const router = useRouter();
 
   const {setHeaderContent} = useHeader();
 
@@ -74,7 +76,7 @@ export default function PipelinePage() {
             valueType: 'option',
             render: (_, record) => (
               <Space>
-                <Button href={`/namespace/${record.namespace}/application/${record.applicationName}/pipeline/${record.id}`}>Watch</Button>
+                <Button onClick={() => router.push(`/namespace/${record.namespace}/application/${record.applicationName}/pipeline/${record.id}`)}>Watch</Button>
                 <Button danger onClick={() => {
                   stopPipeline(record.namespace, record.applicationName, record.id).then((data) => {
                     console.log(data)

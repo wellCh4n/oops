@@ -2,7 +2,7 @@
 
 import { useHeader } from "@/context/header-context";
 import { fetchConfigMap, updateConfigMap } from "@/service/configmap";
-import { ProForm, ProFormCheckbox, ProFormGroup, ProFormList, ProFormSelect, ProFormText, ProFormTextArea } from "@ant-design/pro-components";
+import { ProForm, ProFormGroup, ProFormList, ProFormTextArea } from "@ant-design/pro-components";
 import { useParams } from "next/navigation";
 import { useEffect } from "react";
 

@@ -3,18 +3,19 @@
 import { ProTable } from '@ant-design/pro-components';
 import { Button, Space } from 'antd';
 import { ApplicationItem } from '@/types/application';
-import Link from 'next/link';
 import { DatabaseOutlined, EditOutlined, InfoCircleOutlined, SendOutlined } from '@ant-design/icons';
 import {useEffect, useState} from 'react';
 import { useHeader } from '@/context/header-context';
 import { fetchNamespaceList } from "@/service/namespace";
 import { queryApplications } from '@/service';
+import { useRouter } from 'next/navigation';
 
 export default function ApplicationPage() {
 
   const {setHeaderContent} = useHeader();
   const [namespaces, setNamespaces] = useState<string[] | null>(null);
   const [namespaceValueEnum, setNamespaceValueEnum] = useState<Record<string, { text: string }>>({});
+  const router = useRouter();
 
   useEffect(() => {
     setHeaderContent(
@@ -57,7 +58,7 @@ export default function ApplicationPage() {
             dataIndex: 'name',
             render: (_, record) =>
             <>
-              <Link href={`/namespace/${record.namespace}/application/${record.name}/status`}>{record.name}</Link>
+              <Button onClick={() => router.push(`/namespace/${record.namespace}/application/${record.name}/status`)}>{record.name}</Button>
             </>,
             search: true
           },
@@ -73,10 +74,10 @@ export default function ApplicationPage() {
             valueType: 'option',
             render: (_, record) => (
               <Space>
-                <Button icon={<EditOutlined />} href={`/namespace/${record.namespace}/application/${record.name}`}>Edit</Button>
-                <Button icon={<SendOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/deployment`}>Deploy</Button>
-                <Button icon={<InfoCircleOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/status`}>Status</Button>
-                <Button icon={<DatabaseOutlined />} href={`/namespace/${record.namespace}/application/${record.name}/configmap`}>Config</Button>
+                <Button icon={<EditOutlined />} onClick={() => router.push(`/namespace/${record.namespace}/application/${record.name}`)}>Edit</Button>
+                <Button icon={<SendOutlined />} onClick={() => router.push(`/namespace/${record.namespace}/application/${record.name}/deployment`)}>Deploy</Button>
+                <Button icon={<InfoCircleOutlined />} onClick={() => router.push(`/namespace/${record.namespace}/application/${record.name}/status`)}>Status</Button>
+                <Button icon={<DatabaseOutlined />} onClick={() => router.push(`/namespace/${record.namespace}/application/${record.name}/configmap`)}>Config</Button>
               </Space>
             ),
           },

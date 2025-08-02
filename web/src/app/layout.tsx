@@ -11,6 +11,7 @@ import './globals.css';
 import { AppstoreOutlined, SettingOutlined, RocketOutlined } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
 import { HeaderProvider, useHeader } from '@/context/header-context';
+import EnvironmentSelector from '@/component/EnvironmentSelector';
 
 const { Header, Content, Sider } = Layout;
 
@@ -49,8 +50,13 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <Menu theme="dark" selectedKeys={[pathname]} mode="inline" items={items} onClick={handleMenuClick} />
       </Sider>
       <Layout>
-        <Header className="h-15! text-white! px-4!">
-          {headerContent}
+        <Header className=" text-white! px-4! flex items-center justify-between">
+          <div className="flex-1">
+            {headerContent}
+          </div>
+          <div className="flex-shrink-0">
+            <EnvironmentSelector />
+          </div>
         </Header>
         <Content>
           {children}

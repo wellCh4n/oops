@@ -1,12 +1,14 @@
 package com.github.wellch4n.oops.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.objects.FileEntryResponse;
 import io.kubernetes.client.Exec;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,6 +17,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +50,14 @@ public class ExplorerWebSocketHandler extends TextWebSocketHandler {
         String namespace = parts[3];
         String app = parts[5];
         String pod = parts[7];
+
+        Map<String, String> params = UriComponentsBuilder
+                .fromUriString(uri.toString())
+                .build()
+                .getQueryParams()
+                .toSingleValueMap();
+        String environment = params.get("environment");
+        EnvironmentContext.setEnvironment(environment);
 
         Exec exec = new Exec(KubernetesClientFactory.getClient());
         this.process = exec.exec(

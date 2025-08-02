@@ -35,6 +35,9 @@ public class KubernetesApiClientInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        String environment = request.getHeader("OOPS-Environment");
+
+        EnvironmentContext.setEnvironment(environment);
         ApiClient apiClient = KubernetesClientFactory.getClient();
 
         if (apiClient == null) {

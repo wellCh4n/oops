@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
+import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import io.kubernetes.client.Exec;
 import org.jetbrains.annotations.NotNull;
@@ -8,10 +9,12 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.*;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /**
  * @author wellCh4n
@@ -34,6 +37,14 @@ public class TerminalWebSocketHandler extends BinaryWebSocketHandler {
         String namespace = parts[3];
         String app = parts[5];
         String pod = parts[7];
+
+        Map<String, String> params = UriComponentsBuilder
+                .fromUriString(uri.toString())
+                .build()
+                .getQueryParams()
+                .toSingleValueMap();
+        String environment = params.get("environment");
+        EnvironmentContext.setEnvironment(environment);
 
         Exec exec = new Exec(KubernetesClientFactory.getClient());
         this.process = exec.exec(

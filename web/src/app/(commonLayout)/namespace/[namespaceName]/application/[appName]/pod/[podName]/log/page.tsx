@@ -38,8 +38,9 @@ export default function LogPage() {
     };
 
     eventSource.addEventListener('log', (event) => {
-        console.log('Received message:', event.data);
-        setLogs(prev => [...prev, event.data]);
+      const messageEvent = event as MessageEvent;
+      console.log('Received message:', messageEvent.data);
+      setLogs(prev => [...prev, messageEvent.data]);
     });
     
     eventSource.onerror = (error) => {

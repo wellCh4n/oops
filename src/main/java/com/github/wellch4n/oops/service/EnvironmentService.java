@@ -23,4 +23,8 @@ public class EnvironmentService {
     public List<Environment> getEnvironments() {
         return environmentRepository.findAll();
     }
+
+    public Environment getEnvironment(String name) {
+        return environmentRepository.findFirstByName(name);
+    }
 }
