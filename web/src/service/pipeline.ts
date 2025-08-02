@@ -10,7 +10,7 @@ export const fetchPipeline = (namespace: string, appName: string,  pipelineId: s
 }
 
 export const watchPipeline = (namespace: string, appName: string, pipelineId: string) => {
-  return new EventSource(`http://${request.baseUrl}/api/namespaces/${namespace}/applications/${appName}/pipelines/${pipelineId}/watch`)
+  return request.sse(`/api/namespaces/${namespace}/applications/${appName}/pipelines/${pipelineId}/watch`)
 }
 
 export const stopPipeline = (namespace: string, appName: string, pipelineId: string) => {
