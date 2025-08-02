@@ -139,8 +139,8 @@ export default function TerminalPage() {
           treeData={fileTree}
         />
       </div>
-      <div className="h-full w-full" style={{ backgroundColor: '#1e1e1e' }}>
-        <div className="h-full p-2" ref={terminalRef} />
+      <div className="h-full w-full p-3" style={{ backgroundColor: '#1e1e1e' }}>
+        <div className="h-full" ref={terminalRef} />
       </div>
     </div>
   );
