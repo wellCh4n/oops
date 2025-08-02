@@ -7,16 +7,89 @@ import { EnvironmentItem } from '@/types/environment';
 import { Button, Card, Modal, Table, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 
+
+type EnvironmentPanelProps = {
+  environments: EnvironmentItem[];
+}
+
+const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({ environments }) => {
+  return (
+    <div>
+      <div className="flex justify-end p-3">
+        <Button 
+          type="primary"
+          onClick={() => {
+            Modal.confirm({
+              title: 'Create Environment',
+              footer: null,
+              content: (
+                <EnvironmentEditor 
+                  environment={{}} 
+                  onFinish={() => {
+                    window.location.reload();
+                  }}
+                  mode="create"
+                />
+              )
+            })
+          }}
+        >
+          Create
+        </Button>
+      </div>
+      <Table<EnvironmentItem>
+        rowKey={(record) => record.id}
+        dataSource={environments}
+        columns={[
+          {
+            key: 'id',
+            title: 'ID',
+            dataIndex: 'id',
+          },
+          {
+            key: 'name',
+            title: 'Name',
+            dataIndex: 'name',
+          },
+          {
+            key: 'apiServerUrl',
+            title: 'API Server',
+            dataIndex: 'apiServerUrl',
+          },
+          {
+            key: 'action',
+            title: 'Action',
+            render: (_, record) => {
+              return (
+                <Button onClick={() => {
+                  Modal.confirm({
+                    title: 'Edit Environment',
+                    footer: null,
+                    content: (
+                      <EnvironmentEditor 
+                        environment={record} 
+                        onFinish={() => {
+                          window.location.reload();
+                        }}
+                        mode="edit"
+                      />
+                    )
+                  })
+                }}>Edit</Button>
+              )
+            }
+          },
+        ]}
+      />
+    </div>
+  )
+}
+
 export default function SystemPage() {
 
   const [environments, setEnvironments] = useState<EnvironmentItem[]>([]);
   const { setHeaderContent } = useHeader();
-
-  const fetchEnvironments = async () => {
-    const data = await fetchEnvironmentList();
-    setEnvironments(data);
-  }
-
+  
   useEffect(() => {
     setHeaderContent(
       <span>System</span>
@@ -27,64 +100,10 @@ export default function SystemPage() {
   }, [ setHeaderContent ])
 
   useEffect(() => {
-    fetchEnvironments()
+    fetchEnvironmentList().then((data) => {
+      setEnvironments(data);
+    })
   }, [])
-
-  type EnvironmentPanelProps = {
-    environments: EnvironmentItem[];
-  }
-
-  const EnvironmentPanel: React.FC<EnvironmentPanelProps> = ({ environments }) => {
-    return (
-      <div>
-        <Table<EnvironmentItem>
-          rowKey={(record) => record.id}
-          dataSource={environments}
-          columns={[
-            {
-              key: 'id',
-              title: 'ID',
-              dataIndex: 'id',
-            },
-            {
-              key: 'name',
-              title: 'Name',
-              dataIndex: 'name',
-            },
-            {
-              key: 'apiServerUrl',
-              title: 'API Server',
-              dataIndex: 'apiServerUrl',
-            },
-            {
-              key: 'action',
-              title: 'Action',
-              render: (_, record) => {
-                return (
-                  <Button onClick={() => {
-                    const modal = Modal.confirm({
-                      title: 'Edit Environment',
-                      footer: null,
-                      content: (
-                        <EnvironmentEditor 
-                          environment={record} 
-                          onFinish={() => {
-                            modal.destroy();
-                            fetchEnvironments();
-                          }}
-                          mode="edit"
-                        />
-                      )
-                    })
-                  }}>Edit</Button>
-                )
-              }
-            },
-          ]}
-        />
-      </div>
-    )
-  }
 
   return (
     <Card>
@@ -97,33 +116,6 @@ export default function SystemPage() {
           },
         ]}
       />
-      {/* <Form 
-        layout="vertical"
-        onFinish={(values) => {
-          const configs = Object.entries(values).map((value) => {
-            const [ configKey, configValue ] = value;
-            return {
-              configKey,
-              configValue,
-            } as SystemItem
-          })
-          updateSystem(configs)
-        }}
-        form={form}
-      >
-        { systemInfos.map((systemInfo) => {
-          return (
-            <Form.Item key={systemInfo.configKey} label={systemInfo.configKey} name={systemInfo.configKey}>
-              <Input.TextArea value={systemInfo.configValue} autoSize />
-            </Form.Item>
-          )
-        }) }
-        <Form.Item>
-          <Button type="primary" htmlType="submit">
-            Save
-          </Button>
-        </Form.Item>
-      </Form> */}
     </Card>
   );
 }

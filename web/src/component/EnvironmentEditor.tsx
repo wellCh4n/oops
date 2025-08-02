@@ -5,7 +5,7 @@ import { Form, Input, Button } from "antd";
 type EditorMode = "create" | "edit";
 
 type EnvironmentEditorProps = {
-  environment: EnvironmentItem;
+  environment: Partial<EnvironmentItem>;
   mode: EditorMode;
   onFinish: () => void;
 }
@@ -21,7 +21,7 @@ const EnvironmentEditor: React.FC<EnvironmentEditorProps> = ({ environment, mode
             onFinish();
           })
         } else {
-          updateEnvironment(environment.id, values).then(() => {
+          updateEnvironment(environment.id!, values).then(() => {
             onFinish();
           })
         }
