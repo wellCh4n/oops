@@ -1,9 +1,6 @@
 package com.github.wellch4n.oops.config;
 
 import com.github.wellch4n.oops.data.Environment;
-import com.github.wellch4n.oops.data.SystemConfig;
-import com.github.wellch4n.oops.data.SystemConfigRepository;
-import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.AppsV1Api;

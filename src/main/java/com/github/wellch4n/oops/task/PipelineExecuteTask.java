@@ -5,10 +5,10 @@ import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
-import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.service.BuildStorageService;
+import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
@@ -49,12 +49,11 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         this.deploymentConfig = SpringContext.getBean(DeploymentConfig.class);
 
-        SystemConfigRepository systemConfigRepository = SpringContext.getBean(SystemConfigRepository.class);
-        SystemConfig imageRepository = systemConfigRepository.findByConfigKey(SystemConfigKeys.IMAGE_REPOSITORY_URL);
-        if (imageRepository == null) {
-            throw new IllegalStateException("Image repository URL is not configured.");
-        }
-        this.repositoryUrl = imageRepository.getConfigValue();
+        String environmentName = pipeline.getEnvironment();
+        EnvironmentService environmentService = SpringContext.getBean(EnvironmentService.class);
+        Environment environment = environmentService.getEnvironment(environmentName);
+
+        this.repositoryUrl = environment.getImageRepositoryUrl();
     }
 
     @Override

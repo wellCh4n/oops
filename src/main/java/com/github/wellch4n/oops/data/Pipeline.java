@@ -19,6 +19,8 @@ public class Pipeline extends BaseDataObject {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
+    private String environment;
+
     private String namespace;
 
     private String applicationName;

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.data.Pipeline;
@@ -35,6 +36,7 @@ public class DeploymentService {
             pipeline.setNamespace(namespace);
             pipeline.setApplicationName(application.getName());
             pipeline.setStatus(PipelineStatus.INITIALIZED);
+            pipeline.setEnvironment(EnvironmentContext.getEnvironment());
             pipelineRepository.save(pipeline);
 
             PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline);

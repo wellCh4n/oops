@@ -1,14 +1,13 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
-import com.github.wellch4n.oops.data.SystemConfig;
+import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.objects.BuildStorage;
 import io.kubernetes.client.custom.Quantity;
 import io.kubernetes.client.openapi.models.*;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -23,10 +22,10 @@ import java.util.Map;
 @Service
 public class BuildStorageService {
 
-    private final SystemService systemService;
+    private final EnvironmentService environmentService;
 
-    public BuildStorageService(SystemService systemService) {
-        this.systemService = systemService;
+    public BuildStorageService(EnvironmentService environmentService) {
+        this.environmentService = environmentService;
     }
 
     public List<BuildStorage> getBuildStorages(String namespace, String applicationName) {
@@ -64,10 +63,8 @@ public class BuildStorageService {
 
     public Boolean addBuildStorage(String namespace, String applicationName, BuildStorage request) throws Exception {
 
-        SystemConfig buildCacheStorageClass = systemService.getSystemConfig(SystemConfigKeys.BUILD_CACHE_STORAGE_CLASS);
-        if (buildCacheStorageClass == null || StringUtils.isEmpty(buildCacheStorageClass.getConfigValue())) {
-            throw new Exception("Build cache storage class is not configured.");
-        }
+        String environmentName = EnvironmentContext.getEnvironment();
+        Environment environment = environmentService.getEnvironment(environmentName);
 
         HashMap<String, Quantity> requests = new HashMap<>();
         requests.put("storage", new Quantity(request.getCapacity()));
@@ -87,7 +84,7 @@ public class BuildStorageService {
                 )
                 .spec(
                         new V1PersistentVolumeClaimSpec()
-                                .storageClassName(buildCacheStorageClass.getConfigValue())
+                                .storageClassName(environment.getBuildStorageClass())
                                 .accessModes(List.of("ReadWriteMany"))
                                 .volumeMode("Filesystem")
                                 .resources(

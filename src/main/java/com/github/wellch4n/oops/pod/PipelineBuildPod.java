@@ -61,13 +61,10 @@ public class PipelineBuildPod extends V1Pod {
 
     @SafeVarargs
     public final void addVolumes(List<V1Volume>... volumes) {
-//        List<V1Volume> mounts = new ArrayList<>();
         for (List<V1Volume> v1Volumes : volumes) {
             for (V1Volume v1Volume : v1Volumes) {
                 this.getSpec().addVolumesItem(v1Volume);
             }
         }
-
-//        this.getSpec().setVolumes(mounts);
     }
 }

@@ -4,7 +4,7 @@ import EnvironmentEditor from '@/component/EnvironmentEditor';
 import { useHeader } from '@/context/header-context';
 import { deleteEnvironment, fetchEnvironmentList } from '@/service/environment';
 import { EnvironmentItem } from '@/types/environment';
-import { Button, Modal, Space, Table, Tabs } from 'antd';
+import { Button, Card, Modal, Space, Table, Tabs } from 'antd';
 import React, { useEffect, useState } from 'react';
 
 
@@ -131,9 +131,7 @@ export default function SystemPage() {
   }, [])
 
   return (
-    <div
-      className="bg-white p-3"
-    >
+    <Card>
       <Tabs
         items={[
           {
@@ -143,6 +141,6 @@ export default function SystemPage() {
           },
         ]}
       />
-    </div>
+    </Card>
   );
 }
