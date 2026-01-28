@@ -31,3 +31,36 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+web/node_modules
+
+# testing
+/coverage
+
+# next.js
+web/.next
+web/out/
+
+# production
+web/build
+
+# misc
+web/.DS_Store
+web/*.pem
+
+# debug
+web/npm-debug.log*
+web/.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+web/.env*
+
+# vercel
+web/.vercel
+
+# typescript
+web/*.tsbuildinfo
+web/next-env.d.ts
