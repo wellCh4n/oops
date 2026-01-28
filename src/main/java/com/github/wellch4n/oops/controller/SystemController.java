@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.data.SystemConfig;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.SystemService;
@@ -23,13 +22,11 @@ public class SystemController {
         this.systemService = systemService;
     }
 
-    @WithoutKubernetes
     @GetMapping
     public Result<List<SystemConfig>> getSystemConfigs() {
         return Result.success(systemService.getSystemConfigs());
     }
 
-    @WithoutKubernetes
     @PutMapping
     public Result<Boolean> updateSystemConfigs(@RequestBody List<SystemConfig> systemConfigs) {
         return Result.success(systemService.updateSystemConfigs(systemConfigs));

@@ -41,3 +41,19 @@ export async function createEnvironment(data: EnvironmentFormValues): Promise<Ap
 
   return response.json();
 }
+
+export async function updateEnvironment(id: string, data: EnvironmentFormValues): Promise<ApiResponse<boolean>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update environment");
+  }
+
+  return response.json();
+}

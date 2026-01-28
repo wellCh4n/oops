@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.objects.Result;
 import io.kubernetes.client.openapi.ApiClient;
 import jakarta.servlet.http.HttpServletRequest;

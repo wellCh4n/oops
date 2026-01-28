@@ -11,6 +11,8 @@ export interface Environment {
   apiServerToken: string
   workNamespace: string
   imageRepositoryUrl: string
+  imageRepositoryUsername?: string
+  imageRepositoryPassword?: string
   buildStorageClass: string
 }
 

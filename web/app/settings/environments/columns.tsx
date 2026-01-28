@@ -14,6 +14,8 @@ export const environmentSchema = z.object({
   apiServerToken: z.string().min(1, "Token is required"),
   workNamespace: z.string().min(1, "Namespace is required"),
   imageRepositoryUrl: z.string().url("Must be a valid URL"),
+  imageRepositoryUsername: z.string().optional(),
+  imageRepositoryPassword: z.string().optional(),
   buildStorageClass: z.string().min(1, "Storage class is required"),
 })
 

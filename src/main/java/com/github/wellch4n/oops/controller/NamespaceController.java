@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.NamespaceService;
@@ -29,13 +28,11 @@ public class NamespaceController {
         this.namespaceService = namespaceService;
     }
 
-    @WithoutKubernetes
     @GetMapping
     public Result<Set<String>> getNamespaces() {
         return Result.success(namespaceService.getNamespaces());
     }
 
-    @WithoutKubernetes
     @PostMapping
     public Result<Boolean> createNamespace(@RequestBody Namespace namespace) {
         namespaceService.createNamespace(namespace.getName());

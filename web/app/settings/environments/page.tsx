@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
 import { columns, EnvironmentFormValues, environmentSchema } from "./columns"
 import { Environment } from "@/lib/api/types"
-import { fetchEnvironments, createEnvironment, testEnvironment } from "@/lib/api/environments"
+import { fetchEnvironments, createEnvironment, updateEnvironment, testEnvironment } from "@/lib/api/environments"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -42,6 +42,8 @@ export default function EnvironmentsPage() {
       apiServerToken: "",
       workNamespace: "",
       imageRepositoryUrl: "",
+      imageRepositoryUsername: "",
+      imageRepositoryPassword: "",
       buildStorageClass: "",
     },
   })
@@ -73,6 +75,8 @@ export default function EnvironmentsPage() {
       form.reset({
         ...editingEnv,
         id: editingEnv.id,
+        imageRepositoryUsername: editingEnv.imageRepositoryUsername || "",
+        imageRepositoryPassword: editingEnv.imageRepositoryPassword || "",
       })
     } else {
       form.reset({
@@ -81,6 +85,8 @@ export default function EnvironmentsPage() {
         apiServerToken: "",
         workNamespace: "",
         imageRepositoryUrl: "",
+        imageRepositoryUsername: "",
+        imageRepositoryPassword: "",
         buildStorageClass: "",
       })
     }
@@ -111,15 +117,25 @@ export default function EnvironmentsPage() {
     }
   }
 
-  const handleUpdate = (data: EnvironmentFormValues) => {
+  const handleUpdate = async (data: EnvironmentFormValues) => {
     if (!editingEnv) return
-    const updatedEnv: Environment = {
-      ...data,
-      id: editingEnv.id,
+    try {
+      const response = await updateEnvironment(editingEnv.id, data)
+      if (response.success) {
+        const updatedEnv: Environment = {
+          ...data,
+          id: editingEnv.id,
+        }
+        setEnvironments(environments.map((env) => (env.id === editingEnv.id ? updatedEnv : env)))
+        setEditingEnv(null)
+        toast.success("Environment updated successfully")
+      } else {
+        toast.error(response.message || "Failed to update environment")
+      }
+    } catch (error) {
+      toast.error("Failed to update environment")
+      console.error(error)
     }
-    setEnvironments(environments.map((env) => (env.id === editingEnv.id ? updatedEnv : env)))
-    setEditingEnv(null)
-    toast.success("Environment updated successfully")
   }
 
   const handleDelete = (id: string) => {
@@ -270,6 +286,34 @@ export default function EnvironmentsPage() {
                   </FormItem>
                 )}
               />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="imageRepositoryUsername"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image Repository Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="username" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="imageRepositoryPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Image Repository Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" placeholder="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <DialogFooter>
                 <Button type="submit">Save changes</Button>
               </DialogFooter>

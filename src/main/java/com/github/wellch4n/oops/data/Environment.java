@@ -34,6 +34,8 @@ public class Environment {
     private String buildStorageClass;
 
     private String imageRepositoryUrl;
+    private String imageRepositoryUsername;
+    private String imageRepositoryPassword;
 
     public CoreV1Api coreV1Api() {
         return new CoreV1Api(Config.fromToken(apiServerUrl, apiServerToken, false));
