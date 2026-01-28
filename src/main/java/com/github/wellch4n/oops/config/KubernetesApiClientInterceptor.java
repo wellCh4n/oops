@@ -26,26 +26,26 @@ public class KubernetesApiClientInterceptor implements HandlerInterceptor {
                              @NotNull HttpServletResponse response,
                              @NotNull Object handler) throws Exception {
 
-        if (!(handler instanceof HandlerMethod handlerMethod)) {
-            return true;
-        }
-        WithoutKubernetes withoutKubernetes = handlerMethod.getMethodAnnotation(WithoutKubernetes.class);
-
-        if (withoutKubernetes != null) {
-            return true;
-        }
-
-        String environment = request.getHeader("OOPS-Environment");
-
-        EnvironmentContext.setEnvironment(environment);
-        ApiClient apiClient = KubernetesClientFactory.getClient();
-
-        if (apiClient == null) {
-            response.setContentType("application/json");
-            Result<Object> failure = Result.failure("Kubernetes API server URL or token is not configured in the system.");
-            response.getWriter().write(objectMapper.writeValueAsString(failure));
-            return false;
-        }
+//        if (!(handler instanceof HandlerMethod handlerMethod)) {
+//            return true;
+//        }
+//        WithoutKubernetes withoutKubernetes = handlerMethod.getMethodAnnotation(WithoutKubernetes.class);
+//
+//        if (withoutKubernetes != null) {
+//            return true;
+//        }
+//
+//        String environment = request.getHeader("OOPS-Environment");
+//
+//        EnvironmentContext.setEnvironment(environment);
+//        ApiClient apiClient = KubernetesClientFactory.getClient();
+//
+//        if (apiClient == null) {
+//            response.setContentType("application/json");
+//            Result<Object> failure = Result.failure("Kubernetes API server URL or token is not configured in the system.");
+//            response.getWriter().write(objectMapper.writeValueAsString(failure));
+//            return false;
+//        }
 
         return true;
     }

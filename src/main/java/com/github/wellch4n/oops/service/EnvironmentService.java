@@ -3,6 +3,9 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.config.EnvironmentContext;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.EnvironmentRepository;
+import io.kubernetes.client.openapi.ApiClient;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.util.Config;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -63,5 +66,21 @@ public class EnvironmentService {
         EnvironmentContext.clear();
 
         return true;
+    }
+
+    public Boolean testConnection(String id) {
+        Environment environment = environmentRepository.findById(id).orElse(null);
+        if (environment == null) {
+            return false;
+        }
+        try {
+            ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
+            CoreV1Api api = new CoreV1Api(client);
+            api.listNamespace().execute();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

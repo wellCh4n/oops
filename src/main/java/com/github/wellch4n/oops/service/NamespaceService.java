@@ -1,6 +1,8 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
+import com.github.wellch4n.oops.data.Namespace;
+import com.github.wellch4n.oops.data.NamespaceRepository;
 import io.kubernetes.client.openapi.models.V1NamespaceList;
 import org.springframework.stereotype.Service;
 
@@ -15,14 +17,22 @@ import java.util.stream.Collectors;
 @Service
 public class NamespaceService {
 
+    private final NamespaceRepository namespaceRepository;
+
+    public NamespaceService(NamespaceRepository namespaceRepository) {
+        this.namespaceRepository = namespaceRepository;
+    }
+
+
     public Set<String> getNamespaces() {
-        try {
-            V1NamespaceList v1NamespaceList = KubernetesClientFactory.getCoreApi().listNamespace().execute();
-            return v1NamespaceList.getItems().stream()
-                    .map(namespace -> namespace.getMetadata().getName())
-                    .collect(Collectors.toSet());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to retrieve namespaces: " + e.getMessage(), e);
-        }
+        return namespaceRepository.findAll().stream()
+                .map(Namespace::getName)
+                .collect(Collectors.toSet());
+    }
+
+    public void createNamespace(String name) {
+        Namespace namespace = new Namespace();
+        namespace.setName(name);
+        namespaceRepository.save(namespace);
     }
 }

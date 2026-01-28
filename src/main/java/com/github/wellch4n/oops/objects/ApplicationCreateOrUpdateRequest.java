@@ -12,9 +12,8 @@ import java.util.List;
 @Data
 public class ApplicationCreateOrUpdateRequest {
     private String name;
+    private String description;
     private String repository;
     private String dockerFile;
     private String buildImage;
-    private String buildCommand;
-    private Integer replicas = 0;
 }

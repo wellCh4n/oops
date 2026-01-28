@@ -12,6 +12,7 @@ import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
+import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -27,13 +28,14 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Pipeline pipeline;
     private final Application application;
-    private final List<BuildStorage> buildStorages;
+    private final ApplicationEnvironmentConfig applicationEnvironmentConfig;
+    private final List<BuildStorage> buildStorages = null;
     private final CoreV1Api api;
     private final DeploymentConfig deploymentConfig;
 
     private final String repositoryUrl;
 
-    public PipelineExecuteTask(Pipeline pipeline) {
+    public PipelineExecuteTask(Pipeline pipeline, Environment environment) {
         this.pipeline = pipeline;
 
         ApplicationRepository applicationRepository = SpringContext.getBean(ApplicationRepository.class);
@@ -42,26 +44,34 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipeline.getApplicationName()
         );
 
-        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
-        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
+        ApplicationEnvironmentConfigRepository bean = SpringContext.getBean(ApplicationEnvironmentConfigRepository.class);
+        this.applicationEnvironmentConfig = bean.findFirstByNamespaceAndApplicationNameAndEnvironmentName(
+                application.getNamespace(),
+                application.getName(),
+                environment.getName()
+        );
 
-        this.api = KubernetesClientFactory.getCoreApi();
+//        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
+//        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
+
+        this.api = environment.coreV1Api();
+//        this.api = KubernetesClientFactory.getCoreApi();
 
         this.deploymentConfig = SpringContext.getBean(DeploymentConfig.class);
 
-        SystemConfigRepository systemConfigRepository = SpringContext.getBean(SystemConfigRepository.class);
-        SystemConfig imageRepository = systemConfigRepository.findByConfigKey(SystemConfigKeys.IMAGE_REPOSITORY_URL);
-        if (imageRepository == null) {
-            throw new IllegalStateException("Image repository URL is not configured.");
-        }
-        this.repositoryUrl = imageRepository.getConfigValue();
+//        SystemConfigRepository systemConfigRepository = SpringContext.getBean(SystemConfigRepository.class);
+//        SystemConfig imageRepository = systemConfigRepository.findByConfigKey(SystemConfigKeys.IMAGE_REPOSITORY_URL);
+//        if (imageRepository == null) {
+//            throw new IllegalStateException("Image repository URL is not configured.");
+//        }
+        this.repositoryUrl = environment.getImageRepositoryUrl();
     }
 
     @Override
     public PipelineBuildPod call() {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
-        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
+//        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
 
         List<BaseContainer> initContainers = Lists.newArrayList();
 
@@ -69,10 +79,10 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts());
         initContainers.add(clone);
 
-        if (StringUtils.isNotEmpty(application.getBuildImage()) && StringUtils.isNotEmpty(application.getBuildCommand())) {
-            BuildContainer build = new BuildContainer(application);
+        if (StringUtils.isNotEmpty(application.getBuildImage()) && StringUtils.isNotEmpty(applicationEnvironmentConfig.getBuildCommand())) {
+            BuildContainer build = new BuildContainer(application, applicationEnvironmentConfig);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
-            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
+//            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);
         }
 
@@ -86,7 +96,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
-        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
+//        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try {

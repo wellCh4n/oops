@@ -28,6 +28,8 @@ public class Pipeline extends BaseDataObject {
 
     private String artifact;
 
+    private String environment;
+
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, id);
     }

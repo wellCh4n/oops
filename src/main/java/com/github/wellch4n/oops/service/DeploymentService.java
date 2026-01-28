@@ -1,9 +1,6 @@
 package com.github.wellch4n.oops.service;
 
-import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationRepository;
-import com.github.wellch4n.oops.data.Pipeline;
-import com.github.wellch4n.oops.data.PipelineRepository;
+import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.task.PipelineExecuteTask;
@@ -21,23 +18,28 @@ public class DeploymentService {
 
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
+    private final EnvironmentService environmentService;
 
-    public DeploymentService(ApplicationRepository applicationRepository, PipelineRepository pipelineRepository) {
+    public DeploymentService(ApplicationRepository applicationRepository, PipelineRepository pipelineRepository, EnvironmentService environmentService) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
+        this.environmentService = environmentService;
     }
 
-    public String deployApplication(String namespace, String applicationName) {
+    public String deployApplication(String namespace, String applicationName, String environmentName) {
         try {
+            Environment environment = environmentService.getEnvironment(environmentName);
+
             Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
 
             Pipeline pipeline = new Pipeline();
             pipeline.setNamespace(namespace);
             pipeline.setApplicationName(application.getName());
             pipeline.setStatus(PipelineStatus.INITIALIZED);
+            pipeline.setEnvironment(environment.getName());
             pipelineRepository.save(pipeline);
 
-            PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline);
+            PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);
             FutureTask<PipelineBuildPod> pipelineExecutorJobTask = new FutureTask<>(pipelineExecuteTask);
             Thread.ofVirtual().start(pipelineExecutorJobTask);
 

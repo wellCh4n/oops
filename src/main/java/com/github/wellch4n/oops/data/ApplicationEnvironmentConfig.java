@@ -1,35 +1,28 @@
 package com.github.wellch4n.oops.data;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-/**
- * @author wellCh4n
- * @date 2025/7/5
- */
 
 @Data
 @Entity
 @EqualsAndHashCode(callSuper = true)
-public class Application extends BaseDataObject {
+public class ApplicationEnvironmentConfig extends BaseDataObject {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
-    private String name;
-
-    private String description;
-
     private String namespace;
 
-    private String repository;
+    private String applicationName;
 
-    private String dockerFile;
-
-    private String buildImage;
+    private String environmentName;
 
     private String buildCommand;
 
     private Integer replicas;
+
 }

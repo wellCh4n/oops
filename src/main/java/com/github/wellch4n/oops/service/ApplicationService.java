@@ -2,10 +2,15 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
+import com.github.wellch4n.oops.data.ApplicationEnvironmentConfigRepository;
 import com.github.wellch4n.oops.data.ApplicationRepository;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationCreateOrUpdateRequest;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.objects.ApplicationEnvironmentConfigRequest;
+import com.github.wellch4n.oops.data.Environment;
+import com.github.wellch4n.oops.data.EnvironmentRepository;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
@@ -28,9 +33,13 @@ import java.util.List;
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
+    private final ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository;
+    private final EnvironmentRepository environmentRepository;
 
-    public ApplicationService(ApplicationRepository applicationRepository) {
+    public ApplicationService(ApplicationRepository applicationRepository, ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository, EnvironmentRepository environmentRepository) {
         this.applicationRepository = applicationRepository;
+        this.applicationEnvironmentConfigRepository = applicationEnvironmentConfigRepository;
+        this.environmentRepository = environmentRepository;
     }
 
     public Application getApplication(String namespace, String name) {
@@ -45,11 +54,10 @@ public class ApplicationService {
         Application application = new Application();
         application.setName(request.getName());
         application.setNamespace(namespace);
+        application.setDescription(request.getDescription());
         application.setRepository(request.getRepository());
         application.setDockerFile(request.getDockerFile());
         application.setBuildImage(request.getBuildImage());
-        application.setBuildCommand(request.getBuildCommand());
-        application.setReplicas(request.getReplicas());
         applicationRepository.save(application);
 
         return application.getId();
@@ -60,11 +68,41 @@ public class ApplicationService {
         if (application == null) {
             throw new RuntimeException("Application not found");
         }
+        application.setDescription(request.getDescription());
         application.setDockerFile(request.getDockerFile());
         application.setRepository(request.getRepository());
-        application.setReplicas(request.getReplicas());
+        application.setBuildImage(request.getBuildImage());
         applicationRepository.save(application);
 
+        return true;
+    }
+
+    public List<ApplicationEnvironmentConfig> getApplicationEnvironmentConfigs(String namespace, String name) {
+        return applicationEnvironmentConfigRepository.findApplicationEnvironmentConfigByNamespaceAndApplicationName(namespace, name);
+    }
+
+    public Boolean createApplicationConfigs(List<ApplicationEnvironmentConfig> configs) {
+        applicationEnvironmentConfigRepository.saveAll(configs);
+        return true;
+    }
+
+    public Boolean upsertApplicationConfigs(String namespace, String appName, List<ApplicationEnvironmentConfigRequest> configs) {
+        for (ApplicationEnvironmentConfigRequest req : configs) {
+            Environment env = environmentRepository.findById(req.getEnvironmentId())
+                    .orElseThrow(() -> new IllegalArgumentException("Environment not found: " + req.getEnvironmentId()));
+            String envName = env.getName();
+            ApplicationEnvironmentConfig existing = applicationEnvironmentConfigRepository
+                    .findFirstByNamespaceAndApplicationNameAndEnvironmentName(namespace, appName, envName);
+            ApplicationEnvironmentConfig target = existing != null ? existing : new ApplicationEnvironmentConfig();
+            if (existing == null) {
+                target.setNamespace(namespace);
+                target.setApplicationName(appName);
+                target.setEnvironmentName(envName);
+            }
+            target.setBuildCommand(req.getBuildCommand());
+            target.setReplicas(req.getReplicas());
+            applicationEnvironmentConfigRepository.save(target);
+        }
         return true;
     }
 

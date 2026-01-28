@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.service.DeploymentService;
 import com.github.wellch4n.oops.objects.Result;
+import org.springframework.data.repository.query.Param;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +25,8 @@ public class DeploymentController {
 
     @PostMapping
     public Result<String> deployApplication(@PathVariable String namespace,
-                                            @PathVariable String name) {
-        return Result.success(deploymentService.deployApplication(namespace, name));
+                                            @PathVariable String name,
+                                            @Param("environment") String environment) {
+        return Result.success(deploymentService.deployApplication(namespace, name, environment));
     }
 }

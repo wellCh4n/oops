@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
+import com.github.wellch4n.oops.annotation.WithoutKubernetes;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.EnvironmentService;
@@ -22,24 +23,34 @@ public class EnvironmentController {
         this.environmentService = environmentService;
     }
 
+    @WithoutKubernetes
     @GetMapping
     public Result<List<Environment>> getEnvironments() {
         return Result.success(environmentService.getEnvironments());
     }
 
+    @WithoutKubernetes
     @PutMapping("{id}")
     public Result<Boolean> updateEnvironment(@PathVariable String id,
                                              @RequestBody Environment environment) {
         return Result.success(environmentService.updateEnvironment(id, environment));
     }
 
+    @WithoutKubernetes
     @PostMapping
     public Result<Boolean> createEnvironment(@RequestBody Environment environment) {
         return Result.success(environmentService.createEnvironment(environment));
     }
 
+    @WithoutKubernetes
     @DeleteMapping("{id}")
     public Result<Boolean> deleteEnvironment(@PathVariable String id) {
         return Result.success(environmentService.deleteEnvironment(id));
+    }
+
+    @WithoutKubernetes
+    @PostMapping("test/{id}")
+    public Result<Boolean> testEnvironment(@PathVariable String id) {
+        return Result.success(environmentService.testConnection(id));
     }
 }

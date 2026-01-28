@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ConfigMapResponse;
@@ -24,17 +25,19 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     private final Pipeline pipeline;
     private final Application application;
+    private final Environment environment;
     private final List<ConfigMapResponse> configMaps;
 
-    public ArtifactDeployTask(Pipeline pipeline, Application application, List<ConfigMapResponse> configMaps) {
+    public ArtifactDeployTask(Pipeline pipeline, Application application, Environment environment, List<ConfigMapResponse> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
+        this.environment = environment;
         this.configMaps = configMaps;
     }
 
     @Override
     public Boolean call() throws Exception {
-        AppsV1Api appsApi = KubernetesClientFactory.getAppsApi();
+        AppsV1Api appsApi = environment.appsApi();
         String namespace = application.getNamespace();
         String applicationName = application.getName();
 
