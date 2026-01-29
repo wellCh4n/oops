@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity } from "lucide-react"
+import { Pencil, Rocket, Activity, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Application } from "@/lib/api/types"
 
@@ -18,6 +18,10 @@ export const columns: ColumnDef<Application>[] = [
     header: "名称",
   },
   {
+    accessorKey: "description",
+    header: "描述",
+  },
+  {
     accessorKey: "namespace",
     header: "命名空间",
   },
@@ -28,7 +32,7 @@ export const columns: ColumnDef<Application>[] = [
       const meta = table.options.meta as TableMeta
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <Button
             variant="outline"
             size="sm"

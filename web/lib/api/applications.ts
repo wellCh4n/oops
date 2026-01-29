@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, BackendApplicationEnvironmentConfig } from "./types";
+import { Application, ApiResponse, BackendApplicationEnvironmentConfig, ApplicationPodStatus } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -98,6 +98,24 @@ export const deployApplication = async (
   });
   if (!response.ok) {
     throw new Error("Failed to deploy application");
+  }
+  return response.json();
+};
+
+export const getApplicationStatus = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationPodStatus[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/status?env=${env}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application status");
+  }
+  return response.json();
+};
+
+export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?env=${env}`, {
+    method: "PUT",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to restart application pod");
   }
   return response.json();
 };

@@ -62,10 +62,15 @@ export default function PublishPage({ params }: PageProps) {
       const res = await deployApplication(namespace, name, selectedEnv)
       if (res.success) {
         toast.success(`已提交发布到 ${selectedEnv}`)
+        // Assuming the backend returns the pipeline ID in res.data
+        if (res.data) {
+             router.push(`/apps/${namespace}/${name}/pipelines/${res.data}`)
+        } else {
+             router.push("/apps")
+        }
       } else {
         toast.error(res.message || "发布失败")
       }
-      router.push("/apps")
     } catch (error) {
       toast.error("Failed to publish application")
     } finally {

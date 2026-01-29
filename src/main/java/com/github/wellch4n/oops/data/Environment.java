@@ -44,4 +44,8 @@ public class Environment {
     public AppsV1Api appsApi() {
         return new AppsV1Api(Config.fromToken(apiServerUrl, apiServerToken, false));
     }
+
+    public ApiClient apiClient() {
+        return Config.fromToken(apiServerUrl, apiServerToken, false);
+    }
 }

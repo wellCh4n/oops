@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Trash2, Plug } from "lucide-react"
+import { Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { z } from "zod"
 import { Environment } from "@/lib/api/types"
@@ -9,23 +9,21 @@ import { Environment } from "@/lib/api/types"
 // Define Schema and Types here to avoid circular dependencies or multiple files
 export const environmentSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "Name is required"),
-  apiServerUrl: z.string().url("Must be a valid URL"),
-  apiServerToken: z.string().min(1, "Token is required"),
-  workNamespace: z.string().min(1, "Namespace is required"),
-  imageRepositoryUrl: z.string().url("Must be a valid URL"),
+  name: z.string().min(1, "名称不能为空"),
+  apiServerUrl: z.string().url("必须是有效的 URL"),
+  apiServerToken: z.string().min(1, "令牌不能为空"),
+  workNamespace: z.string().min(1, "命名空间不能为空"),
+  imageRepositoryUrl: z.string().min(1, "镜像仓库地址不能为空"),
   imageRepositoryUsername: z.string().optional(),
   imageRepositoryPassword: z.string().optional(),
-  buildStorageClass: z.string().min(1, "Storage class is required"),
+  buildStorageClass: z.string().optional(),
 })
 
 export type EnvironmentFormValues = z.infer<typeof environmentSchema>
 
 // Define the shape of our table meta to include handlers
 interface TableMeta {
-  onEdit: (environment: Environment) => void
-  onDelete: (id: string) => void
-  onTest: (id: string) => void
+  onView: (environment: Environment) => void
 }
 
 export const columns: ColumnDef<Environment>[] = [
@@ -52,31 +50,14 @@ export const columns: ColumnDef<Environment>[] = [
       const meta = table.options.meta as TableMeta
 
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => meta?.onTest(environment.id)}
-            title="测试连接"
+            variant="outline" 
+            size="sm"
+            onClick={() => meta?.onView(environment)}
           >
-            <Plug className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => meta?.onEdit(environment)}
-            title="编辑"
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-red-600 hover:text-red-600 hover:bg-red-50"
-            onClick={() => meta?.onDelete(environment.id)}
-            title="删除"
-          >
-            <Trash2 className="h-4 w-4" />
+            <Eye className="mr-2 h-4 w-4" />
+            查看
           </Button>
         </div>
       )

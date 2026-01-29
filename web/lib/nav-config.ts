@@ -21,6 +21,11 @@ export const navConfig: NavGroup[] = [
         url: "/apps",
         icon: LayoutGrid,
       },
+      {
+        title: "流水线",
+        url: "/pipelines",
+        icon: Layers,
+      },
     ],
   },
   {

@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.pod;
 
 import com.github.wellch4n.oops.container.BaseContainer;
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import io.kubernetes.client.openapi.models.*;
@@ -25,7 +26,7 @@ public class PipelineBuildPod extends V1Pod {
     @Getter
     private final String pipelineId;
 
-    public PipelineBuildPod(Application application, Pipeline pipeline,
+    public PipelineBuildPod(Application application, Pipeline pipeline, Environment environment,
                             List<BaseContainer> stepContainers, BaseContainer finishContainer) {
 
         String pipelineId = pipeline.getId();
@@ -33,7 +34,7 @@ public class PipelineBuildPod extends V1Pod {
 
         V1ObjectMeta metadata = new V1ObjectMeta();
         metadata.setName(pipeline.getName());
-        metadata.setNamespace("oops");
+        metadata.setNamespace(environment.getWorkNamespace());
 
         Map<String, String> labels = Map.of(
                 "oops.type", OopsTypes.PIPELINE.name(),

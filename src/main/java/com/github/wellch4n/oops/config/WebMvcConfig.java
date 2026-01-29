@@ -13,11 +13,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    private final KubernetesApiClientInterceptor kubernetesApiClientInterceptor;
-
-    public WebMvcConfig(KubernetesApiClientInterceptor kubernetesApiClientInterceptor) {
-        this.kubernetesApiClientInterceptor = kubernetesApiClientInterceptor;
-    }
+//    private final KubernetesApiClientInterceptor kubernetesApiClientInterceptor;
+//
+//    public WebMvcConfig(KubernetesApiClientInterceptor kubernetesApiClientInterceptor) {
+//        this.kubernetesApiClientInterceptor = kubernetesApiClientInterceptor;
+//    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -29,9 +29,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .exposedHeaders("*");
     }
 
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(kubernetesApiClientInterceptor)
-                .addPathPatterns("/**");
-    }
+//    @Override
+//    public void addInterceptors(InterceptorRegistry registry) {
+//        registry.addInterceptor(kubernetesApiClientInterceptor)
+//                .addPathPatterns("/**");
+//    }
 }

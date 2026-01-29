@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.job;
 
-import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.objects.ConfigMapResponse;
@@ -48,7 +47,7 @@ public class PipelineInstanceScanJob {
 
                 Environment environment = environmentService.getEnvironment(environmentName);
 
-                V1Pod buildPod = environment.coreV1Api().readNamespacedPodStatus(pipelineName, "oops").execute();
+                V1Pod buildPod = environment.coreV1Api().readNamespacedPodStatus(pipelineName, environment.getWorkNamespace()).execute();
                 String status = buildPod.getStatus().getPhase();
 
                 if ("Succeeded".equals(status)) {

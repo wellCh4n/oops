@@ -26,8 +26,11 @@ public class PipelineController {
 
     @GetMapping
     public Result<List<Pipeline>> getPipelines(@PathVariable String namespace,
-                                               @PathVariable String name) {
-        return Result.success(pipelineService.getPipelines(namespace, name));
+                                               @PathVariable String name,
+                                               @RequestParam(required = false) String environment,
+                                               @RequestParam(required = false) Integer page,
+                                               @RequestParam(required = false) Integer size) {
+        return Result.success(pipelineService.getPipelines(namespace, name, environment, page, size));
     }
 
     @GetMapping("/{id}")

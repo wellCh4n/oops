@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.task;
 
-import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;

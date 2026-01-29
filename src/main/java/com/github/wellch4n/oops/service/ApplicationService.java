@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.service;
 
-import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
 import com.github.wellch4n.oops.data.ApplicationEnvironmentConfigRepository;
@@ -15,6 +14,7 @@ import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
@@ -86,30 +86,41 @@ public class ApplicationService {
         return true;
     }
 
-    public Boolean upsertApplicationConfigs(String namespace, String appName, List<ApplicationEnvironmentConfigRequest> configs) {
+    @Transactional
+    public Boolean updateApplicationConfigs(String namespace, String appName, List<ApplicationEnvironmentConfigRequest> configs) {
+        List<ApplicationEnvironmentConfig> oldConfigs = applicationEnvironmentConfigRepository
+                .findApplicationEnvironmentConfigByNamespaceAndApplicationName(namespace, appName);
+        if (oldConfigs != null && !oldConfigs.isEmpty()) {
+            applicationEnvironmentConfigRepository.deleteAll(oldConfigs);
+        }
+
+        List<ApplicationEnvironmentConfig> newConfigs = new ArrayList<>();
         for (ApplicationEnvironmentConfigRequest req : configs) {
             Environment env = environmentRepository.findById(req.getEnvironmentId())
                     .orElseThrow(() -> new IllegalArgumentException("Environment not found: " + req.getEnvironmentId()));
             String envName = env.getName();
-            ApplicationEnvironmentConfig existing = applicationEnvironmentConfigRepository
-                    .findFirstByNamespaceAndApplicationNameAndEnvironmentName(namespace, appName, envName);
-            ApplicationEnvironmentConfig target = existing != null ? existing : new ApplicationEnvironmentConfig();
-            if (existing == null) {
-                target.setNamespace(namespace);
-                target.setApplicationName(appName);
-                target.setEnvironmentName(envName);
-            }
+
+            ApplicationEnvironmentConfig target = new ApplicationEnvironmentConfig();
+            target.setNamespace(namespace);
+            target.setApplicationName(appName);
+            target.setEnvironmentName(envName);
             target.setBuildCommand(req.getBuildCommand());
             target.setReplicas(req.getReplicas());
-            applicationEnvironmentConfigRepository.save(target);
+            newConfigs.add(target);
         }
+        applicationEnvironmentConfigRepository.saveAll(newConfigs);
         return true;
     }
 
-    public List<ApplicationPodStatusResponse> getApplicationStatus(String namespace, String name) {
+    public List<ApplicationPodStatusResponse> getApplicationStatus(String namespace, String name, String environmentName) {
         try {
+            Environment environment = environmentRepository.findFirstByName(environmentName);
+            if (environment == null) {
+                throw new IllegalArgumentException("Environment not found: " + environmentName);
+            }
+
             String labelSelector = "oops.type=%s,oops.app.name=%s".formatted(OopsTypes.APPLICATION.name(), name);
-            V1PodList podList = KubernetesClientFactory.getCoreApi().listNamespacedPod(namespace)
+            V1PodList podList = environment.coreV1Api().listNamespacedPod(namespace)
                     .labelSelector(labelSelector)
                     .execute();
 
@@ -124,32 +135,42 @@ public class ApplicationService {
         }
     }
 
-    public Boolean restartApplication(String namespace, String name, String podName) {
+    public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
         try {
-            KubernetesClientFactory.getCoreApi().deleteNamespacedPod(podName, namespace).execute();
+            Environment environment = environmentRepository.findFirstByName(environmentName);
+            if (environment == null) {
+                throw new IllegalArgumentException("Environment not found: " + environmentName);
+            }
+            environment.coreV1Api().deleteNamespacedPod(podName, namespace).execute();
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Failed to restart application pod: " + e.getMessage(), e);
         }
     }
 
-    public SseEmitter getApplicationPodLogs(String namespace, String name, String podName) {
+    public SseEmitter getApplicationPodLogs(String namespace, String name, String podName, String environmentName) {
         SseEmitter emitter = new SseEmitter(0L);
 
         Thread.startVirtualThread(() -> {
-            PodLogs logs = new PodLogs(KubernetesClientFactory.getClient());
-            try(InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
-                BufferedReader br = new BufferedReader(
-                        new InputStreamReader(is, StandardCharsets.UTF_8));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    SseEmitter.SseEventBuilder event = SseEmitter.event()
-                            .name("log")
-                            .data(line);
-                    emitter.send(event);
+            try {
+                Environment environment = environmentRepository.findFirstByName(environmentName);
+                if (environment == null) {
+                    throw new IllegalArgumentException("Environment not found: " + environmentName);
                 }
+                PodLogs logs = new PodLogs(environment.apiClient());
+                try(InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
+                    BufferedReader br = new BufferedReader(
+                            new InputStreamReader(is, StandardCharsets.UTF_8));
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        SseEmitter.SseEventBuilder event = SseEmitter.event()
+                                .name("log")
+                                .data(line);
+                        emitter.send(event);
+                    }
 
-                emitter.complete();
+                    emitter.complete();
+                }
             } catch (Exception e) {
                 emitter.completeWithError(e);
             }

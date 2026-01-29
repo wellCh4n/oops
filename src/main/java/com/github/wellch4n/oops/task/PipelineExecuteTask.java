@@ -1,14 +1,13 @@
 package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.DeploymentConfig;
-import com.github.wellch4n.oops.config.KubernetesClientFactory;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
-import com.github.wellch4n.oops.service.BuildStorageService;
+//import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
@@ -28,6 +27,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Pipeline pipeline;
     private final Application application;
+    private final Environment environment;
     private final ApplicationEnvironmentConfig applicationEnvironmentConfig;
     private final List<BuildStorage> buildStorages = null;
     private final CoreV1Api api;
@@ -64,7 +64,11 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 //        if (imageRepository == null) {
 //            throw new IllegalStateException("Image repository URL is not configured.");
 //        }
-        this.repositoryUrl = environment.getImageRepositoryUrl();
+        String imageRepositoryUrl = environment.getImageRepositoryUrl();
+        imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
+        this.repositoryUrl = imageRepositoryUrl;
+
+        this.environment = environment;
     }
 
     @Override
@@ -94,13 +98,13 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         DoneContainer done = new DoneContainer();
         done.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
 
-        PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, initContainers, done);
+        PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, environment, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
 //        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try {
-            api.createNamespacedPod("oops", pipelineBuildPod).execute();
+            api.createNamespacedPod(environment.getWorkNamespace(), pipelineBuildPod).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }

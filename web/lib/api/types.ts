@@ -13,7 +13,7 @@ export interface Environment {
   imageRepositoryUrl: string
   imageRepositoryUsername?: string
   imageRepositoryPassword?: string
-  buildStorageClass: string
+  buildStorageClass?: string
 }
 
 export interface Workspace {
@@ -45,4 +45,24 @@ export interface BackendApplicationEnvironmentConfig {
   environmentName: string
   buildCommand?: string
   replicas?: number
+}
+
+export interface ApplicationPodStatus {
+  name: string
+  namespace: string
+  status: string
+  image: string[]
+  podIP: string
+}
+
+export type PipelineStatus = 'INITIALIZED' | 'PENDING' | 'RUNNING' | 'STOPED' | 'SUCCEEDED' | 'ERROR'
+
+export interface Pipeline {
+  id: string
+  namespace: string
+  applicationName: string
+  status: PipelineStatus
+  artifact: string
+  environment: string
+  createdTime: string
 }

@@ -10,7 +10,7 @@ public class DoneContainer extends BaseContainer {
 
     public DoneContainer() {
         this.name("done")
-                .image("busybox:latest")
+                .image("busybox:1.36.1")
                 .command(List.of("sh","-c","echo done!"));
     }
 }

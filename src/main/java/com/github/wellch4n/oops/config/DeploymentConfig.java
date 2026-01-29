@@ -18,6 +18,6 @@ public class DeploymentConfig {
 
     @Data
     public static class Push {
-        private String image = "gcr.io/kaniko-project/executor:latest";
+        private String image = "gcr.io/kaniko-project/executor:v1.24.0";
     }
 }
