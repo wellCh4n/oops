@@ -62,8 +62,8 @@ export default function PipelineDetailPage({ params }: PageProps) {
     })
 
     eventSource.onerror = (e) => {
-        // console.error("EventSource failed", e)
-        // eventSource.close()
+        console.error("EventSource failed", e)
+        eventSource.close()
     }
 
     return () => {

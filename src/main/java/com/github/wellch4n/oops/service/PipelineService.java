@@ -5,8 +5,14 @@ import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.google.gson.reflect.TypeToken;
 import io.kubernetes.client.PodLogs;
+import io.kubernetes.client.openapi.apis.CoreV1Api;
+import io.kubernetes.client.openapi.models.V1Container;
+import io.kubernetes.client.openapi.models.V1ContainerStatus;
 import io.kubernetes.client.openapi.models.V1Pod;
+import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.util.Watch;
 import org.apache.commons.compress.utils.Lists;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -17,7 +23,9 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author wellCh4n
@@ -62,8 +70,9 @@ public class PipelineService {
 
                 String environmentName = pipeline.getEnvironment();
                 Environment environment = environmentService.getEnvironment(environmentName);
+                CoreV1Api coreV1Api = environment.coreV1Api();
 
-                V1Pod v1Pod = environment.coreV1Api().readNamespacedPod(pipelineName, environment.getWorkNamespace()).execute();
+                V1Pod v1Pod = coreV1Api.readNamespacedPod(pipelineName, environment.getWorkNamespace()).execute();
                 v1Pod.getSpec().getInitContainers().forEach(container -> containers.add(container.getName()));
                 v1Pod.getSpec().getContainers().forEach(container -> containers.add(container.getName()));
 
@@ -72,7 +81,24 @@ public class PipelineService {
                 emitter.send(steps);
 
                 for (String containerName : containers) {
-                    System.out.println("Watching " + containerName);
+                    try (Watch<V1Pod> watch = Watch.createWatch(
+                            environment.apiClient(),
+                            coreV1Api.listNamespacedPod(environment.getWorkNamespace())
+                                    .fieldSelector("metadata.name=" + pipelineName)
+                                    .watch(true)
+                                    .buildCall(null),
+                            new TypeToken<Watch.Response<V1Pod>>(){}.getType())) {
+
+                        for (Watch.Response<V1Pod> item : watch) {
+                            V1Pod pod = item.object;
+                            if (isContainerReady(pod, containerName)) {
+                                break; // 容器就绪，跳出 Watch 循环
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Watch error: " + e.getMessage());
+                    }
+
                     PodLogs logs = new PodLogs(environment.apiClient());
                     try (InputStream is = logs.streamNamespacedPodLog(environment.getWorkNamespace(), pipelineName, containerName)) {
                         BufferedReader br = new BufferedReader(
@@ -84,6 +110,9 @@ public class PipelineService {
                                     .data("[" + containerName + "] " + line);
                             emitter.send(event);
                         }
+                    } catch (Exception e) {
+                        System.out.println("Error watching pod logs: " + e.getMessage());
+                        emitter.completeWithError(e);
                     }
                 }
 
@@ -96,6 +125,36 @@ public class PipelineService {
         });
 
         return emitter;
+    }
+
+    private boolean isContainerReady(V1Pod pod, String containerName) {
+        if (pod == null || pod.getStatus() == null) return false;
+
+        var initContainerStatusOptional = pod.getStatus().getInitContainerStatuses().stream().filter(status -> status.getName().equals(containerName)).findFirst();
+        if (initContainerStatusOptional.isPresent()) {
+            var v1ContainerStatus = initContainerStatusOptional.get();
+            if (Boolean.TRUE.equals(v1ContainerStatus.getStarted()) || v1ContainerStatus.getReady()) {
+                return true;
+            }
+        }
+
+        var containerStatusOptional = pod.getStatus().getContainerStatuses().stream().filter(status -> status.getName().equals(containerName)).findFirst();
+        if (containerStatusOptional.isPresent()) {
+            var v1ContainerStatus = containerStatusOptional.get();
+            if (v1ContainerStatus.getState().getTerminated() != null) {
+                return true;
+            }
+        }
+
+        List<V1ContainerStatus> allStatuses = new ArrayList<>();
+        if (pod.getStatus().getInitContainerStatuses() != null)
+            allStatuses.addAll(pod.getStatus().getInitContainerStatuses());
+        if (pod.getStatus().getContainerStatuses() != null)
+            allStatuses.addAll(pod.getStatus().getContainerStatuses());
+
+        return allStatuses.stream()
+                .filter(s -> containerName.equals(s.getName()))
+                .anyMatch(s -> Boolean.TRUE.equals(s.getStarted()) || s.getReady());
     }
 
     public Boolean stopPipeline(String namespace, String applicationName, String id) {

@@ -28,7 +28,7 @@
     </scm>
     <properties>
         <java.version>21</java.version>
-        <kubernetes.client.version>23.0.0</kubernetes.client.version>
+        <kubernetes.client.version>25.0.0</kubernetes.client.version>
     </properties>
     <dependencies>
         <dependency>

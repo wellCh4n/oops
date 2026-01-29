@@ -29,8 +29,7 @@ export function AppSidebar() {
                   <LayoutGrid className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Oops Web</span>
-                  <span className="">v1.0.0</span>
+                  <span className="font-semibold">Oops</span>
                 </div>
               </a>
             </SidebarMenuButton>
