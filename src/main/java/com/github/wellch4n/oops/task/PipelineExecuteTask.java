@@ -35,7 +35,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final String repositoryUrl;
 
-    public PipelineExecuteTask(Pipeline pipeline, Environment environment) {
+    public PipelineExecuteTask(Pipeline pipeline, Environment environment, ApplicationEnvironmentConfig applicationEnvironmentConfig) {
         this.pipeline = pipeline;
 
         ApplicationRepository applicationRepository = SpringContext.getBean(ApplicationRepository.class);
@@ -44,12 +44,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipeline.getApplicationName()
         );
 
-        ApplicationEnvironmentConfigRepository bean = SpringContext.getBean(ApplicationEnvironmentConfigRepository.class);
-        this.applicationEnvironmentConfig = bean.findFirstByNamespaceAndApplicationNameAndEnvironmentName(
-                application.getNamespace(),
-                application.getName(),
-                environment.getName()
-        );
+        this.environment = environment;
+        this.applicationEnvironmentConfig = applicationEnvironmentConfig;
 
 //        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
 //        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
@@ -68,7 +64,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
         this.repositoryUrl = imageRepositoryUrl;
 
-        this.environment = environment;
     }
 
     @Override

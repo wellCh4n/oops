@@ -162,7 +162,7 @@ export default function ClientApps({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items中心 gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">应用名称:</span>
             <div className="flex w-full max-w-sm items-center space-x-2">
               <Input

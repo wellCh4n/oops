@@ -27,14 +27,16 @@ public class PipelineInstanceScanJob {
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
     private final ConfigMapService configMapService;
+    private final ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
-                                   ConfigMapService configMapService) {
+                                   ConfigMapService configMapService, ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.configMapService = configMapService;
+        this.applicationEnvironmentConfigRepository = applicationEnvironmentConfigRepository;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -55,7 +57,11 @@ public class PipelineInstanceScanJob {
 //                    List<ConfigMapResponse> configMaps = configMapService.getConfigMaps(pipeline.getNamespace(), pipeline.getApplicationName());
 
                     Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                    ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, null);
+
+                    ApplicationEnvironmentConfig applicationEnvironmentConfig = applicationEnvironmentConfigRepository.findFirstByNamespaceAndApplicationNameAndEnvironmentName(
+                            application.getNamespace(), application.getName(), environmentName);
+
+                    ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationEnvironmentConfig, null);
                     artifactDeployTask.call();
 
                     pipeline.setStatus(PipelineStatus.SUCCEEDED);

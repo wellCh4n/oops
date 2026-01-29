@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
@@ -25,12 +26,16 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Pipeline pipeline;
     private final Application application;
     private final Environment environment;
+    private final ApplicationEnvironmentConfig applicationEnvironmentConfig;
     private final List<ConfigMapResponse> configMaps;
 
-    public ArtifactDeployTask(Pipeline pipeline, Application application, Environment environment, List<ConfigMapResponse> configMaps) {
+    public ArtifactDeployTask(Pipeline pipeline, Application application,
+                              Environment environment, ApplicationEnvironmentConfig environmentConfig,
+                              List<ConfigMapResponse> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
+        this.applicationEnvironmentConfig = environmentConfig;
         this.configMaps = configMaps;
     }
 
@@ -98,7 +103,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                         .namespace(namespace)
                         .labels(labels))
                 .spec(new V1StatefulSetSpec()
-                        .replicas(application.getReplicas())
+                        .replicas(applicationEnvironmentConfig.getReplicas())
                         .selector(new V1LabelSelector().matchLabels(labels))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(labels))

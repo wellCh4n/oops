@@ -19,11 +19,13 @@ public class DeploymentService {
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
+    private final ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository;
 
-    public DeploymentService(ApplicationRepository applicationRepository, PipelineRepository pipelineRepository, EnvironmentService environmentService) {
+    public DeploymentService(ApplicationRepository applicationRepository, PipelineRepository pipelineRepository, EnvironmentService environmentService, ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
+        this.applicationEnvironmentConfigRepository = applicationEnvironmentConfigRepository;
     }
 
     public String deployApplication(String namespace, String applicationName, String environmentName) {
@@ -32,6 +34,8 @@ public class DeploymentService {
 
             Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
 
+            ApplicationEnvironmentConfig environmentConfig = applicationEnvironmentConfigRepository.findFirstByNamespaceAndApplicationNameAndEnvironmentName(namespace, applicationName, environmentName);
+
             Pipeline pipeline = new Pipeline();
             pipeline.setNamespace(namespace);
             pipeline.setApplicationName(application.getName());
@@ -39,7 +43,7 @@ public class DeploymentService {
             pipeline.setEnvironment(environment.getName());
             pipelineRepository.save(pipeline);
 
-            PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);
+            PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment, environmentConfig);
             FutureTask<PipelineBuildPod> pipelineExecutorJobTask = new FutureTask<>(pipelineExecuteTask);
             Thread.ofVirtual().start(pipelineExecutorJobTask);
 
