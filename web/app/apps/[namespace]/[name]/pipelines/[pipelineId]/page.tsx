@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation"
 import { getPipeline } from "@/lib/api/pipelines"
 import { Pipeline } from "@/lib/api/types"
 import { API_BASE_URL } from "@/lib/api/config"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import dayjs from "dayjs"
 
 interface PageProps {
   params: Promise<{
@@ -78,21 +77,18 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }, [logs])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] p-6 space-y-4">
-        {/* Header */}
+    <div className="flex flex-col h-[calc(100vh-2rem)] space-y-4">
         <div className="flex items-center justify-between border-b pb-4">
-             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div>
-                    <h2 className="text-xl font-bold">流水线详情</h2>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>ID: {pipelineId}</span>
-                        {pipeline && <Badge variant="outline">{pipeline.status}</Badge>}
-                    </div>
-                </div>
-             </div>
+          <div className="flex items-center gap-4">
+            <div>
+              <h2 className="text-xl font-bold">流水线详情</h2>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {pipeline && <>ID: <Badge variant="outline">{pipelineId}</Badge></>}
+                {pipeline && <>状态: <Badge variant="outline">{pipeline.status}</Badge></>}
+                {pipeline && <>创建时间: <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Content */}

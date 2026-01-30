@@ -44,12 +44,16 @@ export default function EnvironmentsPage() {
     resolver: zodResolver(environmentSchema),
     defaultValues: {
       name: "",
-      apiServerUrl: "",
-      apiServerToken: "",
+      kubernetesApiServer: {
+        url: "",
+        token: "",
+      },
       workNamespace: "",
-      imageRepositoryUrl: "",
-      imageRepositoryUsername: "",
-      imageRepositoryPassword: "",
+      imageRepository: {
+        url: "",
+        username: "",
+        password: "",
+      },
       buildStorageClass: "",
     },
   })
@@ -79,20 +83,33 @@ export default function EnvironmentsPage() {
   useEffect(() => {
     if (viewingEnv) {
       form.reset({
-        ...viewingEnv,
         id: viewingEnv.id,
-        imageRepositoryUsername: viewingEnv.imageRepositoryUsername || "",
-        imageRepositoryPassword: viewingEnv.imageRepositoryPassword || "",
+        name: viewingEnv.name,
+        workNamespace: viewingEnv.workNamespace,
+        buildStorageClass: viewingEnv.buildStorageClass || "",
+        kubernetesApiServer: {
+          url: viewingEnv.kubernetesApiServer?.url || "",
+          token: viewingEnv.kubernetesApiServer?.token || "",
+        },
+        imageRepository: {
+          url: viewingEnv.imageRepository?.url || "",
+          username: viewingEnv.imageRepository?.username || "",
+          password: viewingEnv.imageRepository?.password || "",
+        },
       })
     } else {
       form.reset({
         name: "",
-        apiServerUrl: "",
-        apiServerToken: "",
+        kubernetesApiServer: {
+          url: "",
+          token: "",
+        },
         workNamespace: "",
-        imageRepositoryUrl: "",
-        imageRepositoryUsername: "",
-        imageRepositoryPassword: "",
+        imageRepository: {
+          url: "",
+          username: "",
+          password: "",
+        },
         buildStorageClass: "",
       })
     }
@@ -219,7 +236,7 @@ export default function EnvironmentsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="apiServerUrl"
+                    name="kubernetesApiServer.url"
                     render={({ field }) => (
                       <FormItem className="col-span-2">
                         <FormLabel>API 服务地址</FormLabel>
@@ -232,7 +249,7 @@ export default function EnvironmentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="apiServerToken"
+                    name="kubernetesApiServer.token"
                     render={({ field }) => (
                       <FormItem className="col-span-2">
                         <FormLabel>API 服务令牌</FormLabel>
@@ -307,7 +324,7 @@ export default function EnvironmentsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="imageRepositoryUrl"
+                    name="imageRepository.url"
                     render={({ field }) => (
                       <FormItem className="col-span-2">
                         <FormLabel>仓库地址</FormLabel>
@@ -320,7 +337,7 @@ export default function EnvironmentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="imageRepositoryUsername"
+                    name="imageRepository.username"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>用户名</FormLabel>
@@ -333,7 +350,7 @@ export default function EnvironmentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="imageRepositoryPassword"
+                    name="imageRepository.password"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>密码</FormLabel>

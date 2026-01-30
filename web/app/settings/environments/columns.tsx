@@ -10,12 +10,16 @@ import { Environment } from "@/lib/api/types"
 export const environmentSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "名称不能为空"),
-  apiServerUrl: z.string().url("必须是有效的 URL"),
-  apiServerToken: z.string().min(1, "令牌不能为空"),
+  kubernetesApiServer: z.object({
+    url: z.string().url("必须是有效的 URL"),
+    token: z.string().min(1, "令牌不能为空"),
+  }),
   workNamespace: z.string().min(1, "命名空间不能为空"),
-  imageRepositoryUrl: z.string().min(1, "镜像仓库地址不能为空"),
-  imageRepositoryUsername: z.string().optional(),
-  imageRepositoryPassword: z.string().optional(),
+  imageRepository: z.object({
+    url: z.string().min(1, "镜像仓库地址不能为空"),
+    username: z.string().optional(),
+    password: z.string().optional(),
+  }),
   buildStorageClass: z.string().optional(),
 })
 
@@ -32,7 +36,7 @@ export const columns: ColumnDef<Environment>[] = [
     header: "名称",
   },
   {
-    accessorKey: "apiServerUrl",
+    accessorKey: "kubernetesApiServer.url",
     header: "API Server URL",
   },
   {
@@ -40,7 +44,7 @@ export const columns: ColumnDef<Environment>[] = [
     header: "工作命名空间",
   },
   {
-    accessorKey: "imageRepositoryUrl",
+    accessorKey: "imageRepository.url",
     header: "镜像仓库",
   },
   {

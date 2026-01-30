@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -12,7 +13,6 @@ import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 
-import java.net.URI;
 import java.time.Duration;
 
 /**
@@ -22,6 +22,8 @@ import java.time.Duration;
 
 @Data
 @Entity
+@NoArgsConstructor
+@AllArgsConstructor
 public class Environment {
 
     private static final OkHttpClient HTTP_CLIENT = new okhttp3.OkHttpClient.Builder()
@@ -62,7 +64,9 @@ public class Environment {
             return kubernetesApiServer;
         }
 
+        @JsonIgnore
         private transient volatile ApiClient apiClient;
+        @JsonIgnore
         public ApiClient apiClient() {
             if (this.apiClient == null) {
                 synchronized (this) {
@@ -74,7 +78,9 @@ public class Environment {
             return this.apiClient;
         }
 
+        @JsonIgnore
         private transient volatile CoreV1Api coreV1Api;
+        @JsonIgnore
         public CoreV1Api coreV1Api() {
             if (this.coreV1Api == null) {
                 synchronized (this) {
@@ -86,7 +92,9 @@ public class Environment {
             return this.coreV1Api;
         }
 
+        @JsonIgnore
         private transient volatile AppsV1Api appsV1Api;
+        @JsonIgnore
         public AppsV1Api appsV1Api() {
             if (this.appsV1Api == null) {
                 synchronized (this) {

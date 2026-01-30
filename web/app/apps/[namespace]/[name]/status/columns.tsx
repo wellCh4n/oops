@@ -8,7 +8,8 @@ import { RotateCw, Terminal, FileText } from "lucide-react"
 
 export const getStatusColumns = (
   onRestart: (podName: string) => void,
-  onViewLogs: (podName: string) => void
+  onViewLogs: (podName: string) => void,
+  onTerminal: (podName: string) => void
 ): ColumnDef<ApplicationPodStatus>[] => [
   {
     accessorKey: "name",
@@ -63,7 +64,7 @@ export const getStatusColumns = (
             <FileText className="mr-2 h-4 w-4" />
             日志
           </Button>
-          <Button variant="outline" size="sm" onClick={() => console.log("Terminal", row.original.name)}>
+          <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
             <Terminal className="mr-2 h-4 w-4" />
             终端
           </Button>

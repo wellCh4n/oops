@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.objects.ApplicationEnvironmentConfigRequest;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
+import com.github.wellch4n.oops.service.DeploymentService;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -24,9 +25,11 @@ import java.util.List;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
+    private final DeploymentService deploymentService;
 
-    public ApplicationController(ApplicationService applicationService) {
+    public ApplicationController(ApplicationService applicationService, DeploymentService deploymentService) {
         this.applicationService = applicationService;
+        this.deploymentService = deploymentService;
     }
 
     @GetMapping("/{name}")
@@ -86,5 +89,12 @@ public class ApplicationController {
                                             @PathVariable String pod,
                                             @RequestParam String env) {
         return applicationService.getApplicationPodLogs(namespace, name, pod, env);
+    }
+
+    @PostMapping(value = "/{name}/deployments")
+    public Result<String> deployApplication(@PathVariable String namespace,
+                                            @PathVariable String name,
+                                            @Param("environment") String environment) {
+        return Result.success(deploymentService.deployApplication(namespace, name, environment));
     }
 }

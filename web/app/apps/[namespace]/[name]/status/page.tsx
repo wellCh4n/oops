@@ -132,7 +132,11 @@ export default function ApplicationStatusPage() {
     router.push(`/apps/${namespace}/${name}/logs/${podName}?env=${selectedEnv}`)
   }
 
-  const columns = getStatusColumns(handleRestartClick, handleViewLogs)
+  const handleTerminal = (podName: string) => {
+    window.open(`/apps/${namespace}/${name}/pods/${podName}/terminal?env=${selectedEnv}`, '_blank')
+  }
+
+  const columns = getStatusColumns(handleRestartClick, handleViewLogs, handleTerminal)
 
   return (
     <div className="flex-1 space-y-4">

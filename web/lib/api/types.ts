@@ -7,13 +7,21 @@ export interface ApiResponse<T> {
 export interface Environment {
   id: string
   name: string
-  apiServerUrl: string
-  apiServerToken: string
+  kubernetesApiServer: KubernetesApiServer
   workNamespace: string
-  imageRepositoryUrl: string
-  imageRepositoryUsername?: string
-  imageRepositoryPassword?: string
+  imageRepository: ImageRepository
   buildStorageClass?: string
+}
+
+export interface KubernetesApiServer {
+  url: string,
+  token: string
+}
+
+export interface ImageRepository {
+  url: string,
+  username?: string,
+  password?: string
 }
 
 export interface Workspace {
