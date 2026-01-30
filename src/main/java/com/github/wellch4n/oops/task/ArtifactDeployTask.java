@@ -41,7 +41,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     @Override
     public Boolean call() throws Exception {
-        AppsV1Api appsApi = environment.appsApi();
+        AppsV1Api appsApi = environment.getKubernetesApiServer().appsV1Api();
         String namespace = application.getNamespace();
         String applicationName = application.getName();
 

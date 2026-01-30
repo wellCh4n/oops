@@ -44,24 +44,4 @@ public class EnvironmentController {
     public Result<Boolean> deleteEnvironment(@PathVariable String id) {
         return Result.success(environmentService.deleteEnvironment(id));
     }
-
-    @PostMapping("test/{id}")
-    public Result<Boolean> testEnvironment(@PathVariable String id) {
-        return Result.success(environmentService.testConnection(id));
-    }
-
-    @PostMapping("test")
-    public Result<Boolean> testEnvironment(@RequestBody Environment environment) {
-        return Result.success(environmentService.testConnection(environment));
-    }
-
-    @PostMapping("/kubernetes/test")
-    public Result<Boolean> testKubernetes(@RequestBody Environment environment) {
-        return Result.success(environmentService.testKubernetesConnection(environment));
-    }
-
-    @PostMapping("/registry/test")
-    public Result<Boolean> testRegistry(@RequestBody Environment environment) {
-        return Result.success(environmentService.testRegistryConnection(environment));
-    }
 }

@@ -8,7 +8,6 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Secret;
-import io.kubernetes.client.util.Config;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -50,13 +49,10 @@ public class EnvironmentService {
         }
 
         Environment existingEnvironment = environmentOptional.get();
-        existingEnvironment.setApiServerUrl(environment.getApiServerUrl());
-        existingEnvironment.setApiServerToken(environment.getApiServerToken());
+        existingEnvironment.setKubernetesApiServer(environment.getKubernetesApiServer());
         existingEnvironment.setBuildStorageClass(environment.getBuildStorageClass());
         existingEnvironment.setWorkNamespace(environment.getWorkNamespace());
-        existingEnvironment.setImageRepositoryUrl(environment.getImageRepositoryUrl());
-        existingEnvironment.setImageRepositoryUsername(environment.getImageRepositoryUsername());
-        existingEnvironment.setImageRepositoryPassword(environment.getImageRepositoryPassword());
+        existingEnvironment.setImageRepository(environment.getImageRepository());
 
         environmentRepository.saveAndFlush(existingEnvironment);
         return true;
@@ -68,7 +64,7 @@ public class EnvironmentService {
             try {
                 // Step 1: Validate Kubernetes Connection
                 sendStepUpdate(emitter, 1, "RUNNING", "Validating Kubernetes connection...");
-                if (testKubernetesConnection(environment)) {
+                if (environment.getKubernetesApiServer().isValid()) {
                     sendStepUpdate(emitter, 1, "SUCCESS", "Kubernetes connection validated.");
                 } else {
                     sendStepUpdate(emitter, 1, "FAILURE", "Failed to validate Kubernetes connection.");
@@ -79,7 +75,7 @@ public class EnvironmentService {
                 // Step 2: Create Work Namespace
                 sendStepUpdate(emitter, 2, "RUNNING", "Creating work namespace...");
                 try {
-                    ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
+                    ApiClient client = environment.getKubernetesApiServer().apiClient();
                     CoreV1Api api = new CoreV1Api(client);
                     
                     boolean namespaceExists = false;
@@ -106,7 +102,7 @@ public class EnvironmentService {
 
                 // Step 3: Validate Registry Connection
                 sendStepUpdate(emitter, 3, "RUNNING", "Validating registry connection...");
-                if (testRegistryConnection(environment)) {
+                if (environment.getImageRepository().isValid()) {
                     sendStepUpdate(emitter, 3, "SUCCESS", "Registry connection validated.");
                 } else {
                     sendStepUpdate(emitter, 3, "FAILURE", "Failed to validate registry connection.");
@@ -117,7 +113,7 @@ public class EnvironmentService {
                 // Step 4: Create Registry Secret
                 sendStepUpdate(emitter, 4, "RUNNING", "Creating registry secret...");
                 try {
-                    ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
+                    ApiClient client = environment.getKubernetesApiServer().apiClient();
                     CoreV1Api api = new CoreV1Api(client);
 
                     boolean secretExists = false;
@@ -131,18 +127,18 @@ public class EnvironmentService {
                     if (secretExists) {
                         sendStepUpdate(emitter, 4, "SKIPPED", "Secret 'dockerhub' already exists.");
                     } else {
-                        String usernameAndPassword = "%s:%s".formatted(environment.getImageRepositoryUsername(), environment.getImageRepositoryPassword());
+                        String usernameAndPassword = "%s:%s".formatted(environment.getImageRepository().getUsername(), environment.getImageRepository().getPassword());
                         String auth = java.util.Base64.getEncoder().encodeToString(usernameAndPassword.getBytes());
 
-                        String imageRepositoryUrl = environment.getImageRepositoryUrl();
+                        String imageRepositoryUrl = environment.getImageRepository().getUrl();
                         URI uri = new URI(imageRepositoryUrl);
                         String url = "%s://%s".formatted(uri.getScheme(), uri.getHost());
 
                         var config = Map.of(
                                 "auths", Map.of(
                                         url, Map.of(
-                                                "username", environment.getImageRepositoryUsername(),
-                                                "password", environment.getImageRepositoryPassword(),
+                                                "username", environment.getImageRepository().getUsername(),
+                                                "password", environment.getImageRepository().getPassword(),
                                                 "auth", auth
                                         )
                                 )
@@ -193,74 +189,5 @@ public class EnvironmentService {
         environmentRepository.deleteById(id);
 
         return true;
-    }
-
-    public Boolean testConnection(String id) {
-        Environment environment = environmentRepository.findById(id).orElse(null);
-        if (environment == null) {
-            return false;
-        }
-        try {
-            ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
-            CoreV1Api api = new CoreV1Api(client);
-            api.listNamespace().execute();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public Boolean testConnection(Environment environment) {
-        try {
-            ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
-            CoreV1Api api = new CoreV1Api(client);
-            api.listNamespace().execute();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public Boolean testKubernetesConnection(Environment environment) {
-        try {
-            ApiClient client = Config.fromToken(environment.getApiServerUrl(), environment.getApiServerToken(), false);
-            CoreV1Api api = new CoreV1Api(client);
-            api.listNamespace().execute();
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-    public Boolean testRegistryConnection(Environment environment) {
-        try {
-            String url = environment.getImageRepositoryUrl();
-            if (!url.startsWith("http")) {
-                url = "https://" + url;
-            }
-            URI uri = new URI(url);
-            String targetUrl = uri.getScheme() + "://" + uri.getHost();
-            if (uri.getPort() != -1) {
-                targetUrl += ":" + uri.getPort();
-            }
-//            targetUrl += "/v2/";
-
-            okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
-            String credential = okhttp3.Credentials.basic(environment.getImageRepositoryUsername(), environment.getImageRepositoryPassword());
-            okhttp3.Request request = new okhttp3.Request.Builder()
-                    .url(targetUrl)
-                    .header("Authorization", credential)
-                    .get()
-                    .build();
-            try (okhttp3.Response response = client.newCall(request).execute()) {
-                return response.isSuccessful();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        }
     }
 }

@@ -70,7 +70,7 @@ public class PipelineService {
 
                 String environmentName = pipeline.getEnvironment();
                 Environment environment = environmentService.getEnvironment(environmentName);
-                CoreV1Api coreV1Api = environment.coreV1Api();
+                CoreV1Api coreV1Api = environment.getKubernetesApiServer().coreV1Api();
 
                 V1Pod v1Pod = coreV1Api.readNamespacedPod(pipelineName, environment.getWorkNamespace()).execute();
                 v1Pod.getSpec().getInitContainers().forEach(container -> containers.add(container.getName()));
@@ -82,7 +82,7 @@ public class PipelineService {
 
                 for (String containerName : containers) {
                     try (Watch<V1Pod> watch = Watch.createWatch(
-                            environment.apiClient(),
+                            environment.getKubernetesApiServer().apiClient(),
                             coreV1Api.listNamespacedPod(environment.getWorkNamespace())
                                     .fieldSelector("metadata.name=" + pipelineName)
                                     .watch(true)
@@ -99,7 +99,7 @@ public class PipelineService {
                         System.err.println("Watch error: " + e.getMessage());
                     }
 
-                    PodLogs logs = new PodLogs(environment.apiClient());
+                    PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
                     try (InputStream is = logs.streamNamespacedPodLog(environment.getWorkNamespace(), pipelineName, containerName)) {
                         BufferedReader br = new BufferedReader(
                                 new InputStreamReader(is, StandardCharsets.UTF_8));
@@ -167,9 +167,9 @@ public class PipelineService {
         Environment environment = environmentService.getEnvironment(environmentName);
 
         try {
-            V1Pod pod = environment.coreV1Api().readNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
+            V1Pod pod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
             if (pod != null) {
-                environment.coreV1Api().deleteNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
+                environment.getKubernetesApiServer().coreV1Api().deleteNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
                 pipeline.setStatus(PipelineStatus.STOPED);
                 pipelineRepository.save(pipeline);
                 return true;

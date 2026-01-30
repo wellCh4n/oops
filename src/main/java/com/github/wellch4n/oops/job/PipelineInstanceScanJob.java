@@ -49,7 +49,7 @@ public class PipelineInstanceScanJob {
 
                 Environment environment = environmentService.getEnvironment(environmentName);
 
-                V1Pod buildPod = environment.coreV1Api().readNamespacedPodStatus(pipelineName, environment.getWorkNamespace()).execute();
+                V1Pod buildPod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPodStatus(pipelineName, environment.getWorkNamespace()).execute();
                 String status = buildPod.getStatus().getPhase();
 
                 if ("Succeeded".equals(status)) {

@@ -4,14 +4,11 @@ import com.github.wellch4n.oops.config.DeploymentConfig;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
-import com.github.wellch4n.oops.enums.SystemConfigKeys;
 import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
-import com.github.wellch4n.oops.volume.BuildStorageVolume;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
-import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -50,7 +47,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 //        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
 //        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
 
-        this.api = environment.coreV1Api();
+        this.api = environment.getKubernetesApiServer().coreV1Api();
 //        this.api = KubernetesClientFactory.getCoreApi();
 
         this.deploymentConfig = SpringContext.getBean(DeploymentConfig.class);
@@ -60,7 +57,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 //        if (imageRepository == null) {
 //            throw new IllegalStateException("Image repository URL is not configured.");
 //        }
-        String imageRepositoryUrl = environment.getImageRepositoryUrl();
+        String imageRepositoryUrl = environment.getImageRepository().getUrl();
         imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
         this.repositoryUrl = imageRepositoryUrl;
 

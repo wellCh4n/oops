@@ -120,7 +120,7 @@ public class ApplicationService {
             }
 
             String labelSelector = "oops.type=%s,oops.app.name=%s".formatted(OopsTypes.APPLICATION.name(), name);
-            V1PodList podList = environment.coreV1Api().listNamespacedPod(namespace)
+            V1PodList podList = environment.getKubernetesApiServer().coreV1Api().listNamespacedPod(namespace)
                     .labelSelector(labelSelector)
                     .execute();
 
@@ -141,7 +141,7 @@ public class ApplicationService {
             if (environment == null) {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
-            environment.coreV1Api().deleteNamespacedPod(podName, namespace).execute();
+            environment.getKubernetesApiServer().coreV1Api().deleteNamespacedPod(podName, namespace).execute();
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Failed to restart application pod: " + e.getMessage(), e);
@@ -157,7 +157,7 @@ public class ApplicationService {
                 if (environment == null) {
                     throw new IllegalArgumentException("Environment not found: " + environmentName);
                 }
-                PodLogs logs = new PodLogs(environment.apiClient());
+                PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
                 try(InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
                     BufferedReader br = new BufferedReader(
                             new InputStreamReader(is, StandardCharsets.UTF_8));
