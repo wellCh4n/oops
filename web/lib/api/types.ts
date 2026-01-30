@@ -54,6 +54,13 @@ export interface ApplicationBuildEnvironmentConfig {
   buildCommand?: string
 }
 
+export interface ApplicationEnvironment {
+  id?: string
+  namespace: string
+  applicationName: string
+  environmentName: string
+}
+
 export interface ApplicationPerformanceEnvironmentConfig {
   id?: string
   namespace: string

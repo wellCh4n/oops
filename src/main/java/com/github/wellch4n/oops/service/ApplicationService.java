@@ -30,17 +30,20 @@ public class ApplicationService {
     private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
     private final ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository;
     private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
+    private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
     private final EnvironmentRepository environmentRepository;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
                               ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository,
                               ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                              ApplicationEnvironmentRepository applicationEnvironmentRepository,
                               EnvironmentRepository environmentRepository) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
         this.applicationBuildEnvironmentConfigRepository = applicationBuildEnvironmentConfigRepository;
         this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
+        this.applicationEnvironmentRepository = applicationEnvironmentRepository;
         this.environmentRepository = environmentRepository;
     }
 
@@ -130,6 +133,22 @@ public class ApplicationService {
             config.setApplicationName(appName);
         }
         applicationPerformanceEnvironmentConfigRepository.saveAll(configs);
+        return true;
+    }
+
+    public List<ApplicationEnvironment> getApplicationEnvironments(String namespace, String name) {
+        return applicationEnvironmentRepository.findByNamespaceAndApplicationName(namespace, name);
+    }
+
+    @Transactional
+    public Boolean updateApplicationEnvironments(String namespace, String appName, List<ApplicationEnvironment> configs) {
+        applicationEnvironmentRepository.deleteByNamespaceAndApplicationName(namespace, appName);
+        for (ApplicationEnvironment config : configs) {
+            config.setId(null);
+            config.setNamespace(namespace);
+            config.setApplicationName(appName);
+        }
+        applicationEnvironmentRepository.saveAll(configs);
         return true;
     }
 

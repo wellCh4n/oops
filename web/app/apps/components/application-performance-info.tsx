@@ -27,10 +27,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, X } from "lucide-react"
-import { Environment, ApplicationPerformanceEnvironmentConfig } from "@/lib/api/types"
+import { Environment, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { Skeleton } from "@/components/ui/skeleton"
-import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
-import { fetchEnvironments } from "@/lib/api/environments"
+import { updateApplicationPerformanceEnvConfigs, getApplicationEnvironments } from "@/lib/api/applications"
 import { toast } from "sonner"
 
 interface ApplicationPerformanceInfoProps {
@@ -46,23 +45,8 @@ export function ApplicationPerformanceInfo({
   applicationName,
   namespace,
 }: ApplicationPerformanceInfoProps) {
-  const [environments, setEnvironments] = useState<Environment[]>([])
-  const [isLoadingEnvs, setIsLoadingEnvs] = useState(true)
-
-  useEffect(() => {
-    const loadEnvironments = async () => {
-      try {
-        const res = await fetchEnvironments()
-        if (res.data) setEnvironments(res.data)
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to fetch environments")
-      } finally {
-        setIsLoadingEnvs(false)
-      }
-    }
-    loadEnvironments()
-  }, [])
+  const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
+  const [isLoadingEnvs, setIsLoadingEnvs] = useState(false)
 
   const form = useForm<ApplicationPerformanceEnvFormValues>({
     resolver: zodResolver(applicationPerformanceEnvSchema),
@@ -73,7 +57,7 @@ export function ApplicationPerformanceInfo({
   })
 
   const { control } = form
-  const { fields, append, remove } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control,
     name: "environmentConfigs",
   })
@@ -87,15 +71,45 @@ export function ApplicationPerformanceInfo({
     }
   }, [fields, activeTab])
 
-  const availableEnvs = environments.filter(e => !fields.some(f => f.environmentName === e.name))
+  useEffect(() => {
+    const loadEnvironments = async () => {
+      if (!namespace || !applicationName) return
 
-  const handleDelete = (index: number, environmentName: string) => {
-    if (activeTab === environmentName) {
-       const newActiveId = fields[index - 1]?.environmentName || fields[index + 1]?.environmentName
-       setActiveTab(newActiveId)
+      setIsLoadingEnvs(true)
+      try {
+        const res = await getApplicationEnvironments(namespace, applicationName)
+        if (res.data) {
+            setEnvironments(res.data)
+
+            // Sync form fields with fetched environments
+            const currentConfigs = form.getValues("environmentConfigs") || []
+            const newConfigs = res.data.map(env => {
+                const existing = currentConfigs.find(c => c.environmentName === env.environmentName)
+                return existing || {
+                    environmentName: env.environmentName,
+                    replicas: 0, 
+                    cpuRequest: "0.1", 
+                    cpuLimit: "1", 
+                    memoryRequest: "128", 
+                    memoryLimit: "512" 
+                }
+            })
+            replace(newConfigs)
+
+            // Set active tab if not set
+            if (newConfigs.length > 0) {
+                setActiveTab(newConfigs[0].environmentName)
+            }
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to fetch environments")
+      } finally {
+        setIsLoadingEnvs(false)
+      }
     }
-    remove(index)
-  }
+    loadEnvironments()
+  }, [namespace, applicationName, replace, form])
 
   return (
     <Form {...form}>
@@ -109,62 +123,18 @@ export function ApplicationPerformanceInfo({
                   <TabsTrigger 
                     key={field.id} 
                     value={field.environmentName}
-                    className="group relative overflow-visible px-6"
+                    className="px-6"
                   >
                     {isLoadingEnvs ? <Skeleton className="h-4 w-16 bg-muted-foreground/20" /> : field.environmentName}
-                    {activeTab === field.environmentName && (
-                      <div
-                        className="absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center h-4 w-4 rounded-full bg-muted-foreground/50 hover:bg-muted-foreground text-white cursor-pointer shadow-sm transition-all duration-200 group-hover:delay-300 z-10"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                          handleDelete(index, field.environmentName)
-                        }}
-                      >
-                         <X className="h-2.5 w-2.5" />
-                      </div>
-                    )}
                   </TabsTrigger>
                 ))}
               </TabsList>
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {availableEnvs.map(env => (
-                    <DropdownMenuItem 
-                      key={env.id} 
-                      onClick={() => {
-                        append({ 
-                          environmentName: env.name, 
-                          replicas: 0, 
-                          cpuRequest: "0.1", 
-                          cpuLimit: "1", 
-                          memoryRequest: "128", 
-                          memoryLimit: "512" 
-                        })
-                        setActiveTab(env.name)
-                      }}
-                    >
-                      {env.name}
-                    </DropdownMenuItem>
-                  ))}
-                  {availableEnvs.length === 0 && (
-                    <DropdownMenuItem disabled>
-                      {isLoadingEnvs ? "Loading..." : "No more environments"}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
 
             {fields.length === 0 && (
                <div className="py-8 text-center text-muted-foreground text-sm border rounded-md mt-2 border-dashed">
-                 点击右上角 + 号添加环境配置
+                 暂无环境配置，请先在基本信息中配置部署环境
                </div>
             )}
 

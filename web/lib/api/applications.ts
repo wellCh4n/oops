@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationPodStatus } from "./types";
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -130,6 +130,32 @@ export const updateApplicationPerformanceEnvConfigs = async (
   });
   if (!response.ok) {
     throw new Error("Failed to save application performance environment configs");
+  }
+  return response.json();
+};
+
+export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application environments");
+  }
+  return response.json();
+};
+
+export const updateApplicationEnvironments = async (
+  namespace: string,
+  name: string,
+  configs: ApplicationEnvironment[]
+): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(configs),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save application environments");
   }
   return response.json();
 };

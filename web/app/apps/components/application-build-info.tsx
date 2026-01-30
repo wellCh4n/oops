@@ -28,10 +28,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Plus, X } from "lucide-react"
-import { Environment, ApplicationBuildEnvironmentConfig, ApplicationBuildConfig } from "@/lib/api/types"
+import { Environment, ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { Skeleton } from "@/components/ui/skeleton"
-import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { fetchEnvironments } from "@/lib/api/environments"
+import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig, getApplicationEnvironments } from "@/lib/api/applications"
 import { toast } from "sonner"
 
 interface ApplicationBuildInfoProps {
@@ -49,13 +48,16 @@ export function ApplicationBuildInfo({
   applicationName,
   namespace,
 }: ApplicationBuildInfoProps) {
-  const [environments, setEnvironments] = useState<Environment[]>([])
-  const [isLoadingEnvs, setIsLoadingEnvs] = useState(true)
+  const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
+  const [isLoadingEnvs, setIsLoadingEnvs] = useState(false)
 
   useEffect(() => {
     const loadEnvironments = async () => {
+      if (!namespace || !applicationName) return
+      
+      setIsLoadingEnvs(true)
       try {
-        const res = await fetchEnvironments()
+        const res = await getApplicationEnvironments(namespace, applicationName)
         if (res.data) setEnvironments(res.data)
       } catch (error) {
         console.error(error)
@@ -65,7 +67,7 @@ export function ApplicationBuildInfo({
       }
     }
     loadEnvironments()
-  }, [])
+  }, [namespace, applicationName]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const form = useForm<ApplicationBuildFormValues>({
     resolver: zodResolver(applicationBuildSchema),
@@ -79,7 +81,7 @@ export function ApplicationBuildInfo({
   })
 
   const { control } = form
-  const { fields, append, remove } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control,
     name: "environmentConfigs",
   })
@@ -87,22 +89,48 @@ export function ApplicationBuildInfo({
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
 
+  useEffect(() => {
+    const loadEnvironments = async () => {
+      if (!namespace || !applicationName) return
+      
+      setIsLoadingEnvs(true)
+      try {
+        const res = await getApplicationEnvironments(namespace, applicationName)
+        if (res.data) {
+            setEnvironments(res.data)
+            
+            // Sync form fields with fetched environments
+            const currentConfigs = form.getValues("environmentConfigs") || []
+            const newConfigs = res.data.map(env => {
+                const existing = currentConfigs.find(c => c.environmentName === env.environmentName)
+                return existing || {
+                    environmentName: env.environmentName,
+                    buildCommand: ""
+                }
+            })
+            replace(newConfigs)
+
+            // Set active tab if not set
+            if (newConfigs.length > 0) {
+                setActiveTab(newConfigs[0].environmentName)
+            }
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error("Failed to fetch environments")
+      } finally {
+        setIsLoadingEnvs(false)
+      }
+    }
+    loadEnvironments()
+  }, [namespace, applicationName, replace, form])
+
   // Initialize activeTab
   useEffect(() => {
     if (fields.length > 0 && !activeTab) {
       setActiveTab(fields[0].environmentName)
     }
   }, [fields, activeTab])
-
-  const availableEnvs = environments.filter(e => !fields.some(f => f.environmentName === e.name))
-
-  const handleDelete = (index: number, environmentName: string) => {
-    if (activeTab === environmentName) {
-       const newActiveId = fields[index - 1]?.environmentName || fields[index + 1]?.environmentName
-       setActiveTab(newActiveId)
-    }
-    remove(index)
-  }
 
   const handleSave = async (data: ApplicationBuildFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
@@ -203,55 +231,17 @@ export function ApplicationBuildInfo({
                         <TabsTrigger 
                           key={field.id} 
                           value={field.environmentName}
-                          className="group relative overflow-visible px-6"
+                          className="px-6"
                         >
                           {isLoadingEnvs ? <Skeleton className="h-4 w-16 bg-muted-foreground/20" /> : field.environmentName}
-                          {activeTab === field.environmentName && (
-                            <div
-                              className="absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center h-4 w-4 rounded-full bg-muted-foreground/50 hover:bg-muted-foreground text-white cursor-pointer shadow-sm transition-all duration-200 group-hover:delay-300 z-10"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                e.preventDefault()
-                                handleDelete(index, field.environmentName)
-                              }}
-                            >
-                               <X className="h-2.5 w-2.5" />
-                            </div>
-                          )}
                         </TabsTrigger>
                       ))}
                     </TabsList>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-8 w-8 shrink-0">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {availableEnvs.map(env => (
-                          <DropdownMenuItem 
-                            key={env.id} 
-                            onClick={() => {
-                              append({ environmentName: env.name, buildCommand: "" })
-                              setActiveTab(env.name)
-                            }}
-                          >
-                            {env.name}
-                          </DropdownMenuItem>
-                        ))}
-                        {availableEnvs.length === 0 && (
-                          <DropdownMenuItem disabled>
-                            {isLoadingEnvs ? "Loading..." : "No more environments"}
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
 
                   {fields.length === 0 && (
                      <div className="py-8 text-center text-muted-foreground text-sm border rounded-md mt-2 border-dashed">
-                       点击右上角 + 号添加环境配置
+                       暂无环境配置，请先在基本信息中配置部署环境
                      </div>
                   )}
 

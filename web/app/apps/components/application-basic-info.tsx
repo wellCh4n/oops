@@ -24,9 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ApplicationBasicFormValues, applicationBasicSchema } from "../schema"
-import { Application } from "@/lib/api/types"
-import { updateApplication } from "@/lib/api/applications"
+import { Application, Environment, ApplicationEnvironment } from "@/lib/api/types"
+import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
+import { fetchEnvironments } from "@/lib/api/environments"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -36,18 +37,28 @@ export function ApplicationBasicInfo({
   initialData,
 }: ApplicationBasicInfoProps) {
   const [namespaces, setNamespaces] = useState<string[]>([])
+  const [environments, setEnvironments] = useState<Environment[]>([])
+  const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
   
   useEffect(() => {
-    const loadNamespaces = async () => {
+    const loadData = async () => {
       try {
-        const res = await fetchNamespaces()
-        setNamespaces(res.data)
+        const nsRes = await fetchNamespaces()
+        setNamespaces(nsRes.data)
+
+        const envRes = await fetchEnvironments()
+        setEnvironments(envRes.data)
+
+        if (initialData) {
+            const appEnvRes = await getApplicationEnvironments(initialData.namespace, initialData.name)
+            setSelectedEnvNames(appEnvRes.data.map(e => e.environmentName))
+        }
       } catch (error) {
-        toast.error("Failed to fetch namespaces")
+        toast.error("Failed to fetch initial data")
       }
     }
-    loadNamespaces()
-  }, [])
+    loadData()
+  }, [initialData])
 
   const form = useForm<ApplicationBasicFormValues>({
     resolver: zodResolver(applicationBasicSchema),
@@ -66,6 +77,14 @@ export function ApplicationBasicInfo({
 
   const { isSubmitting } = form.formState
 
+  const toggleEnv = (envName: string) => {
+    setSelectedEnvNames(prev => 
+        prev.includes(envName) 
+            ? prev.filter(n => n !== envName)
+            : [...prev, envName]
+    )
+  }
+
   const onSubmit = async (data: ApplicationBasicFormValues) => {
     try {
       const payload = {
@@ -74,6 +93,16 @@ export function ApplicationBasicInfo({
       }
       
       await updateApplication(payload)
+
+      if (initialData) {
+        const envPayload: ApplicationEnvironment[] = selectedEnvNames.map(envName => ({
+            namespace: data.namespace,
+            applicationName: data.name,
+            environmentName: envName
+        }))
+        await updateApplicationEnvironments(data.namespace, data.name, envPayload)
+      }
+
       toast.success("应用更新成功")
     } catch (error) {
       console.error(error)
@@ -136,6 +165,31 @@ export function ApplicationBasicInfo({
             </FormItem>
           )}
         />
+
+        {initialData && (
+            <FormItem>
+                <FormLabel>部署环境</FormLabel>
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                    {environments.map(env => (
+                        <div key={env.id} className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id={`env-${env.id}`}
+                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                checked={selectedEnvNames.includes(env.name)}
+                                onChange={() => toggleEnv(env.name)}
+                            />
+                            <label
+                                htmlFor={`env-${env.id}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                                {env.name}
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </FormItem>
+        )}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>

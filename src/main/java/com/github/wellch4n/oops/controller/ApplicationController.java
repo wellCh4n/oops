@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import com.github.wellch4n.oops.data.ApplicationBuildEnvironmentConfig;
+import com.github.wellch4n.oops.data.ApplicationEnvironment;
 import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
@@ -92,6 +93,19 @@ public class ApplicationController {
                                                                           @PathVariable String name,
                                                                           @RequestBody List<ApplicationPerformanceEnvironmentConfig> configs) {
         return Result.success(applicationService.updateApplicationPerformanceEnvironmentConfigs(namespace, name, configs));
+    }
+
+    @GetMapping("/{name}/environments")
+    public Result<List<ApplicationEnvironment>> getApplicationEnvironments(@PathVariable String namespace,
+                                                                           @PathVariable String name) {
+        return Result.success(applicationService.getApplicationEnvironments(namespace, name));
+    }
+
+    @PutMapping("/{name}/environments")
+    public Result<Boolean> updateApplicationEnvironments(@PathVariable String namespace,
+                                                         @PathVariable String name,
+                                                         @RequestBody List<ApplicationEnvironment> configs) {
+        return Result.success(applicationService.updateApplicationEnvironments(namespace, name, configs));
     }
 
     @GetMapping("/{name}/status")
