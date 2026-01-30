@@ -35,20 +35,30 @@ export interface Application {
   name: string
   description?: string
   namespace: string
-  repository: string
-  dockerFile: string
-  buildImage: string
 }
 
-export interface ApplicationEnvironmentConfig {
+export interface ApplicationBuildConfig {
   id?: string
-  applicationId?: string
-  environmentId?: string
-  namespace?: string
-  applicationName?: string
-  environmentName?: string
-  
+  namespace: string
+  applicationName: string
+  repository?: string
+  dockerFile?: string
+  buildImage?: string
+}
+
+export interface ApplicationBuildEnvironmentConfig {
+  id?: string
+  namespace: string
+  applicationName: string
+  environmentName: string
   buildCommand?: string
+}
+
+export interface ApplicationPerformanceEnvironmentConfig {
+  id?: string
+  namespace: string
+  applicationName: string
+  environmentName: string
   replicas?: number
   cpuRequest?: string
   cpuLimit?: string

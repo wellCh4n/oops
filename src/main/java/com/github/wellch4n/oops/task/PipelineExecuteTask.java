@@ -24,15 +24,17 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Pipeline pipeline;
     private final Application application;
+    private final ApplicationBuildConfig applicationBuildConfig;
+    private final ApplicationBuildEnvironmentConfig applicationBuildEnvironmentConfig;
+
     private final Environment environment;
-    private final ApplicationEnvironmentConfig applicationEnvironmentConfig;
     private final List<BuildStorage> buildStorages = null;
     private final CoreV1Api api;
     private final DeploymentConfig deploymentConfig;
 
     private final String repositoryUrl;
 
-    public PipelineExecuteTask(Pipeline pipeline, Environment environment, ApplicationEnvironmentConfig applicationEnvironmentConfig) {
+    public PipelineExecuteTask(Pipeline pipeline, Environment environment) {
         this.pipeline = pipeline;
 
         ApplicationRepository applicationRepository = SpringContext.getBean(ApplicationRepository.class);
@@ -41,8 +43,20 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipeline.getApplicationName()
         );
 
+        ApplicationBuildConfigRepository applicationBuildConfigRepository = SpringContext.getBean(ApplicationBuildConfigRepository.class);
+        this.applicationBuildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(
+                application.getNamespace(),
+                application.getName()
+        ).get();
+
+        ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository = SpringContext.getBean(ApplicationBuildEnvironmentConfigRepository.class);
+        this.applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
+                application.getNamespace(),
+                application.getName(),
+                environment.getName()
+        ).get();
+
         this.environment = environment;
-        this.applicationEnvironmentConfig = applicationEnvironmentConfig;
 
 //        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
 //        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
@@ -71,12 +85,12 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         List<BaseContainer> initContainers = Lists.newArrayList();
 
-        CloneContainer clone = new CloneContainer(application);
+        CloneContainer clone = new CloneContainer(application, applicationBuildConfig);
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts());
         initContainers.add(clone);
 
-        if (StringUtils.isNotEmpty(application.getBuildImage()) && StringUtils.isNotEmpty(applicationEnvironmentConfig.getBuildCommand())) {
-            BuildContainer build = new BuildContainer(application, applicationEnvironmentConfig);
+        if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(applicationBuildEnvironmentConfig.getBuildCommand())) {
+            BuildContainer build = new BuildContainer(application, applicationBuildConfig, applicationBuildEnvironmentConfig);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
 //            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);

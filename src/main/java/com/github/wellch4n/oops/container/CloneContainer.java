@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 
 import java.util.List;
 
@@ -10,9 +11,9 @@ import java.util.List;
  */
 public class CloneContainer extends BaseContainer {
 
-    public CloneContainer(Application application) {
+    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig) {
         this.name("clone")
                 .image("alpine/git:v2.49.0")
-                .command(List.of("sh", "-c", "git clone " + application.getRepository() + " /workspace"));
+                .command(List.of("sh", "-c", "git clone " + applicationBuildConfig.getRepository() + " /workspace"));
     }
 }

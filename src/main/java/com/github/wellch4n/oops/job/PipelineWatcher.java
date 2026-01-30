@@ -33,18 +33,18 @@ public class PipelineWatcher {
 
     private final PipelineRepository pipelineRepository;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository;
+    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
     private final EnvironmentService environmentService;
 
     private final Map<String, SharedInformerFactory> factories = new ConcurrentHashMap<>();
 
     public PipelineWatcher(PipelineRepository pipelineRepository,
                            ApplicationRepository applicationRepository,
-                           ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository,
+                           ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
                            EnvironmentService environmentService) {
         this.pipelineRepository = pipelineRepository;
         this.applicationRepository = applicationRepository;
-        this.applicationEnvironmentConfigRepository = applicationEnvironmentConfigRepository;
+        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
         this.environmentService = environmentService;
     }
 
@@ -159,16 +159,10 @@ public class PipelineWatcher {
         if ("Succeeded".equals(status)) {
             try {
                 Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                ApplicationEnvironmentConfig applicationEnvironmentConfig = applicationEnvironmentConfigRepository.findFirstByNamespaceAndApplicationNameAndEnvironmentName(
-                        application.getNamespace(), application.getName(), pipeline.getEnvironment());
+                ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
+                        application.getNamespace(), application.getName(), pipeline.getEnvironment()).get();
 
-                System.out.println("Deploying application " + application.getName() + 
-                        " with CPU Request=" + applicationEnvironmentConfig.getCpuRequest() + 
-                        ", CPU Limit=" + applicationEnvironmentConfig.getCpuLimit() + 
-                        ", Memory Request=" + applicationEnvironmentConfig.getMemoryRequest() + 
-                        ", Memory Limit=" + applicationEnvironmentConfig.getMemoryLimit());
-
-                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationEnvironmentConfig, null);
+                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null);
                 artifactDeployTask.call();
 
                 pipeline.setStatus(PipelineStatus.SUCCEEDED);

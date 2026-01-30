@@ -4,10 +4,10 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
 import { getPipelines, stopPipeline } from "@/lib/api/pipelines"
-import { getApplications, getApplicationConfigs } from "@/lib/api/applications"
+import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { Pipeline, Application } from "@/lib/api/types"
-import { getPipelineColumns } from "@/app/apps/[namespace]/[name]/pipelines/columns"
+import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
@@ -92,9 +92,9 @@ export default function PipelinesPage() {
             return
         }
         try {
-            const res = await getApplicationConfigs(selectedNamespace, selectedApp)
+            const res = await getApplicationBuildEnvConfigs(selectedNamespace, selectedApp)
             if (res.data) {
-                setEnvironments(res.data.map(c => c.environmentName))
+                setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
                 setSelectedEnv("all")
             }
         } catch (error) {

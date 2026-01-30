@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
+import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
@@ -27,16 +27,16 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Pipeline pipeline;
     private final Application application;
     private final Environment environment;
-    private final ApplicationEnvironmentConfig applicationEnvironmentConfig;
+    private final ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig;
     private final List<ConfigMapResponse> configMaps;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
-                              Environment environment, ApplicationEnvironmentConfig environmentConfig,
+                              Environment environment, ApplicationPerformanceEnvironmentConfig environmentConfig,
                               List<ConfigMapResponse> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
-        this.applicationEnvironmentConfig = environmentConfig;
+        this.applicationPerformanceEnvironmentConfig = environmentConfig;
         this.configMaps = configMaps;
     }
 
@@ -104,7 +104,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                         .namespace(namespace)
                         .labels(labels))
                 .spec(new V1StatefulSetSpec()
-                        .replicas(applicationEnvironmentConfig.getReplicas())
+                        .replicas(applicationPerformanceEnvironmentConfig.getReplicas())
                         .selector(new V1LabelSelector().matchLabels(labels))
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(labels))
@@ -118,12 +118,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                         .volumeMounts(volumeMounts)
                                                         .resources(new V1ResourceRequirements()
                                                                 .requests(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationEnvironmentConfig.getCpuRequest(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationEnvironmentConfig.getMemoryRequest()) ? applicationEnvironmentConfig.getMemoryRequest() + "Mi" : "128Mi")
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationPerformanceEnvironmentConfig.getCpuRequest(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationPerformanceEnvironmentConfig.getMemoryRequest()) ? applicationPerformanceEnvironmentConfig.getMemoryRequest() + "Mi" : "128Mi")
                                                                 ))
                                                                 .limits(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationEnvironmentConfig.getCpuLimit(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationEnvironmentConfig.getMemoryLimit()) ? applicationEnvironmentConfig.getMemoryLimit() + "Mi" : "128Mi")
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationPerformanceEnvironmentConfig.getCpuLimit(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationPerformanceEnvironmentConfig.getMemoryLimit()) ? applicationPerformanceEnvironmentConfig.getMemoryLimit() + "Mi" : "128Mi")
                                                                 ))
                                                         )
                                         ))

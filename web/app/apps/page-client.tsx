@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { ApplicationCreateDialog } from "./components/application-create-dialog"
 
 export default function ClientApps({
   searchParams,
@@ -34,6 +35,7 @@ export default function ClientApps({
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   useEffect(() => {
     const loadNamespaces = async () => {
@@ -121,7 +123,7 @@ export default function ClientApps({
   const filteredApplications = applications
 
   const handleCreate = () => {
-    router.push(`/apps/create?namespace=${selectedNamespace}`)
+    setIsCreateOpen(true)
   }
 
   const handleEdit = (app: Application) => {
@@ -195,6 +197,13 @@ export default function ClientApps({
           onPublish: handlePublish,
           onStatus: handleStatus,
         }}
+      />
+
+      <ApplicationCreateDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        namespaces={namespaces}
+        defaultNamespace={selectedNamespace}
       />
     </div>
   )

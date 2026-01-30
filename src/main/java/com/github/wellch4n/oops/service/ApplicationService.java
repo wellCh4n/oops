@@ -1,15 +1,8 @@
 package com.github.wellch4n.oops.service;
 
-import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
-import com.github.wellch4n.oops.data.ApplicationEnvironmentConfigRepository;
-import com.github.wellch4n.oops.data.ApplicationRepository;
+import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import com.github.wellch4n.oops.objects.ApplicationCreateOrUpdateRequest;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
-import com.github.wellch4n.oops.objects.ApplicationEnvironmentConfigRequest;
-import com.github.wellch4n.oops.data.Environment;
-import com.github.wellch4n.oops.data.EnvironmentRepository;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
@@ -23,6 +16,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author wellCh4n
@@ -33,12 +27,20 @@ import java.util.List;
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
-    private final ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository;
+    private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
+    private final ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository;
+    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
     private final EnvironmentRepository environmentRepository;
 
-    public ApplicationService(ApplicationRepository applicationRepository, ApplicationEnvironmentConfigRepository applicationEnvironmentConfigRepository, EnvironmentRepository environmentRepository) {
+    public ApplicationService(ApplicationRepository applicationRepository,
+                              ApplicationBuildConfigRepository applicationBuildConfigRepository,
+                              ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository,
+                              ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                              EnvironmentRepository environmentRepository) {
         this.applicationRepository = applicationRepository;
-        this.applicationEnvironmentConfigRepository = applicationEnvironmentConfigRepository;
+        this.applicationBuildConfigRepository = applicationBuildConfigRepository;
+        this.applicationBuildEnvironmentConfigRepository = applicationBuildEnvironmentConfigRepository;
+        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
         this.environmentRepository = environmentRepository;
     }
 
@@ -50,69 +52,84 @@ public class ApplicationService {
         return applicationRepository.findByNamespace(namespace);
     }
 
-    public String createApplication(String namespace, ApplicationCreateOrUpdateRequest request) {
-        Application application = new Application();
-        application.setName(request.getName());
+    @Transactional
+    public String createApplication(String namespace, Application application) {
         application.setNamespace(namespace);
-        application.setDescription(request.getDescription());
-        application.setRepository(request.getRepository());
-        application.setDockerFile(request.getDockerFile());
-        application.setBuildImage(request.getBuildImage());
         applicationRepository.save(application);
-
         return application.getId();
     }
 
-    public Boolean updateApplication(String namespace, String name, ApplicationCreateOrUpdateRequest request) {
-        Application application = applicationRepository.findByNamespaceAndName(namespace, name);
-        if (application == null) {
+    @Transactional
+    public Boolean updateApplication(String namespace, String name, Application application) {
+        Application exist = applicationRepository.findByNamespaceAndName(namespace, name);
+        if (exist == null) {
             throw new RuntimeException("Application not found");
         }
-        application.setDescription(request.getDescription());
-        application.setDockerFile(request.getDockerFile());
-        application.setRepository(request.getRepository());
-        application.setBuildImage(request.getBuildImage());
+        application.setDescription(application.getDescription());
         applicationRepository.save(application);
-
-        return true;
-    }
-
-    public List<ApplicationEnvironmentConfig> getApplicationEnvironmentConfigs(String namespace, String name) {
-        return applicationEnvironmentConfigRepository.findApplicationEnvironmentConfigByNamespaceAndApplicationName(namespace, name);
-    }
-
-    public Boolean createApplicationConfigs(List<ApplicationEnvironmentConfig> configs) {
-        applicationEnvironmentConfigRepository.saveAll(configs);
         return true;
     }
 
     @Transactional
-    public Boolean updateApplicationConfigs(String namespace, String appName, List<ApplicationEnvironmentConfigRequest> configs) {
-        List<ApplicationEnvironmentConfig> oldConfigs = applicationEnvironmentConfigRepository
-                .findApplicationEnvironmentConfigByNamespaceAndApplicationName(namespace, appName);
+    public Boolean updateApplicationBuildConfig(String namespace, String name, ApplicationBuildConfig request) {
+        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name)
+                .orElseGet(() -> {
+                    ApplicationBuildConfig config = new ApplicationBuildConfig();
+                    config.setNamespace(namespace);
+                    config.setApplicationName(name);
+                    return config;
+                });
+        
+        buildConfig.setRepository(request.getRepository());
+        buildConfig.setDockerFile(request.getDockerFile());
+        buildConfig.setBuildImage(request.getBuildImage());
+        applicationBuildConfigRepository.save(buildConfig);
+        return true;
+    }
+
+    public ApplicationBuildConfig getApplicationBuildConfig(String namespace, String name) {
+        return applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+    }
+
+    public List<ApplicationBuildEnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
+        return applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+    }
+
+    public List<ApplicationPerformanceEnvironmentConfig> getApplicationPerformanceEnvironmentConfigs(String namespace, String name) {
+        return applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+    }
+
+    @Transactional
+    public Boolean updateApplicationBuildEnvironmentConfigs(String namespace, String appName, List<ApplicationBuildEnvironmentConfig> configs) {
+        List<ApplicationBuildEnvironmentConfig> oldConfigs = applicationBuildEnvironmentConfigRepository
+                .findByNamespaceAndApplicationName(namespace, appName);
         if (oldConfigs != null && !oldConfigs.isEmpty()) {
-            applicationEnvironmentConfigRepository.deleteAll(oldConfigs);
+            applicationBuildEnvironmentConfigRepository.deleteAll(oldConfigs);
+        }
+        
+        for (ApplicationBuildEnvironmentConfig config : configs) {
+            config.setId(null);
+            config.setNamespace(namespace);
+            config.setApplicationName(appName);
+        }
+        applicationBuildEnvironmentConfigRepository.saveAll(configs);
+        return true;
+    }
+
+    @Transactional
+    public Boolean updateApplicationPerformanceEnvironmentConfigs(String namespace, String appName, List<ApplicationPerformanceEnvironmentConfig> configs) {
+        List<ApplicationPerformanceEnvironmentConfig> oldConfigs = applicationPerformanceEnvironmentConfigRepository
+                .findByNamespaceAndApplicationName(namespace, appName);
+        if (oldConfigs != null && !oldConfigs.isEmpty()) {
+            applicationPerformanceEnvironmentConfigRepository.deleteAll(oldConfigs);
         }
 
-        List<ApplicationEnvironmentConfig> newConfigs = new ArrayList<>();
-        for (ApplicationEnvironmentConfigRequest req : configs) {
-            Environment env = environmentRepository.findById(req.getEnvironmentId())
-                    .orElseThrow(() -> new IllegalArgumentException("Environment not found: " + req.getEnvironmentId()));
-            String envName = env.getName();
-
-            ApplicationEnvironmentConfig target = new ApplicationEnvironmentConfig();
-            target.setNamespace(namespace);
-            target.setApplicationName(appName);
-            target.setEnvironmentName(envName);
-            target.setBuildCommand(req.getBuildCommand());
-            target.setReplicas(req.getReplicas());
-            target.setCpuRequest(req.getCpuRequest());
-            target.setCpuLimit(req.getCpuLimit());
-            target.setMemoryRequest(req.getMemoryRequest());
-            target.setMemoryLimit(req.getMemoryLimit());
-            newConfigs.add(target);
+        for (ApplicationPerformanceEnvironmentConfig config : configs) {
+            config.setId(null);
+            config.setNamespace(namespace);
+            config.setApplicationName(appName);
         }
-        applicationEnvironmentConfigRepository.saveAll(newConfigs);
+        applicationPerformanceEnvironmentConfigRepository.saveAll(configs);
         return true;
     }
 

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationEnvironmentConfig, ApplicationPodStatus } from "./types";
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationPodStatus } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -59,28 +59,77 @@ export const deleteApplication = async (namespace: string, id: string): Promise<
   }
 };
 
-export const getApplicationConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironmentConfig[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/configs`);
+export const getApplicationBuildConfig = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildConfig>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/build/config`);
   if (!response.ok) {
-    throw new Error("Failed to fetch application environment configs");
+    throw new Error("Failed to fetch application build config");
   }
   return response.json();
 };
 
-export const upsertApplicationConfigs = async (
-  namespace: string, 
-  name: string, 
-  configs: ApplicationEnvironmentConfig[]
+export const updateApplicationBuildConfig = async (namespace: string, name: string, config: ApplicationBuildConfig): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/build/config`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(config),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update application build config");
+  }
+  return response.json();
+};
+
+export const getApplicationBuildEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/build/configs`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application build environment configs");
+  }
+  return response.json();
+};
+
+export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceEnvironmentConfig[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application performance environment configs");
+  }
+  return response.json();
+};
+
+
+export const updateApplicationBuildEnvConfigs = async (
+  namespace: string,
+  name: string,
+  configs: ApplicationBuildEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/configs`, {
-    method: "POST",
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/build/configs`, {
+    method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(configs),
   });
   if (!response.ok) {
-    throw new Error("Failed to save application environment configs");
+    throw new Error("Failed to save application build environment configs");
+  }
+  return response.json();
+};
+
+export const updateApplicationPerformanceEnvConfigs = async (
+  namespace: string,
+  name: string,
+  configs: ApplicationPerformanceEnvironmentConfig[]
+): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(configs),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to save application performance environment configs");
   }
   return response.json();
 };

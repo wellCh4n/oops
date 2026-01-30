@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @Entity
 @EqualsAndHashCode(callSuper = true)
-public class ApplicationEnvironmentConfig extends BaseDataObject {
+public class ApplicationBuildConfig extends BaseDataObject {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -19,15 +19,9 @@ public class ApplicationEnvironmentConfig extends BaseDataObject {
 
     private String applicationName;
 
-    private String environmentName;
+    private String repository;
 
-    private String buildCommand;
+    private String dockerFile;
 
-    private Integer replicas;
-
-    private String cpuRequest;
-    private String cpuLimit;
-
-    private String memoryRequest;
-    private String memoryLimit;
+    private String buildImage;
 }

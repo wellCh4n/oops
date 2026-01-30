@@ -1,9 +1,9 @@
 package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
-import com.github.wellch4n.oops.objects.ApplicationCreateOrUpdateRequest;
-import com.github.wellch4n.oops.objects.ApplicationEnvironmentConfigRequest;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig;
+import com.github.wellch4n.oops.data.ApplicationBuildEnvironmentConfig;
+import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
@@ -44,28 +44,54 @@ public class ApplicationController {
 
     @PostMapping
     public Result<String> createApplication(@PathVariable String namespace,
-                                            @RequestBody ApplicationCreateOrUpdateRequest request) {
-        return Result.success(applicationService.createApplication(namespace, request));
+                                            @RequestBody Application application) {
+        return Result.success(applicationService.createApplication(namespace, application));
     }
 
     @PutMapping("/{name}")
     public Result<Boolean> updateApplication(@PathVariable String namespace,
                                              @PathVariable String name,
-                                             @RequestBody ApplicationCreateOrUpdateRequest request) {
-        return Result.success(applicationService.updateApplication(namespace, name, request));
+                                             @RequestBody Application application) {
+        return Result.success(applicationService.updateApplication(namespace, name, application));
     }
 
-    @GetMapping("/{name}/environments/configs")
-    public Result<List<ApplicationEnvironmentConfig>> getApplicationConfig(@PathVariable String namespace,
-                                                                           @PathVariable String name) {
-        return Result.success(applicationService.getApplicationEnvironmentConfigs(namespace, name));
+    @GetMapping("/{name}/build/config")
+    public Result<ApplicationBuildConfig> getApplicationBuildConfig(@PathVariable String namespace,
+                                                                    @PathVariable String name) {
+        return Result.success(applicationService.getApplicationBuildConfig(namespace, name));
     }
 
-    @PostMapping("/{name}/environments/configs")
-    public Result<Boolean> createApplicationConfig(@PathVariable String namespace,
-                                                   @PathVariable String name,
-                                                   @RequestBody List<ApplicationEnvironmentConfigRequest> configs) {
-        return Result.success(applicationService.updateApplicationConfigs(namespace, name, configs));
+    @PutMapping("/{name}/build/config")
+    public Result<Boolean> updateApplicationBuildConfig(@PathVariable String namespace,
+                                                        @PathVariable String name,
+                                                        @RequestBody ApplicationBuildConfig request) {
+        return Result.success(applicationService.updateApplicationBuildConfig(namespace, name, request));
+    }
+
+    @GetMapping("/{name}/environments/build/configs")
+    public Result<List<ApplicationBuildEnvironmentConfig>> getApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
+                                                                                                 @PathVariable String name) {
+        return Result.success(applicationService.getApplicationBuildEnvironmentConfigs(namespace, name));
+    }
+
+    @GetMapping("/{name}/environments/performance/configs")
+    public Result<List<ApplicationPerformanceEnvironmentConfig>> getApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
+                                                                                                             @PathVariable String name) {
+        return Result.success(applicationService.getApplicationPerformanceEnvironmentConfigs(namespace, name));
+    }
+
+    @PutMapping("/{name}/environments/build/configs")
+    public Result<Boolean> updateApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
+                                                                    @PathVariable String name,
+                                                                    @RequestBody List<ApplicationBuildEnvironmentConfig> configs) {
+        return Result.success(applicationService.updateApplicationBuildEnvironmentConfigs(namespace, name, configs));
+    }
+
+    @PutMapping("/{name}/environments/performance/configs")
+    public Result<Boolean> updateApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
+                                                                          @PathVariable String name,
+                                                                          @RequestBody List<ApplicationPerformanceEnvironmentConfig> configs) {
+        return Result.success(applicationService.updateApplicationPerformanceEnvironmentConfigs(namespace, name, configs));
     }
 
     @GetMapping("/{name}/status")

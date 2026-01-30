@@ -1,7 +1,8 @@
 package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationEnvironmentConfig;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig;
+import com.github.wellch4n.oops.data.ApplicationBuildEnvironmentConfig;
 
 import java.util.List;
 
@@ -11,10 +12,10 @@ import java.util.List;
  */
 public class BuildContainer extends BaseContainer {
 
-    public BuildContainer(Application application, ApplicationEnvironmentConfig applicationEnvironmentConfig) {
+    public BuildContainer(Application application, ApplicationBuildConfig applicationBuildConfig, ApplicationBuildEnvironmentConfig applicationBuildEnvironmentConfig) {
         this.name("build")
-                .image(application.getBuildImage())
+                .image(applicationBuildConfig.getBuildImage())
                 .workingDir("/workspace")
-                .command(List.of("sh", "-c", applicationEnvironmentConfig.getBuildCommand()));
+                .command(List.of("sh", "-c", applicationBuildEnvironmentConfig.getBuildCommand()));
     }
 }

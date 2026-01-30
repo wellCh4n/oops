@@ -22,14 +22,4 @@ public class Application extends BaseDataObject {
     private String description;
 
     private String namespace;
-
-    private String repository;
-
-    private String dockerFile;
-
-    private String buildImage;
-
-    private String buildCommand;
-
-    private Integer replicas;
 }
