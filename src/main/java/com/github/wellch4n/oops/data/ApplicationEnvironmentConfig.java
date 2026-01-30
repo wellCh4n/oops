@@ -25,4 +25,9 @@ public class ApplicationEnvironmentConfig extends BaseDataObject {
 
     private Integer replicas;
 
+    private String cpuRequest;
+    private String cpuLimit;
+
+    private String memoryRequest;
+    private String memoryLimit;
 }

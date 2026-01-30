@@ -7,4 +7,8 @@ public class ApplicationEnvironmentConfigRequest {
     private String environmentId;
     private String buildCommand;
     private Integer replicas;
+    private String cpuRequest;
+    private String cpuLimit;
+    private String memoryRequest;
+    private String memoryLimit;
 }

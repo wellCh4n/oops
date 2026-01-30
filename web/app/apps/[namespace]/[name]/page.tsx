@@ -21,7 +21,7 @@ export default function EditAppPage() {
   const [application, setApplication] = useState<Application | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [initialEnvConfigs, setInitialEnvConfigs] = useState<{ environmentId: string; buildCommand?: string; replicas?: number }[]>([])
+  const [initialEnvConfigs, setInitialEnvConfigs] = useState<{ environmentId: string; buildCommand?: string; replicas?: number; cpuRequest?: string; cpuLimit?: string; memoryRequest?: string; memoryLimit?: string }[]>([])
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -37,11 +37,15 @@ export default function EditAppPage() {
         const envs = envsRes.data ?? []
         const cfgs = cfgRes.data ?? []
         const mapped = cfgs.map(c => {
-          const envId = envs.find(e => e.name === c.environmentName)?.id || c.environmentName
+          const envId = c.environmentId || envs.find(e => e.name === c.environmentName)?.id || c.environmentName || ""
           return {
             environmentId: envId,
             buildCommand: c.buildCommand,
             replicas: c.replicas,
+            cpuRequest: c.cpuRequest,
+            cpuLimit: c.cpuLimit,
+            memoryRequest: c.memoryRequest,
+            memoryLimit: c.memoryLimit,
           }
         })
         setInitialEnvConfigs(mapped)
@@ -83,7 +87,7 @@ export default function EditAppPage() {
     
     setSaving(true)
     try {
-        if (data.environmentConfigs && data.environmentConfigs.length > 0) {
+        if (data.environmentConfigs) {
           await upsertApplicationConfigs(namespace, application.name, data.environmentConfigs)
           toast.success("环境配置保存成功")
         }

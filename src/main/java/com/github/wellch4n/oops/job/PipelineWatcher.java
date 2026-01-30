@@ -162,6 +162,12 @@ public class PipelineWatcher {
                 ApplicationEnvironmentConfig applicationEnvironmentConfig = applicationEnvironmentConfigRepository.findFirstByNamespaceAndApplicationNameAndEnvironmentName(
                         application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
+                System.out.println("Deploying application " + application.getName() + 
+                        " with CPU Request=" + applicationEnvironmentConfig.getCpuRequest() + 
+                        ", CPU Limit=" + applicationEnvironmentConfig.getCpuLimit() + 
+                        ", Memory Request=" + applicationEnvironmentConfig.getMemoryRequest() + 
+                        ", Memory Limit=" + applicationEnvironmentConfig.getMemoryLimit());
+
                 ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationEnvironmentConfig, null);
                 artifactDeployTask.call();
 

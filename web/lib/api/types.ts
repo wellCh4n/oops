@@ -41,18 +41,19 @@ export interface Application {
 }
 
 export interface ApplicationEnvironmentConfig {
-  applicationId: string,
-  environmentId: string
+  id?: string
+  applicationId?: string
+  environmentId?: string
+  namespace?: string
+  applicationName?: string
+  environmentName?: string
+  
   buildCommand?: string
   replicas?: number
-}
-
-export interface BackendApplicationEnvironmentConfig {
-  namespace: string
-  applicationName: string
-  environmentName: string
-  buildCommand?: string
-  replicas?: number
+  cpuRequest?: string
+  cpuLimit?: string
+  memoryRequest?: string
+  memoryLimit?: string
 }
 
 export interface ApplicationPodStatus {

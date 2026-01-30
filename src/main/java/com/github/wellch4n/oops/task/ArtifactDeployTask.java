@@ -9,6 +9,7 @@ import com.github.wellch4n.oops.objects.ConfigMapResponse;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.*;
+import io.kubernetes.client.custom.Quantity;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -115,6 +116,16 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                         .ports(List.of(new V1ContainerPort().containerPort(8080)))
                                                         .env(envVars)
                                                         .volumeMounts(volumeMounts)
+                                                        .resources(new V1ResourceRequirements()
+                                                                .requests(Map.of(
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationEnvironmentConfig.getCpuRequest(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationEnvironmentConfig.getMemoryRequest()) ? applicationEnvironmentConfig.getMemoryRequest() + "Mi" : "128Mi")
+                                                                ))
+                                                                .limits(Map.of(
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationEnvironmentConfig.getCpuLimit(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationEnvironmentConfig.getMemoryLimit()) ? applicationEnvironmentConfig.getMemoryLimit() + "Mi" : "128Mi")
+                                                                ))
+                                                        )
                                         ))
                                         .imagePullSecrets(List.of(
                                                 new V1LocalObjectReference().name("dockerhub")

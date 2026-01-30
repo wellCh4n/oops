@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, BackendApplicationEnvironmentConfig, ApplicationPodStatus } from "./types";
+import { Application, ApiResponse, ApplicationEnvironmentConfig, ApplicationPodStatus } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -59,7 +59,7 @@ export const deleteApplication = async (namespace: string, id: string): Promise<
   }
 };
 
-export const getApplicationConfigs = async (namespace: string, name: string): Promise<ApiResponse<BackendApplicationEnvironmentConfig[]>> => {
+export const getApplicationConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironmentConfig[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/configs`);
   if (!response.ok) {
     throw new Error("Failed to fetch application environment configs");
@@ -70,7 +70,7 @@ export const getApplicationConfigs = async (namespace: string, name: string): Pr
 export const upsertApplicationConfigs = async (
   namespace: string, 
   name: string, 
-  configs: Array<{ environmentId: string; buildCommand?: string; replicas?: number }>
+  configs: ApplicationEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/configs`, {
     method: "POST",

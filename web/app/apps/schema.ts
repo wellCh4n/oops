@@ -11,6 +11,10 @@ export const applicationSchema = z.object({
     environmentId: z.string(),
     buildCommand: z.string().optional(),
     replicas: z.number().int().min(0).optional(),
+    cpuRequest: z.string().optional(),
+    cpuLimit: z.string().optional(),
+    memoryRequest: z.string().optional(),
+    memoryLimit: z.string().optional(),
   })),
 })
 

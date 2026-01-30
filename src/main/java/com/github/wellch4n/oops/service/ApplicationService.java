@@ -106,6 +106,10 @@ public class ApplicationService {
             target.setEnvironmentName(envName);
             target.setBuildCommand(req.getBuildCommand());
             target.setReplicas(req.getReplicas());
+            target.setCpuRequest(req.getCpuRequest());
+            target.setCpuLimit(req.getCpuLimit());
+            target.setMemoryRequest(req.getMemoryRequest());
+            target.setMemoryLimit(req.getMemoryLimit());
             newConfigs.add(target);
         }
         applicationEnvironmentConfigRepository.saveAll(newConfigs);

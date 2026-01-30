@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Skeleton } from "@/components/ui/skeleton"
 import Editor from "@monaco-editor/react"
 import { ApplicationFormValues, applicationSchema } from "./schema"
 import { Application, Environment } from "@/lib/api/types"
@@ -43,12 +44,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 
 interface ApplicationFormProps {
   initialData?: Application
-  initialEnvConfigs?: { environmentId: string; buildCommand?: string; replicas?: number }[]
+  initialEnvConfigs?: { environmentId: string; buildCommand?: string; replicas?: number; cpuRequest?: string; cpuLimit?: string; memoryRequest?: string; memoryLimit?: string }[]
   onSaveAppInfo: (data: ApplicationFormValues) => void
-  onSaveEnvConfigs?: (data: ApplicationFormValues) => void
+  onSaveEnvConfigs?: (data: ApplicationFormValues) => Promise<void> | void
   onCancel: () => void
   submitLabel?: string
   namespaceSelect?: React.ReactNode
@@ -62,6 +64,8 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
   const currentTab = searchParams.get("tab") || "app-info"
 
   const [environments, setEnvironments] = useState<Environment[]>([])
+  const [isLoadingEnvs, setIsLoadingEnvs] = useState(true)
+  const [isSavingEnv, setIsSavingEnv] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; index: number | null }>({
     isOpen: false,
     index: null,
@@ -97,6 +101,7 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
     fetchEnvironments().then(res => {
       if (res.data) setEnvironments(res.data)
     }).catch(console.error)
+    .finally(() => setIsLoadingEnvs(false))
   }, [])
 
   const getEnvName = (id: string) => environments.find(e => e.id === id)?.name || id
@@ -112,10 +117,11 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
 
   const handleSaveEnvConfigsClick = async (e: React.MouseEvent) => {
     e.preventDefault()
-    const isValid = await form.trigger("environmentConfigs")
-    if (isValid && onSaveEnvConfigs) {
-      onSaveEnvConfigs(form.getValues())
+    setIsSavingEnv(true)
+    if (onSaveEnvConfigs) {
+      await onSaveEnvConfigs(form.getValues())
     }
+    setIsSavingEnv(false)
   }
 
   // Set default tab to the first environment if available, otherwise undefined
@@ -245,7 +251,7 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
                           value={field.environmentId}
                           className="group relative overflow-visible px-6"
                         >
-                          {getEnvName(field.environmentId)}
+                          {isLoadingEnvs ? <Skeleton className="h-4 w-16 bg-muted-foreground/20" /> : getEnvName(field.environmentId)}
                           {activeTab === field.environmentId && (
                             <div
                               className="absolute -top-1.5 -right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center h-4 w-4 rounded-full bg-muted-foreground/50 hover:bg-muted-foreground text-white cursor-pointer shadow-sm transition-all duration-200 group-hover:delay-300 z-10"
@@ -273,7 +279,7 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
                           <DropdownMenuItem 
                             key={env.id} 
                             onClick={() => {
-                              append({ environmentId: env.id, buildCommand: "", replicas: 0 })
+                              append({ environmentId: env.id, buildCommand: "", replicas: 0, cpuRequest: "0.1", cpuLimit: "1", memoryRequest: "128", memoryLimit: "512" })
                               setActiveTab(env.id)
                             }}
                           >
@@ -282,7 +288,7 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
                         ))}
                         {availableEnvs.length === 0 && (
                           <DropdownMenuItem disabled>
-                            {environments.length === 0 ? "Loading..." : "No more environments"}
+                            {isLoadingEnvs ? "Loading..." : "No more environments"}
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -352,14 +358,86 @@ export function ApplicationForm({ initialData, initialEnvConfigs, onSaveAppInfo,
                           </FormItem>
                         )}
                       />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`environmentConfigs.${index}.cpuRequest`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CPU 请求 (core)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="例如 0.1"
+                                  {...field}
+                                  autoComplete="off"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`environmentConfigs.${index}.cpuLimit`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CPU 限制 (core)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="例如 1"
+                                  {...field}
+                                  autoComplete="off"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={`environmentConfigs.${index}.memoryRequest`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>内存 请求 (Mi)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="例如 128"
+                                  {...field}
+                                  autoComplete="off"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`environmentConfigs.${index}.memoryLimit`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>内存 限制 (Mi)</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="例如 512"
+                                  {...field}
+                                  autoComplete="off"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </TabsContent>
                   ))}
                 </Tabs>
                 
                 {onSaveEnvConfigs && (
                   <div className="flex space-x-2 mt-4">
-                    <Button type="button" onClick={handleSaveEnvConfigsClick}>
-                      保存环境配置
+                    <Button type="button" onClick={handleSaveEnvConfigsClick} disabled={isSavingEnv}>
+                      {isSavingEnv ? "保存中..." : "保存环境配置"}
                     </Button>
                   </div>
                 )}
