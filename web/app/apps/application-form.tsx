@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationPerformanceInfo } from "./components/application-performance-info"
+import { ApplicationConfigInfo } from "./components/application-config-info"
 
 interface ApplicationFormProps {
   initialData?: Application
@@ -42,6 +43,7 @@ export function ApplicationForm({
             <TabsTrigger value="app-info" className="px-6">应用信息</TabsTrigger>
             <TabsTrigger value="build-config" className="px-6">构建配置</TabsTrigger>
             <TabsTrigger value="performance-info" className="px-6">性能配置</TabsTrigger>
+            <TabsTrigger value="config-info" className="px-6">配置管理</TabsTrigger>
           </TabsList>
         </div>
 
@@ -65,6 +67,13 @@ export function ApplicationForm({
           <ApplicationPerformanceInfo 
             initialEnvConfigs={initialPerformanceEnvConfigs}
             applicationId={initialData?.id}
+            applicationName={initialData?.name}
+            namespace={initialData?.namespace}
+          />
+        </TabsContent>
+
+        <TabsContent value="config-info">
+          <ApplicationConfigInfo 
             applicationName={initialData?.name}
             namespace={initialData?.namespace}
           />

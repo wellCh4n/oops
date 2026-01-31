@@ -40,8 +40,17 @@ export const applicationPerformanceEnvSchema = z.object({
   })),
 })
 
+export const applicationConfigSchema = z.object({
+  configMaps: z.array(z.object({
+    key: z.string().min(1, "Key is required"),
+    value: z.string().min(1, "Value is required"),
+    mountPath: z.string(),
+  })),
+})
+
 export type ApplicationBasicFormValues = z.infer<typeof applicationBasicSchema>
 export type ApplicationBuildConfigFormValues = z.infer<typeof applicationBuildConfigSchema>
 export type CreateApplicationFormValues = z.infer<typeof createApplicationSchema>
 export type ApplicationBuildFormValues = z.infer<typeof applicationBuildSchema>
 export type ApplicationPerformanceEnvFormValues = z.infer<typeof applicationPerformanceEnvSchema>
+export type ApplicationConfigFormValues = z.infer<typeof applicationConfigSchema>

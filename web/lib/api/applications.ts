@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus } from "./types";
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -97,6 +97,36 @@ export const getApplicationPerformanceEnvConfigs = async (namespace: string, nam
   return response.json();
 };
 
+export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application environments");
+  }
+  return response.json();
+};
+
+export const getApplicationConfigMaps = async (namespace: string, name: string, environment: string): Promise<ApiResponse<ConfigMap[]>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application config maps");
+  }
+  return response.json();
+};
+
+export const updateApplicationConfigMaps = async (namespace: string, name: string, environment: string, configMaps: ConfigMap[]): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(configMaps),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update application config maps");
+  }
+  return response.json();
+};
+
 
 export const updateApplicationBuildEnvConfigs = async (
   namespace: string,
@@ -130,14 +160,6 @@ export const updateApplicationPerformanceEnvConfigs = async (
   });
   if (!response.ok) {
     throw new Error("Failed to save application performance environment configs");
-  }
-  return response.json();
-};
-
-export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch application environments");
   }
   return response.json();
 };

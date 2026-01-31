@@ -92,3 +92,9 @@ export interface Pipeline {
   environment: string
   createdTime: string
 }
+
+export interface ConfigMap {
+  key: string
+  value: string
+  mountPath: string
+}

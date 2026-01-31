@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import com.github.wellch4n.oops.objects.ConfigMapResponse;
+import com.github.wellch4n.oops.objects.ConfigMapItem;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.models.*;
@@ -28,11 +28,11 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Application application;
     private final Environment environment;
     private final ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig;
-    private final List<ConfigMapResponse> configMaps;
+    private final List<ConfigMapItem> configMaps;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
                               Environment environment, ApplicationPerformanceEnvironmentConfig environmentConfig,
-                              List<ConfigMapResponse> configMaps) {
+                              List<ConfigMapItem> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
@@ -53,8 +53,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
         List<V1EnvVar> envVars = Lists.newArrayList();
         if (CollectionUtils.isNotEmpty(configMaps)) {
-            for (ConfigMapResponse configMap : configMaps) {
-                if (StringUtils.isNotEmpty(configMap.getMountPath())) continue;
+            for (ConfigMapItem configMap : configMaps) {
 
                 V1EnvVar envVar = new V1EnvVar();
                 envVar.setName(configMap.getName());
@@ -71,30 +70,30 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             }
         }
 
-        List<V1VolumeMount> volumeMounts = Lists.newArrayList();
-        List<V1Volume> volumes = Lists.newArrayList();
-        if (CollectionUtils.isNotEmpty(configMaps)) {
-            for (ConfigMapResponse configMap : configMaps) {
-                if (StringUtils.isEmpty(configMap.getMountPath())) continue;
-
-                V1VolumeMount volumeMount = new V1VolumeMount();
-                volumeMount.setName(configMap.getName());
-                volumeMount.setMountPath(configMap.getMountPath());
-                volumeMount.setReadOnly(true);
-                volumeMounts.add(volumeMount);
-
-                V1Volume volume = new V1Volume();
-                volume.setName(configMap.getName());
-                volume.setConfigMap(new V1ConfigMapVolumeSource()
-                        .name(applicationName)
-                        .items(List.of(new V1KeyToPath()
-                                .key(configMap.getKey())
-                                .path(configMap.getKey())
-                        ))
-                );
-                volumes.add(volume);
-            }
-        }
+//        List<V1VolumeMount> volumeMounts = Lists.newArrayList();
+//        List<V1Volume> volumes = Lists.newArrayList();
+//        if (CollectionUtils.isNotEmpty(configMaps)) {
+//            for (ConfigMapItem configMap : configMaps) {
+//                if (StringUtils.isEmpty(configMap.getMountPath())) continue;
+//
+//                V1VolumeMount volumeMount = new V1VolumeMount();
+//                volumeMount.setName(configMap.getName());
+//                volumeMount.setMountPath(configMap.getMountPath());
+//                volumeMount.setReadOnly(true);
+//                volumeMounts.add(volumeMount);
+//
+//                V1Volume volume = new V1Volume();
+//                volume.setName(configMap.getName());
+//                volume.setConfigMap(new V1ConfigMapVolumeSource()
+//                        .name(applicationName)
+//                        .items(List.of(new V1KeyToPath()
+//                                .key(configMap.getKey())
+//                                .path(configMap.getKey())
+//                        ))
+//                );
+//                volumes.add(volume);
+//            }
+//        }
 
         V1StatefulSet statefulSet = new V1StatefulSet()
                 .apiVersion("apps/v1")
@@ -115,7 +114,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                         .image(pipeline.getArtifact())
                                                         .ports(List.of(new V1ContainerPort().containerPort(8080)))
                                                         .env(envVars)
-                                                        .volumeMounts(volumeMounts)
+//                                                        .volumeMounts(volumeMounts)
                                                         .resources(new V1ResourceRequirements()
                                                                 .requests(Map.of(
                                                                         "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationPerformanceEnvironmentConfig.getCpuRequest(), "100m")),
@@ -130,7 +129,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                         .imagePullSecrets(List.of(
                                                 new V1LocalObjectReference().name("dockerhub")
                                         ))
-                                        .volumes(volumes)
+//                                        .volumes(volumes)
                                 )
                         )
                 );

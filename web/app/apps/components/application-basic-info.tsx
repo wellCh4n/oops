@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ApplicationBasicFormValues, applicationBasicSchema } from "../schema"
 import { Application, Environment, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
@@ -112,7 +113,7 @@ export function ApplicationBasicInfo({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-4xl">
         <FormField
           control={form.control}
           name="name"
@@ -172,12 +173,10 @@ export function ApplicationBasicInfo({
                 <div className="grid grid-cols-2 gap-4 pt-2">
                     {environments.map(env => (
                         <div key={env.id} className="flex items-center space-x-2">
-                            <input
-                                type="checkbox"
+                            <Checkbox
                                 id={`env-${env.id}`}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                                 checked={selectedEnvNames.includes(env.name)}
-                                onChange={() => toggleEnv(env.name)}
+                                onCheckedChange={() => toggleEnv(env.name)}
                             />
                             <label
                                 htmlFor={`env-${env.id}`}

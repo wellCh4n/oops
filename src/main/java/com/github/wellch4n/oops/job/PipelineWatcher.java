@@ -3,6 +3,8 @@ package com.github.wellch4n.oops.job;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.objects.ConfigMapItem;
+import com.github.wellch4n.oops.service.ConfigMapService;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import com.google.gson.reflect.TypeToken;
@@ -35,17 +37,20 @@ public class PipelineWatcher {
     private final ApplicationRepository applicationRepository;
     private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
     private final EnvironmentService environmentService;
+    private final ConfigMapService configMapService;
 
     private final Map<String, SharedInformerFactory> factories = new ConcurrentHashMap<>();
 
     public PipelineWatcher(PipelineRepository pipelineRepository,
                            ApplicationRepository applicationRepository,
                            ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
-                           EnvironmentService environmentService) {
+                           EnvironmentService environmentService,
+                           ConfigMapService configMapService) {
         this.pipelineRepository = pipelineRepository;
         this.applicationRepository = applicationRepository;
         this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
         this.environmentService = environmentService;
+        this.configMapService = configMapService;
     }
 
     @Scheduled(fixedRate = 10000)
@@ -162,7 +167,9 @@ public class PipelineWatcher {
                 ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
                         application.getNamespace(), application.getName(), pipeline.getEnvironment()).get();
 
-                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null);
+                List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
+
+                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, configMaps);
                 artifactDeployTask.call();
 
                 pipeline.setStatus(PipelineStatus.SUCCEEDED);

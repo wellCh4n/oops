@@ -14,23 +14,11 @@ import { Button } from "@/components/ui/button"
 import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ApplicationPerformanceEnvFormValues, applicationPerformanceEnvSchema } from "../schema"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Plus, X } from "lucide-react"
-import { Environment, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
-import { Skeleton } from "@/components/ui/skeleton"
-import { updateApplicationPerformanceEnvConfigs, getApplicationEnvironments } from "@/lib/api/applications"
+import { TabsContent } from "@/components/ui/tabs"
+import { ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
+import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
 import { toast } from "sonner"
+import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 
 interface ApplicationPerformanceInfoProps {
   initialEnvConfigs?: ApplicationPerformanceEnvironmentConfig[]
@@ -45,9 +33,6 @@ export function ApplicationPerformanceInfo({
   applicationName,
   namespace,
 }: ApplicationPerformanceInfoProps) {
-  const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
-  const [isLoadingEnvs, setIsLoadingEnvs] = useState(false)
-
   const form = useForm<ApplicationPerformanceEnvFormValues>({
     resolver: zodResolver(applicationPerformanceEnvSchema),
     defaultValues: {
@@ -63,6 +48,33 @@ export function ApplicationPerformanceInfo({
   })
 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
+    // Sync form fields with fetched environments
+    const currentConfigs = form.getValues("environmentConfigs") || []
+    const newConfigs = envs.map((env) => {
+      const existing = currentConfigs.find(
+        (c) => c.environmentName === env.environmentName
+      )
+      return (
+        existing || {
+          environmentName: env.environmentName,
+          replicas: 0,
+          cpuRequest: "0.1",
+          cpuLimit: "1",
+          memoryRequest: "128",
+          memoryLimit: "512",
+        }
+      )
+    })
+    replace(newConfigs)
+
+    // Set active tab if not set
+    if (newConfigs.length > 0 && !activeTab) {
+      setActiveTab(newConfigs[0].environmentName)
+    }
+  }
 
   // Initialize activeTab
   useEffect(() => {
@@ -71,111 +83,13 @@ export function ApplicationPerformanceInfo({
     }
   }, [fields, activeTab])
 
-  useEffect(() => {
-    const loadEnvironments = async () => {
-      if (!namespace || !applicationName) return
-
-      setIsLoadingEnvs(true)
-      try {
-        const res = await getApplicationEnvironments(namespace, applicationName)
-        if (res.data) {
-            setEnvironments(res.data)
-
-            // Sync form fields with fetched environments
-            const currentConfigs = form.getValues("environmentConfigs") || []
-            const newConfigs = res.data.map(env => {
-                const existing = currentConfigs.find(c => c.environmentName === env.environmentName)
-                return existing || {
-                    environmentName: env.environmentName,
-                    replicas: 0, 
-                    cpuRequest: "0.1", 
-                    cpuLimit: "1", 
-                    memoryRequest: "128", 
-                    memoryLimit: "512" 
-                }
-            })
-            replace(newConfigs)
-
-            // Set active tab if not set
-            if (newConfigs.length > 0) {
-                setActiveTab(newConfigs[0].environmentName)
-            }
-        }
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to fetch environments")
-      } finally {
-        setIsLoadingEnvs(false)
-      }
-    }
-    loadEnvironments()
-  }, [namespace, applicationName, replace, form])
-
-  return (
-    <Form {...form}>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-        <div>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">环境</span>
-              <TabsList className="justify-start h-auto flex-wrap">
-                {fields.map((field, index) => (
-                  <TabsTrigger 
-                    key={field.id} 
-                    value={field.environmentName}
-                    className="px-6"
-                  >
-                    {isLoadingEnvs ? <Skeleton className="h-4 w-16 bg-muted-foreground/20" /> : field.environmentName}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              
-            </div>
-
-            {fields.length === 0 && (
-               <div className="py-8 text-center text-muted-foreground text-sm border rounded-md mt-2 border-dashed">
-                 暂无环境配置，请先在基本信息中配置部署环境
-               </div>
-            )}
-
-            {fields.map((field, index) => (
-              <TabsContent key={field.id} value={field.environmentName}>
-                <SingleEnvironmentConfig
-                  index={index}
-                  applicationId={applicationId}
-                  applicationName={applicationName}
-                  namespace={namespace}
-                />
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
-      </div>
-    </Form>
-  )
-}
-
-interface SingleEnvironmentConfigProps {
-  index: number
-  applicationId?: string
-  applicationName?: string
-  namespace?: string
-}
-
-function SingleEnvironmentConfig({ index, applicationId, applicationName, namespace }: SingleEnvironmentConfigProps) {
-  const { control, getValues } = useFormContext<ApplicationPerformanceEnvFormValues>()
-  const [isSaving, setIsSaving] = useState(false)
-
-  const handleSave = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    
+  const handleSave = async (data: ApplicationPerformanceEnvFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
       toast.error("请先保存应用基本信息")
       return
     }
 
-    const values = getValues()
-    const configs = values.environmentConfigs.map(config => ({
+    const configs = data.environmentConfigs.map(config => ({
         ...config,
         namespace,
         applicationName,
@@ -194,7 +108,45 @@ function SingleEnvironmentConfig({ index, applicationId, applicationName, namesp
   }
 
   return (
-    <div className="space-y-4 pt-4">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+        <div className="w-full">
+          <ApplicationEnvironmentSelector
+            namespace={namespace}
+            applicationName={applicationName}
+            value={activeTab}
+            onValueChange={setActiveTab}
+            onEnvironmentsLoaded={handleEnvironmentsLoaded}
+            className="w-full"
+          >
+            {fields.map((field, index) => (
+              <TabsContent key={field.id} value={field.environmentName}>
+                <SingleEnvironmentConfig
+                  index={index}
+                />
+              </TabsContent>
+            ))}
+          </ApplicationEnvironmentSelector>
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isSaving}>
+            {isSaving ? "保存中..." : "保存配置"}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  )
+}
+
+interface SingleEnvironmentConfigProps {
+  index: number
+}
+
+function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
+  const { control } = useFormContext<ApplicationPerformanceEnvFormValues>()
+
+  return (
+    <div className="space-y-4">
       <FormField
         control={control}
         name={`environmentConfigs.${index}.replicas`}
@@ -288,11 +240,6 @@ function SingleEnvironmentConfig({ index, applicationId, applicationName, namesp
             </FormItem>
           )}
         />
-      </div>
-      <div className="flex space-x-2 mt-4">
-        <Button type="button" onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "保存中..." : "保存"}
-        </Button>
       </div>
     </div>
   )

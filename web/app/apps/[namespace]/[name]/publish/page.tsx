@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Rocket } from "lucide-react"
 import { toast } from "sonner"
-import { getApplication, getApplicationPerformanceEnvConfigs, deployApplication } from "@/lib/api/applications"
-import { Application, ApplicationPerformanceEnvironmentConfig } from "@/lib/api/types"
+import { getApplication, getApplicationEnvironments, deployApplication } from "@/lib/api/applications"
+import { Application, ApplicationEnvironment } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 
@@ -23,25 +23,25 @@ export default function PublishPage({ params }: PageProps) {
   const { namespace, name } = use(params)
   
   const [application, setApplication] = useState<Application | null>(null)
-  const [envConfigs, setEnvConfigs] = useState<ApplicationPerformanceEnvironmentConfig[]>([])
+  const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appRes, configRes] = await Promise.all([
+        const [appRes, envRes] = await Promise.all([
           getApplication(namespace, name),
-          getApplicationPerformanceEnvConfigs(namespace, name)
+          getApplicationEnvironments(namespace, name)
         ])
         
         if (appRes.data) {
           setApplication(appRes.data)
         }
-        if (configRes.data) {
-          setEnvConfigs(configRes.data)
-          if (configRes.data.length > 0) {
-            const firstEnv = configRes.data[0].environmentName
+        if (envRes.data) {
+          setEnvironments(envRes.data)
+          if (envRes.data.length > 0) {
+            const firstEnv = envRes.data[0].environmentName
             if (firstEnv) {
               setSelectedEnv(firstEnv)
             }
@@ -99,14 +99,14 @@ export default function PublishPage({ params }: PageProps) {
         <div className="grid gap-2">
           <Label>发布环境</Label>
           <RadioGroup value={selectedEnv} onValueChange={setSelectedEnv} className="flex flex-row gap-6">
-            {envConfigs.filter(config => config.environmentName).map(config => (
-              <div className="flex items-center space-x-2" key={config.environmentName}>
-                <RadioGroupItem value={config.environmentName!} id={config.environmentName} />
-                <Label htmlFor={config.environmentName}>{config.environmentName}</Label>
+            {environments.map(env => (
+              <div className="flex items-center space-x-2" key={env.environmentName}>
+                <RadioGroupItem value={env.environmentName} id={env.environmentName} />
+                <Label htmlFor={env.environmentName}>{env.environmentName}</Label>
               </div>
             ))}
           </RadioGroup>
-          {envConfigs.length === 0 && (
+          {environments.length === 0 && (
             <p className="text-sm text-destructive">
               该应用暂无环境配置，请先在应用详情页添加环境配置。
             </p>
