@@ -1,12 +1,15 @@
 package com.github.wellch4n.oops.application.application.service;
 
-import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.application.domain.model.*;
+import com.github.wellch4n.oops.application.domain.repository.*;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -17,6 +20,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author wellCh4n
@@ -48,7 +52,36 @@ public class ApplicationService {
     }
 
     public Application getApplication(String namespace, String name) {
-        return applicationRepository.findByNamespaceAndName(namespace, name);
+        Application application = new Application();
+
+        Optional<ApplicationDO> applicationDOOptional = applicationRepository.findByNamespaceAndName(namespace, name);
+        if (applicationDOOptional.isEmpty()) {
+            return null;
+        }
+        BeanUtils.copyProperties(applicationDOOptional.get(), application);
+
+        Optional<ApplicationBuildConfigDO> applicationBuildConfigDOOptional = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+        applicationBuildConfigDOOptional.ifPresent(buildConfigDO -> {
+            Application.BuildConfig buildConfig = new Application.BuildConfig();
+            BeanUtils.copyProperties(buildConfigDO, buildConfig);
+            application.setBuildConfig(buildConfig);
+        });
+
+        List<ApplicationBuildEnvironmentConfigDO> buildEnvironmentConfigDOList = applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+        buildEnvironmentConfigDOList.forEach(configDO -> {
+            Application.BuildEnvironmentConfig config = new Application.BuildEnvironmentConfig();
+            BeanUtils.copyProperties(configDO, config);
+            application.getBuildEnvironmentConfigs().put(configDO.getEnvironmentName(), config);
+        });
+
+        List<ApplicationPerformanceEnvironmentConfigDO> performanceEnvironmentConfigDOList = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+        performanceEnvironmentConfigDOList.forEach(configDO -> {
+            Application.PerformanceEnvironmentConfig config = new Application.PerformanceEnvironmentConfig();
+            BeanUtils.copyProperties(configDO, config);
+            application.getPerformanceEnvironmentConfigs().put(configDO.getEnvironmentName(), config);
+        });
+
+        return application;
     }
 
     public List<Application> getApplications(String namespace) {
