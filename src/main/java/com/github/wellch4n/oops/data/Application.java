@@ -12,6 +12,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @Entity
 @EqualsAndHashCode(callSuper = true)
+@Table(name = "application")
 public class Application extends BaseDataObject {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

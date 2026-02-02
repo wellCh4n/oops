@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.controller;
+package com.github.wellch4n.oops.application.api.web;
 
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
@@ -7,7 +7,7 @@ import com.github.wellch4n.oops.data.ApplicationEnvironment;
 import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
-import com.github.wellch4n.oops.service.ApplicationService;
+import com.github.wellch4n.oops.application.application.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;

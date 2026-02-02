@@ -30,8 +30,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig;
     private final List<ConfigMapItem> configMaps;
 
-    public ArtifactDeployTask(Pipeline pipeline, Application application,
-                              Environment environment, ApplicationPerformanceEnvironmentConfig environmentConfig,
+    public ArtifactDeployTask(Pipeline pipeline, Application application, Environment environment,
+                              ApplicationPerformanceEnvironmentConfig environmentConfig,
                               List<ConfigMapItem> configMaps) {
         this.pipeline = pipeline;
         this.application = application;

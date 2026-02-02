@@ -1,8 +1,9 @@
-package com.github.wellch4n.oops.service;
+package com.github.wellch4n.oops.application.application.service;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.service.EnvironmentService;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
@@ -16,7 +17,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author wellCh4n
@@ -31,20 +31,20 @@ public class ApplicationService {
     private final ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository;
     private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
     private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
-    private final EnvironmentRepository environmentRepository;
+    private final EnvironmentService environmentService;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
                               ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository,
                               ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
                               ApplicationEnvironmentRepository applicationEnvironmentRepository,
-                              EnvironmentRepository environmentRepository) {
+                              EnvironmentService environmentService) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
         this.applicationBuildEnvironmentConfigRepository = applicationBuildEnvironmentConfigRepository;
         this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
         this.applicationEnvironmentRepository = applicationEnvironmentRepository;
-        this.environmentRepository = environmentRepository;
+        this.environmentService = environmentService;
     }
 
     public Application getApplication(String namespace, String name) {
@@ -154,7 +154,7 @@ public class ApplicationService {
 
     public List<ApplicationPodStatusResponse> getApplicationStatus(String namespace, String name, String environmentName) {
         try {
-            Environment environment = environmentRepository.findFirstByName(environmentName);
+            Environment environment = environmentService.getEnvironment(environmentName);
             if (environment == null) {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
@@ -177,7 +177,7 @@ public class ApplicationService {
 
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
         try {
-            Environment environment = environmentRepository.findFirstByName(environmentName);
+            Environment environment = environmentService.getEnvironment(environmentName);
             if (environment == null) {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
@@ -193,7 +193,7 @@ public class ApplicationService {
 
         Thread.startVirtualThread(() -> {
             try {
-                Environment environment = environmentRepository.findFirstByName(environmentName);
+                Environment environment = environmentService.getEnvironment(environmentName);
                 if (environment == null) {
                     throw new IllegalArgumentException("Environment not found: " + environmentName);
                 }

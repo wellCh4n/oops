@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.application.application.service.ApplicationService;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
@@ -16,13 +17,13 @@ import java.util.concurrent.FutureTask;
 @Service
 public class DeploymentService {
 
-    private final ApplicationRepository applicationRepository;
-    private final PipelineRepository pipelineRepository;
+    private final ApplicationService applicationService;
+    private final PipelineService pipelineService;
     private final EnvironmentService environmentService;
 
-    public DeploymentService(ApplicationRepository applicationRepository, PipelineRepository pipelineRepository, EnvironmentService environmentService) {
-        this.applicationRepository = applicationRepository;
-        this.pipelineRepository = pipelineRepository;
+    public DeploymentService(ApplicationService applicationService, PipelineService pipelineService, EnvironmentService environmentService) {
+        this.applicationService = applicationService;
+        this.pipelineService = pipelineService;
         this.environmentService = environmentService;
     }
 
@@ -30,14 +31,14 @@ public class DeploymentService {
         try {
             Environment environment = environmentService.getEnvironment(environmentName);
 
-            Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
+            Application application = applicationService.getApplication(namespace, applicationName);
 
             Pipeline pipeline = new Pipeline();
             pipeline.setNamespace(namespace);
             pipeline.setApplicationName(application.getName());
             pipeline.setStatus(PipelineStatus.INITIALIZED);
             pipeline.setEnvironment(environment.getName());
-            pipelineRepository.save(pipeline);
+            pipelineService.createPipeline(pipeline);
 
             PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);
             FutureTask<PipelineBuildPod> pipelineExecutorJobTask = new FutureTask<>(pipelineExecuteTask);
@@ -47,7 +48,7 @@ public class DeploymentService {
 
             pipeline.setArtifact(pipelineBuildPod.getArtifact());
             pipeline.setStatus(PipelineStatus.RUNNING);
-            pipelineRepository.save(pipeline);
+            pipelineService.updatePipeline(pipeline);
 
             return pipelineBuildPod.getPipelineId();
         } catch (Exception e) {

@@ -28,7 +28,6 @@ public class EnvironmentService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final EnvironmentRepository environmentRepository;
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
 
     public EnvironmentService(EnvironmentRepository environmentRepository) {
         this.environmentRepository = environmentRepository;
@@ -60,7 +59,7 @@ public class EnvironmentService {
 
     public SseEmitter createEnvironmentStream(Environment environment) {
         SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5 minutes timeout
-        executorService.submit(() -> {
+        Thread.startVirtualThread(() -> {
             try {
                 // Step 1: Validate Kubernetes Connection
                 sendStepUpdate(emitter, 1, "RUNNING", "Validating Kubernetes connection...");

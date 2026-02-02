@@ -58,6 +58,14 @@ public class PipelineService {
         return pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
     }
 
+    public void createPipeline(Pipeline pipeline) {
+        pipelineRepository.save(pipeline);
+    }
+
+    public void updatePipeline(Pipeline pipeline) {
+        pipelineRepository.save(pipeline);
+    }
+
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
         SseEmitter emitter = new SseEmitter(0L);
 
