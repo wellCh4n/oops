@@ -29,15 +29,40 @@ public class EnvironmentController {
         return Result.success(environmentService.getEnvironments());
     }
 
+    @GetMapping("{id}")
+    public Result<Environment> getEnvironment(@PathVariable String id) {
+        return Result.success(environmentService.getEnvironmentById(id));
+    }
+
     @PutMapping("{id}")
     public Result<Boolean> updateEnvironment(@PathVariable String id,
                                              @RequestBody Environment environment) {
         return Result.success(environmentService.updateEnvironment(id, environment));
     }
 
-    @PostMapping(produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter createEnvironmentStream(@RequestBody Environment environment) {
-        return environmentService.createEnvironmentStream(environment);
+    @PostMapping
+    public Result<Environment> createEnvironment(@RequestBody Environment environment) {
+        return Result.success(environmentService.createEnvironment(environment));
+    }
+
+    @PostMapping("validate/kubernetes")
+    public Result<EnvironmentService.KubernetesValidationResult> validateKubernetes(@RequestBody EnvironmentService.KubernetesValidationRequest request) {
+        return Result.success(environmentService.validateKubernetes(request));
+    }
+
+    @PostMapping("create-namespace")
+    public Result<Boolean> createNamespace(@RequestBody EnvironmentService.KubernetesValidationRequest request) {
+        return Result.success(environmentService.createNamespace(request));
+    }
+
+    @PostMapping("validate/image-repository")
+    public Result<Boolean> validateImageRepository(@RequestBody Environment.ImageRepository imageRepository) {
+        return Result.success(environmentService.validateImageRepository(imageRepository));
+    }
+
+    @PostMapping(path = "{id}/initialize", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter initializeEnvironmentStream(@PathVariable String id) {
+        return environmentService.initializeEnvironmentStream(id);
     }
 
     @DeleteMapping("{id}")

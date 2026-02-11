@@ -11,23 +11,43 @@ export async function fetchEnvironments(): Promise<ApiResponse<Environment[]>> {
   return response.json();
 }
 
-export async function createEnvironmentStream(
-  data: EnvironmentFormValues,
+export async function fetchEnvironment(id: string): Promise<ApiResponse<Environment>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments/${id}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch environment");
+  }
+  return response.json();
+}
+
+export async function createEnvironment(data: EnvironmentFormValues): Promise<ApiResponse<Environment>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create environment");
+  }
+
+  return response.json();
+}
+
+export async function initializeEnvironmentStream(
+  id: string,
   onProgress: (step: number, status: string, message: string) => void,
   onComplete: () => void,
   onError: (error: any) => void
 ) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/environments`, {
+    const response = await fetch(`${API_BASE_URL}/api/environments/${id}/initialize`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to start environment creation stream");
+      throw new Error("Failed to start environment initialization stream");
     }
 
     const reader = response.body?.getReader();
@@ -76,6 +96,42 @@ export async function createEnvironmentStream(
   } catch (e) {
     onError(e);
   }
+}
+
+export interface KubernetesValidationResult {
+  success: boolean;
+  status: "VALID" | "CONNECTION_FAILED" | "NAMESPACE_MISSING" | "ERROR";
+  message: string;
+}
+
+export async function validateKubernetes(data: { kubernetesApiServer: { url?: string; token?: string }, workNamespace: string }): Promise<ApiResponse<KubernetesValidationResult>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments/validate/kubernetes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Failed to validate kubernetes");
+  return response.json();
+}
+
+export async function createNamespace(data: { kubernetesApiServer: { url?: string; token?: string }, workNamespace: string }): Promise<ApiResponse<boolean>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments/create-namespace`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Failed to create namespace");
+  return response.json();
+}
+
+export async function validateImageRepository(data: { url?: string; username?: string; password?: string }): Promise<ApiResponse<boolean>> {
+  const response = await fetch(`${API_BASE_URL}/api/environments/validate/image-repository`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error("Failed to validate image repository");
+  return response.json();
 }
 
 export async function updateEnvironment(id: string, data: EnvironmentFormValues): Promise<ApiResponse<boolean>> {

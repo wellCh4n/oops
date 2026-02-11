@@ -8,6 +8,9 @@ import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.V1Namespace;
 import io.kubernetes.client.openapi.models.V1ObjectMeta;
 import io.kubernetes.client.openapi.models.V1Secret;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -42,6 +45,10 @@ public class EnvironmentService {
         return environmentRepository.findFirstByName(name);
     }
 
+    public Environment getEnvironmentById(String id) {
+        return environmentRepository.findById(id).orElse(null);
+    }
+
     public Boolean updateEnvironment(String id, Environment environment) {
         Optional<Environment> environmentOptional = environmentRepository.findById(id);
         if (environmentOptional.isEmpty()) {
@@ -58,18 +65,98 @@ public class EnvironmentService {
         return true;
     }
 
-    public SseEmitter createEnvironmentStream(Environment environment) {
+    public Environment createEnvironment(Environment environment) {
+        return environmentRepository.save(environment);
+    }
+
+    public KubernetesValidationResult validateKubernetes(KubernetesValidationRequest request) {
+        Environment.KubernetesApiServer kubernetesApiServer = request.getKubernetesApiServer();
+        String workNamespace = request.getWorkNamespace();
+
+        if (kubernetesApiServer == null || !kubernetesApiServer.isValid()) {
+            return new KubernetesValidationResult(false, "CONNECTION_FAILED", "无法连接到 Kubernetes API Server");
+        }
+
+        if (workNamespace == null || workNamespace.isEmpty()) {
+             // If no namespace provided, but connection is valid, maybe we consider it valid? 
+             // But the user form has namespace. Let's assume namespace is required for full validation.
+             return new KubernetesValidationResult(true, "VALID", "连接成功");
+        }
+
+        try {
+            ApiClient client = kubernetesApiServer.apiClient();
+            CoreV1Api api = new CoreV1Api(client);
+            try {
+                api.readNamespace(workNamespace).execute();
+                return new KubernetesValidationResult(true, "VALID", "验证通过");
+            } catch (Exception e) {
+                // If 404
+                if (e.getMessage().contains("Not Found") || e.getMessage().contains("404")) {
+                    return new KubernetesValidationResult(false, "NAMESPACE_MISSING", "工作空间不存在");
+                }
+                throw e;
+            }
+        } catch (Exception e) {
+            return new KubernetesValidationResult(false, "ERROR", "验证失败: " + e.getMessage());
+        }
+    }
+
+    public Boolean createNamespace(KubernetesValidationRequest request) {
+        Environment.KubernetesApiServer kubernetesApiServer = request.getKubernetesApiServer();
+        String workNamespace = request.getWorkNamespace();
+
+        try {
+            ApiClient client = kubernetesApiServer.apiClient();
+            CoreV1Api api = new CoreV1Api(client);
+            api.createNamespace(new V1Namespace()
+                    .metadata(new V1ObjectMeta().name(workNamespace))
+            ).execute();
+            return true;
+        } catch (Exception e) {
+            throw new RuntimeException("创建工作空间失败: " + e.getMessage());
+        }
+    }
+
+    public Boolean validateImageRepository(Environment.ImageRepository imageRepository) {
+        return imageRepository.isValid();
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class KubernetesValidationRequest {
+        private Environment.KubernetesApiServer kubernetesApiServer;
+        private String workNamespace;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class KubernetesValidationResult {
+        private boolean success;
+        private String status; // VALID, CONNECTION_FAILED, NAMESPACE_MISSING, ERROR
+        private String message;
+    }
+
+    public SseEmitter initializeEnvironmentStream(String id) {
         SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5 minutes timeout
         executorService.submit(() -> {
             try {
+                Optional<Environment> environmentOptional = environmentRepository.findById(id);
+                if (environmentOptional.isEmpty()) {
+                    emitter.completeWithError(new Exception("Environment not found"));
+                    return;
+                }
+                Environment environment = environmentOptional.get();
+
                 // Step 1: Validate Kubernetes Connection
                 sendStepUpdate(emitter, 1, "RUNNING", "Validating Kubernetes connection...");
-                if (environment.getKubernetesApiServer().isValid()) {
-                    sendStepUpdate(emitter, 1, "SUCCESS", "Kubernetes connection validated.");
-                } else {
-                    sendStepUpdate(emitter, 1, "FAILURE", "Failed to validate Kubernetes connection.");
+                if (environment.getKubernetesApiServer() == null || !environment.getKubernetesApiServer().isValid()) {
+                    sendStepUpdate(emitter, 1, "FAILURE", "Kubernetes configuration is invalid or missing.");
                     emitter.completeWithError(new Exception("Kubernetes connection failed"));
                     return;
+                } else {
+                    sendStepUpdate(emitter, 1, "SUCCESS", "Kubernetes connection validated.");
                 }
 
                 // Step 2: Create Work Namespace
@@ -102,12 +189,12 @@ public class EnvironmentService {
 
                 // Step 3: Validate Registry Connection
                 sendStepUpdate(emitter, 3, "RUNNING", "Validating registry connection...");
-                if (environment.getImageRepository().isValid()) {
-                    sendStepUpdate(emitter, 3, "SUCCESS", "Registry connection validated.");
-                } else {
-                    sendStepUpdate(emitter, 3, "FAILURE", "Failed to validate registry connection.");
+                if (environment.getImageRepository() == null || !environment.getImageRepository().isValid()) {
+                    sendStepUpdate(emitter, 3, "FAILURE", "Registry configuration is invalid or missing.");
                     emitter.completeWithError(new Exception("Registry connection failed"));
                     return;
+                } else {
+                    sendStepUpdate(emitter, 3, "SUCCESS", "Registry connection validated.");
                 }
 
                 // Step 4: Create Registry Secret
@@ -156,11 +243,8 @@ public class EnvironmentService {
                     return;
                 }
 
-                // Save Environment
-                environmentRepository.save(environment);
-
                 // Final success
-                emitter.send(SseEmitter.event().name("complete").data("Environment created successfully"));
+                emitter.send(SseEmitter.event().name("complete").data("Environment initialized successfully"));
                 emitter.complete();
 
             } catch (Exception e) {
