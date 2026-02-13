@@ -3,9 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.EnvironmentService;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -43,26 +41,6 @@ public class EnvironmentController {
     @PostMapping
     public Result<Environment> createEnvironment(@RequestBody Environment environment) {
         return Result.success(environmentService.createEnvironment(environment));
-    }
-
-    @PostMapping("validate/kubernetes")
-    public Result<EnvironmentService.KubernetesValidationResult> validateKubernetes(@RequestBody EnvironmentService.KubernetesValidationRequest request) {
-        return Result.success(environmentService.validateKubernetes(request));
-    }
-
-    @PostMapping("create-namespace")
-    public Result<Boolean> createNamespace(@RequestBody EnvironmentService.KubernetesValidationRequest request) {
-        return Result.success(environmentService.createNamespace(request));
-    }
-
-    @PostMapping("validate/image-repository")
-    public Result<Boolean> validateImageRepository(@RequestBody Environment.ImageRepository imageRepository) {
-        return Result.success(environmentService.validateImageRepository(imageRepository));
-    }
-
-    @PostMapping(path = "{id}/initialize", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter initializeEnvironmentStream(@PathVariable String id) {
-        return environmentService.initializeEnvironmentStream(id);
     }
 
     @DeleteMapping("{id}")

@@ -35,69 +35,6 @@ export async function createEnvironment(data: EnvironmentFormValues): Promise<Ap
   return response.json();
 }
 
-export async function initializeEnvironmentStream(
-  id: string,
-  onProgress: (step: number, status: string, message: string) => void,
-  onComplete: () => void,
-  onError: (error: any) => void
-) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/environments/${id}/initialize`, {
-      method: "POST",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to start environment initialization stream");
-    }
-
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-
-    if (!reader) {
-      throw new Error("Response body is null");
-    }
-
-    let buffer = "";
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() || ""; // Keep the last incomplete chunk
-
-      for (const block of lines) {
-        const linesInBlock = block.split("\n");
-        let eventType = "message";
-        let dataStr = "";
-
-        for (const line of linesInBlock) {
-          if (line.startsWith("event:")) {
-            eventType = line.replace("event:", "").trim();
-          } else if (line.startsWith("data:")) {
-            dataStr = line.replace("data:", "").trim();
-          }
-        }
-
-        if (eventType === "progress" && dataStr) {
-          try {
-            const parsed = JSON.parse(dataStr);
-            onProgress(parsed.step, parsed.status, parsed.message);
-          } catch (e) {
-            console.error("Failed to parse progress data", e);
-          }
-        } else if (eventType === "complete") {
-          onComplete();
-          return; // Stop reading
-        }
-      }
-    }
-  } catch (e) {
-    onError(e);
-  }
-}
-
 export interface KubernetesValidationResult {
   success: boolean;
   status: "VALID" | "CONNECTION_FAILED" | "NAMESPACE_MISSING" | "ERROR";
@@ -105,7 +42,7 @@ export interface KubernetesValidationResult {
 }
 
 export async function validateKubernetes(data: { kubernetesApiServer: { url?: string; token?: string }, workNamespace: string }): Promise<ApiResponse<KubernetesValidationResult>> {
-  const response = await fetch(`${API_BASE_URL}/api/environments/validate/kubernetes`, {
+  const response = await fetch(`${API_BASE_URL}/api/kubernetes/validations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -115,7 +52,7 @@ export async function validateKubernetes(data: { kubernetesApiServer: { url?: st
 }
 
 export async function createNamespace(data: { kubernetesApiServer: { url?: string; token?: string }, workNamespace: string }): Promise<ApiResponse<boolean>> {
-  const response = await fetch(`${API_BASE_URL}/api/environments/create-namespace`, {
+  const response = await fetch(`${API_BASE_URL}/api/kubernetes/namespaces`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -125,7 +62,7 @@ export async function createNamespace(data: { kubernetesApiServer: { url?: strin
 }
 
 export async function validateImageRepository(data: { url?: string; username?: string; password?: string }): Promise<ApiResponse<boolean>> {
-  const response = await fetch(`${API_BASE_URL}/api/environments/validate/image-repository`, {
+  const response = await fetch(`${API_BASE_URL}/api/image-repositories/validations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
