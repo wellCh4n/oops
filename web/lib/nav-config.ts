@@ -1,9 +1,9 @@
-import { LayoutGrid, Users, Server, Layers } from "lucide-react"
+import { LayoutGrid, Users, Server, Layers, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   title: string
   url: string
-  icon: any
+  icon: LucideIcon
 }
 
 export interface NavGroup {

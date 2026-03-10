@@ -25,19 +25,19 @@ public class PipelineInstanceScanJob {
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
     private final ConfigMapService configMapService;
-    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
+    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
                                    ConfigMapService configMapService,
-                                   ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                                   ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                                    ApplicationServiceConfigRepository applicationServiceConfigRepository) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.configMapService = configMapService;
-        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
+        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
     }
 
@@ -60,8 +60,8 @@ public class PipelineInstanceScanJob {
                 if ("Succeeded".equals(status)) {
                     try {
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                        var applicationPerformanceEnvironmentConfig = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
-                                application.getNamespace(), application.getName(), pipeline.getEnvironment()).orElse(new ApplicationPerformanceEnvironmentConfig());
+                        ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
+                                application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
                         var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
                                 application.getNamespace(), application.getName()).orElse(null);
@@ -93,5 +93,16 @@ public class PipelineInstanceScanJob {
                 pipelineRepository.save(pipeline);
             }
         }
+    }
+
+    private ApplicationPerformanceConfig.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
+        ApplicationPerformanceConfig config = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+        if (config == null || config.getEnvironmentConfigs() == null) {
+            return new ApplicationPerformanceConfig.EnvironmentConfig();
+        }
+        return config.getEnvironmentConfigs().stream()
+                .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
+                .findFirst()
+                .orElseGet(ApplicationPerformanceConfig.EnvironmentConfig::new);
     }
 }

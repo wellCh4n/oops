@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, type CSSProperties } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Eye, EyeOff, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -291,7 +291,7 @@ export default function EnvironmentEditPage() {
                                   className="pr-10 min-h-[unset] max-h-[80px] break-all resize-none overflow-y-auto"
                                   style={{
                                     WebkitTextSecurity: showToken ? 'none' : 'disc',
-                                  } as any}
+                                  } as CSSProperties}
                                 />
                                 <Button
                                   type="button"

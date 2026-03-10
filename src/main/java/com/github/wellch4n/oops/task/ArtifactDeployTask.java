@@ -26,12 +26,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Pipeline pipeline;
     private final Application application;
     private final Environment environment;
-    private final ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig;
+    private final ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig;
     private final ApplicationServiceConfig applicationServiceConfig;
     private final List<ConfigMapItem> configMaps;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
-                              Environment environment, ApplicationPerformanceEnvironmentConfig environmentConfig, ApplicationServiceConfig applicationServiceConfig,
+                              Environment environment, ApplicationPerformanceConfig.EnvironmentConfig environmentConfig, ApplicationServiceConfig applicationServiceConfig,
                               List<ConfigMapItem> configMaps) {
         this.pipeline = pipeline;
         this.application = application;
@@ -46,6 +46,10 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         AppsV1Api appsApi = environment.getKubernetesApiServer().appsV1Api();
         String namespace = application.getNamespace();
         String applicationName = application.getName();
+
+        ApplicationPerformanceConfig.EnvironmentConfig performanceConfig = applicationPerformanceEnvironmentConfig != null
+                ? applicationPerformanceEnvironmentConfig
+                : new ApplicationPerformanceConfig.EnvironmentConfig();
 
         Map<String, String> labels = Map.of(
                 "oops.type", OopsTypes.APPLICATION.name(),
@@ -162,8 +166,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                         .labels(labels))
                 .spec(new V1StatefulSetSpec()
                         .replicas(
-                                applicationPerformanceEnvironmentConfig.getReplicas() == null
-                                        ? 0 : applicationPerformanceEnvironmentConfig.getReplicas())
+                                performanceConfig.getReplicas() == null
+                                        ? 0 : performanceConfig.getReplicas())
                         .serviceName(applicationName)
                         .selector(new V1LabelSelector().matchLabels(labels))
                         .template(new V1PodTemplateSpec()
@@ -180,12 +184,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 //                                                        .volumeMounts(volumeMounts)
                                                         .resources(new V1ResourceRequirements()
                                                                 .requests(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationPerformanceEnvironmentConfig.getCpuRequest(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationPerformanceEnvironmentConfig.getMemoryRequest()) ? applicationPerformanceEnvironmentConfig.getMemoryRequest() + "Mi" : "128Mi")
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuRequest(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryRequest()) ? performanceConfig.getMemoryRequest() + "Mi" : "128Mi")
                                                                 ))
                                                                 .limits(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(applicationPerformanceEnvironmentConfig.getCpuLimit(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(applicationPerformanceEnvironmentConfig.getMemoryLimit()) ? applicationPerformanceEnvironmentConfig.getMemoryLimit() + "Mi" : "128Mi")
+                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuLimit(), "100m")),
+                                                                        "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryLimit()) ? performanceConfig.getMemoryLimit() + "Mi" : "128Mi")
                                                                 ))
                                                         )
                                         ))

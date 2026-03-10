@@ -63,7 +63,18 @@ export default function NamespacesPage() {
   }
 
   useEffect(() => {
-    loadNamespaces()
+    void (async () => {
+      try {
+        const res = await fetchNamespaces()
+        if (res.success) {
+          setNamespaces(res.data)
+        } else {
+          toast.error(res.message)
+        }
+      } catch (error) {
+        toast.error("获取命名空间失败")
+      }
+    })()
   }, [])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

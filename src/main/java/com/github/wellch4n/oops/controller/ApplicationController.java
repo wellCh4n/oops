@@ -65,28 +65,28 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/environments/build/configs")
-    public Result<List<ApplicationBuildEnvironmentConfig>> getApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
-                                                                                                 @PathVariable String name) {
+    public Result<List<ApplicationBuildConfig.EnvironmentConfig>> getApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
+                                                                                                       @PathVariable String name) {
         return Result.success(applicationService.getApplicationBuildEnvironmentConfigs(namespace, name));
     }
 
     @GetMapping("/{name}/environments/performance/configs")
-    public Result<List<ApplicationPerformanceEnvironmentConfig>> getApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
-                                                                                                             @PathVariable String name) {
+    public Result<List<ApplicationPerformanceConfig.EnvironmentConfig>> getApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
+                                                                                                                  @PathVariable String name) {
         return Result.success(applicationService.getApplicationPerformanceEnvironmentConfigs(namespace, name));
     }
 
     @PutMapping("/{name}/environments/build/configs")
     public Result<Boolean> updateApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
                                                                     @PathVariable String name,
-                                                                    @RequestBody List<ApplicationBuildEnvironmentConfig> configs) {
+                                                                    @RequestBody List<ApplicationBuildConfig.EnvironmentConfig> configs) {
         return Result.success(applicationService.updateApplicationBuildEnvironmentConfigs(namespace, name, configs));
     }
 
     @PutMapping("/{name}/environments/performance/configs")
     public Result<Boolean> updateApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
                                                                           @PathVariable String name,
-                                                                          @RequestBody List<ApplicationPerformanceEnvironmentConfig> configs) {
+                                                                          @RequestBody List<ApplicationPerformanceConfig.EnvironmentConfig> configs) {
         return Result.success(applicationService.updateApplicationPerformanceEnvironmentConfigs(namespace, name, configs));
     }
 

@@ -2,9 +2,6 @@ package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.List;
-
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -17,10 +14,12 @@ import jakarta.persistence.Lob;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.util.List;
+
 @Data
 @Entity
 @EqualsAndHashCode(callSuper = true)
-public class ApplicationBuildConfig extends BaseDataObject {
+public class ApplicationPerformanceConfig extends BaseDataObject {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -29,12 +28,6 @@ public class ApplicationBuildConfig extends BaseDataObject {
 
     private String applicationName;
 
-    private String repository;
-
-    private String dockerFile;
-
-    private String buildImage;
-
     @Lob
     @Column(name = "environment_configs")
     @Convert(converter = EnvironmentConfigsConverter.class)
@@ -42,10 +35,15 @@ public class ApplicationBuildConfig extends BaseDataObject {
 
     @Data
     public static class EnvironmentConfig {
-
         private String environmentName;
 
-        private String buildCommand;
+        private String cpuRequest;
+        private String cpuLimit;
+
+        private String memoryRequest;
+        private String memoryLimit;
+
+        private Integer replicas;
     }
 
     @Converter

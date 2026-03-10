@@ -1,6 +1,6 @@
 "use client"
 
-import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
+import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
@@ -13,7 +13,7 @@ interface ApplicationFormProps {
   initialData?: Application
   initialBuildConfig?: ApplicationBuildConfig
   initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
-  initialPerformanceEnvConfigs?: ApplicationPerformanceEnvironmentConfig[]
+  initialPerformanceEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
   initialServiceConfig?: ApplicationServiceConfig
 }
 

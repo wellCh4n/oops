@@ -27,7 +27,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final Pipeline pipeline;
     private final Application application;
     private final ApplicationBuildConfig applicationBuildConfig;
-    private final ApplicationBuildEnvironmentConfig applicationBuildEnvironmentConfig;
+    private final String buildCommand;
 
     private final Environment environment;
     private final List<BuildStorage> buildStorages = null;
@@ -58,16 +58,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         }
         this.applicationBuildConfig = applicationBuildConfig.get();
 
-        ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository = SpringContext.getBean(ApplicationBuildEnvironmentConfigRepository.class);
-        var applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
-                application.getNamespace(),
-                application.getName(),
-                environment.getName()
-        );
-        if (applicationBuildEnvironmentConfig.isEmpty()) {
-            throw new IllegalStateException("Application build environment config not found.");
-        }
-        this.applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfig.get();
+        this.buildCommand = resolveBuildCommand(this.applicationBuildConfig, environment.getName()).orElse(null);
 
         this.environment = environment;
         this.branch = pipeline.getBranch();
@@ -94,8 +85,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
 
-        if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(applicationBuildEnvironmentConfig.getBuildCommand())) {
-            BuildContainer build = new BuildContainer(application, applicationBuildConfig, applicationBuildEnvironmentConfig);
+        if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
+            BuildContainer build = new BuildContainer(application, applicationBuildConfig, buildCommand);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
 //            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);
@@ -121,5 +112,17 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         }
 
         return pipelineBuildPod;
+    }
+
+    private static Optional<String> resolveBuildCommand(ApplicationBuildConfig buildConfig, String environmentName) {
+        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
+            return Optional.empty();
+        }
+        for (ApplicationBuildConfig.EnvironmentConfig config : buildConfig.getEnvironmentConfigs()) {
+            if (config != null && environmentName != null && environmentName.equals(config.getEnvironmentName())) {
+                return Optional.ofNullable(config.getBuildCommand());
+            }
+        }
+        return Optional.empty();
     }
 }

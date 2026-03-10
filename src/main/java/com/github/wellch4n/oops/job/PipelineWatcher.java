@@ -35,7 +35,7 @@ public class PipelineWatcher {
 
     private final PipelineRepository pipelineRepository;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
+    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final EnvironmentService environmentService;
     private final ConfigMapService configMapService;
 
@@ -43,12 +43,12 @@ public class PipelineWatcher {
 
     public PipelineWatcher(PipelineRepository pipelineRepository,
                            ApplicationRepository applicationRepository,
-                           ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                           ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                            EnvironmentService environmentService,
                            ConfigMapService configMapService) {
         this.pipelineRepository = pipelineRepository;
         this.applicationRepository = applicationRepository;
-        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
+        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.environmentService = environmentService;
         this.configMapService = configMapService;
     }
@@ -164,8 +164,8 @@ public class PipelineWatcher {
         if ("Succeeded".equals(status)) {
             try {
                 Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                ApplicationPerformanceEnvironmentConfig applicationPerformanceEnvironmentConfig = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
-                        application.getNamespace(), application.getName(), pipeline.getEnvironment()).get();
+                ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
+                        application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
                 List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
 
@@ -183,5 +183,16 @@ public class PipelineWatcher {
             pipeline.setStatus(PipelineStatus.ERROR);
             pipelineRepository.save(pipeline);
         }
+    }
+
+    private ApplicationPerformanceConfig.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
+        ApplicationPerformanceConfig config = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+        if (config == null || config.getEnvironmentConfigs() == null) {
+            return new ApplicationPerformanceConfig.EnvironmentConfig();
+        }
+        return config.getEnvironmentConfigs().stream()
+                .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
+                .findFirst()
+                .orElseGet(ApplicationPerformanceConfig.EnvironmentConfig::new);
     }
 }

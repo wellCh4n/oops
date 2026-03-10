@@ -15,6 +15,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,22 +29,19 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
-    private final ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository;
-    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
+    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final EnvironmentRepository environmentRepository;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
-                              ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository,
-                              ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                              ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                               ApplicationEnvironmentRepository applicationEnvironmentRepository, ApplicationServiceConfigRepository applicationServiceConfigRepository,
                               EnvironmentRepository environmentRepository) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
-        this.applicationBuildEnvironmentConfigRepository = applicationBuildEnvironmentConfigRepository;
-        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
+        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationEnvironmentRepository = applicationEnvironmentRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.environmentRepository = environmentRepository;
@@ -88,6 +86,7 @@ public class ApplicationService {
         buildConfig.setRepository(request.getRepository());
         buildConfig.setDockerFile(request.getDockerFile());
         buildConfig.setBuildImage(request.getBuildImage());
+        buildConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
         applicationBuildConfigRepository.save(buildConfig);
         return true;
     }
@@ -96,45 +95,48 @@ public class ApplicationService {
         return applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
     }
 
-    public List<ApplicationBuildEnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
-        return applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+    public List<ApplicationBuildConfig.EnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
+        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return buildConfig.getEnvironmentConfigs();
     }
 
-    public List<ApplicationPerformanceEnvironmentConfig> getApplicationPerformanceEnvironmentConfigs(String namespace, String name) {
-        return applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+    public List<ApplicationPerformanceConfig.EnvironmentConfig> getApplicationPerformanceEnvironmentConfigs(String namespace, String name) {
+        ApplicationPerformanceConfig performanceConfig = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        if (performanceConfig == null || performanceConfig.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return performanceConfig.getEnvironmentConfigs();
     }
 
     @Transactional
-    public Boolean updateApplicationBuildEnvironmentConfigs(String namespace, String appName, List<ApplicationBuildEnvironmentConfig> configs) {
-        List<ApplicationBuildEnvironmentConfig> oldConfigs = applicationBuildEnvironmentConfigRepository
-                .findByNamespaceAndApplicationName(namespace, appName);
-        if (oldConfigs != null && !oldConfigs.isEmpty()) {
-            applicationBuildEnvironmentConfigRepository.deleteAll(oldConfigs);
-        }
-        
-        for (ApplicationBuildEnvironmentConfig config : configs) {
-            config.setId(null);
-            config.setNamespace(namespace);
-            config.setApplicationName(appName);
-        }
-        applicationBuildEnvironmentConfigRepository.saveAll(configs);
+    public Boolean updateApplicationBuildEnvironmentConfigs(String namespace, String appName, List<ApplicationBuildConfig.EnvironmentConfig> configs) {
+        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, appName)
+                .orElseGet(() -> {
+                    ApplicationBuildConfig config = new ApplicationBuildConfig();
+                    config.setNamespace(namespace);
+                    config.setApplicationName(appName);
+                    return config;
+                });
+
+        buildConfig.setEnvironmentConfigs(configs);
+        applicationBuildConfigRepository.save(buildConfig);
         return true;
     }
 
     @Transactional
-    public Boolean updateApplicationPerformanceEnvironmentConfigs(String namespace, String appName, List<ApplicationPerformanceEnvironmentConfig> configs) {
-        List<ApplicationPerformanceEnvironmentConfig> oldConfigs = applicationPerformanceEnvironmentConfigRepository
-                .findByNamespaceAndApplicationName(namespace, appName);
-        if (oldConfigs != null && !oldConfigs.isEmpty()) {
-            applicationPerformanceEnvironmentConfigRepository.deleteAll(oldConfigs);
-        }
-
-        for (ApplicationPerformanceEnvironmentConfig config : configs) {
-            config.setId(null);
-            config.setNamespace(namespace);
-            config.setApplicationName(appName);
-        }
-        applicationPerformanceEnvironmentConfigRepository.saveAll(configs);
+    public Boolean updateApplicationPerformanceEnvironmentConfigs(String namespace, String appName, List<ApplicationPerformanceConfig.EnvironmentConfig> configs) {
+        ApplicationPerformanceConfig performanceConfig = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, appName)
+                .orElseGet(() -> {
+                    ApplicationPerformanceConfig config = new ApplicationPerformanceConfig();
+                    config.setNamespace(namespace);
+                    config.setApplicationName(appName);
+                    return config;
+                });
+        performanceConfig.setEnvironmentConfigs(configs);
+        applicationPerformanceConfigRepository.save(performanceConfig);
         return true;
     }
 
@@ -167,10 +169,12 @@ public class ApplicationService {
             newConfig.setNamespace(namespace);
             newConfig.setApplicationName(name);
             newConfig.setPort(request.getPort());
+            newConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
             applicationServiceConfigRepository.save(newConfig);
         } else {
             ApplicationServiceConfig applicationServiceConfig = exist.get();
             applicationServiceConfig.setPort(request.getPort());
+            applicationServiceConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
             applicationServiceConfigRepository.save(applicationServiceConfig);
         }
         return true;

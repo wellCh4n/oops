@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types";
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
@@ -20,7 +20,7 @@ export const getApplicationService = async (namespace: string, name: string): Pr
 export const updateApplicationService = async (
   namespace: string,
   name: string,
-  config: Pick<ApplicationServiceConfig, "port">
+  config: Pick<ApplicationServiceConfig, "port" | "environmentConfigs">
 ): Promise<ApiResponse<boolean>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service`, {
     method: "PUT",
@@ -115,7 +115,7 @@ export const getApplicationBuildEnvConfigs = async (namespace: string, name: str
   return response.json();
 };
 
-export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceEnvironmentConfig[]>> => {
+export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`);
   if (!response.ok) {
     throw new Error("Failed to fetch application performance environment configs");
@@ -175,7 +175,7 @@ export const updateApplicationBuildEnvConfigs = async (
 export const updateApplicationPerformanceEnvConfigs = async (
   namespace: string,
   name: string,
-  configs: ApplicationPerformanceEnvironmentConfig[]
+  configs: ApplicationPerformanceConfigEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`, {
     method: "PUT",

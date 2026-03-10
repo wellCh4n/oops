@@ -44,12 +44,10 @@ export interface ApplicationBuildConfig {
   repository?: string
   dockerFile?: string
   buildImage?: string
+  environmentConfigs?: ApplicationBuildEnvironmentConfig[]
 }
 
 export interface ApplicationBuildEnvironmentConfig {
-  id?: string
-  namespace: string
-  applicationName: string
   environmentName: string
   buildCommand?: string
 }
@@ -61,10 +59,14 @@ export interface ApplicationEnvironment {
   environmentName: string
 }
 
-export interface ApplicationPerformanceEnvironmentConfig {
+export interface ApplicationPerformanceConfig {
   id?: string
   namespace: string
   applicationName: string
+  environmentConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+}
+
+export interface ApplicationPerformanceConfigEnvironmentConfig {
   environmentName: string
   replicas?: number
   cpuRequest?: string
@@ -104,4 +106,10 @@ export interface ApplicationServiceConfig {
   namespace?: string
   applicationName?: string
   port?: number
+  environmentConfigs?: ApplicationServiceEnvironmentConfig[]
+}
+
+export interface ApplicationServiceEnvironmentConfig {
+  environmentName: string
+  host?: string
 }

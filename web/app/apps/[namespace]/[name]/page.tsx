@@ -15,7 +15,7 @@ import {
   Application, 
   ApplicationBuildConfig, 
   ApplicationBuildEnvironmentConfig, 
-  ApplicationPerformanceEnvironmentConfig,
+  ApplicationPerformanceConfigEnvironmentConfig,
   ApplicationServiceConfig
 } from "@/lib/api/types"
 import { toast } from "sonner"
@@ -30,7 +30,7 @@ export default function EditAppPage() {
   const [application, setApplication] = useState<Application | null>(null)
   const [buildConfig, setBuildConfig] = useState<ApplicationBuildConfig | undefined>(undefined)
   const [buildEnvConfigs, setBuildEnvConfigs] = useState<ApplicationBuildEnvironmentConfig[]>([])
-  const [performanceEnvConfigs, setPerformanceEnvConfigs] = useState<ApplicationPerformanceEnvironmentConfig[]>([])
+  const [performanceEnvConfigs, setPerformanceEnvConfigs] = useState<ApplicationPerformanceConfigEnvironmentConfig[]>([])
   const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
   
   const [loading, setLoading] = useState(true)

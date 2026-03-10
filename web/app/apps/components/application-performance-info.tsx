@@ -15,13 +15,13 @@ import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ApplicationPerformanceEnvFormValues, applicationPerformanceEnvSchema } from "../schema"
 import { TabsContent } from "@/components/ui/tabs"
-import { ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
+import { ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 
 interface ApplicationPerformanceInfoProps {
-  initialEnvConfigs?: ApplicationPerformanceEnvironmentConfig[]
+  initialEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
   applicationId?: string
   applicationName?: string
   namespace?: string
@@ -36,7 +36,7 @@ export function ApplicationPerformanceInfo({
   const form = useForm<ApplicationPerformanceEnvFormValues>({
     resolver: zodResolver(applicationPerformanceEnvSchema),
     defaultValues: {
-      environmentConfigs: initialEnvConfigs as any,
+      environmentConfigs: initialEnvConfigs,
     },
     mode: "onChange",
   })
@@ -88,16 +88,10 @@ export function ApplicationPerformanceInfo({
       toast.error("请先保存应用基本信息")
       return
     }
-
-    const configs = data.environmentConfigs.map(config => ({
-        ...config,
-        namespace,
-        applicationName,
-    })) as ApplicationPerformanceEnvironmentConfig[]
     
     setIsSaving(true)
     try {
-      await updateApplicationPerformanceEnvConfigs(namespace, applicationName, configs)
+      await updateApplicationPerformanceEnvConfigs(namespace, applicationName, data.environmentConfigs)
       toast.success("环境配置保存成功")
     } catch (error) {
       console.error(error)

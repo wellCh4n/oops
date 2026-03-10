@@ -42,7 +42,7 @@ export function ApplicationBuildInfo({
       repository: initialBuildConfig?.repository || "",
       dockerFile: initialBuildConfig?.dockerFile || "Dockerfile",
       buildImage: initialBuildConfig?.buildImage || "",
-      environmentConfigs: initialEnvConfigs as any,
+      environmentConfigs: initialEnvConfigs,
     },
     mode: "onChange",
   })
@@ -104,11 +104,7 @@ export function ApplicationBuildInfo({
       await updateApplicationBuildConfig(namespace, applicationName, buildConfigPayload)
 
       // 2. Save environment configs
-      const envConfigs = data.environmentConfigs.map(config => ({
-          ...config,
-          namespace,
-          applicationName,
-      })) as ApplicationBuildEnvironmentConfig[]
+      const envConfigs = data.environmentConfigs as ApplicationBuildEnvironmentConfig[]
       await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
 
       toast.success("构建配置保存成功")
