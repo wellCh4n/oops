@@ -1,15 +1,10 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationBuildConfig;
-import com.github.wellch4n.oops.data.ApplicationBuildEnvironmentConfig;
-import com.github.wellch4n.oops.data.ApplicationEnvironment;
-import com.github.wellch4n.oops.data.ApplicationPerformanceEnvironmentConfig;
+import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -108,6 +103,16 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplicationEnvironments(namespace, name, configs));
     }
 
+    @GetMapping("/{name}/service")
+    public Result<ApplicationServiceConfig> getService(@PathVariable String namespace, @PathVariable String name) {
+        return Result.success(applicationService.getApplicationServiceConfig(namespace, name));
+    }
+
+    @PutMapping("/{name}/service")
+    public Result<Boolean> updateService(@PathVariable String namespace, @PathVariable String name, @RequestBody ApplicationServiceConfig config) {
+        return Result.success(applicationService.updateApplicationServiceConfig(namespace, name, config));
+    }
+
     @GetMapping("/{name}/status")
     public Result<List<ApplicationPodStatusResponse>> getApplicationStatus(@PathVariable String namespace,
                                                                            @PathVariable String name,
@@ -134,7 +139,8 @@ public class ApplicationController {
     @PostMapping(value = "/{name}/deployments")
     public Result<String> deployApplication(@PathVariable String namespace,
                                             @PathVariable String name,
-                                            @Param("environment") String environment) {
-        return Result.success(deploymentService.deployApplication(namespace, name, environment));
+                                            @RequestParam("environment") String environment,
+                                            @RequestParam(value = "branch", defaultValue = "main") String branch) {
+        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch));
     }
 }

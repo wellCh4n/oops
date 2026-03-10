@@ -98,3 +98,10 @@ export interface ConfigMap {
   value: string
   mountPath: string
 }
+
+export interface ApplicationServiceConfig {
+  id?: string
+  namespace?: string
+  applicationName?: string
+  port?: number
+}

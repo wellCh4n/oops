@@ -53,7 +53,7 @@ public class PipelineWatcher {
         this.configMapService = configMapService;
     }
 
-    @Scheduled(fixedRate = 10000)
+//    @Scheduled(fixedRate = 10000)
     public void refreshWatchers() {
         List<Environment> environments = environmentService.getEnvironments();
         Set<String> currentEnvIds = environments.stream().map(Environment::getId).collect(Collectors.toSet());
@@ -169,7 +169,7 @@ public class PipelineWatcher {
 
                 List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
 
-                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, configMaps);
+                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null, configMaps);
                 artifactDeployTask.call();
 
                 pipeline.setStatus(PipelineStatus.SUCCEEDED);

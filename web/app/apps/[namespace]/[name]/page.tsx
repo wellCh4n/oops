@@ -8,13 +8,15 @@ import {
   getApplication, 
   getApplicationBuildConfig, 
   getApplicationBuildEnvConfigs, 
-  getApplicationPerformanceEnvConfigs 
+  getApplicationPerformanceEnvConfigs,
+  getApplicationService
 } from "@/lib/api/applications"
 import { 
   Application, 
   ApplicationBuildConfig, 
   ApplicationBuildEnvironmentConfig, 
-  ApplicationPerformanceEnvironmentConfig 
+  ApplicationPerformanceEnvironmentConfig,
+  ApplicationServiceConfig
 } from "@/lib/api/types"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -29,17 +31,19 @@ export default function EditAppPage() {
   const [buildConfig, setBuildConfig] = useState<ApplicationBuildConfig | undefined>(undefined)
   const [buildEnvConfigs, setBuildEnvConfigs] = useState<ApplicationBuildEnvironmentConfig[]>([])
   const [performanceEnvConfigs, setPerformanceEnvConfigs] = useState<ApplicationPerformanceEnvironmentConfig[]>([])
+  const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
   
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchApp = async () => {
       try {
-        const [appRes, buildConfigRes, buildEnvRes, perfEnvRes] = await Promise.all([
+        const [appRes, buildConfigRes, buildEnvRes, perfEnvRes, serviceRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationBuildConfig(namespace, name),
           getApplicationBuildEnvConfigs(namespace, name),
           getApplicationPerformanceEnvConfigs(namespace, name),
+          getApplicationService(namespace, name),
         ])
 
         if (appRes.data) {
@@ -56,6 +60,10 @@ export default function EditAppPage() {
 
         if (perfEnvRes.data) {
             setPerformanceEnvConfigs(perfEnvRes.data)
+        }
+
+        if (serviceRes.data) {
+            setServiceConfig(serviceRes.data)
         }
 
       } catch (error) {
@@ -91,6 +99,7 @@ export default function EditAppPage() {
         initialBuildConfig={buildConfig}
         initialBuildEnvConfigs={buildEnvConfigs}
         initialPerformanceEnvConfigs={performanceEnvConfigs}
+        initialServiceConfig={serviceConfig}
       />
     </div>
   )

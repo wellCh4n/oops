@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.DeploymentConfig;
+import com.github.wellch4n.oops.config.PipelineImageConfig;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
@@ -14,6 +15,7 @@ import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 
 /**
@@ -30,7 +32,10 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final Environment environment;
     private final List<BuildStorage> buildStorages = null;
     private final CoreV1Api api;
-    private final DeploymentConfig deploymentConfig;
+    private final PipelineImageConfig pipelineImageConfig;
+
+    private String branch;
+//    private final DeploymentConfig deploymentConfig;
 
     private final String repositoryUrl;
 
@@ -44,33 +49,33 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         );
 
         ApplicationBuildConfigRepository applicationBuildConfigRepository = SpringContext.getBean(ApplicationBuildConfigRepository.class);
-        this.applicationBuildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(
+        var applicationBuildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(
                 application.getNamespace(),
                 application.getName()
-        ).get();
+        );
+        if (applicationBuildConfig.isEmpty()) {
+            throw new IllegalStateException("Application build config not found.");
+        }
+        this.applicationBuildConfig = applicationBuildConfig.get();
 
         ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository = SpringContext.getBean(ApplicationBuildEnvironmentConfigRepository.class);
-        this.applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
+        var applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
                 application.getNamespace(),
                 application.getName(),
                 environment.getName()
-        ).get();
+        );
+        if (applicationBuildEnvironmentConfig.isEmpty()) {
+            throw new IllegalStateException("Application build environment config not found.");
+        }
+        this.applicationBuildEnvironmentConfig = applicationBuildEnvironmentConfig.get();
 
         this.environment = environment;
-
-//        BuildStorageService buildStorageService = SpringContext.getBean(BuildStorageService.class);
-//        this.buildStorages = buildStorageService.getBuildStorages(pipeline.getNamespace(), pipeline.getApplicationName());
+        this.branch = pipeline.getBranch();
 
         this.api = environment.getKubernetesApiServer().coreV1Api();
-//        this.api = KubernetesClientFactory.getCoreApi();
 
-        this.deploymentConfig = SpringContext.getBean(DeploymentConfig.class);
+        this.pipelineImageConfig = SpringContext.getBean(PipelineImageConfig.class);
 
-//        SystemConfigRepository systemConfigRepository = SpringContext.getBean(SystemConfigRepository.class);
-//        SystemConfig imageRepository = systemConfigRepository.findByConfigKey(SystemConfigKeys.IMAGE_REPOSITORY_URL);
-//        if (imageRepository == null) {
-//            throw new IllegalStateException("Image repository URL is not configured.");
-//        }
         String imageRepositoryUrl = environment.getImageRepository().getUrl();
         imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
         this.repositoryUrl = imageRepositoryUrl;
@@ -85,8 +90,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         List<BaseContainer> initContainers = Lists.newArrayList();
 
-        CloneContainer clone = new CloneContainer(application, applicationBuildConfig);
-        clone.addVolumeMounts(workspaceVolume.getVolumeMounts());
+        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), branch);
+        clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
 
         if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(applicationBuildEnvironmentConfig.getBuildCommand())) {
@@ -96,7 +101,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
             initContainers.add(build);
         }
 
-        PushContainer push = new PushContainer(application, pipeline, repositoryUrl, deploymentConfig.getPush().getImage());
+        PushContainer push = new PushContainer(application, pipeline, repositoryUrl, pipelineImageConfig.getPush());
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(push);
         String artifact = push.getArtifact();

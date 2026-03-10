@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
+import io.kubernetes.client.openapi.models.V1EnvVar;
 
 import java.util.List;
 
@@ -11,9 +12,20 @@ import java.util.List;
  */
 public class CloneContainer extends BaseContainer {
 
-    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig) {
+    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String image, String branch) {
         this.name("clone")
-                .image("alpine/git:v2.49.0")
-                .command(List.of("sh", "-c", "git clone " + applicationBuildConfig.getRepository() + " /workspace"));
+                .image(image)
+                .command(
+                        List.of(
+                                "sh", "-c",
+                                "git clone -b " + branch + " --depth 1 " + applicationBuildConfig.getRepository() + " /workspace"
+                        )
+                );
+
+        V1EnvVar gitSshVar = new V1EnvVar()
+                .name("GIT_SSH_COMMAND")
+                .value("ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null");
+
+        this.addEnvItem(gitSshVar);
     }
 }

@@ -1,10 +1,36 @@
 import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap } from "./types";
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types";
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
   if (!response.ok) {
     throw new Error("Failed to fetch applications");
+  }
+  return response.json();
+};
+
+export const getApplicationService = async (namespace: string, name: string): Promise<ApiResponse<ApplicationServiceConfig>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch application service config");
+  }
+  return response.json();
+};
+
+export const updateApplicationService = async (
+  namespace: string,
+  name: string,
+  config: Pick<ApplicationServiceConfig, "port">
+): Promise<ApiResponse<boolean>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(config),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update application service config");
   }
   return response.json();
 };
@@ -185,9 +211,15 @@ export const updateApplicationEnvironments = async (
 export const deployApplication = async (
   namespace: string,
   name: string,
-  environment: string
+  environment: string,
+  branch: string = "main"
 ): Promise<ApiResponse<string>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/deployments?environment=${environment}`, {
+  const params = new URLSearchParams({
+    environment,
+    branch: branch || "main",
+  })
+
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/deployments?${params.toString()}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

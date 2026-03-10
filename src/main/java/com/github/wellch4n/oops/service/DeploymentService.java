@@ -26,7 +26,7 @@ public class DeploymentService {
         this.environmentService = environmentService;
     }
 
-    public String deployApplication(String namespace, String applicationName, String environmentName) {
+    public String deployApplication(String namespace, String applicationName, String environmentName, String branch) {
         try {
             Environment environment = environmentService.getEnvironment(environmentName);
 
@@ -37,6 +37,7 @@ public class DeploymentService {
             pipeline.setApplicationName(application.getName());
             pipeline.setStatus(PipelineStatus.INITIALIZED);
             pipeline.setEnvironment(environment.getName());
+            pipeline.setBranch(branch);
             pipelineRepository.save(pipeline);
 
             PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);

@@ -31,19 +31,21 @@ public class ApplicationService {
     private final ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository;
     private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
     private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
+    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final EnvironmentRepository environmentRepository;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
                               ApplicationBuildEnvironmentConfigRepository applicationBuildEnvironmentConfigRepository,
                               ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
-                              ApplicationEnvironmentRepository applicationEnvironmentRepository,
+                              ApplicationEnvironmentRepository applicationEnvironmentRepository, ApplicationServiceConfigRepository applicationServiceConfigRepository,
                               EnvironmentRepository environmentRepository) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
         this.applicationBuildEnvironmentConfigRepository = applicationBuildEnvironmentConfigRepository;
         this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
         this.applicationEnvironmentRepository = applicationEnvironmentRepository;
+        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.environmentRepository = environmentRepository;
     }
 
@@ -149,6 +151,28 @@ public class ApplicationService {
             config.setApplicationName(appName);
         }
         applicationEnvironmentRepository.saveAll(configs);
+        return true;
+    }
+
+    public ApplicationServiceConfig getApplicationServiceConfig(String namespace, String name) {
+        return applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+    }
+
+    public Boolean updateApplicationServiceConfig(String namespace, String name, ApplicationServiceConfig request) {
+        Optional<ApplicationServiceConfig> exist = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+
+
+        if (exist.isEmpty()) {
+            ApplicationServiceConfig newConfig = new ApplicationServiceConfig();
+            newConfig.setNamespace(namespace);
+            newConfig.setApplicationName(name);
+            newConfig.setPort(request.getPort());
+            applicationServiceConfigRepository.save(newConfig);
+        } else {
+            ApplicationServiceConfig applicationServiceConfig = exist.get();
+            applicationServiceConfig.setPort(request.getPort());
+            applicationServiceConfigRepository.save(applicationServiceConfig);
+        }
         return true;
     }
 

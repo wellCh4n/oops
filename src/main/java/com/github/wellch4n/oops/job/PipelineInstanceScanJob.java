@@ -1,0 +1,97 @@
+package com.github.wellch4n.oops.job;
+
+import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.objects.ConfigMapItem;
+import com.github.wellch4n.oops.service.ConfigMapService;
+import com.github.wellch4n.oops.service.EnvironmentService;
+import com.github.wellch4n.oops.task.ArtifactDeployTask;
+import io.kubernetes.client.openapi.models.V1Pod;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * @author wellCh4n
+ * @date 2025/7/8
+ */
+
+@Component
+public class PipelineInstanceScanJob {
+
+    private final ApplicationRepository applicationRepository;
+    private final PipelineRepository pipelineRepository;
+    private final EnvironmentService environmentService;
+    private final ConfigMapService configMapService;
+    private final ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository;
+    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
+
+    public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
+                                   PipelineRepository pipelineRepository, EnvironmentService environmentService,
+                                   ConfigMapService configMapService,
+                                   ApplicationPerformanceEnvironmentConfigRepository applicationPerformanceEnvironmentConfigRepository,
+                                   ApplicationServiceConfigRepository applicationServiceConfigRepository) {
+        this.applicationRepository = applicationRepository;
+        this.pipelineRepository = pipelineRepository;
+        this.environmentService = environmentService;
+        this.configMapService = configMapService;
+        this.applicationPerformanceEnvironmentConfigRepository = applicationPerformanceEnvironmentConfigRepository;
+        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
+    }
+
+    @Scheduled(fixedRate = 5000)
+    public void scan() {
+        List<Pipeline> runningPipelines = pipelineRepository.findAllByStatus(PipelineStatus.RUNNING);
+        for (Pipeline pipeline : runningPipelines) {
+            try {
+
+                if (PipelineStatus.SUCCEEDED.equals(pipeline.getStatus()) || PipelineStatus.ERROR.equals(pipeline.getStatus())) {
+                    return;
+                }
+
+                String environmentName = pipeline.getEnvironment();
+                Environment environment = environmentService.getEnvironment(environmentName);
+
+                V1Pod buildPod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPodStatus(pipeline.getName(), environment.getWorkNamespace()).execute();
+                String status = buildPod.getStatus().getPhase();
+
+                if ("Succeeded".equals(status)) {
+                    try {
+                        Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
+                        var applicationPerformanceEnvironmentConfig = applicationPerformanceEnvironmentConfigRepository.findByNamespaceAndApplicationNameAndEnvironmentName(
+                                application.getNamespace(), application.getName(), pipeline.getEnvironment()).orElse(new ApplicationPerformanceEnvironmentConfig());
+
+                        var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
+                                application.getNamespace(), application.getName()).orElse(null);
+
+                        List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
+
+                        ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
+                                pipeline, application, environment,
+                                applicationPerformanceEnvironmentConfig, applicationServiceConfig,
+                                configMaps
+                        );
+                        artifactDeployTask.call();
+
+                        pipeline.setStatus(PipelineStatus.SUCCEEDED);
+                        pipelineRepository.save(pipeline);
+                    } catch (Exception e) {
+                        System.err.println("Error processing succeeded pipeline " + pipeline.getId() + ": " + e.getMessage());
+                        pipeline.setStatus(PipelineStatus.ERROR);
+                        pipelineRepository.save(pipeline);
+                    }
+                } else if ("Failed".equals(status)) {
+                    pipeline.setStatus(PipelineStatus.ERROR);
+                    pipelineRepository.save(pipeline);
+                }
+
+            } catch (Exception e) {
+                System.out.println("Error scanning pipeline instance: " + e.getMessage());
+                pipeline.setStatus(PipelineStatus.ERROR);
+                pipelineRepository.save(pipeline);
+            }
+        }
+    }
+}

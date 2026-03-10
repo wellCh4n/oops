@@ -1,25 +1,28 @@
 "use client"
 
-import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig } from "@/lib/api/types"
+import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationPerformanceInfo } from "./components/application-performance-info"
 import { ApplicationConfigInfo } from "./components/application-config-info"
+import { ApplicationServiceInfo } from "./components/application-service-info"
 
 interface ApplicationFormProps {
   initialData?: Application
   initialBuildConfig?: ApplicationBuildConfig
   initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   initialPerformanceEnvConfigs?: ApplicationPerformanceEnvironmentConfig[]
+  initialServiceConfig?: ApplicationServiceConfig
 }
 
 export function ApplicationForm({ 
   initialData, 
   initialBuildConfig,
   initialBuildEnvConfigs,
-  initialPerformanceEnvConfigs
+  initialPerformanceEnvConfigs,
+  initialServiceConfig
 }: ApplicationFormProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -43,6 +46,7 @@ export function ApplicationForm({
             <TabsTrigger value="app-info" className="px-6">应用信息</TabsTrigger>
             <TabsTrigger value="build-config" className="px-6">构建配置</TabsTrigger>
             <TabsTrigger value="performance-info" className="px-6">性能配置</TabsTrigger>
+            <TabsTrigger value="service-info" className="px-6">服务暴露</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6">配置管理</TabsTrigger>
           </TabsList>
         </div>
@@ -50,6 +54,14 @@ export function ApplicationForm({
         <TabsContent value="app-info">
           <ApplicationBasicInfo 
             initialData={initialData}
+          />
+        </TabsContent>
+
+        <TabsContent value="service-info">
+          <ApplicationServiceInfo
+            initialServiceConfig={initialServiceConfig}
+            applicationName={initialData?.name}
+            namespace={initialData?.namespace}
           />
         </TabsContent>
 

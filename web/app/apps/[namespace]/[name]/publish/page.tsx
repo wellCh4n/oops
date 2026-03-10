@@ -9,6 +9,7 @@ import { getApplication, getApplicationEnvironments, deployApplication } from "@
 import { Application, ApplicationEnvironment } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 
 interface PageProps {
   params: Promise<{
@@ -25,6 +26,7 @@ export default function PublishPage({ params }: PageProps) {
   const [application, setApplication] = useState<Application | null>(null)
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
+  const [branch, setBranch] = useState<string>("main")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function PublishPage({ params }: PageProps) {
 
     setLoading(true)
     try {
-      const res = await deployApplication(namespace, name, selectedEnv)
+      const res = await deployApplication(namespace, name, selectedEnv, branch.trim() || "main")
       if (res.success) {
         toast.success(`已提交发布到 ${selectedEnv}`)
         // Assuming the backend returns the pipeline ID in res.data
@@ -111,6 +113,16 @@ export default function PublishPage({ params }: PageProps) {
               该应用暂无环境配置，请先在应用详情页添加环境配置。
             </p>
           )}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="branch">发布分支</Label>
+          <Input
+            id="branch"
+            value={branch}
+            onChange={(e) => setBranch(e.target.value)}
+            placeholder="main"
+          />
         </div>
         
         <div className="pt-4">
