@@ -52,11 +52,28 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 "oops.app.name", applicationName
         );
 
-        V1EnvFromSource envFormSource = new V1EnvFromSource()
-                .configMapRef(new V1ConfigMapEnvSource().name(applicationName));
-
         checkDockerSecret();
         checkService();
+
+        V1EnvFromSource envFormSource = resolveEnvFromSource(namespace, applicationName);
+
+        V1Container container = new V1Container()
+                .name(applicationName)
+                .image(pipeline.getArtifact())
+                .addPortsItem(new V1ContainerPort().containerPort(applicationServiceConfig.getPort()))
+                .resources(new V1ResourceRequirements()
+                        .requests(Map.of(
+                                "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuRequest(), "100m")),
+                                "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryRequest()) ? performanceConfig.getMemoryRequest() + "Mi" : "128Mi")
+                        ))
+                        .limits(Map.of(
+                                "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuLimit(), "100m")),
+                                "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryLimit()) ? performanceConfig.getMemoryLimit() + "Mi" : "128Mi")
+                        ))
+                );
+        if (envFormSource != null) {
+            container.addEnvFromItem(envFormSource);
+        }
 
         V1StatefulSet statefulSet = new V1StatefulSet()
                 .apiVersion("apps/v1")
@@ -74,23 +91,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                         .template(new V1PodTemplateSpec()
                                 .metadata(new V1ObjectMeta().labels(labels))
                                 .spec(new V1PodSpec()
-                                        .containers(List.of(
-                                                new V1Container()
-                                                        .name(applicationName)
-                                                        .image(pipeline.getArtifact())
-                                                        .addPortsItem(new V1ContainerPort().containerPort(applicationServiceConfig.getPort()))
-                                                        .addEnvFromItem(envFormSource)
-                                                        .resources(new V1ResourceRequirements()
-                                                                .requests(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuRequest(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryRequest()) ? performanceConfig.getMemoryRequest() + "Mi" : "128Mi")
-                                                                ))
-                                                                .limits(Map.of(
-                                                                        "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuLimit(), "100m")),
-                                                                        "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryLimit()) ? performanceConfig.getMemoryLimit() + "Mi" : "128Mi")
-                                                                ))
-                                                        )
-                                        ))
+                                        .addContainersItem(container)
                                         .addImagePullSecretsItem(new V1LocalObjectReference().name("dockerhub"))
                                 )
                         )
@@ -106,6 +107,20 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             return false;
         }
         return true;
+    }
+
+    private V1EnvFromSource resolveEnvFromSource(String namespace, String configMapName) throws ApiException {
+        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
+        try {
+            coreApi.readNamespacedConfigMap(configMapName, namespace).execute();
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                return null;
+            }
+            throw e;
+        }
+        return new V1EnvFromSource()
+                .configMapRef(new V1ConfigMapEnvSource().name(configMapName));
     }
 
     private void checkDockerSecret() throws ApiException {
