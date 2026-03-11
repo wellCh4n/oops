@@ -3,8 +3,6 @@ package com.github.wellch4n.oops.job;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.enums.PipelineStatus;
-import com.github.wellch4n.oops.objects.ConfigMapItem;
-import com.github.wellch4n.oops.service.ConfigMapService;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import com.google.gson.reflect.TypeToken;
@@ -19,7 +17,6 @@ import io.kubernetes.client.openapi.models.V1PodList;
 import io.kubernetes.client.util.CallGeneratorParams;
 import io.kubernetes.client.util.Watch;
 import io.kubernetes.client.util.Watchable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -37,20 +34,17 @@ public class PipelineWatcher {
     private final ApplicationRepository applicationRepository;
     private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final EnvironmentService environmentService;
-    private final ConfigMapService configMapService;
 
     private final Map<String, SharedInformerFactory> factories = new ConcurrentHashMap<>();
 
     public PipelineWatcher(PipelineRepository pipelineRepository,
                            ApplicationRepository applicationRepository,
                            ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
-                           EnvironmentService environmentService,
-                           ConfigMapService configMapService) {
+                           EnvironmentService environmentService) {
         this.pipelineRepository = pipelineRepository;
         this.applicationRepository = applicationRepository;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.environmentService = environmentService;
-        this.configMapService = configMapService;
     }
 
 //    @Scheduled(fixedRate = 10000)
@@ -167,9 +161,7 @@ public class PipelineWatcher {
                 ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
                         application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
-                List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
-
-                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null, configMaps);
+                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null);
                 artifactDeployTask.call();
 
                 pipeline.setStatus(PipelineStatus.SUCCEEDED);

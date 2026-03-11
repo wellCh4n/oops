@@ -44,7 +44,6 @@ export const applicationConfigSchema = z.object({
   configMaps: z.array(z.object({
     key: z.string().min(1, "Key is required"),
     value: z.string().min(1, "Value is required"),
-    mountPath: z.string(),
   })),
 })
 

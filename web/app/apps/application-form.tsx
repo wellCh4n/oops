@@ -46,7 +46,7 @@ export function ApplicationForm({
             <TabsTrigger value="app-info" className="px-6">应用信息</TabsTrigger>
             <TabsTrigger value="build-config" className="px-6">构建配置</TabsTrigger>
             <TabsTrigger value="performance-info" className="px-6">性能配置</TabsTrigger>
-            <TabsTrigger value="service-info" className="px-6">服务暴露</TabsTrigger>
+            <TabsTrigger value="service-info" className="px-6">服务配置</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6">配置管理</TabsTrigger>
           </TabsList>
         </div>

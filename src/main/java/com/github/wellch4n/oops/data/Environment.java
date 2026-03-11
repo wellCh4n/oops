@@ -1,6 +1,9 @@
 package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.github.wellch4n.oops.crd.IngressRoute;
+import com.github.wellch4n.oops.crd.IngressRouteApi;
+import com.github.wellch4n.oops.crd.IngressRouteList;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -104,6 +107,27 @@ public class Environment {
                 }
             }
             return this.appsV1Api;
+        }
+
+        @JsonIgnore
+        private transient volatile IngressRouteApi ingressRouteApi;
+        @JsonIgnore
+        public IngressRouteApi ingressRouteApi() {
+            if (this.ingressRouteApi == null) {
+                synchronized (this) {
+                    if (this.ingressRouteApi == null) {
+                        this.ingressRouteApi = new IngressRouteApi(
+                                IngressRoute.class,
+                                IngressRouteList.class,
+                                "traefik.containo.us",
+                                "v1alpha1",
+                                "ingressroutes",
+                                apiClient
+                        );
+                    }
+                }
+            }
+            return this.ingressRouteApi;
         }
 
         public boolean isValid() {

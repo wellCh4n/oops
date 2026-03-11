@@ -11,7 +11,6 @@ import lombok.Data;
 public class ConfigMapItem {
     private String key;
     private String value;
-    private String mountPath;
 
     public String getName() {
         return key.replace(".", "-");

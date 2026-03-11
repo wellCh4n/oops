@@ -2,8 +2,6 @@ package com.github.wellch4n.oops.job;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
-import com.github.wellch4n.oops.objects.ConfigMapItem;
-import com.github.wellch4n.oops.service.ConfigMapService;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.kubernetes.client.openapi.models.V1Pod;
@@ -11,7 +9,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author wellCh4n
@@ -24,19 +21,16 @@ public class PipelineInstanceScanJob {
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
-    private final ConfigMapService configMapService;
     private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
-                                   ConfigMapService configMapService,
                                    ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                                    ApplicationServiceConfigRepository applicationServiceConfigRepository) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
-        this.configMapService = configMapService;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
     }
@@ -66,12 +60,9 @@ public class PipelineInstanceScanJob {
                         var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
                                 application.getNamespace(), application.getName()).orElse(null);
 
-                        List<ConfigMapItem> configMaps = configMapService.getConfigMaps(application.getNamespace(), application.getName(), environment.getName());
-
                         ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
                                 pipeline, application, environment,
-                                applicationPerformanceEnvironmentConfig, applicationServiceConfig,
-                                configMaps
+                                applicationPerformanceEnvironmentConfig, applicationServiceConfig
                         );
                         artifactDeployTask.call();
 

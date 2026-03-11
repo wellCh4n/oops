@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.data;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.AttributeConverter;
@@ -34,6 +35,17 @@ public class ApplicationServiceConfig extends BaseDataObject {
     @Column(name = "environment_configs")
     @Convert(converter = EnvironmentConfigsConverter.class)
     private List<EnvironmentConfig> environmentConfigs;
+
+    @JsonIgnore
+    public EnvironmentConfig getEnvironmentConfig(String environmentName) {
+        if (environmentConfigs == null) {
+            return null;
+        }
+        return environmentConfigs.stream()
+                .filter(config -> environmentName.equals(config.getEnvironmentName()))
+                .findFirst()
+                .orElse(null);
+    }
 
     @Data
     public static class EnvironmentConfig {

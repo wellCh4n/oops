@@ -98,7 +98,6 @@ export interface Pipeline {
 export interface ConfigMap {
   key: string
   value: string
-  mountPath: string
 }
 
 export interface ApplicationServiceConfig {

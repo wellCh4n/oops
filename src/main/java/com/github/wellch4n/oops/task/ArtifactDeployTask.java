@@ -1,16 +1,15 @@
 package com.github.wellch4n.oops.task;
 
+import com.github.wellch4n.oops.crd.IngressRoute;
+import com.github.wellch4n.oops.crd.IngressRouteApi;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import com.github.wellch4n.oops.objects.ConfigMapItem;
 import io.kubernetes.client.openapi.ApiException;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.custom.Quantity;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -28,17 +27,14 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Environment environment;
     private final ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig;
     private final ApplicationServiceConfig applicationServiceConfig;
-    private final List<ConfigMapItem> configMaps;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
-                              Environment environment, ApplicationPerformanceConfig.EnvironmentConfig environmentConfig, ApplicationServiceConfig applicationServiceConfig,
-                              List<ConfigMapItem> configMaps) {
+                              Environment environment, ApplicationPerformanceConfig.EnvironmentConfig environmentConfig, ApplicationServiceConfig applicationServiceConfig) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
         this.applicationPerformanceEnvironmentConfig = environmentConfig;
         this.applicationServiceConfig = applicationServiceConfig;
-        this.configMaps = configMaps;
     }
 
     @Override
@@ -56,106 +52,11 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 "oops.app.name", applicationName
         );
 
-        List<V1EnvVar> envVars = Lists.newArrayList();
-        if (CollectionUtils.isNotEmpty(configMaps)) {
-            for (ConfigMapItem configMap : configMaps) {
+        V1EnvFromSource envFormSource = new V1EnvFromSource()
+                .configMapRef(new V1ConfigMapEnvSource().name(applicationName));
 
-                V1EnvVar envVar = new V1EnvVar();
-                envVar.setName(configMap.getName());
-                envVar.setValueFrom(
-                        new V1EnvVarSource()
-                                .configMapKeyRef(
-                                        new V1ConfigMapKeySelector()
-                                                .name(applicationName)
-                                                .key(configMap.getKey())
-                                )
-                );
-
-                envVars.add(envVar);
-            }
-        }
-
-//        List<V1VolumeMount> volumeMounts = Lists.newArrayList();
-//        List<V1Volume> volumes = Lists.newArrayList();
-//        if (CollectionUtils.isNotEmpty(configMaps)) {
-//            for (ConfigMapItem configMap : configMaps) {
-//                if (StringUtils.isEmpty(configMap.getMountPath())) continue;
-//
-//                V1VolumeMount volumeMount = new V1VolumeMount();
-//                volumeMount.setName(configMap.getName());
-//                volumeMount.setMountPath(configMap.getMountPath());
-//                volumeMount.setReadOnly(true);
-//                volumeMounts.add(volumeMount);
-//
-//                V1Volume volume = new V1Volume();
-//                volume.setName(configMap.getName());
-//                volume.setConfigMap(new V1ConfigMapVolumeSource()
-//                        .name(applicationName)
-//                        .items(List.of(new V1KeyToPath()
-//                                .key(configMap.getKey())
-//                                .path(configMap.getKey())
-//                        ))
-//                );
-//                volumes.add(volume);
-//            }
-//        }
-
-        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
-        try {
-            coreApi.readNamespacedSecret("dockerhub", namespace).execute();
-        } catch (Exception e) {
-            boolean notFound = e.getMessage() != null && (e.getMessage().contains("Not Found") || e.getMessage().contains("404"));
-            if (notFound) {
-                V1Secret source = coreApi.readNamespacedSecret("dockerhub", environment.getWorkNamespace()).execute();
-                if (source != null) {
-                    V1Secret newSecret = new V1Secret()
-                            .metadata(new V1ObjectMeta().name("dockerhub").namespace(namespace))
-                            .type(source.getType())
-                            .data(source.getData());
-                    coreApi.createNamespacedSecret(namespace, newSecret).execute();
-                }
-            }
-        }
-
-        Integer containerPort = applicationServiceConfig != null && applicationServiceConfig.getPort() != null
-                ? applicationServiceConfig.getPort()
-                : 80;
-
-        V1Service service = new V1Service()
-                .apiVersion("v1")
-                .kind("Service")
-                .metadata(new V1ObjectMeta()
-                        .name(applicationName)
-                        .namespace(namespace)
-                        .labels(labels))
-                .spec(new V1ServiceSpec()
-                        .type("ClusterIP")
-                        .selector(labels)
-                        .ports(List.of(
-                                new V1ServicePort()
-                                        .name("http")
-                                        .protocol("TCP")
-                                        .port(80)
-                                        .targetPort(new IntOrString(containerPort))
-                        )));
-
-        try {
-            V1Service existService = coreApi.readNamespacedService(applicationName, namespace).execute();
-            if (existService != null && existService.getMetadata() != null && service.getMetadata() != null) {
-                service.getMetadata().setResourceVersion(existService.getMetadata().getResourceVersion());
-            }
-            if (existService != null && existService.getSpec() != null && service.getSpec() != null) {
-                service.getSpec().setClusterIP(existService.getSpec().getClusterIP());
-                service.getSpec().setClusterIPs(existService.getSpec().getClusterIPs());
-            }
-            coreApi.replaceNamespacedService(applicationName, namespace, service).execute();
-        } catch (ApiException apiException) {
-            if (apiException.getCode() == 404) {
-                coreApi.createNamespacedService(namespace, service).execute();
-            } else {
-                return false;
-            }
-        }
+        checkDockerSecret();
+        checkService();
 
         V1StatefulSet statefulSet = new V1StatefulSet()
                 .apiVersion("apps/v1")
@@ -177,11 +78,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                 new V1Container()
                                                         .name(applicationName)
                                                         .image(pipeline.getArtifact())
-                                                        .ports(
-                                                                List.of(new V1ContainerPort().containerPort(containerPort))
-                                                        )
-                                                        .env(envVars)
-//                                                        .volumeMounts(volumeMounts)
+                                                        .addPortsItem(new V1ContainerPort().containerPort(applicationServiceConfig.getPort()))
+                                                        .addEnvFromItem(envFormSource)
                                                         .resources(new V1ResourceRequirements()
                                                                 .requests(Map.of(
                                                                         "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuRequest(), "100m")),
@@ -193,10 +91,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                                                 ))
                                                         )
                                         ))
-                                        .imagePullSecrets(List.of(
-                                                new V1LocalObjectReference().name("dockerhub")
-                                        ))
-//                                        .volumes(volumes)
+                                        .addImagePullSecretsItem(new V1LocalObjectReference().name("dockerhub"))
                                 )
                         )
                 );
@@ -211,5 +106,86 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             return false;
         }
         return true;
+    }
+
+    private void checkDockerSecret() throws ApiException {
+        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
+        try {
+            coreApi.readNamespacedSecret("dockerhub", application.getNamespace()).execute();
+        } catch (Exception e) {
+            boolean notFound = e.getMessage() != null && (e.getMessage().contains("Not Found") || e.getMessage().contains("404"));
+            if (notFound) {
+                V1Secret source = coreApi.readNamespacedSecret("dockerhub", environment.getWorkNamespace()).execute();
+                if (source != null) {
+                    V1Secret newSecret = new V1Secret()
+                            .metadata(new V1ObjectMeta().name("dockerhub").namespace(application.getNamespace()))
+                            .type(source.getType())
+                            .data(source.getData());
+                    coreApi.createNamespacedSecret(application.getNamespace(), newSecret).execute();
+                }
+            }
+        }
+    }
+
+    private void checkService() throws ApiException {
+        if (applicationServiceConfig == null) {
+            return;
+        }
+
+        Integer port = applicationServiceConfig.getPort();
+        if (port == null) {
+            return;
+        }
+
+        String name = application.getName();
+        String namespace = application.getNamespace();
+        int servicePort = 80;
+        Map<String, String> labels = Map.of(
+                "oops.type", OopsTypes.APPLICATION.name(),
+                "oops.app.name", name
+        );
+
+        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
+        V1Service desiredService = new V1Service()
+                .apiVersion("v1")
+                .kind("Service")
+                .metadata(new V1ObjectMeta()
+                        .name(name)
+                        .namespace(namespace)
+                        .labels(labels))
+                .spec(new V1ServiceSpec()
+                        .type("ClusterIP")
+                        .selector(labels)
+                        .ports(List.of(
+                                new V1ServicePort()
+                                        .name("http")
+                                        .protocol("TCP")
+                                        .port(servicePort)
+                                        .targetPort(new IntOrString(port))
+                        )));
+
+        V1Service existingService = coreApi.readNamespacedService(name, namespace).execute();
+        if (existingService != null) {
+            if (existingService.getMetadata() != null && desiredService.getMetadata() != null) {
+                desiredService.getMetadata().setResourceVersion(existingService.getMetadata().getResourceVersion());
+            }
+            if (existingService.getSpec() != null && desiredService.getSpec() != null) {
+                desiredService.getSpec().setClusterIP(existingService.getSpec().getClusterIP());
+                desiredService.getSpec().setClusterIPs(existingService.getSpec().getClusterIPs());
+            }
+        }
+        coreApi.replaceNamespacedService(name, namespace, desiredService).execute();
+
+        ApplicationServiceConfig.EnvironmentConfig environmentConfig =
+                applicationServiceConfig.getEnvironmentConfig(environment.getName());
+        if (environmentConfig == null || environmentConfig.getHost() == null) {
+            return;
+        }
+
+        IngressRouteApi ingressRouteApi = environment.getKubernetesApiServer().ingressRouteApi();
+        IngressRoute ingressRoute = new IngressRoute(application, environmentConfig);
+        ingressRouteApi.upsertNamespacedIngressRoute(name, namespace, ingressRoute);
+
+
     }
 }

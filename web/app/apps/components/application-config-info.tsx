@@ -111,9 +111,8 @@ export function ApplicationConfigInfo({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[30%]">Key</TableHead>
-                    <TableHead className="w-[30%]">Value</TableHead>
-                    <TableHead className="w-[30%]">Mount Path</TableHead>
+                    <TableHead className="w-[45%]">Key</TableHead>
+                    <TableHead className="w-[45%]">Value</TableHead>
                     <TableHead className="w-[10%]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -149,20 +148,6 @@ export function ApplicationConfigInfo({
                         />
                       </TableCell>
                       <TableCell>
-                        <FormField
-                          control={form.control}
-                          name={`configMaps.${index}.mountPath`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="/etc/config/path" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell>
                         <Button
                           type="button"
                           variant="ghost"
@@ -176,7 +161,7 @@ export function ApplicationConfigInfo({
                   ))}
                   {fields.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
                         {isLoadingConfig ? "加载中..." : "暂无配置项"}
                       </TableCell>
                     </TableRow>
@@ -189,7 +174,7 @@ export function ApplicationConfigInfo({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => append({ key: "", value: "", mountPath: "" })}
+                onClick={() => append({ key: "", value: "" })}
                 disabled={isLoadingConfig}
               >
                 <Plus className="mr-2 h-4 w-4" />
