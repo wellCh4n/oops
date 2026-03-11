@@ -26,12 +26,20 @@ public class IngressRoute implements KubernetesObject {
                         .withNamespace(application.getNamespace())
                         .build();
         this.spec = Map.of(
-                "entryPoints", List.of("web"),
-                "routes", List.of(Map.of(
-                        "match", "Host(`" + config.getHost() + "`)",
-                        "kind", "Rule",
-                        "services", List.of(Map.of("name", application.getName(), "port", 80))
-                ))
+//                "entryPoints", List.of("web"),
+                "routes", List.of(
+                        Map.of(
+                                "match", "Host(`" + config.getHost() + "`) && EntryPoints(`web`)",
+                                "kind", "Rule",
+                                "services", List.of(Map.of("name", application.getName(), "port", 80))
+                        ),
+                        Map.of(
+                                "match", "Host(`" + config.getHost() + "`) && EntryPoints(`websecure`)",
+                                "kind", "Rule",
+                                "services", List.of(Map.of("name", application.getName(), "port", 80)),
+                                "tls", Map.of("certResolver", "letsencrypt-prod")
+                        )
+                )
         );
     }
 }
