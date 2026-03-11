@@ -8,17 +8,14 @@ export const getPipelines = async (
   page?: number,
   size?: number
 ): Promise<ApiResponse<Pipeline[]>> => {
-  const url = new URL(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pipelines`);
-  if (environment && environment !== "all") {
-    url.searchParams.append("environment", environment);
-  }
-  if (page !== undefined) {
-    url.searchParams.append("page", String(page));
-  }
-  if (size !== undefined) {
-    url.searchParams.append("size", String(size));
-  }
-  const response = await fetch(url.toString());
+  const params = new URLSearchParams();
+  if (environment && environment !== "all") params.set("environment", environment);
+  if (page !== undefined) params.set("page", String(page));
+  if (size !== undefined) params.set("size", String(size));
+
+  const qs = params.toString();
+  const url = `${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pipelines${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url);
   if (!response.ok) {
     throw new Error("Failed to fetch pipelines");
   }
