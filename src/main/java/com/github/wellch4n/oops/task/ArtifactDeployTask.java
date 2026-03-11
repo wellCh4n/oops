@@ -146,7 +146,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         );
 
         CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
-        V1Service desiredService = new V1Service()
+        V1Service service = new V1Service()
                 .apiVersion("v1")
                 .kind("Service")
                 .metadata(new V1ObjectMeta()
@@ -164,17 +164,21 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                         .targetPort(new IntOrString(port))
                         )));
 
-        V1Service existingService = coreApi.readNamespacedService(name, namespace).execute();
-        if (existingService != null) {
-            if (existingService.getMetadata() != null && desiredService.getMetadata() != null) {
-                desiredService.getMetadata().setResourceVersion(existingService.getMetadata().getResourceVersion());
+        try {
+            V1Service existingService = coreApi.readNamespacedService(name, namespace).execute();
+            if (existingService.getMetadata() != null && service.getMetadata() != null) {
+                service.getMetadata().setResourceVersion(existingService.getMetadata().getResourceVersion());
             }
-            if (existingService.getSpec() != null && desiredService.getSpec() != null) {
-                desiredService.getSpec().setClusterIP(existingService.getSpec().getClusterIP());
-                desiredService.getSpec().setClusterIPs(existingService.getSpec().getClusterIPs());
+            if (existingService.getSpec() != null && service.getSpec() != null) {
+                service.getSpec().setClusterIP(existingService.getSpec().getClusterIP());
+                service.getSpec().setClusterIPs(existingService.getSpec().getClusterIPs());
+            }
+            coreApi.replaceNamespacedService(name, namespace, service).execute();
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                coreApi.createNamespacedService(namespace, service).execute();
             }
         }
-        coreApi.replaceNamespacedService(name, namespace, desiredService).execute();
 
         ApplicationServiceConfig.EnvironmentConfig environmentConfig =
                 applicationServiceConfig.getEnvironmentConfig(environment.getName());
