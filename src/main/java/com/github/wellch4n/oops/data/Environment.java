@@ -57,7 +57,8 @@ public class Environment {
         @Column(name = "api_server_url")
         private String url;
 
-        @Column(name = "api_server_token")
+        @Lob
+        @Column(name = "api_server_token", columnDefinition = "TEXT")
         private String token;
 
         public static KubernetesApiServer of(String url, String token) {
