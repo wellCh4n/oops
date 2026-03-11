@@ -130,22 +130,6 @@ public class PipelineService {
     private boolean isContainerReady(V1Pod pod, String containerName) {
         if (pod == null || pod.getStatus() == null) return false;
 
-        var initContainerStatusOptional = pod.getStatus().getInitContainerStatuses().stream().filter(status -> status.getName().equals(containerName)).findFirst();
-        if (initContainerStatusOptional.isPresent()) {
-            var v1ContainerStatus = initContainerStatusOptional.get();
-            if (Boolean.TRUE.equals(v1ContainerStatus.getStarted()) || v1ContainerStatus.getReady()) {
-                return true;
-            }
-        }
-
-        var containerStatusOptional = pod.getStatus().getContainerStatuses().stream().filter(status -> status.getName().equals(containerName)).findFirst();
-        if (containerStatusOptional.isPresent()) {
-            var v1ContainerStatus = containerStatusOptional.get();
-            if (v1ContainerStatus.getState().getTerminated() != null) {
-                return true;
-            }
-        }
-
         List<V1ContainerStatus> allStatuses = new ArrayList<>();
         if (pod.getStatus().getInitContainerStatuses() != null)
             allStatuses.addAll(pod.getStatus().getInitContainerStatuses());
@@ -154,7 +138,10 @@ public class PipelineService {
 
         return allStatuses.stream()
                 .filter(s -> containerName.equals(s.getName()))
-                .anyMatch(s -> Boolean.TRUE.equals(s.getStarted()) || s.getReady());
+                .anyMatch(s ->
+                        (s.getState() != null && (s.getState().getRunning() != null || s.getState().getTerminated() != null))
+                                || Boolean.TRUE.equals(s.getStarted())
+                                || s.getReady());
     }
 
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
