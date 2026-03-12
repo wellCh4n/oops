@@ -111,4 +111,5 @@ export interface ApplicationServiceConfig {
 export interface ApplicationServiceEnvironmentConfig {
   environmentName: string
   host?: string
+  https?: boolean
 }

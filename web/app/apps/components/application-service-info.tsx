@@ -4,8 +4,10 @@ import { useEffect, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
+import { Copy } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -22,12 +24,20 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [environmentConfigs, setEnvironmentConfigs] = useState<ApplicationServiceEnvironmentConfig[]>([])
   const [saving, setSaving] = useState(false)
 
+  const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
+
   useEffect(() => {
     if (initialServiceConfig?.port != null) {
       setPort(String(initialServiceConfig.port))
     }
     if (initialServiceConfig?.environmentConfigs) {
-      setEnvironmentConfigs(initialServiceConfig.environmentConfigs)
+      setEnvironmentConfigs(
+        initialServiceConfig.environmentConfigs.map((c) => ({
+          ...c,
+          host: c.host ? normalizeHost(c.host) : c.host,
+          https: c.https ?? true,
+        }))
+      )
     }
   }, [initialServiceConfig])
 
@@ -36,7 +46,9 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       const current = prev || []
       const next = envs.map((env) => {
         const existing = current.find((c) => c.environmentName === env.environmentName)
-        return existing || { environmentName: env.environmentName, host: "" }
+        return existing
+          ? { ...existing, https: existing.https ?? true }
+          : { environmentName: env.environmentName, host: "", https: true }
       })
       if (next.length > 0 && !activeTab) {
         setActiveTab(next[0].environmentName)
@@ -104,19 +116,66 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
             <TabsContent key={config.environmentName} value={config.environmentName}>
               <div className="grid gap-2 max-w-xl">
                 <Label htmlFor={`service-host-${config.environmentName}`}>Host</Label>
-                <Input
-                  id={`service-host-${config.environmentName}`}
-                  value={config.host ?? ""}
-                  onChange={(e) => {
-                    const host = e.target.value
-                    setEnvironmentConfigs((prev) => {
-                      const next = [...prev]
-                      next[index] = { ...next[index], host }
-                      return next
-                    })
-                  }}
-                  placeholder="例如 app.example.com"
-                />
+                <div className="flex w-full items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`service-https-${config.environmentName}`}
+                      checked={config.https ?? true}
+                      onCheckedChange={(checked) => {
+                        const https = checked === true
+                        setEnvironmentConfigs((prev) => {
+                          const next = [...prev]
+                          next[index] = { ...next[index], https }
+                          return next
+                        })
+                      }}
+                    />
+                    <Label htmlFor={`service-https-${config.environmentName}`}>HTTPS</Label>
+                  </div>
+
+                  <div className="flex flex-1 items-center">
+                    <div
+                      className="flex h-9 items-center whitespace-nowrap rounded-md rounded-r-none border border-input bg-muted px-3 text-sm text-muted-foreground"
+                    >
+                      {config.https ?? true ? "https://" : "http://"}
+                    </div>
+                    <Input
+                      id={`service-host-${config.environmentName}`}
+                      className="rounded-l-none"
+                      value={config.host ?? ""}
+                      onChange={(e) => {
+                        const host = normalizeHost(e.target.value)
+                        setEnvironmentConfigs((prev) => {
+                          const next = [...prev]
+                          next[index] = { ...next[index], host }
+                          return next
+                        })
+                      }}
+                      placeholder="例如 app.example.com"
+                    />
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="复制完整地址"
+                    disabled={!((config.host ?? "").trim())}
+                    onClick={async () => {
+                      const scheme = (config.https ?? true) ? "https://" : "http://"
+                      const host = (config.host ?? "").trim()
+                      const url = `${scheme}${host}`
+                      try {
+                        await navigator.clipboard.writeText(url)
+                        toast.success("已复制")
+                      } catch (e) {
+                        toast.error("复制失败")
+                      }
+                    }}
+                  >
+                    <Copy />
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           ))}

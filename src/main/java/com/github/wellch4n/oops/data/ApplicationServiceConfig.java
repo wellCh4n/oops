@@ -52,6 +52,8 @@ public class ApplicationServiceConfig extends BaseDataObject {
         private String environmentName;
 
         private String host;
+
+        private Boolean https = true;
     }
 
     @Converter
