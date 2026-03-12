@@ -37,11 +37,11 @@ java -jar /app/oops.jar ${CONFIG_ARGS} --server.port=${BACKEND_PORT:-8080} &
 BACK_PID=$!
 
 cd /app/web
-if [ ! -d ".next" ]; then
+if [ ! -f "server.js" ]; then
   kill "$BACK_PID" 2>/dev/null || true
   exit 1
 fi
-/app/web/node_modules/.bin/next start -p ${FRONTEND_PORT:-3000} &
+PORT=${FRONTEND_PORT:-3000} HOSTNAME=0.0.0.0 node /app/web/server.js &
 FRONT_PID=$!
 
 nginx -g "daemon off;" &

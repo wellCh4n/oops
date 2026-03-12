@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.job;
 
+import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
@@ -23,16 +24,19 @@ public class PipelineInstanceScanJob {
     private final EnvironmentService environmentService;
     private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
+    private final IngressConfig ingressConfig;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
                                    ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+                                   IngressConfig ingressConfig,
                                    ApplicationServiceConfigRepository applicationServiceConfigRepository) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
+        this.ingressConfig = ingressConfig;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -62,7 +66,7 @@ public class PipelineInstanceScanJob {
 
                         ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
                                 pipeline, application, environment,
-                                applicationPerformanceEnvironmentConfig, applicationServiceConfig
+                                applicationPerformanceEnvironmentConfig, applicationServiceConfig, ingressConfig
                         );
                         artifactDeployTask.call();
 

@@ -161,7 +161,7 @@ public class PipelineWatcher {
                 ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
                         application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
-                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null);
+                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null, null);
                 artifactDeployTask.call();
 
                 pipeline.setStatus(PipelineStatus.SUCCEEDED);

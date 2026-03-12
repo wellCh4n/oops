@@ -30,7 +30,10 @@ COPY --from=backend-builder /opt/java/openjdk /opt/java/openjdk
 
 COPY --from=backend-builder /build/backend/target/oops-0.0.1-SNAPSHOT.jar /app/oops.jar
 
-COPY --from=web-deps /build/web /app/web
+RUN mkdir -p /app/web
+COPY --from=web-deps /build/web/.next/standalone /app/web
+COPY --from=web-deps /build/web/.next/static /app/web/.next/static
+COPY --from=web-deps /build/web/public /app/web/public
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

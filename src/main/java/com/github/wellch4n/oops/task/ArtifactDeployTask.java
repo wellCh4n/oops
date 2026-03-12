@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.task;
 
+import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.crd.IngressRoute;
 import com.github.wellch4n.oops.crd.IngressRouteApi;
 import com.github.wellch4n.oops.data.*;
@@ -27,14 +28,19 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Environment environment;
     private final ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig;
     private final ApplicationServiceConfig applicationServiceConfig;
+    private final IngressConfig ingressConfig;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
-                              Environment environment, ApplicationPerformanceConfig.EnvironmentConfig environmentConfig, ApplicationServiceConfig applicationServiceConfig) {
+                              Environment environment,
+                              ApplicationPerformanceConfig.EnvironmentConfig environmentConfig,
+                              ApplicationServiceConfig applicationServiceConfig,
+                              IngressConfig ingressConfig) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
         this.applicationPerformanceEnvironmentConfig = environmentConfig;
         this.applicationServiceConfig = applicationServiceConfig;
+        this.ingressConfig = ingressConfig;
     }
 
     @Override
@@ -202,7 +208,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         }
 
         IngressRouteApi ingressRouteApi = environment.getKubernetesApiServer().ingressRouteApi();
-        IngressRoute ingressRoute = new IngressRoute(application, environmentConfig);
+        IngressRoute ingressRoute = new IngressRoute(application, environmentConfig, ingressConfig);
         ingressRouteApi.upsertNamespacedIngressRoute(name, namespace, ingressRoute);
 
 
