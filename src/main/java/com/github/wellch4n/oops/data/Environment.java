@@ -12,6 +12,7 @@ import io.kubernetes.client.util.Config;
 import jakarta.persistence.*;
 import lombok.*;
 import okhttp3.HttpUrl;
+import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 
@@ -78,7 +79,19 @@ public class Environment {
             if (this.apiClient == null) {
                 synchronized (this) {
                     if (this.apiClient == null) {
-                        this.apiClient = Config.fromToken(this.url, this.token, false);
+                        ApiClient client = Config.fromToken(this.url, this.token, false);
+
+                        OkHttpClient base = client.getHttpClient();
+                        Dispatcher dispatcher = new Dispatcher();
+                        dispatcher.setMaxRequests(256);
+                        dispatcher.setMaxRequestsPerHost(256);
+
+                        OkHttpClient tuned = base.newBuilder()
+                                .dispatcher(dispatcher)
+                                .connectTimeout(Duration.ofSeconds(5))
+                                .build();
+                        client.setHttpClient(tuned);
+                        this.apiClient = client;
                     }
                 }
             }

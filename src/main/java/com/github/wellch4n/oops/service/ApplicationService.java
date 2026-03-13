@@ -253,6 +253,13 @@ public class ApplicationService {
         Thread thread = Thread.startVirtualThread(() -> {
             log.info("Virtual thread started for streaming logs of pod {} in environment {}", podName, environmentName);
             try {
+                try {
+                    emitter.send(SseEmitter.event().name("open").data("connected"));
+                } catch (IOException e) {
+                    stop.run();
+                    return;
+                }
+
                 Environment environment = environmentRepository.findFirstByName(environmentName);
                 if (environment == null) {
                     throw new IllegalArgumentException("Environment not found: " + environmentName);
