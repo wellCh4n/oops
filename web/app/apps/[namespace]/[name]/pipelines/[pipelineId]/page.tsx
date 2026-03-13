@@ -1,7 +1,6 @@
 "use client"
 
 import { use, useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
 import { getPipeline } from "@/lib/api/pipelines"
 import { Pipeline } from "@/lib/api/types"
 import { API_BASE_URL } from "@/lib/api/config"
@@ -18,7 +17,6 @@ interface PageProps {
 }
 
 export default function PipelineDetailPage({ params }: PageProps) {
-  const router = useRouter()
   const { namespace, name, pipelineId } = use(params)
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
   const [logs, setLogs] = useState<string[]>([])
@@ -77,7 +75,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }, [logs])
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] space-y-4">
+    <div className="flex h-full min-h-0 flex-col gap-4">
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
             <div>
@@ -92,15 +90,15 @@ export default function PipelineDetailPage({ params }: PageProps) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 flex gap-4 overflow-hidden">
+        <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
             {/* Steps Sidebar */}
-            <div className="w-64 border-r pr-4 overflow-y-auto">
+            <div className="w-40 border-r pr-4 overflow-y-auto min-h-0">
                 <h3 className="font-semibold mb-2">步骤</h3>
                 <div className="space-y-1">
                     {steps.map(step => (
                         <div 
                             key={step} 
-                            className={`p-2 rounded text-sm ${activeStep === step ? 'bg-secondary font-medium' : 'text-muted-foreground'}`}
+                            className={`p-2 rounded text-sm truncate ${activeStep === step ? 'bg-secondary font-medium' : 'text-muted-foreground'}`}
                         >
                             {step}
                         </div>
@@ -110,8 +108,8 @@ export default function PipelineDetailPage({ params }: PageProps) {
             </div>
 
             {/* Logs Area */}
-            <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col">
-                <div ref={logContainerRef} className="h-full overflow-y-auto whitespace-pre-wrap break-all">
+            <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                <div ref={logContainerRef} className="flex-1 min-h-0 overflow-y-auto whitespace-pre-wrap break-all">
                     {logs.map((log, i) => (
                         <div key={i}>{log}</div>
                     ))}

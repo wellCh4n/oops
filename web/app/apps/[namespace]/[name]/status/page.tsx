@@ -129,7 +129,7 @@ export default function ApplicationStatusPage() {
   }
 
   const handleViewLogs = (podName: string) => {
-    router.push(`/apps/${namespace}/${name}/pods/${podName}/logs?env=${selectedEnv}`)
+    window.open(`/apps/${namespace}/${name}/pods/${podName}/logs?env=${selectedEnv}`, '_blank')
   }
 
   const handleTerminal = (podName: string) => {

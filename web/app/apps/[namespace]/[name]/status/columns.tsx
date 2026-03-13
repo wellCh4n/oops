@@ -14,6 +14,10 @@ export const getStatusColumns = (
   {
     accessorKey: "name",
     header: "Pod",
+    cell: ({ row }) => {
+      const name = row.getValue("name") as string
+      return <div className="max-w-48 truncate">{name}</div>
+    },
   },
   {
     accessorKey: "status",
@@ -37,9 +41,9 @@ export const getStatusColumns = (
     cell: ({ row }) => {
       const images = row.getValue("image") as string[]
       return (
-        <div className="flex flex-col gap-1">
+        <div className="flex max-w-[28rem] flex-col gap-1 whitespace-normal break-all">
           {images.map((img, i) => (
-            <span key={i} className="text-sm text-muted-foreground break-all">
+            <span key={i} className="text-sm text-muted-foreground">
               {img}
             </span>
           ))}
@@ -57,16 +61,16 @@ export const getStatusColumns = (
             size="sm" 
             onClick={() => onRestart(row.original.name)}
           >
-            <RotateCw className="mr-2 h-4 w-4" />
-            重启
+            <RotateCw className="h-4 w-4" />
+            <span className="ml-2 hidden lg:inline">重启</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onViewLogs(row.original.name)}>
-            <FileText className="mr-2 h-4 w-4" />
-            日志
+            <FileText className="h-4 w-4" />
+            <span className="ml-2 hidden lg:inline">日志</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
-            <Terminal className="mr-2 h-4 w-4" />
-            终端
+            <Terminal className="h-4 w-4" />
+            <span className="ml-2 hidden lg:inline">终端</span>
           </Button>
         </div>
       )

@@ -56,7 +56,7 @@ public class TerminalWebSocketHandler extends BinaryWebSocketHandler {
         this.process = exec.exec(
                 namespace,
                 pod,
-                new String[]{"/bin/bash"},
+                new String[]{"/bin/sh"},
                 app,
                 true, true
         );
