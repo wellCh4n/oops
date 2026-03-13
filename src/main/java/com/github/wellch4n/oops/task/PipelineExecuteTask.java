@@ -10,6 +10,7 @@ import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
+import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import org.apache.commons.compress.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -31,10 +32,11 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Environment environment;
     private final List<BuildStorage> buildStorages = null;
-    private final CoreV1Api api;
+
+    private final BatchV1Api batchV1Api;
     private final PipelineImageConfig pipelineImageConfig;
 
-    private String branch;
+    private final String branch;
 //    private final DeploymentConfig deploymentConfig;
 
     private final String repositoryUrl;
@@ -63,7 +65,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         this.environment = environment;
         this.branch = pipeline.getBranch();
 
-        this.api = environment.getKubernetesApiServer().coreV1Api();
+        this.batchV1Api = environment.getKubernetesApiServer().batchV1Api();
 
         this.pipelineImageConfig = SpringContext.getBean(PipelineImageConfig.class);
 
@@ -106,7 +108,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         pipelineBuildPod.setArtifact(artifact);
 
         try {
-            api.createNamespacedPod(environment.getWorkNamespace(), pipelineBuildPod).execute();
+            batchV1Api.createNamespacedJob(environment.getWorkNamespace(), pipelineBuildPod).execute();
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.crd;
 
 import io.kubernetes.client.common.KubernetesListObject;
-import io.kubernetes.client.common.KubernetesObject;
 import io.kubernetes.client.openapi.models.V1ListMeta;
 import lombok.Data;
 

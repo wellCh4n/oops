@@ -6,12 +6,11 @@ import com.github.wellch4n.oops.crd.IngressRouteApi;
 import com.github.wellch4n.oops.crd.IngressRouteList;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
+import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import io.kubernetes.client.util.Config;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
@@ -49,14 +48,18 @@ public class Environment {
     @Embedded
     private ImageRepository imageRepository;
 
-    @Data
     @Embeddable
     @NoArgsConstructor
     @AllArgsConstructor
     public static class KubernetesApiServer {
+
+        @Getter
+        @Setter
         @Column(name = "api_server_url")
         private String url;
 
+        @Getter
+        @Setter
         @Lob
         @Column(name = "api_server_token", columnDefinition = "TEXT")
         private String token;
@@ -80,6 +83,20 @@ public class Environment {
                 }
             }
             return this.apiClient;
+        }
+
+        @JsonIgnore
+        private transient volatile BatchV1Api batchV1Api;
+        @JsonIgnore
+        public BatchV1Api batchV1Api() {
+            if (this.batchV1Api == null) {
+                synchronized (this) {
+                    if (this.batchV1Api == null) {
+                        this.batchV1Api = new BatchV1Api(apiClient());
+                    }
+                }
+            }
+            return this.batchV1Api;
         }
 
         @JsonIgnore

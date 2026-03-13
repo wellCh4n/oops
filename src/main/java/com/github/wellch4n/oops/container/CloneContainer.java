@@ -12,13 +12,15 @@ import java.util.List;
  */
 public class CloneContainer extends BaseContainer {
 
+    private static final String CLONE_COMMAND_WITH_BRANCH = "git clone -b %s --depth 1 %s /workspace";
+
     public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String image, String branch) {
         this.name("clone")
                 .image(image)
                 .command(
                         List.of(
                                 "sh", "-c",
-                                "git clone -b " + branch + " --depth 1 " + applicationBuildConfig.getRepository() + " /workspace"
+                                String.format(CLONE_COMMAND_WITH_BRANCH, branch, applicationBuildConfig.getRepository())
                         )
                 );
 

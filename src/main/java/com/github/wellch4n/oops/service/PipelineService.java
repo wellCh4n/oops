@@ -7,13 +7,12 @@ import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.google.gson.reflect.TypeToken;
 import io.kubernetes.client.PodLogs;
+import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.models.V1Container;
-import io.kubernetes.client.openapi.models.V1ContainerStatus;
-import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodSpec;
+import io.kubernetes.client.openapi.models.*;
 import io.kubernetes.client.util.Watch;
 import org.apache.commons.compress.utils.Lists;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -24,8 +23,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author wellCh4n
@@ -59,82 +60,115 @@ public class PipelineService {
     }
 
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
+        // 建议设置一个合理的超时时间，或者 0L 永久
         SseEmitter emitter = new SseEmitter(0L);
+
+        // 用于标记客户端是否还在线
+        AtomicBoolean isCompleted = new AtomicBoolean(false);
+        emitter.onCompletion(() -> isCompleted.set(true));
+        emitter.onTimeout(() -> isCompleted.set(true));
+        emitter.onError((e) -> isCompleted.set(true));
 
         Thread.startVirtualThread(() -> {
             try {
                 Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
                 String pipelineName = pipeline.getName();
+                Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
 
-                List<String> containers = Lists.newArrayList();
-
-                String environmentName = pipeline.getEnvironment();
-                Environment environment = environmentService.getEnvironment(environmentName);
                 CoreV1Api coreV1Api = environment.getKubernetesApiServer().coreV1Api();
+                BatchV1Api batchV1Api = environment.getKubernetesApiServer().batchV1Api();
 
-                V1Pod v1Pod = coreV1Api.readNamespacedPod(pipelineName, environment.getWorkNamespace()).execute();
-                v1Pod.getSpec().getInitContainers().forEach(container -> containers.add(container.getName()));
-                v1Pod.getSpec().getContainers().forEach(container -> containers.add(container.getName()));
+                V1Job v1Job = batchV1Api.readNamespacedJob(pipelineName, environment.getWorkNamespace()).execute();
+                List<String> containers = new ArrayList<>();
+                v1Job.getSpec().getTemplate().getSpec().getInitContainers().forEach(c -> containers.add(c.getName()));
+                v1Job.getSpec().getTemplate().getSpec().getContainers().forEach(c -> containers.add(c.getName()));
 
-                SseEmitter.SseEventBuilder steps = SseEmitter.event().name("steps")
-                        .data(objectMapper.writeValueAsString(containers));
-                emitter.send(steps);
+                emitter.send(SseEmitter.event().name("steps").data(objectMapper.writeValueAsString(containers)));
 
                 for (String containerName : containers) {
+                    if (isCompleted.get()) return;
+
+                    V1Pod jobPod = null;
+                    for (int i = 0; i < 10; i++) {
+                        jobPod = currentJobPod(environment, pipelineName);
+                        if (jobPod != null) break;
+                        Thread.sleep(1000);
+                    }
+
+                    if (jobPod == null) {
+                        emitter.send(SseEmitter.event().name("error").data("Pod not created in time"));
+                        return;
+                    }
+                    String jobPodName = jobPod.getMetadata().getName();
+
+                    // 3. Watch 容器就绪状态
                     try (Watch<V1Pod> watch = Watch.createWatch(
                             environment.getKubernetesApiServer().apiClient(),
                             coreV1Api.listNamespacedPod(environment.getWorkNamespace())
-                                    .fieldSelector("metadata.name=" + pipelineName)
+                                    .fieldSelector("metadata.name=" + jobPodName) // 锁定具体 Pod
                                     .watch(true)
                                     .buildCall(null),
                             new TypeToken<Watch.Response<V1Pod>>(){}.getType())) {
 
                         for (Watch.Response<V1Pod> item : watch) {
-                            V1Pod pod = item.object;
-                            if (isContainerReady(pod, containerName)) {
-                                break; // 容器就绪，跳出 Watch 循环
-                            }
+                            if (isCompleted.get()) return; // 检查在线状态
+                            if (isContainerReady(item.object, containerName)) break;
                         }
-                    } catch (Exception e) {
-                        System.err.println("Watch error: " + e.getMessage());
                     }
 
                     PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
-                    try (InputStream is = logs.streamNamespacedPodLog(environment.getWorkNamespace(), pipelineName, containerName)) {
-                        BufferedReader br = new BufferedReader(
-                                new InputStreamReader(is, StandardCharsets.UTF_8));
+                    try (InputStream is = logs.streamNamespacedPodLog(
+                            environment.getWorkNamespace(), jobPodName, containerName,
+                            null, 2000, false)) { // follow = true
+
+                        BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                         String line;
-                        while ((line = br.readLine()) != null) {
-                            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                                    .name(containerName)
-                                    .data("[" + containerName + "] " + line);
-                            emitter.send(event);
+                        while (!isCompleted.get() && (line = br.readLine()) != null) {
+                            emitter.send(SseEmitter.event().name(containerName).data("[" + containerName + "] " + line));
                         }
-                    } catch (Exception e) {
-                        System.out.println("Error watching pod logs: " + e.getMessage());
-                        emitter.completeWithError(e);
                     }
                 }
 
-                System.out.println("Watching completed");
-                emitter.complete();
+                if (!isCompleted.get()) {
+                    emitter.complete();
+                }
             } catch (Exception e) {
-                System.out.println("Error watching pipeline: " + e.getMessage());
-                emitter.completeWithError(e);
+                if (!isCompleted.get()) {
+                    emitter.completeWithError(e);
+                }
             }
         });
 
         return emitter;
     }
 
-    private boolean isContainerReady(V1Pod pod, String containerName) {
-        if (pod == null || pod.getStatus() == null) return false;
+    private V1Pod currentJobPod(Environment environment, String jobPipelineName) {
+        try {
+            V1PodList allPods = environment.getKubernetesApiServer().coreV1Api()
+                    .listNamespacedPod(environment.getWorkNamespace())
+                    .labelSelector("job-name=" + jobPipelineName)
+                    .execute();
+
+            if (allPods.getItems().isEmpty()) {
+                return null;
+            }
+
+            return allPods.getItems().stream()
+                    .max(Comparator.comparing(p -> p.getMetadata().getCreationTimestamp()))
+                    .orElse(allPods.getItems().getFirst());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private boolean isContainerReady(V1Pod jobPod, String containerName) {
+        if (jobPod == null || jobPod.getStatus() == null) return false;
 
         List<V1ContainerStatus> allStatuses = new ArrayList<>();
-        if (pod.getStatus().getInitContainerStatuses() != null)
-            allStatuses.addAll(pod.getStatus().getInitContainerStatuses());
-        if (pod.getStatus().getContainerStatuses() != null)
-            allStatuses.addAll(pod.getStatus().getContainerStatuses());
+        if (jobPod.getStatus().getInitContainerStatuses() != null)
+            allStatuses.addAll(jobPod.getStatus().getInitContainerStatuses());
+        if (jobPod.getStatus().getContainerStatuses() != null)
+            allStatuses.addAll(jobPod.getStatus().getContainerStatuses());
 
         return allStatuses.stream()
                 .filter(s -> containerName.equals(s.getName()))

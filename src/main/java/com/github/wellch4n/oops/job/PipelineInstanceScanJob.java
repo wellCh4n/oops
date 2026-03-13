@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
+import io.kubernetes.client.openapi.models.V1Job;
 import io.kubernetes.client.openapi.models.V1Pod;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -52,10 +53,9 @@ public class PipelineInstanceScanJob {
                 String environmentName = pipeline.getEnvironment();
                 Environment environment = environmentService.getEnvironment(environmentName);
 
-                V1Pod buildPod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPodStatus(pipeline.getName(), environment.getWorkNamespace()).execute();
-                String status = buildPod.getStatus().getPhase();
+                V1Job jobPod = environment.getKubernetesApiServer().batchV1Api().readNamespacedJob(pipeline.getName(), environment.getWorkNamespace()).execute();
 
-                if ("Succeeded".equals(status)) {
+                if (jobPod.getStatus() != null && jobPod.getStatus().getSucceeded() != null && jobPod.getStatus().getSucceeded() == 1) {
                     try {
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
                         ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
@@ -77,9 +77,6 @@ public class PipelineInstanceScanJob {
                         pipeline.setStatus(PipelineStatus.ERROR);
                         pipelineRepository.save(pipeline);
                     }
-                } else if ("Failed".equals(status)) {
-                    pipeline.setStatus(PipelineStatus.ERROR);
-                    pipelineRepository.save(pipeline);
                 }
 
             } catch (Exception e) {

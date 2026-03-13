@@ -17,7 +17,7 @@ import java.util.Map;
  * @author wellCh4n
  * @date 2025/7/7
  */
-public class PipelineBuildPod extends V1Pod {
+public class PipelineBuildPod extends V1Job {
 
     @Getter
     @Setter
@@ -29,7 +29,8 @@ public class PipelineBuildPod extends V1Pod {
     public PipelineBuildPod(Application application, Pipeline pipeline, Environment environment,
                             List<BaseContainer> stepContainers, BaseContainer finishContainer) {
 
-        String pipelineId = pipeline.getId();
+        this.pipelineId = pipeline.getId();
+
         String applicationName = application.getName();
 
         V1ObjectMeta metadata = new V1ObjectMeta();
@@ -38,13 +39,12 @@ public class PipelineBuildPod extends V1Pod {
 
         Map<String, String> labels = Map.of(
                 "oops.type", OopsTypes.PIPELINE.name(),
-                "oops.pipeline.id", pipelineId,
+                "oops.pipeline.id", this.pipelineId,
                 "oops.pipeline.name", pipeline.getName(),
                 "oops.pipeline.application.name", applicationName
         );
         metadata.setLabels(labels);
 
-        this.pipelineId = pipelineId;
 
         List<V1Container> initContainers = new ArrayList<>(stepContainers);
 
@@ -54,21 +54,30 @@ public class PipelineBuildPod extends V1Pod {
                 .restartPolicy("Never")
                 .overhead(null);
 
-        this.apiVersion("v1")
-                .kind("Pod")
+        V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec()
                 .metadata(metadata)
                 .spec(podSpec);
+
+        V1JobSpec jobSpec = new V1JobSpec()
+                .template(podTemplateSpec)
+                .ttlSecondsAfterFinished(604800);
+
+
+        this.apiVersion("batch/v1")
+                .kind("Job")
+                .metadata(metadata)
+                .spec(jobSpec);
     }
 
     @SafeVarargs
     public final void addVolumes(List<V1Volume>... volumes) {
-//        List<V1Volume> mounts = new ArrayList<>();
+
+        if (this.getSpec() == null || this.getSpec().getTemplate().getSpec() == null) return;
+
         for (List<V1Volume> v1Volumes : volumes) {
             for (V1Volume v1Volume : v1Volumes) {
-                this.getSpec().addVolumesItem(v1Volume);
+                this.getSpec().getTemplate().getSpec().addVolumesItem(v1Volume);
             }
         }
-
-//        this.getSpec().setVolumes(mounts);
     }
 }
