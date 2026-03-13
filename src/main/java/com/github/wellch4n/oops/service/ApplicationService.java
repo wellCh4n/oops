@@ -6,11 +6,13 @@ import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.models.V1Pod;
 import io.kubernetes.client.openapi.models.V1PodList;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +26,7 @@ import java.util.Optional;
  * @date 2025/7/28
  */
 
+@Slf4j
 @Service
 public class ApplicationService {
 
@@ -217,9 +220,11 @@ public class ApplicationService {
     }
 
     public SseEmitter getApplicationPodLogs(String namespace, String name, String podName, String environmentName) {
-        SseEmitter emitter = new SseEmitter(0L);
+        log.info("Starting to stream logs for pod {} in environment {}", podName, environmentName);
+        SseEmitter emitter = new SseEmitter(60 * 60 * 1000L);
 
         Thread.startVirtualThread(() -> {
+            log.info("Virtual thread started for streaming logs of pod {} in environment {}", podName, environmentName);
             try {
                 Environment environment = environmentRepository.findFirstByName(environmentName);
                 if (environment == null) {
@@ -227,6 +232,7 @@ public class ApplicationService {
                 }
                 PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
                 try(InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
+                    log.info("Streaming logs for pod {} in environment {}", podName, environmentName);
                     BufferedReader br = new BufferedReader(
                             new InputStreamReader(is, StandardCharsets.UTF_8));
                     String line;
@@ -237,9 +243,11 @@ public class ApplicationService {
                         emitter.send(event);
                     }
 
+                    log.info("Finished streaming logs for pod {} in environment {}", podName, environmentName);
                     emitter.complete();
                 }
             } catch (Exception e) {
+                log.info("Failed to stream logs for pod {} in environment {}", podName, environmentName, e);
                 emitter.completeWithError(e);
             }
         });
