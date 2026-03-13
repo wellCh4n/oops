@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author wellCh4n
@@ -64,10 +65,46 @@ public class PipelineService {
         SseEmitter emitter = new SseEmitter(0L);
 
         // 用于标记客户端是否还在线
-        AtomicBoolean isCompleted = new AtomicBoolean(false);
-        emitter.onCompletion(() -> isCompleted.set(true));
-        emitter.onTimeout(() -> isCompleted.set(true));
-        emitter.onError((e) -> isCompleted.set(true));
+        AtomicBoolean closed = new AtomicBoolean(false);
+        AtomicReference<Watch<?>> activeWatch = new AtomicReference<>();
+        AtomicReference<InputStream> activeStream = new AtomicReference<>();
+
+        Runnable cleanup = () -> {
+            if (!closed.compareAndSet(false, true)) return;
+            Watch<?> watch = activeWatch.getAndSet(null);
+            if (watch != null) {
+                try {
+                    watch.close();
+                } catch (Exception ignored) {
+                }
+            }
+            InputStream stream = activeStream.getAndSet(null);
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (Exception ignored) {
+                }
+            }
+        };
+
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(() -> {
+            cleanup.run();
+            emitter.complete();
+        });
+        emitter.onError((e) -> cleanup.run());
+
+        Thread.startVirtualThread(() -> {
+            while (!closed.get()) {
+                try {
+                    Thread.sleep(15_000);
+                    emitter.send(SseEmitter.event().comment("keepalive"));
+                } catch (Exception e) {
+                    cleanup.run();
+                    break;
+                }
+            }
+        });
 
         Thread.startVirtualThread(() -> {
             try {
@@ -86,7 +123,7 @@ public class PipelineService {
                 emitter.send(SseEmitter.event().name("steps").data(objectMapper.writeValueAsString(containers)));
 
                 for (String containerName : containers) {
-                    if (isCompleted.get()) return;
+                    if (closed.get()) return;
 
                     V1Pod jobPod = null;
                     for (int i = 0; i < 10; i++) {
@@ -109,31 +146,35 @@ public class PipelineService {
                                     .watch(true)
                                     .buildCall(null),
                             new TypeToken<Watch.Response<V1Pod>>(){}.getType())) {
+                        activeWatch.set(watch);
 
                         for (Watch.Response<V1Pod> item : watch) {
-                            if (isCompleted.get()) return; // 检查在线状态
+                            if (closed.get()) return; // 检查在线状态
                             if (isContainerReady(item.object, containerName)) break;
                         }
+                        activeWatch.compareAndSet(watch, null);
                     }
 
                     PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
                     try (InputStream is = logs.streamNamespacedPodLog(
                             environment.getWorkNamespace(), jobPodName, containerName,
                             null, 2000, false)) { // follow = true
+                        activeStream.set(is);
 
                         BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                         String line;
-                        while (!isCompleted.get() && (line = br.readLine()) != null) {
+                        while (!closed.get() && (line = br.readLine()) != null) {
                             emitter.send(SseEmitter.event().name(containerName).data("[" + containerName + "] " + line));
                         }
+                        activeStream.compareAndSet(is, null);
                     }
                 }
 
-                if (!isCompleted.get()) {
+                if (!closed.get()) {
                     emitter.complete();
                 }
             } catch (Exception e) {
-                if (!isCompleted.get()) {
+                if (!closed.get()) {
                     emitter.completeWithError(e);
                 }
             }
