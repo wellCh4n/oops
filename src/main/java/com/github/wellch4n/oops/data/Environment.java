@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
 
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author wellCh4n
@@ -53,6 +54,7 @@ public class Environment {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class KubernetesApiServer {
+        private static final ConcurrentHashMap<String, ApiClient> API_CLIENT_CACHE = new ConcurrentHashMap<>();
 
         @Getter
         @Setter
@@ -79,18 +81,22 @@ public class Environment {
             if (this.apiClient == null) {
                 synchronized (this) {
                     if (this.apiClient == null) {
-                        ApiClient client = Config.fromToken(this.url, this.token, false);
+                        String key = this.url + "|" + Integer.toHexString(this.token == null ? 0 : this.token.hashCode());
+                        ApiClient client = API_CLIENT_CACHE.computeIfAbsent(key, k -> {
+                            ApiClient created = Config.fromToken(this.url, this.token, false);
 
-                        OkHttpClient base = client.getHttpClient();
-                        Dispatcher dispatcher = new Dispatcher();
-                        dispatcher.setMaxRequests(256);
-                        dispatcher.setMaxRequestsPerHost(256);
+                            OkHttpClient base = created.getHttpClient();
+                            Dispatcher dispatcher = new Dispatcher();
+                            dispatcher.setMaxRequests(256);
+                            dispatcher.setMaxRequestsPerHost(256);
 
-                        OkHttpClient tuned = base.newBuilder()
-                                .dispatcher(dispatcher)
-                                .connectTimeout(Duration.ofSeconds(5))
-                                .build();
-                        client.setHttpClient(tuned);
+                            OkHttpClient tuned = base.newBuilder()
+                                    .dispatcher(dispatcher)
+                                    .connectTimeout(Duration.ofSeconds(5))
+                                    .build();
+                            created.setHttpClient(tuned);
+                            return created;
+                        });
                         this.apiClient = client;
                     }
                 }
@@ -153,7 +159,7 @@ public class Environment {
                                 "traefik.containo.us",
                                 "v1alpha1",
                                 "ingressroutes",
-                                apiClient
+                                apiClient()
                         );
                     }
                 }
