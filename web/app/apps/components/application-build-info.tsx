@@ -21,6 +21,7 @@ import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationE
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { useTheme } from "next-themes"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -207,6 +208,8 @@ interface SingleEnvironmentConfigProps {
 
 function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationBuildFormValues>()
+  const { resolvedTheme } = useTheme()
+  const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
 
   return (
     <div className="flex flex-col gap-4">
@@ -225,7 +228,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
                   <Editor
                     height="100%"
                     defaultLanguage="shell"
-                    theme="vs-dark"
+                    theme={editorTheme}
                     value={field.value}
                     onChange={field.onChange}
                     options={{
