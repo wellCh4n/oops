@@ -51,13 +51,13 @@ export function ApplicationForm({
           </TabsList>
         </div>
 
-        <TabsContent value="app-info">
+        <TabsContent value="app-info" className="rounded-md border bg-background p-4">
           <ApplicationBasicInfo 
             initialData={initialData}
           />
         </TabsContent>
 
-        <TabsContent value="service-info">
+        <TabsContent value="service-info" className="rounded-md border bg-background p-4">
           <ApplicationServiceInfo
             initialServiceConfig={initialServiceConfig}
             applicationName={initialData?.name}
@@ -65,7 +65,7 @@ export function ApplicationForm({
           />
         </TabsContent>
 
-        <TabsContent value="build-config">
+        <TabsContent value="build-config" className="rounded-md border bg-background p-4">
           <ApplicationBuildInfo 
             initialBuildConfig={initialBuildConfig}
             initialEnvConfigs={initialBuildEnvConfigs}
@@ -75,7 +75,7 @@ export function ApplicationForm({
           />
         </TabsContent>
 
-        <TabsContent value="performance-info">
+        <TabsContent value="performance-info" className="rounded-md border bg-background p-4">
           <ApplicationPerformanceInfo 
             initialEnvConfigs={initialPerformanceEnvConfigs}
             applicationId={initialData?.id}
@@ -84,7 +84,7 @@ export function ApplicationForm({
           />
         </TabsContent>
 
-        <TabsContent value="config-info">
+        <TabsContent value="config-info" className="rounded-md border bg-background p-4">
           <ApplicationConfigInfo 
             applicationName={initialData?.name}
             namespace={initialData?.namespace}

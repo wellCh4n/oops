@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Trash2, Loader2 } from "lucide-react"
@@ -27,6 +27,41 @@ import {
 import { getApplicationConfigMaps, updateApplicationConfigMaps } from "@/lib/api/applications"
 import { ApplicationEnvironment } from "@/lib/api/types"
 import { ApplicationConfigFormValues, applicationConfigSchema } from "../schema"
+
+function ConfigValueTextarea({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      disabled={disabled}
+      placeholder="value"
+      rows={1}
+      className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-hidden"
+      onChange={(e) => {
+        e.currentTarget.style.height = "auto"
+        e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`
+        onChange(e.currentTarget.value)
+      }}
+    />
+  )
+}
 
 interface ApplicationConfigInfoProps {
   applicationName?: string
@@ -97,7 +132,7 @@ export function ApplicationConfigInfo({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <ApplicationEnvironmentSelector
         namespace={namespace}
         applicationName={applicationName}
@@ -106,7 +141,7 @@ export function ApplicationConfigInfo({
         onEnvironmentsLoaded={handleEnvironmentsLoaded}
       >
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
@@ -126,7 +161,7 @@ export function ApplicationConfigInfo({
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input placeholder="config.key" {...field} />
+                                <Input placeholder="key" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -140,7 +175,11 @@ export function ApplicationConfigInfo({
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <Input placeholder="value" {...field} />
+                                <ConfigValueTextarea
+                                  value={(field.value ?? "") as string}
+                                  disabled={field.disabled}
+                                  onChange={field.onChange}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -161,28 +200,33 @@ export function ApplicationConfigInfo({
                   ))}
                   {fields.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                      <TableCell colSpan={3} className="text-center text-muted-foreground h-12">
                         {isLoadingConfig ? "加载中..." : "暂无配置项"}
                       </TableCell>
                     </TableRow>
                   )}
+                  <TableRow>
+                    <TableCell colSpan={3}>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-center"
+                        onClick={() => append({ key: "", value: "" })}
+                        disabled={isLoadingConfig}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        添加配置项
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
 
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => append({ key: "", value: "" })}
-                disabled={isLoadingConfig}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                添加配置项
-              </Button>
+            <div className="flex">
               <Button type="submit" disabled={isSaving || isLoadingConfig}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                保存配置
+                保存
               </Button>
             </div>
           </form>

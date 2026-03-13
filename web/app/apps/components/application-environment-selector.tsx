@@ -52,7 +52,7 @@ export function ApplicationEnvironmentSelector({
 
   return (
     <Tabs value={value} onValueChange={onValueChange} className={className}>
-      <div className="flex items-center space-x-2 mb-2">
+      <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground whitespace-nowrap">环境</span>
         <TabsList className="justify-start h-auto flex-wrap">
           {environments.map((env) => (
@@ -72,7 +72,7 @@ export function ApplicationEnvironmentSelector({
       </div>
 
       {environments.length === 0 && !isLoading && (
-        <div className="py-8 text-center text-muted-foreground text-sm border rounded-md mt-2 border-dashed mb-4">
+        <div className="py-8 text-center text-muted-foreground text-sm border rounded-md border-dashed">
           暂无环境配置，请先在基本信息中配置部署环境
         </div>
       )}

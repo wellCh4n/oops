@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Editor from "@monaco-editor/react"
@@ -119,9 +120,9 @@ export function ApplicationBuildInfo({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSave)}>
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <h3 className="text-lg font-medium">源码配置</h3>
             <FormField
               control={form.control}
@@ -168,8 +169,9 @@ export function ApplicationBuildInfo({
             </div>
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium mb-4">环境构建配置</h3>
+          <Separator />
+          <div className="flex flex-col gap-4">
+            <h3 className="text-lg font-medium">环境构建配置</h3>
             <div className="w-full">
               <ApplicationEnvironmentSelector
                 namespace={namespace}
@@ -188,9 +190,9 @@ export function ApplicationBuildInfo({
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
+          <div className="flex">
              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "保存中..." : "保存配置"}
+                {isSaving ? "保存中..." : "保存"}
              </Button>
           </div>
         </div>
@@ -207,7 +209,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationBuildFormValues>()
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <FormField
         control={control}
         name={`environmentConfigs.${index}.buildCommand`}

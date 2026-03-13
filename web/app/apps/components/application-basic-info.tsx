@@ -113,7 +113,7 @@ export function ApplicationBasicInfo({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-4xl">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-w-4xl flex-col gap-6">
         <FormField
           control={form.control}
           name="name"
@@ -170,7 +170,7 @@ export function ApplicationBasicInfo({
         {initialData && (
             <FormItem>
                 <FormLabel>部署环境</FormLabel>
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-2 gap-4">
                     {environments.map(env => (
                         <div key={env.id} className="flex items-center space-x-2">
                             <Checkbox
@@ -190,9 +190,9 @@ export function ApplicationBasicInfo({
             </FormItem>
         )}
 
-        <div className="flex justify-end">
+        <div className="flex">
           <Button type="submit" disabled={isSubmitting}>
-            保存基本信息
+            {isSubmitting ? "保存中..." : "保存"}
           </Button>
         </div>
       </form>

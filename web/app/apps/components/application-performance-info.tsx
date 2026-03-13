@@ -103,7 +103,7 @@ export function ApplicationPerformanceInfo({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSave)} className="flex flex-col gap-6">
         <div className="w-full">
           <ApplicationEnvironmentSelector
             namespace={namespace}
@@ -122,9 +122,9 @@ export function ApplicationPerformanceInfo({
             ))}
           </ApplicationEnvironmentSelector>
         </div>
-        <div className="flex justify-end">
+        <div className="flex">
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? "保存中..." : "保存配置"}
+            {isSaving ? "保存中..." : "保存"}
           </Button>
         </div>
       </form>
@@ -140,7 +140,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationPerformanceEnvFormValues>()
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <FormField
         control={control}
         name={`environmentConfigs.${index}.replicas`}

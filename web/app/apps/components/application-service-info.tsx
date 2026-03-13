@@ -89,7 +89,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <div className="grid gap-2 max-w-xs">
         <Label htmlFor="service-port">端口</Label>
         <Input
@@ -103,7 +103,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
           max={65535}
         />
       </div>
-      <div className="space-y-2">
+      <div className="flex flex-col gap-2">
         <ApplicationEnvironmentSelector
           namespace={namespace}
           applicationName={applicationName}
