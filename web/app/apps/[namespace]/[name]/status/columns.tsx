@@ -57,7 +57,7 @@ export const getStatusColumns = (
       return (
         <div className="flex items-center justify-end gap-2">
           <Button 
-            variant="outline" 
+            variant={row.original.status === "Running" ? "warning" : "outline"} 
             size="sm" 
             onClick={() => onRestart(row.original.name)}
           >

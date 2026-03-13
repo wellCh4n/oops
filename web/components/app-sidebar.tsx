@@ -1,7 +1,7 @@
 "use client"
 
-import { LayoutGrid } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 import {
   Sidebar,
@@ -17,20 +17,26 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { navConfig } from "@/lib/nav-config"
+import { usePathname } from "next/navigation"
 
 export function AppSidebar() {
+  const pathname = usePathname()
   return (
     <Sidebar>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="hover:bg-transparent hover:text-sidebar-foreground"
+            >
               <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <LayoutGrid className="size-4" />
+                <div className="relative aspect-square size-10 overflow-hidden rounded-lg">
+                  <Image src="/icon.png" alt="Oops" fill className="object-cover" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Oops</span>
+                  <span className="font-bold text-xl">OOPS</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -45,7 +51,10 @@ export function AppSidebar() {
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                    >
                       <Link href={item.url}>
                         <item.icon />
                         <span>{item.title}</span>

@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Oops",
-  description: "Oops",
+  title: "OOPS",
+  description: "OOPS: Kubernetes Is All You Need.",
 };
 
 export default function RootLayout({
