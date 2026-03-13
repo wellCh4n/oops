@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author wellCh4n
@@ -223,7 +225,32 @@ public class ApplicationService {
         log.info("Starting to stream logs for pod {} in environment {}", podName, environmentName);
         SseEmitter emitter = new SseEmitter(60 * 60 * 1000L);
 
-        Thread.startVirtualThread(() -> {
+        AtomicBoolean stopped = new AtomicBoolean(false);
+        AtomicReference<InputStream> streamRef = new AtomicReference<>(null);
+        AtomicReference<Thread> threadRef = new AtomicReference<>(null);
+
+        Runnable stop = () -> {
+            if (!stopped.compareAndSet(false, true)) {
+                return;
+            }
+            InputStream stream = streamRef.getAndSet(null);
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (IOException ignored) {
+                }
+            }
+            Thread thread = threadRef.get();
+            if (thread != null) {
+                thread.interrupt();
+            }
+        };
+
+        emitter.onCompletion(stop);
+        emitter.onTimeout(stop);
+        emitter.onError((e) -> stop.run());
+
+        Thread thread = Thread.startVirtualThread(() -> {
             log.info("Virtual thread started for streaming logs of pod {} in environment {}", podName, environmentName);
             try {
                 Environment environment = environmentRepository.findFirstByName(environmentName);
@@ -231,26 +258,38 @@ public class ApplicationService {
                     throw new IllegalArgumentException("Environment not found: " + environmentName);
                 }
                 PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
-                try(InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
+                try (InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
+                    streamRef.set(is);
                     log.info("Streaming logs for pod {} in environment {}", podName, environmentName);
-                    BufferedReader br = new BufferedReader(
-                            new InputStreamReader(is, StandardCharsets.UTF_8));
+                    BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
                     String line;
-                    while ((line = br.readLine()) != null) {
+                    while (!stopped.get() && (line = br.readLine()) != null) {
                         SseEmitter.SseEventBuilder event = SseEmitter.event()
                                 .name("log")
                                 .data(line);
-                        emitter.send(event);
+                        try {
+                            emitter.send(event);
+                        } catch (IOException e) {
+                            stop.run();
+                            return;
+                        }
                     }
 
                     log.info("Finished streaming logs for pod {} in environment {}", podName, environmentName);
-                    emitter.complete();
+                    if (!stopped.get()) {
+                        emitter.complete();
+                    }
                 }
             } catch (Exception e) {
                 log.info("Failed to stream logs for pod {} in environment {}", podName, environmentName, e);
-                emitter.completeWithError(e);
+                if (!stopped.get()) {
+                    emitter.completeWithError(e);
+                }
+            } finally {
+                stop.run();
             }
         });
+        threadRef.set(thread);
 
         return emitter;
     }
