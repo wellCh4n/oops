@@ -4,19 +4,21 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import io.fabric8.kubernetes.api.model.Container;
-import io.kubernetes.client.PodLogs;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -269,34 +271,39 @@ public class ApplicationService {
                 if (environment == null) {
                     throw new IllegalArgumentException("Environment not found: " + environmentName);
                 }
-                PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
-                try (InputStream is = logs.streamNamespacedPodLog(namespace, podName, name)) {
-                    activeStream.set(is);
-                    log.info("Streaming logs for pod {} in environment {}", podName, environmentName);
-                    BufferedReader br = new BufferedReader(
-                            new InputStreamReader(is, StandardCharsets.UTF_8));
-                    String line;
-                    while (!closed.get() && (line = br.readLine()) != null) {
-                        SseEmitter.SseEventBuilder event = SseEmitter.event()
-                                .name("log")
-                                .data(line);
-                        emitter.send(event);
-                    }
 
-                    activeStream.compareAndSet(is, null);
-                    if (!closed.get()) {
-                        log.info("Finished streaming logs for pod {} in environment {}", podName, environmentName);
-                        emitter.complete();
+                try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                    client.pods().inNamespace(namespace).withName(podName).waitUntilReady(10, TimeUnit.SECONDS);
+
+                    try (LogWatch watch = client.pods().inNamespace(namespace).withName(podName).watchLog()) {
+
+                        activeStream.set(watch.getOutput());
+
+                        BufferedReader bufferedReader = new BufferedReader(
+                                new InputStreamReader(watch.getOutput(), StandardCharsets.UTF_8)
+                        );
+
+                        String line;
+                        while (!closed.get() && (line = bufferedReader.readLine()) != null) {
+                            SseEmitter.SseEventBuilder event = SseEmitter.event()
+                                    .name("log")
+                                    .data(line);
+                            emitter.send(event);
+                        }
+
+                        activeStream.compareAndSet(watch.getOutput(), null);
+
+                        if (!closed.get()) {
+                            log.info("Finished streaming logs for pod {} in environment {}", podName, environmentName);
+                            emitter.complete();
+                        }
                     }
                 }
-            } catch (Exception e) {
-                if (!closed.get()) {
-                    log.info("Failed to stream logs for pod {} in environment {}", podName, environmentName, e);
-                    emitter.completeWithError(e);
-                }
+            } catch (IOException e) {
+                cleanup.run();
+                emitter.complete();
             }
         });
-
         return emitter;
     }
 }

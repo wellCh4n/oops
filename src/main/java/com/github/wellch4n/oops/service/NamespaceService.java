@@ -2,7 +2,6 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.Namespace;
 import com.github.wellch4n.oops.data.NamespaceRepository;
-import io.kubernetes.client.openapi.models.V1NamespaceList;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;

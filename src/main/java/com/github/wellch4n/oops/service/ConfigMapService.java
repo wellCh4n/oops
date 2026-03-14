@@ -7,9 +7,9 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
-import org.apache.commons.compress.utils.Lists;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class ConfigMapService {
                     .withName(applicationName)
                     .get();
             Map<String, String> data = configMap.getData();
-            List<ConfigMapItem> items = Lists.newArrayList();
+            List<ConfigMapItem> items = new ArrayList<>();
             data.forEach((key, value) -> {
                 ConfigMapItem item = new ConfigMapItem();
                 item.setKey(key);

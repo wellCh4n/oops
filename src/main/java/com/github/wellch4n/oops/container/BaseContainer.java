@@ -2,8 +2,6 @@ package com.github.wellch4n.oops.container;
 
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.VolumeMount;
-import io.kubernetes.client.openapi.models.V1Container;
-import io.kubernetes.client.openapi.models.V1VolumeMount;
 
 import java.util.List;
 

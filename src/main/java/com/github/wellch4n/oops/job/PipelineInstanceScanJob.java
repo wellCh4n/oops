@@ -6,7 +6,6 @@ import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.kubernetes.client.openapi.models.V1Job;
-import io.kubernetes.client.openapi.models.V1Pod;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 

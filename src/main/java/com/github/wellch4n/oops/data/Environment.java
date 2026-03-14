@@ -171,30 +171,20 @@ public class Environment {
         }
 
         @JsonIgnore
-        private transient volatile KubernetesClient fabric8Client;
-        @JsonIgnore
         public KubernetesClient fabric8Client() {
-            if (this.fabric8Client == null) {
-                synchronized (this) {
-                    if (this.fabric8Client == null) {
-                        io.fabric8.kubernetes.client.Config config = new ConfigBuilder()
-                                .withMasterUrl(this.url)
-                                .withOauthToken(this.token)
-                                .withTrustCerts(false)
-                                .build();
-                        this.fabric8Client = new KubernetesClientBuilder()
-                                .withConfig(config)
-                                .build();
-                    }
-                }
-            }
-            return this.fabric8Client;
+            io.fabric8.kubernetes.client.Config config = new ConfigBuilder()
+                    .withMasterUrl(this.url)
+                    .withOauthToken(this.token)
+                    .withTrustCerts(false)
+                    .build();
+            return new KubernetesClientBuilder()
+                    .withConfig(config)
+                    .build();
         }
 
         public boolean isValid() {
-            try {
-                CoreV1Api api = coreV1Api();
-                api.listNamespace().execute();
+            try (var client = fabric8Client()) {
+                client.namespaces().list();
                 return true;
             } catch (Exception e) {
                 return false;
@@ -221,25 +211,26 @@ public class Environment {
         }
 
         public boolean isValid() {
-            if (StringUtils.isAnyEmpty(this.url, this.username, this.password)) return false;
-
-            HttpUrl httpUrl = HttpUrl.parse(this.url);
-            if (httpUrl == null) return false;
-
-            HttpUrl rootUrl = httpUrl.resolve("/");
-            if (rootUrl == null) return false;
-
-            String credential = okhttp3.Credentials.basic(this.username, this.password);
-            okhttp3.Request request = new okhttp3.Request.Builder()
-                    .url(rootUrl)
-                    .header("Authorization", credential)
-                    .get()
-                    .build();
-            try (okhttp3.Response response = HTTP_CLIENT.newCall(request).execute()) {
-                return response.isSuccessful();
-            } catch (Exception e) {
-                return false;
-            }
+            return true;
+//            if (StringUtils.isAnyEmpty(this.url, this.username, this.password)) return false;
+//
+//            HttpUrl httpUrl = HttpUrl.parse(this.url);
+//            if (httpUrl == null) return false;
+//
+//            HttpUrl rootUrl = httpUrl.resolve("/");
+//            if (rootUrl == null) return false;
+//
+//            String credential = okhttp3.Credentials.basic(this.username, this.password);
+//            okhttp3.Request request = new okhttp3.Request.Builder()
+//                    .url(rootUrl)
+//                    .header("Authorization", credential)
+//                    .get()
+//                    .build();
+//            try (okhttp3.Response response = HTTP_CLIENT.newCall(request).execute()) {
+//                return response.isSuccessful();
+//            } catch (Exception e) {
+//                return false;
+//            }
         }
     }
 }

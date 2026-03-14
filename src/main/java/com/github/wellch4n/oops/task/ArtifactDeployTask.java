@@ -8,10 +8,8 @@ import com.github.wellch4n.oops.enums.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
-import io.fabric8.kubernetes.api.model.extensions.Ingress;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
-import io.kubernetes.client.openapi.models.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -51,6 +49,12 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             String namespace = application.getNamespace();
             String applicationName = application.getName();
 
+            PatchContext patchContext = new PatchContext.Builder()
+                    .withPatchType(PatchType.SERVER_SIDE_APPLY)
+                    .withFieldManager("oops")
+                    .withForce(true)
+                    .build();
+
             Map<String, String> labels = Map.of("oops.type", OopsTypes.APPLICATION.name(), "oops.app.name", applicationName);
 
             client.namespaces()
@@ -59,26 +63,14 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
             Secret secret = client.secrets().inNamespace(environment.getWorkNamespace()).withName("dockerhub").get();
             if (secret != null) {
-                PatchContext patchContext = new PatchContext.Builder()
-                        .withPatchType(PatchType.SERVER_SIDE_APPLY)
-                        .withFieldManager("oops")
-                        .withForce(true)
-                        .build();
-
-                Secret targetSecret = new SecretBuilder()
-                        .withApiVersion("v1")
-                        .withKind("Secret")
-                        .withNewMetadata()
-                        .withName("dockerhub")
-                        .withNamespace(namespace)
-                        .endMetadata()
-                        .withType(secret.getType())
-                        .withData(secret.getData())
-                        .build();
-
                 client.secrets()
                         .inNamespace(namespace)
-                        .resource(targetSecret)
+                        .resource(new SecretBuilder()
+                                .withNewMetadata().withName("dockerhub").withNamespace(namespace).endMetadata()
+                                .withType(secret.getType())
+                                .withData(secret.getData())
+                                .build()
+                        )
                         .patch(patchContext);
             }
 
@@ -96,31 +88,38 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                     .withImage(pipeline.getArtifact())
                                     .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom()
                                     .withNewResources()
-                                    .   addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
+                                        .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
+                                        .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuLimit(), "500m")))
                                         .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest() + "Mi", "128Mi")))
+                                        .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit() + "Mi", "512Mi")))
                                     .endResources()
-                                    .withPorts(new ContainerPortBuilder().withContainerPort(applicationServiceConfig.getPort()).build())
+                                    .withPorts(new ContainerPortBuilder().withName("http").withContainerPort(applicationServiceConfig.getPort()).build())
                                 .endContainer()
                                 .addNewImagePullSecret("dockerhub")
                             .endSpec()
                         .endTemplate()
                     .endSpec()
                     .build();
-            client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).serverSideApply();
+
+            client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).patch(patchContext);
 
             if (applicationServiceConfig.getPort() != null) {
-                client.services().inNamespace(namespace).resource(new ServiceBuilder()
-                        .withNewMetadata().withName(applicationName).withLabels(labels).endMetadata()
-                        .withNewSpec()
-                        .withType("ClusterIP")
-                        .withSelector(labels)
-                        .addNewPort()
-                        .withName("http")
-                        .withPort(80)
-                        .withTargetPort(new IntOrString(applicationServiceConfig.getPort()))
-                        .endPort()
-                        .endSpec()
-                        .build()).serverSideApply();
+                int servicePort = 85;
+                client.services().inNamespace(namespace).resource(
+                        new ServiceBuilder()
+                                .withNewMetadata().withName(applicationName).withNamespace(namespace).withLabels(labels).endMetadata()
+                                .withNewSpec()
+                                    .withType("ClusterIP")
+                                    .withSelector(labels)
+                                    .addNewPort()
+                                        .withName("web")
+                                        .withProtocol("TCP")
+                                        .withPort(servicePort)
+                                        .withTargetPort(new IntOrString(applicationServiceConfig.getPort()))
+                                    .endPort()
+                                .endSpec()
+                                .build()
+                ).patch(patchContext);
 
                 IngressRoute ingressRoute = new IngressRoute();
                 ingressRoute.setMetadata(new ObjectMetaBuilder()
@@ -137,7 +136,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                         IngressRouteSpec.Route.builder()
                                                 .match("Host(`" + applicationServiceConfig.getEnvironmentConfig(environment.getName()).getHost() + "`)")
                                                 .kind("Rule")
-                                                .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(80).build()))
+                                                .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
                                                 .build()
                                 )
                         )
