@@ -3,9 +3,8 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import io.fabric8.kubernetes.api.model.Container;
 import io.kubernetes.client.PodLogs;
-import io.kubernetes.client.openapi.models.V1Pod;
-import io.kubernetes.client.openapi.models.V1PodList;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -191,17 +189,22 @@ public class ApplicationService {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
 
-            String labelSelector = "oops.type=%s,oops.app.name=%s".formatted(OopsTypes.APPLICATION.name(), name);
-            V1PodList podList = environment.getKubernetesApiServer().coreV1Api().listNamespacedPod(namespace)
-                    .labelSelector(labelSelector)
-                    .execute();
-
-            List<ApplicationPodStatusResponse> podStatusList = new ArrayList<>();
-            for (V1Pod pod : podList.getItems()) {
-                podStatusList.add(new ApplicationPodStatusResponse(pod));
+            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                var pods = client.pods()
+                        .inNamespace(namespace)
+                        .withLabel("oops.type", OopsTypes.APPLICATION.name())
+                        .withLabel("oops.app.name", name)
+                        .list();
+                return pods.getItems().stream().map(pod -> {
+                    var status = new ApplicationPodStatusResponse();
+                    status.setName(pod.getMetadata().getName());
+                    status.setNamespace(pod.getMetadata().getNamespace());
+                    status.setPodIP(pod.getStatus().getPodIP());
+                    status.setStatus(pod.getStatus().getPhase());
+                    status.setImage(pod.getSpec().getContainers().stream().map(Container::getImage).toList());
+                    return status;
+                }).toList();
             }
-
-            return podStatusList;
         } catch (Exception e) {
             throw new RuntimeException("Failed to get application status: " + e.getMessage(), e);
         }
@@ -213,7 +216,10 @@ public class ApplicationService {
             if (environment == null) {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
-            environment.getKubernetesApiServer().coreV1Api().deleteNamespacedPod(podName, namespace).execute();
+
+            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                client.pods().inNamespace(namespace).withName(podName).delete();
+            }
             return true;
         } catch (Exception e) {
             throw new RuntimeException("Failed to restart application pod: " + e.getMessage(), e);

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.wellch4n.oops.crd.IngressRoute;
 import com.github.wellch4n.oops.crd.IngressRouteApi;
 import com.github.wellch4n.oops.crd.IngressRouteList;
+import io.fabric8.kubernetes.client.ConfigBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.kubernetes.client.openapi.ApiClient;
 import io.kubernetes.client.openapi.apis.AppsV1Api;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
@@ -165,6 +168,27 @@ public class Environment {
                 }
             }
             return this.ingressRouteApi;
+        }
+
+        @JsonIgnore
+        private transient volatile KubernetesClient fabric8Client;
+        @JsonIgnore
+        public KubernetesClient fabric8Client() {
+            if (this.fabric8Client == null) {
+                synchronized (this) {
+                    if (this.fabric8Client == null) {
+                        io.fabric8.kubernetes.client.Config config = new ConfigBuilder()
+                                .withMasterUrl(this.url)
+                                .withOauthToken(this.token)
+                                .withTrustCerts(false)
+                                .build();
+                        this.fabric8Client = new KubernetesClientBuilder()
+                                .withConfig(config)
+                                .build();
+                    }
+                }
+            }
+            return this.fabric8Client;
         }
 
         public boolean isValid() {

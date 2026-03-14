@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.container;
 
-import java.util.List;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 
 /**
  * @author wellCh4n
@@ -9,8 +10,15 @@ import java.util.List;
 public class DoneContainer extends BaseContainer {
 
     public DoneContainer() {
-        this.name("done")
-                .image("busybox:1.36.1")
-                .command(List.of("sh","-c","echo done!"));
+        Container container = new ContainerBuilder()
+                .withName("done")
+                .withImage("busybox:1.36.1")
+                .withCommand("sh", "-c", "echo done!")
+                .build();
+
+        // 映射属性
+        this.setName(container.getName());
+        this.setImage(container.getImage());
+        this.setCommand(container.getCommand());
     }
 }

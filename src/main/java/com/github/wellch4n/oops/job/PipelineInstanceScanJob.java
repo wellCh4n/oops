@@ -62,7 +62,7 @@ public class PipelineInstanceScanJob {
                                 application.getNamespace(), application.getName(), pipeline.getEnvironment());
 
                         var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
-                                application.getNamespace(), application.getName()).orElse(null);
+                                application.getNamespace(), application.getName()).orElse(new ApplicationServiceConfig());
 
                         ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
                                 pipeline, application, environment,

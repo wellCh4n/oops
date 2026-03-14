@@ -10,6 +10,7 @@ import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
+import io.fabric8.kubernetes.api.model.Container;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
 import org.apache.commons.compress.utils.Lists;
@@ -81,7 +82,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         SecretVolume secretVolume = new SecretVolume();
 //        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
 
-        List<BaseContainer> initContainers = Lists.newArrayList();
+        List<Container> initContainers = Lists.newArrayList();
 
         CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), branch);
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
@@ -107,8 +108,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 //        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
-        try {
-            batchV1Api.createNamespacedJob(environment.getWorkNamespace(), pipelineBuildPod).execute();
+        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).resource(pipelineBuildPod).create();
         } catch (Exception e) {
             e.printStackTrace();
         }

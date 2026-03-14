@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
-
-import java.util.List;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 
 /**
  * @author wellCh4n
@@ -12,9 +12,16 @@ import java.util.List;
 public class BuildContainer extends BaseContainer {
 
     public BuildContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String buildCommand) {
-        this.name("build")
-                .image(applicationBuildConfig.getBuildImage())
-                .workingDir("/workspace")
-                .command(List.of("sh", "-c", buildCommand));
+        Container container = new ContainerBuilder()
+                .withName("build")
+                .withImage(applicationBuildConfig.getBuildImage())
+                .withWorkingDir("/workspace")
+                .withCommand("sh", "-c", buildCommand)
+                .build();
+
+        this.setName(container.getName());
+        this.setImage(container.getImage());
+        this.setWorkingDir(container.getWorkingDir());
+        this.setCommand(container.getCommand());
     }
 }

@@ -22,6 +22,9 @@ public class ApplicationPodStatusResponse {
     private List<String> image;
     private String podIP;
 
+    public ApplicationPodStatusResponse() {
+    }
+
     public ApplicationPodStatusResponse(V1Pod pod) {
         this.name = pod.getMetadata().getName();
         this.namespace = pod.getMetadata().getNamespace();

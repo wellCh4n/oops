@@ -6,7 +6,7 @@ import { Eye, EyeOff, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { EnvironmentFormValues, environmentSchema } from "../columns"
-import { fetchEnvironment, updateEnvironment, validateKubernetes, validateImageRepository, createNamespace } from "@/lib/api/environments"
+import { fetchEnvironment, updateEnvironment, validateKubernetes, validateImageRepository, createNamespace, deleteEnvironment } from "@/lib/api/environments"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -48,6 +48,11 @@ export default function EnvironmentEditPage() {
   const [showCreateNamespaceDialog, setShowCreateNamespaceDialog] = useState(false)
   const [missingNamespace, setMissingNamespace] = useState("")
 
+  const [environmentName, setEnvironmentName] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
+
   const form = useForm<EnvironmentFormValues>({
     resolver: zodResolver(environmentSchema),
     defaultValues: {
@@ -68,7 +73,7 @@ export default function EnvironmentEditPage() {
 
   // Watch for changes to invalidate validation status
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((_, { name }) => {
       if (name?.startsWith("kubernetesApiServer") || name === "workNamespace") {
         setIsK8sValidated(false)
       }
@@ -77,7 +82,7 @@ export default function EnvironmentEditPage() {
       }
     })
     return () => subscription.unsubscribe()
-  }, [form.watch])
+  }, [form])
 
   useEffect(() => {
     const loadEnvironment = async () => {
@@ -86,6 +91,7 @@ export default function EnvironmentEditPage() {
         const response = await fetchEnvironment(id)
         if (response.success && response.data) {
           const env = response.data
+          setEnvironmentName(env.name)
           form.reset({
             id: env.id,
             name: env.name,
@@ -136,7 +142,7 @@ export default function EnvironmentEditPage() {
         } else {
             toast.error("工作空间创建失败")
         }
-    } catch (e) {
+    } catch {
         toast.dismiss()
         toast.error("工作空间创建失败")
     }
@@ -170,7 +176,7 @@ export default function EnvironmentEditPage() {
         setIsK8sValidated(false)
         toast.error(res.data?.message || "Kubernetes 配置验证失败")
       }
-    } catch (e) {
+    } catch {
       setIsK8sValidated(false)
       toast.error("验证过程出错")
     } finally {
@@ -190,7 +196,7 @@ export default function EnvironmentEditPage() {
         setIsRepoValidated(false)
         toast.error("镜像仓库配置验证失败")
       }
-    } catch (e) {
+    } catch {
       setIsRepoValidated(false)
       toast.error("验证过程出错")
     } finally {
@@ -210,6 +216,31 @@ export default function EnvironmentEditPage() {
     } catch (e) {
       console.error(e)
       toast.error("环境更新失败")
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!environmentName || deleteConfirmInput !== environmentName) return
+    setIsDeleting(true)
+    let ok = false
+    try {
+      const res = await deleteEnvironment(id)
+      if (res.success) {
+        ok = true
+        toast.success("环境删除成功")
+        router.push("/settings/environments")
+      } else {
+        toast.error("环境删除失败")
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error("环境删除失败")
+    } finally {
+      setIsDeleting(false)
+      if (ok) {
+        setShowDeleteDialog(false)
+        setDeleteConfirmInput("")
+      }
     }
   }
 
@@ -426,7 +457,17 @@ export default function EnvironmentEditPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteConfirmInput("")
+                        setShowDeleteDialog(true)
+                      }}
+                    >
+                      删除环境
+                    </Button>
                     <Button type="submit" disabled={!isK8sValidated || !isRepoValidated}>保存配置</Button>
                   </div>
                 </form>
@@ -445,6 +486,44 @@ export default function EnvironmentEditPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>取消</AlertDialogCancel>
             <AlertDialogAction onClick={handleCreateNamespace}>创建并继续</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除环境</AlertDialogTitle>
+            <AlertDialogDescription>
+              此操作不可撤销。请输入环境名称 <strong>{environmentName}</strong> 以确认删除。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={environmentName || "环境名称"}
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              onClick={() => setDeleteConfirmInput("")}
+            >
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting || !environmentName || deleteConfirmInput !== environmentName}
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              确认删除
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

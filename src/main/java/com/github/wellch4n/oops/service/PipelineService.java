@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.google.gson.reflect.TypeToken;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.kubernetes.client.PodLogs;
 import io.kubernetes.client.openapi.apis.BatchV1Api;
 import io.kubernetes.client.openapi.apis.CoreV1Api;
@@ -228,18 +229,18 @@ public class PipelineService {
         String environmentName = pipeline.getEnvironment();
         Environment environment = environmentService.getEnvironment(environmentName);
 
-        try {
-            V1Pod pod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
-            if (pod != null) {
-                environment.getKubernetesApiServer().coreV1Api().deleteNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
-                pipeline.setStatus(PipelineStatus.STOPED);
-                pipelineRepository.save(pipeline);
-                return true;
-            } else {
-                throw new RuntimeException("Pipeline not found");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to stop pipeline: " + e.getMessage());
+        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            client.batch().v1().jobs()
+                    .inNamespace(environment.getWorkNamespace())
+                    .withName(pipeline.getName())
+                    .edit(job -> new JobBuilder(job)
+                            .editSpec()
+                            .withSuspend(true)
+                            .endSpec()
+                            .build());
+            pipeline.setStatus(PipelineStatus.STOPED);
+            pipelineRepository.save(pipeline);
+            return true;
         }
     }
 }
