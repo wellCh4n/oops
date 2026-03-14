@@ -58,15 +58,17 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 "oops.app.name", applicationName
         );
 
+        checkNamespace();
         checkDockerSecret();
         checkService();
+        checkConfigMap();
 
-        V1EnvFromSource envFormSource = resolveEnvFromSource(namespace, applicationName);
+        V1EnvFromSource envFormSource = new V1EnvFromSource()
+                .configMapRef(new V1ConfigMapEnvSource().name(applicationName));
 
         V1Container container = new V1Container()
                 .name(applicationName)
                 .image(pipeline.getArtifact())
-                .addPortsItem(new V1ContainerPort().containerPort(applicationServiceConfig.getPort()))
                 .resources(new V1ResourceRequirements()
                         .requests(Map.of(
                                 "cpu", new Quantity(StringUtils.defaultIfEmpty(performanceConfig.getCpuRequest(), "100m")),
@@ -77,6 +79,9 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                 "memory", new Quantity(StringUtils.isNotEmpty(performanceConfig.getMemoryLimit()) ? performanceConfig.getMemoryLimit() + "Mi" : "128Mi")
                         ))
                 );
+        if (applicationServiceConfig != null && applicationServiceConfig.getPort() != null) {
+            container.addPortsItem(new V1ContainerPort().containerPort(applicationServiceConfig.getPort()));
+        }
         if (envFormSource != null) {
             container.addEnvFromItem(envFormSource);
         }
@@ -115,25 +120,42 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         return true;
     }
 
-    private V1EnvFromSource resolveEnvFromSource(String namespace, String configMapName) throws ApiException {
-        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
+    private void checkNamespace() throws ApiException {
+        CoreV1Api coreV1Api = environment.getKubernetesApiServer().coreV1Api();
         try {
-            coreApi.readNamespacedConfigMap(configMapName, namespace).execute();
+            coreV1Api.readNamespace(application.getNamespace()).execute();
         } catch (ApiException e) {
             if (e.getCode() == 404) {
-                return null;
+                V1Namespace namespace = new V1Namespace()
+                        .metadata(new V1ObjectMeta().name(application.getNamespace()));
+                coreV1Api.createNamespace(namespace).execute();
+                return;
             }
+
             throw e;
         }
-        return new V1EnvFromSource()
-                .configMapRef(new V1ConfigMapEnvSource().name(configMapName));
+    }
+
+    private void checkConfigMap() throws ApiException {
+        CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
+        try {
+            coreApi.readNamespacedConfigMap(application.getName(), application.getNamespace()).execute();
+        } catch (ApiException e) {
+            if (e.getCode() == 404) {
+                V1ConfigMap configMap = new V1ConfigMap()
+                        .metadata(new V1ObjectMeta().name(application.getName()).namespace(application.getNamespace()));
+                coreApi.createNamespacedConfigMap(application.getNamespace(), configMap).execute();
+                return;
+            }
+            throw new RuntimeException("Failed to check ConfigMap: " + e.getMessage());
+        }
     }
 
     private void checkDockerSecret() throws ApiException {
         CoreV1Api coreApi = environment.getKubernetesApiServer().coreV1Api();
         try {
             coreApi.readNamespacedSecret("dockerhub", application.getNamespace()).execute();
-        } catch (Exception e) {
+        } catch (ApiException e) {
             boolean notFound = e.getMessage() != null && (e.getMessage().contains("Not Found") || e.getMessage().contains("404"));
             if (notFound) {
                 V1Secret source = coreApi.readNamespacedSecret("dockerhub", environment.getWorkNamespace()).execute();
