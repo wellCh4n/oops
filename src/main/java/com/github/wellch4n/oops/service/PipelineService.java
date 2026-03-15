@@ -5,29 +5,27 @@ import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
-import com.google.gson.reflect.TypeToken;
-import io.kubernetes.client.PodLogs;
-import io.kubernetes.client.openapi.apis.BatchV1Api;
-import io.kubernetes.client.openapi.apis.CoreV1Api;
-import io.kubernetes.client.openapi.models.*;
-import io.kubernetes.client.util.Watch;
-import org.apache.commons.compress.utils.Lists;
-import org.apache.commons.lang3.StringUtils;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodSpec;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
+import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * @author wellCh4n
@@ -61,39 +59,25 @@ public class PipelineService {
     }
 
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
-        // 建议设置一个合理的超时时间，或者 0L 永久
         SseEmitter emitter = new SseEmitter(0L);
-
-        // 用于标记客户端是否还在线
         AtomicBoolean closed = new AtomicBoolean(false);
-        AtomicReference<Watch<?>> activeWatch = new AtomicReference<>();
-        AtomicReference<InputStream> activeStream = new AtomicReference<>();
+
+        // 用于管理资源释放的容器
+        List<AutoCloseable> resources = new CopyOnWriteArrayList<>();
 
         Runnable cleanup = () -> {
             if (!closed.compareAndSet(false, true)) return;
-            Watch<?> watch = activeWatch.getAndSet(null);
-            if (watch != null) {
-                try {
-                    watch.close();
-                } catch (Exception ignored) {
-                }
-            }
-            InputStream stream = activeStream.getAndSet(null);
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (Exception ignored) {
-                }
-            }
+            resources.forEach(res -> {
+                try { res.close(); } catch (Exception ignored) {}
+            });
+            resources.clear();
         };
 
         emitter.onCompletion(cleanup);
-        emitter.onTimeout(() -> {
-            cleanup.run();
-            emitter.complete();
-        });
-        emitter.onError((e) -> cleanup.run());
+        emitter.onTimeout(cleanup);
+        emitter.onError(e -> cleanup.run());
 
+        // Keep-alive 线程
         Thread.startVirtualThread(() -> {
             while (!closed.get()) {
                 try {
@@ -109,114 +93,100 @@ public class PipelineService {
         Thread.startVirtualThread(() -> {
             try {
                 Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
-                String pipelineName = pipeline.getName();
                 Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+                KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+                String workNs = environment.getWorkNamespace();
+                String pipelineName = pipeline.getName();
 
-                CoreV1Api coreV1Api = environment.getKubernetesApiServer().coreV1Api();
-                BatchV1Api batchV1Api = environment.getKubernetesApiServer().batchV1Api();
+                // 1. 获取 Job 信息
+                Job job = client.batch().v1().jobs().inNamespace(workNs).withName(pipelineName).get();
+                if (job == null) {
+                    emitter.send(SseEmitter.event().name("error").data("Job not found"));
+                    return;
+                }
 
-                V1Job v1Job = batchV1Api.readNamespacedJob(pipelineName, environment.getWorkNamespace()).execute();
+                // 2. 提取所有容器名
                 List<String> containers = new ArrayList<>();
-                v1Job.getSpec().getTemplate().getSpec().getInitContainers().forEach(c -> containers.add(c.getName()));
-                v1Job.getSpec().getTemplate().getSpec().getContainers().forEach(c -> containers.add(c.getName()));
+                PodSpec spec = job.getSpec().getTemplate().getSpec();
+                if (spec.getInitContainers() != null) spec.getInitContainers().forEach(c -> containers.add(c.getName()));
+                if (spec.getContainers() != null) spec.getContainers().forEach(c -> containers.add(c.getName()));
 
                 emitter.send(SseEmitter.event().name("steps").data(objectMapper.writeValueAsString(containers)));
 
                 for (String containerName : containers) {
                     if (closed.get()) return;
 
-                    V1Pod jobPod = null;
+                    // 3. 等待 Pod 出现并获取最新的 Pod
+                    Pod pod = null;
                     for (int i = 0; i < 10; i++) {
-                        jobPod = currentJobPod(environment, pipelineName);
-                        if (jobPod != null) break;
+                        pod = client.pods().inNamespace(workNs).withLabel("job-name", pipelineName).list().getItems()
+                                .stream().max(Comparator.comparing(p -> p.getMetadata().getCreationTimestamp())).orElse(null);
+                        if (pod != null) break;
                         Thread.sleep(1000);
                     }
 
-                    if (jobPod == null) {
-                        emitter.send(SseEmitter.event().name("error").data("Pod not created in time"));
+                    if (pod == null) {
+                        emitter.send(SseEmitter.event().name("error").data("Pod not created"));
                         return;
                     }
-                    String jobPodName = jobPod.getMetadata().getName();
 
-                    // 3. Watch 容器就绪状态
-                    try (Watch<V1Pod> watch = Watch.createWatch(
-                            environment.getKubernetesApiServer().apiClient(),
-                            coreV1Api.listNamespacedPod(environment.getWorkNamespace())
-                                    .fieldSelector("metadata.name=" + jobPodName) // 锁定具体 Pod
-                                    .watch(true)
-                                    .buildCall(null),
-                            new TypeToken<Watch.Response<V1Pod>>(){}.getType())) {
-                        activeWatch.set(watch);
+                    String podName = pod.getMetadata().getName();
 
-                        for (Watch.Response<V1Pod> item : watch) {
-                            if (closed.get()) return; // 检查在线状态
-                            if (isContainerReady(item.object, containerName)) break;
+                    // 4. 等待容器启动 (Fabric8 提供了 waitUntilReady，但针对容器状态我们手动 Watch 更精细)
+                    try (io.fabric8.kubernetes.client.Watch watch = client.pods().inNamespace(workNs).withName(podName).watch(new Watcher<Pod>() {
+                        @Override
+                        public void eventReceived(Watcher.Action action, Pod resource) {
+                            if (isContainerReady(resource, containerName)) {
+                                synchronized (containerName) { containerName.notify(); }
+                            }
                         }
-                        activeWatch.compareAndSet(watch, null);
+                        @Override
+                        public void onClose(WatcherException cause) {}
+                    })) {
+                        resources.add(watch);
+                        synchronized (containerName) {
+                            // 如果还没就绪，等一下
+                            if (!isContainerReady(client.pods().inNamespace(workNs).withName(podName).get(), containerName)) {
+                                containerName.wait(30000); // 最多等30秒启动
+                            }
+                        }
+                        resources.remove(watch);
                     }
 
-                    PodLogs logs = new PodLogs(environment.getKubernetesApiServer().apiClient());
-                    try (InputStream is = logs.streamNamespacedPodLog(
-                            environment.getWorkNamespace(), jobPodName, containerName,
-                            null, 2000, false)) { // follow = true
-                        activeStream.set(is);
+                    LogWatch logWatch = client.pods().inNamespace(workNs).withName(podName)
+                            .inContainer(containerName)
+                            .watchLog();
+                    resources.add(logWatch);
 
-                        BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
+                    try (BufferedReader br = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8))) {
                         String line;
                         while (!closed.get() && (line = br.readLine()) != null) {
                             emitter.send(SseEmitter.event().name(containerName).data("[" + containerName + "] " + line));
                         }
-                        activeStream.compareAndSet(is, null);
                     }
+                    resources.remove(logWatch);
+                    logWatch.close();
                 }
 
-                if (!closed.get()) {
-                    emitter.complete();
-                }
+                if (!closed.get()) emitter.complete();
             } catch (Exception e) {
-                if (!closed.get()) {
-                    emitter.completeWithError(e);
-                }
+                if (!closed.get()) emitter.completeWithError(e);
             }
         });
 
         return emitter;
     }
 
-    private V1Pod currentJobPod(Environment environment, String jobPipelineName) {
-        try {
-            V1PodList allPods = environment.getKubernetesApiServer().coreV1Api()
-                    .listNamespacedPod(environment.getWorkNamespace())
-                    .labelSelector("job-name=" + jobPipelineName)
-                    .execute();
+    private boolean isContainerReady(Pod pod, String containerName) {
+        if (pod == null || pod.getStatus() == null) return false;
 
-            if (allPods.getItems().isEmpty()) {
-                return null;
-            }
+        Stream<ContainerStatus> statuses = Stream.concat(
+                Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(Collections.emptyList()).stream(),
+                Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(Collections.emptyList()).stream()
+        );
 
-            return allPods.getItems().stream()
-                    .max(Comparator.comparing(p -> p.getMetadata().getCreationTimestamp()))
-                    .orElse(allPods.getItems().getFirst());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private boolean isContainerReady(V1Pod jobPod, String containerName) {
-        if (jobPod == null || jobPod.getStatus() == null) return false;
-
-        List<V1ContainerStatus> allStatuses = new ArrayList<>();
-        if (jobPod.getStatus().getInitContainerStatuses() != null)
-            allStatuses.addAll(jobPod.getStatus().getInitContainerStatuses());
-        if (jobPod.getStatus().getContainerStatuses() != null)
-            allStatuses.addAll(jobPod.getStatus().getContainerStatuses());
-
-        return allStatuses.stream()
-                .filter(s -> containerName.equals(s.getName()))
-                .anyMatch(s ->
-                        (s.getState() != null && (s.getState().getRunning() != null || s.getState().getTerminated() != null))
-                                || Boolean.TRUE.equals(s.getStarted())
-                                || s.getReady());
+        return statuses.filter(s -> s.getName().equals(containerName))
+                .anyMatch(s -> s.getStarted() != null && s.getStarted() || s.getReady() || s.getState().getRunning() != null || s.getState().getTerminated() != null);
     }
 
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
@@ -228,18 +198,18 @@ public class PipelineService {
         String environmentName = pipeline.getEnvironment();
         Environment environment = environmentService.getEnvironment(environmentName);
 
-        try {
-            V1Pod pod = environment.getKubernetesApiServer().coreV1Api().readNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
-            if (pod != null) {
-                environment.getKubernetesApiServer().coreV1Api().deleteNamespacedPod(pipeline.getName(), environment.getWorkNamespace()).execute();
-                pipeline.setStatus(PipelineStatus.STOPED);
-                pipelineRepository.save(pipeline);
-                return true;
-            } else {
-                throw new RuntimeException("Pipeline not found");
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to stop pipeline: " + e.getMessage());
+        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            client.batch().v1().jobs()
+                    .inNamespace(environment.getWorkNamespace())
+                    .withName(pipeline.getName())
+                    .edit(job -> new JobBuilder(job)
+                            .editSpec()
+                            .withSuspend(true)
+                            .endSpec()
+                            .build());
+            pipeline.setStatus(PipelineStatus.STOPED);
+            pipelineRepository.save(pipeline);
+            return true;
         }
     }
 }

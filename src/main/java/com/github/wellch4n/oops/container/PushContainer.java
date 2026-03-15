@@ -2,10 +2,9 @@ package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
-import io.kubernetes.client.openapi.models.V1EnvVar;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import lombok.Getter;
-
-import java.util.List;
 
 /**
  * @author wellCh4n
@@ -17,20 +16,26 @@ public class PushContainer extends BaseContainer {
     private final String artifact;
 
     public PushContainer(Application application, Pipeline pipeline, String repositoryUrl, String image) {
-        String artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
-        this.artifact = artifact;
+        this.artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
 
-        this.name("push")
-                .image(image)
-                .workingDir("/workspace")
-                .args(List.of(
-                        "--destination=" + artifact,
+        Container container = new ContainerBuilder()
+                .withName("push")
+                .withImage(image)
+                .withWorkingDir("/workspace")
+                .withArgs(
+                        "--destination=" + this.artifact,
                         "--dockerfile=Dockerfile"
-                ));
+                )
+                .addNewEnv()
+                .withName("KANIKO_REGISTRY_MAP")
+                .withValue("index.docker.io=docker.m.daocloud.io")
+                .endEnv()
+                .build();
 
-        V1EnvVar mirror = new V1EnvVar()
-                .name("KANIKO_REGISTRY_MAP")
-                .value("index.docker.io=docker.m.daocloud.io");
-        this.addEnvItem(mirror);
+        this.setName(container.getName());
+        this.setImage(container.getImage());
+        this.setWorkingDir(container.getWorkingDir());
+        this.setArgs(container.getArgs());
+        this.setEnv(container.getEnv());
     }
 }

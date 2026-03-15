@@ -5,11 +5,11 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
-import io.kubernetes.client.openapi.models.*;
+import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -17,7 +17,7 @@ import java.util.Map;
  * @author wellCh4n
  * @date 2025/7/7
  */
-public class PipelineBuildPod extends V1Job {
+public class PipelineBuildPod extends Job {
 
     @Getter
     @Setter
@@ -27,57 +27,54 @@ public class PipelineBuildPod extends V1Job {
     private final String pipelineId;
 
     public PipelineBuildPod(Application application, Pipeline pipeline, Environment environment,
-                            List<BaseContainer> stepContainers, BaseContainer finishContainer) {
+                            List<Container> stepContainers, Container finishContainer) {
 
+        super();
         this.pipelineId = pipeline.getId();
 
-        String applicationName = application.getName();
+        ObjectMeta metadata = new ObjectMetaBuilder()
+                .withName(pipeline.getName())
+                .withNamespace(environment.getWorkNamespace())
+                .withLabels(Map.of(
+                        "oops.type", OopsTypes.PIPELINE.name(),
+                        "oops.pipeline.id", this.pipelineId,
+                        "oops.pipeline.name", pipeline.getName(),
+                        "oops.pipeline.application.name", application.getName()
+                ))
+                .build();
+        this.setMetadata(metadata);
 
-        V1ObjectMeta metadata = new V1ObjectMeta();
-        metadata.setName(pipeline.getName());
-        metadata.setNamespace(environment.getWorkNamespace());
+        PodTemplateSpec podTemplateSpec = new PodTemplateSpecBuilder()
+                .withNewMetadata()
+                .withLabels(metadata.getLabels())
+                .endMetadata()
+                .withNewSpec()
+                .withInitContainers(stepContainers)
+                .withContainers(finishContainer)
+                .withRestartPolicy("Never")
+                .endSpec()
+                .build();
 
-        Map<String, String> labels = Map.of(
-                "oops.type", OopsTypes.PIPELINE.name(),
-                "oops.pipeline.id", this.pipelineId,
-                "oops.pipeline.name", pipeline.getName(),
-                "oops.pipeline.application.name", applicationName
-        );
-        metadata.setLabels(labels);
+        this.setSpec(new io.fabric8.kubernetes.api.model.batch.v1.JobSpecBuilder()
+                .withTemplate(podTemplateSpec)
+                .withTtlSecondsAfterFinished(604800)
+                .build());
 
-
-        List<V1Container> initContainers = new ArrayList<>(stepContainers);
-
-        V1PodSpec podSpec = new V1PodSpec()
-                .initContainers(initContainers)
-                .containers(List.of(finishContainer))
-                .restartPolicy("Never")
-                .overhead(null);
-
-        V1PodTemplateSpec podTemplateSpec = new V1PodTemplateSpec()
-                .metadata(metadata)
-                .spec(podSpec);
-
-        V1JobSpec jobSpec = new V1JobSpec()
-                .template(podTemplateSpec)
-                .ttlSecondsAfterFinished(604800);
-
-
-        this.apiVersion("batch/v1")
-                .kind("Job")
-                .metadata(metadata)
-                .spec(jobSpec);
+        this.setApiVersion("batch/v1");
+        this.setKind("Job");
     }
 
     @SafeVarargs
-    public final void addVolumes(List<V1Volume>... volumes) {
-
+    public final void addVolumes(List<Volume>... volumes) {
         if (this.getSpec() == null || this.getSpec().getTemplate().getSpec() == null) return;
 
-        for (List<V1Volume> v1Volumes : volumes) {
-            for (V1Volume v1Volume : v1Volumes) {
-                this.getSpec().getTemplate().getSpec().addVolumesItem(v1Volume);
-            }
+        PodSpec podSpec = this.getSpec().getTemplate().getSpec();
+        if (podSpec.getVolumes() == null) {
+            podSpec.setVolumes(new java.util.ArrayList<>());
+        }
+
+        for (List<Volume> volList : volumes) {
+            podSpec.getVolumes().addAll(volList);
         }
     }
 }

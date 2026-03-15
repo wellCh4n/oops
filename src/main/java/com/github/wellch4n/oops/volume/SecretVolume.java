@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.volume;
 
-import io.kubernetes.client.openapi.models.*;
+import io.fabric8.kubernetes.api.model.*;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -13,56 +13,55 @@ import java.util.List;
 public class SecretVolume {
 
     @Getter
-    private final List<V1Volume> volumes = new ArrayList<>();
+    private final List<Volume> volumes = new ArrayList<>();
 
     @Getter
-    private final List<V1VolumeMount> volumeMounts = new ArrayList<>();
+    private final List<VolumeMount> volumeMounts = new ArrayList<>();
 
     public SecretVolume() {
-        {
-            V1SecretVolumeSource v1SecretVolumeSource = new V1SecretVolumeSource();
-            v1SecretVolumeSource.secretName("dockerhub").items(List.of(
-                    new V1KeyToPath()
-                            .key(".dockerconfigjson")
-                            .path("config.json")
-            ));
+        this.volumes.add(new VolumeBuilder()
+                .withName("kaniko-secret")
+                .withNewSecret()
+                .withSecretName("dockerhub")
+                .addNewItem()
+                .withKey(".dockerconfigjson")
+                .withPath("config.json")
+                .endItem()
+                .endSecret()
+                .build());
 
-            V1Volume secretVol = new V1Volume()
-                    .name("kaniko-secret")
-                    .secret(v1SecretVolumeSource);
-            this.volumes.add(secretVol);
+        this.volumeMounts.add(new VolumeMountBuilder()
+                .withName("kaniko-secret")
+                .withMountPath("/kaniko/.docker")
+                .build());
 
-            V1VolumeMount secretMount = new V1VolumeMount()
-                    .name("kaniko-secret")
-                    .mountPath("/kaniko/.docker");
-            this.volumeMounts.add(secretMount);
-        }
+        this.volumes.add(new VolumeBuilder()
+                .withName("git-secret")
+                .withNewConfigMap()
+                .withName("git-credential")
+                .withOptional(true)
+                .withDefaultMode(0600) // 对应 0600 八进制
+                .addNewItem()
+                .withKey(".netrc")
+                .withPath(".netrc")
+                .endItem()
+                .addNewItem()
+                .withKey("id_rsa")
+                .withPath("id_rsa")
+                .endItem()
+                .endConfigMap()
+                .build());
 
-        {
-            V1ConfigMapVolumeSource gitSecretVolumeSource = new V1ConfigMapVolumeSource();
-            gitSecretVolumeSource.name("git-credential").items(
-                    List.of(
-                            new V1KeyToPath().key(".netrc").path(".netrc"),
-                            new V1KeyToPath().key("id_rsa").path("id_rsa")
-                    )
-            ).optional(true);
-            V1Volume gitSecretVol = new V1Volume()
-                    .name("git-secret")
-                    .configMap(gitSecretVolumeSource);
-            this.volumes.add(gitSecretVol);
+        this.volumeMounts.add(new VolumeMountBuilder()
+                .withName("git-secret")
+                .withMountPath("/root/.netrc")
+                .withSubPath(".netrc")
+                .build());
 
-            this.volumeMounts.add(new V1VolumeMount()
-                    .name("git-secret")
-                    .mountPath("/root/.netrc")
-                    .subPath(".netrc"));
-
-            this.volumeMounts.add(new V1VolumeMount()
-                    .name("git-secret")
-                    .mountPath("/root/.ssh/id_rsa")
-                    .subPath("id_rsa"));
-
-            //noinspection OctalInteger
-            gitSecretVolumeSource.defaultMode(0600);
-        }
+        this.volumeMounts.add(new VolumeMountBuilder()
+                .withName("git-secret")
+                .withMountPath("/root/.ssh/id_rsa")
+                .withSubPath("id_rsa")
+                .build());
     }
 }

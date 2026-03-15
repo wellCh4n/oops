@@ -6,8 +6,8 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.objects.ApplicationQueryRequest;
 import com.github.wellch4n.oops.objects.PipelineQueryRequest;
+import io.micrometer.common.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
