@@ -8,8 +8,11 @@ import com.github.wellch4n.oops.enums.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -20,6 +23,8 @@ import java.util.concurrent.Callable;
  * @author wellCh4n
  * @date 2025/7/9
  */
+
+@Slf4j
 public class ArtifactDeployTask implements Callable<Boolean> {
 
     private final Pipeline pipeline;
@@ -28,6 +33,10 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final ApplicationPerformanceConfig.EnvironmentConfig perfEnvConfig;
     private final ApplicationServiceConfig applicationServiceConfig;
     private final IngressConfig ingressConfig;
+    private final KubernetesClient client;
+    private final PatchContext patchContext;
+    private final int servicePort;
+    private final Map<String, String> labels;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
                               Environment environment,
@@ -40,39 +49,27 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         this.perfEnvConfig = environmentConfig;
         this.applicationServiceConfig = applicationServiceConfig;
         this.ingressConfig = ingressConfig;
+
+        this.client = environment.getKubernetesApiServer().fabric8Client();
+
+        this.patchContext = new PatchContext.Builder()
+                .withPatchType(PatchType.SERVER_SIDE_APPLY)
+                .withFieldManager("oops")
+                .withForce(true)
+                .build();
+
+        this.servicePort = 1114;
+        this.labels = Map.of("oops.type", OopsTypes.APPLICATION.name(), "oops.app.name", application.getName());
     }
 
     @Override
     public Boolean call() {
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-            String namespace = application.getNamespace();
-            String applicationName = application.getName();
+        String namespace = application.getNamespace();
+        String applicationName = application.getName();
 
-            PatchContext patchContext = new PatchContext.Builder()
-                    .withPatchType(PatchType.SERVER_SIDE_APPLY)
-                    .withFieldManager("oops")
-                    .withForce(true)
-                    .build();
-
-            Map<String, String> labels = Map.of("oops.type", OopsTypes.APPLICATION.name(), "oops.app.name", applicationName);
-
-            client.namespaces()
-                    .resource(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build())
-                    .serverSideApply();
-
-            Secret secret = client.secrets().inNamespace(environment.getWorkNamespace()).withName("dockerhub").get();
-            if (secret != null) {
-                client.secrets()
-                        .inNamespace(namespace)
-                        .resource(new SecretBuilder()
-                                .withNewMetadata().withName("dockerhub").withNamespace(namespace).endMetadata()
-                                .withType(secret.getType())
-                                .withData(secret.getData())
-                                .build()
-                        )
-                        .patch(patchContext);
-            }
+        checkNamespace();
+        checkImagePullSecret();
 
             StatefulSet statefulSet = new StatefulSetBuilder()
                     .withNewMetadata().withName(applicationName).withLabels(labels).endMetadata()
@@ -101,55 +98,130 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                     .endSpec()
                     .build();
 
-            client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).patch(patchContext);
+        client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).patch(patchContext);
 
-            if (applicationServiceConfig.getPort() != null) {
-                int servicePort = 85;
-                client.services().inNamespace(namespace).resource(
-                        new ServiceBuilder()
-                                .withNewMetadata().withName(applicationName).withNamespace(namespace).withLabels(labels).endMetadata()
-                                .withNewSpec()
-                                    .withType("ClusterIP")
-                                    .withSelector(labels)
-                                    .addNewPort()
-                                        .withName("web")
-                                        .withProtocol("TCP")
-                                        .withPort(servicePort)
-                                        .withTargetPort(new IntOrString(applicationServiceConfig.getPort()))
-                                    .endPort()
-                                .endSpec()
-                                .build()
-                ).patch(patchContext);
-
-                IngressRoute ingressRoute = new IngressRoute();
-                ingressRoute.setMetadata(new ObjectMetaBuilder()
-                        .withName(applicationName)
-                        .withNamespace(namespace)
-                        .build()
-                );
-
-                IngressRouteSpec spec = IngressRouteSpec
-                        .builder()
-                        .entryPoints(List.of("websecure"))
-                        .routes(
-                                List.of(
-                                        IngressRouteSpec.Route.builder()
-                                                .match("Host(`" + applicationServiceConfig.getEnvironmentConfig(environment.getName()).getHost() + "`)")
-                                                .kind("Rule")
-                                                .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
-                                                .build()
-                                )
-                        )
-                        .build();
-
-                ingressRoute.setSpec(spec);
-                client.resources(IngressRoute.class)
-                        .inNamespace(namespace)
-                        .resource(ingressRoute)
-                        .serverSideApply();
-            }
-        }
+        checkService();
+        checkIngressRoute();
 
         return true;
+    }
+
+    private void checkNamespace() {
+        client.namespaces()
+                .resource(new NamespaceBuilder().withNewMetadata().withName(application.getNamespace()).endMetadata().build())
+                .serverSideApply();
+    }
+
+    private void checkImagePullSecret() {
+        String namespace = application.getNamespace();
+
+        Secret secret = client.secrets().inNamespace(environment.getWorkNamespace()).withName("dockerhub").get();
+        if (secret != null) {
+            client.secrets()
+                    .inNamespace(namespace)
+                    .resource(new SecretBuilder()
+                            .withNewMetadata().withName("dockerhub").withNamespace(namespace).endMetadata()
+                            .withType(secret.getType())
+                            .withData(secret.getData())
+                            .build()
+                    )
+                    .patch(patchContext);
+        }
+    }
+
+    private void checkService() {
+        log.info("Checking service for application: {}/{}", application.getNamespace(), application.getName());
+        String namespace = application.getNamespace();
+        String applicationName = application.getName();
+        if (applicationServiceConfig.getPort() != null) {
+            client.services().inNamespace(namespace).resource(
+                    new ServiceBuilder()
+                            .withNewMetadata().withName(applicationName).withNamespace(namespace).withLabels(labels).endMetadata()
+                            .withNewSpec()
+                                .withType("ClusterIP")
+                                .withSelector(labels)
+                                .addNewPort()
+                                    .withName("web")
+                                    .withProtocol("TCP")
+                                    .withPort(servicePort)
+                                    .withTargetPort(new IntOrString(applicationServiceConfig.getPort()))
+                                .endPort()
+                            .endSpec()
+                            .build()
+            ).patch(patchContext);
+        }
+    }
+
+    private void checkIngressRoute() {
+        log.info("Checking ingress route for application: {}/{}", application.getNamespace(), application.getName());
+        String namespace = application.getNamespace();
+        String applicationName = application.getName();
+
+        ApplicationServiceConfig.EnvironmentConfig envServiceConfig = applicationServiceConfig.getEnvironmentConfig(environment.getName());
+        if (envServiceConfig == null || StringUtils.isEmpty(envServiceConfig.getHost())) {
+            log.info("No host configured for application: {}/{} in environment: {}, skipping ingress route creation", application.getNamespace(), application.getName(), environment.getName());
+            return;
+        }
+
+        IngressRoute ingressRoute = new IngressRoute();
+        ingressRoute.setMetadata(new ObjectMetaBuilder()
+                .withName(applicationName)
+                .withNamespace(namespace)
+                .build()
+        );
+
+        var ingressRouteCrd = client.apiextensions().v1().customResourceDefinitions()
+                .withName(CustomResourceDefinitionContext.fromCustomResourceType(IngressRoute.class).getName())
+                .get();
+
+        if (ingressRouteCrd == null) {
+            log.warn("Could not find ingress route crd");
+            return;
+        }
+
+        IngressRouteSpec spec;
+        if (envServiceConfig.getHttps() != null && envServiceConfig.getHttps()) {
+            spec = IngressRouteSpec
+                    .builder()
+                    .entryPoints(List.of("websecure"))
+                    .routes(
+                            List.of(
+                                    IngressRouteSpec.Route.builder()
+                                            .match("Host(`" + envServiceConfig.getHost() + "`)")
+                                            .kind("Rule")
+                                            .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
+                                            .build()
+                            )
+                    )
+                    .tls(IngressRouteSpec.Tls.builder().certResolver(ingressConfig.getCertResolver()).build())
+                    .build();
+
+        } else {
+            spec = IngressRouteSpec
+                    .builder()
+                    .entryPoints(List.of("web"))
+                    .routes(
+                            List.of(
+                                    IngressRouteSpec.Route.builder()
+                                            .match("Host(`" + envServiceConfig.getHost() + "`)")
+                                            .kind("Rule")
+                                            .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
+                                            .build()
+                            )
+                    )
+                    .build();
+
+        }
+        ingressRoute.setSpec(spec);
+
+        try {
+            client.resources(IngressRoute.class)
+                    .inNamespace(namespace)
+                    .resource(ingressRoute)
+                    .patch(patchContext);
+        } catch (Exception e) {
+            log.error("Error applying ingress route for application:e=", e);
+            throw e;
+        }
     }
 }

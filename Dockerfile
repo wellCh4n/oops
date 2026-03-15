@@ -9,7 +9,7 @@ FROM maven:3.9-eclipse-temurin-21 AS backend-builder
 WORKDIR /build/backend
 COPY pom.xml ./
 COPY src ./src
-RUN mvn -q -DskipTests package
+RUN mvn -DskipTests package
 
 FROM node:20-slim AS runtime
 ENV NODE_ENV=production \
