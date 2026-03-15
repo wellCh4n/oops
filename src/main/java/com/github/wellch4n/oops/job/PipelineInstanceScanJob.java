@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
-import io.kubernetes.client.openapi.models.V1Job;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -52,10 +52,9 @@ public class PipelineInstanceScanJob {
                 String environmentName = pipeline.getEnvironment();
                 Environment environment = environmentService.getEnvironment(environmentName);
 
-                V1Job jobPod = environment.getKubernetesApiServer().batchV1Api().readNamespacedJob(pipeline.getName(), environment.getWorkNamespace()).execute();
-
-                if (jobPod.getStatus() != null && jobPod.getStatus().getSucceeded() != null && jobPod.getStatus().getSucceeded() == 1) {
-                    try {
+                try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                    Job job = client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).withName(pipeline.getName()).get();
+                    if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
                         ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
                                 application.getNamespace(), application.getName(), pipeline.getEnvironment());
@@ -71,13 +70,12 @@ public class PipelineInstanceScanJob {
 
                         pipeline.setStatus(PipelineStatus.SUCCEEDED);
                         pipelineRepository.save(pipeline);
-                    } catch (Exception e) {
-                        System.err.println("Error processing succeeded pipeline " + pipeline.getId() + ": " + e.getMessage());
+                    } else if (job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0) {
+                        System.err.println("Error processing succeeded pipeline " + pipeline.getId());
                         pipeline.setStatus(PipelineStatus.ERROR);
                         pipelineRepository.save(pipeline);
                     }
                 }
-
             } catch (Exception e) {
                 System.out.println("Error scanning pipeline instance: " + e.getMessage());
                 pipeline.setStatus(PipelineStatus.ERROR);

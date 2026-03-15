@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.crds;
 
-import com.github.wellch4n.oops.crd.IngressRoute;
 import lombok.Builder;
 import lombok.Data;
 
