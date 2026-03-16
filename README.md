@@ -1,8 +1,17 @@
 # OOPS
 > Kubernetes Is All You Need
 
-<img src="https://github.com/wellCh4n/oops/blob/main/web/public/icon.png" width="200" />
+![icon.png](web/public/icon.png)
 
 ## Requirements:
 > - Kubernetes cluster
 > - SQLite or MySQL database
+
+## Snapshots:
+![app_deploy.png](snapshots/app_deploy.png)
+
+![pod_status.png](snapshots/pod_status.png)
+
+![pod_terminal.png](snapshots/pod_terminal.png)
+
+![env_manager.png](snapshots/env_manager.png)
