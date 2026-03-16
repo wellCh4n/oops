@@ -40,12 +40,12 @@ public class PipelineController {
         return Result.success(pipelineService.getPipeline(namespace, name, id));
     }
 
-    @GetMapping(value = "/{id}/watch", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter watchPipeline(@PathVariable String namespace,
-                                    @PathVariable String name,
-                                    @PathVariable String id) {
-        return pipelineService.watchPipeline(namespace, name, id);
-    }
+//    @GetMapping(value = "/{id}/watch", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+//    public SseEmitter watchPipeline(@PathVariable String namespace,
+//                                    @PathVariable String name,
+//                                    @PathVariable String id) {
+//        return pipelineService.watchPipeline(namespace, name, id);
+//    }
 
     @PutMapping("/{id}/stop")
     public Result<Boolean> stopPipeline(@PathVariable String namespace,

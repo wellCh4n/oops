@@ -24,33 +24,45 @@ export default function ApplicationPodLogsPage() {
   useEffect(() => {
     if (!env || !namespace || !name || !pod) return
 
-    const eventSource = new EventSource(
-      `${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}`
-    )
+    // Use WebSocket instead of SSE
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const baseUrl = API_BASE_URL.startsWith('http')
+      ? API_BASE_URL.replace(/^http/, 'ws')
+      : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-    eventSource.onopen = () => {
-      setConnectionStatus("connected")
-    }
+    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}`
+    let ws: WebSocket | null = null
 
-    eventSource.addEventListener("log", (event) => {
-      const messageEvent = event as MessageEvent
-      setLogs((prev) => [...prev, messageEvent.data])
-    })
+    // Use a small timeout to prevent double connection in React Strict Mode
+    const connectTimeout = setTimeout(() => {
+      ws = new WebSocket(wsUrl)
+      
+      ws.onopen = () => {
+        setConnectionStatus("connected")
+        setError(null)
+      }
 
-    eventSource.onmessage = (event) => {
-      setLogs((prev) => [...prev, event.data])
-    }
+      ws.onmessage = (event) => {
+        const logLine = event.data
+        setLogs((prev) => [...prev, logLine])
+      }
 
-    eventSource.onerror = (err) => {
-      console.error("SSE error:", err)
-      setConnectionStatus("disconnected")
-      setError((prev) => prev ?? "SSE error")
-      // Only set error if connection fails initially or persistently
-      // eventSource.close() // Don't close immediately on minor errors, but maybe specific ones
-    }
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err)
+        setConnectionStatus("disconnected")
+        setError("WebSocket connection error")
+      }
+
+      ws.onclose = () => {
+        setConnectionStatus("disconnected")
+      }
+    }, 100)
 
     return () => {
-      eventSource.close()
+      clearTimeout(connectTimeout)
+      if (ws) {
+        ws.close()
+      }
     }
   }, [namespace, name, pod, env])
 

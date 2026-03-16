@@ -128,13 +128,13 @@ public class ApplicationController {
         return Result.success(applicationService.restartApplication(namespace, name, pod, env));
     }
 
-    @GetMapping(value = "/{name}/pods/{pod}/log", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter getApplicationPodLogs(@PathVariable String namespace,
-                                            @PathVariable String name,
-                                            @PathVariable String pod,
-                                            @RequestParam String env) {
-        return applicationService.getApplicationPodLogs(namespace, name, pod, env);
-    }
+//    @GetMapping(value = "/{name}/pods/{pod}/log", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+//    public SseEmitter getApplicationPodLogs(@PathVariable String namespace,
+//                                            @PathVariable String name,
+//                                            @PathVariable String pod,
+//                                            @RequestParam String env) {
+//        return applicationService.getApplicationPodLogs(namespace, name, pod, env);
+//    }
 
     @PostMapping(value = "/{name}/deployments")
     public Result<String> deployApplication(@PathVariable String namespace,

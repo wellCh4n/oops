@@ -39,32 +39,65 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }, [namespace, name, pipelineId])
 
   useEffect(() => {
-    const url = `${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/watch`
-    const eventSource = new EventSource(url)
-    
-    eventSource.addEventListener("steps", (event) => {
-      try {
-        const stepNames = JSON.parse(event.data) as string[]
-        setSteps(stepNames)
-        
-        stepNames.forEach(stepName => {
-            eventSource.addEventListener(stepName, (e) => {
-                setLogs(prev => [...prev, e.data])
-                setActiveStep(stepName)
-            })
-        })
-      } catch (e) {
-        console.error("Failed to parse steps", e)
-      }
-    })
+    // Use WebSocket instead of SSE
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const baseUrl = API_BASE_URL.startsWith('http')
+      ? API_BASE_URL.replace(/^http/, 'ws')
+      : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-    eventSource.onerror = (e) => {
-        console.error("EventSource failed", e)
-        eventSource.close()
-    }
+    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log`
+    let ws: WebSocket | null = null
+
+    // Use a small timeout to prevent double connection in React Strict Mode
+    const connectTimeout = setTimeout(() => {
+      ws = new WebSocket(wsUrl)
+      
+      ws.onopen = () => {
+        console.log("WebSocket connected for pipeline logs")
+      }
+
+      ws.onmessage = (event) => {
+        const message = event.data
+        
+        // Handle different message types
+        if (message.startsWith("STEPS:")) {
+          try {
+            const stepNames = JSON.parse(message.substring(6)) as string[]
+            setSteps(stepNames)
+          } catch (e) {
+            console.error("Failed to parse steps", e)
+          }
+        } else if (message.startsWith("ERROR:")) {
+          console.error("Pipeline error:", message.substring(6))
+        } else if (message.includes(":")) {
+          // Format: "stepName:logLine"
+          const [stepName, ...logParts] = message.split(":")
+          const logLine = logParts.join(":") // Handle case where log line contains colons
+          setLogs(prev => [...prev, logLine])
+          setActiveStep(stepName)
+        } else {
+          // Fallback for plain log messages
+          setLogs(prev => [...prev, message])
+        }
+      }
+
+      ws.onerror = (e) => {
+        console.error("WebSocket failed", e)
+        if (ws) {
+          ws.close()
+        }
+      }
+
+      ws.onclose = () => {
+        console.log("WebSocket connection closed")
+      }
+    }, 100)
 
     return () => {
-      eventSource.close()
+      clearTimeout(connectTimeout)
+      if (ws) {
+        ws.close()
+      }
     }
   }, [namespace, name, pipelineId])
   
