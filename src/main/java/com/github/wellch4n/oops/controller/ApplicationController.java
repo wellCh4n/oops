@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
+import com.github.wellch4n.oops.service.PipelineService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -22,10 +23,12 @@ public class ApplicationController {
 
     private final ApplicationService applicationService;
     private final DeploymentService deploymentService;
+    private final PipelineService pipelineService;
 
-    public ApplicationController(ApplicationService applicationService, DeploymentService deploymentService) {
+    public ApplicationController(ApplicationService applicationService, DeploymentService deploymentService, PipelineService pipelineService) {
         this.applicationService = applicationService;
         this.deploymentService = deploymentService;
+        this.pipelineService = pipelineService;
     }
 
     @GetMapping("/{name}")
@@ -94,6 +97,13 @@ public class ApplicationController {
     public Result<List<ApplicationEnvironment>> getApplicationEnvironments(@PathVariable String namespace,
                                                                            @PathVariable String name) {
         return Result.success(applicationService.getApplicationEnvironments(namespace, name));
+    }
+
+    @GetMapping("/{name}/last-successful-branch")
+    public Result<String> getLastSuccessfulBranch(@PathVariable String namespace,
+                                                    @PathVariable String name) {
+        String lastBranch = pipelineService.getLastSuccessfulBranch(namespace, name);
+        return Result.success(lastBranch);
     }
 
     @PutMapping("/{name}/environments")

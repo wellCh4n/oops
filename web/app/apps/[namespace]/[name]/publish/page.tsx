@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Rocket } from "lucide-react"
 import { toast } from "sonner"
-import { getApplication, getApplicationEnvironments, deployApplication } from "@/lib/api/applications"
+import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulBranch } from "@/lib/api/applications"
 import { Application, ApplicationEnvironment } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -27,14 +27,16 @@ export default function PublishPage({ params }: PageProps) {
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [branch, setBranch] = useState<string>("main")
+  const [lastSuccessfulBranch, setLastSuccessfulBranch] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appRes, envRes] = await Promise.all([
+        const [appRes, envRes, lastBranchRes] = await Promise.all([
           getApplication(namespace, name),
-          getApplicationEnvironments(namespace, name)
+          getApplicationEnvironments(namespace, name),
+          getLastSuccessfulBranch(namespace, name)
         ])
         
         if (appRes.data) {
@@ -48,6 +50,10 @@ export default function PublishPage({ params }: PageProps) {
               setSelectedEnv(firstEnv)
             }
           }
+        }
+        if (lastBranchRes.data) {
+          setLastSuccessfulBranch(lastBranchRes.data)
+          setBranch(lastBranchRes.data)
         }
       } catch (error) {
         toast.error("Failed to fetch application details")
@@ -116,7 +122,18 @@ export default function PublishPage({ params }: PageProps) {
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="branch">发布分支</Label>
+          <Label htmlFor="branch">
+            发布分支
+            {lastSuccessfulBranch && (
+              <button
+                type="button"
+                onClick={() => setBranch(lastSuccessfulBranch)}
+                className="ml-2 text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer"
+              >
+                上次发布分支：{lastSuccessfulBranch}
+              </button>
+            )}
+          </Label>
           <Input
             id="branch"
             value={branch}

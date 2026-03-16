@@ -30,4 +30,6 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
     Page<Pipeline> findByNamespaceAndApplicationName(String namespace, String applicationName, Pageable pageable);
 
     Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironment(String namespace, String applicationName, String environment, Pageable pageable);
+
+    Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(String namespace, String applicationName, PipelineStatus status);
 }

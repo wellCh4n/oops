@@ -248,3 +248,11 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
   }
   return response.json();
 };
+
+export const getLastSuccessfulBranch = async (namespace: string, name: string): Promise<ApiResponse<string>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/last-successful-branch`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch last successful branch");
+  }
+  return response.json();
+};

@@ -64,6 +64,12 @@ public class PipelineService {
         return pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
     }
 
+    public String getLastSuccessfulBranch(String namespace, String applicationName) {
+        Pipeline lastSuccessfulPipeline = pipelineRepository.findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(
+                namespace, applicationName, PipelineStatus.SUCCEEDED);
+        return lastSuccessfulPipeline != null ? lastSuccessfulPipeline.getBranch() : null;
+    }
+
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
         SseEmitter emitter = new SseEmitter(0L);
         ConcurrentLinkedQueue<AutoCloseable> resources = new ConcurrentLinkedQueue<>();
