@@ -21,9 +21,6 @@ import java.util.Map;
 public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     private final EnvironmentService environmentService;
-    private ExecWatch watch;
-    private OutputStream stdin;
-    private KubernetesClient client;
 
     public TerminalWebSocketHandler(EnvironmentService environmentService) {
         this.environmentService = environmentService;
@@ -45,9 +42,9 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
         String environmentName = params.get("environment");
         Environment environment = environmentService.getEnvironment(environmentName);
 
-        this.client = environment.getKubernetesApiServer().fabric8Client();
+        KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
 
-        this.watch = this.client.pods().inNamespace(namespace).withName(podName)
+        ExecWatch watch = client.pods().inNamespace(namespace).withName(podName)
                 .inContainer(container)
                 .redirectingInput()
                 .writingOutput(new WebSocketOutputStream(session))
@@ -65,11 +62,17 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
                 })
                 .exec("sh", "-c", "export TERM=xterm-256color; exec /bin/sh");
 
-        this.stdin = watch.getInput();
+        OutputStream stdin = watch.getInput();
+        
+        // Store session-specific data in WebSocket session attributes
+        session.getAttributes().put("execWatch", watch);
+        session.getAttributes().put("stdin", stdin);
+        session.getAttributes().put("kubernetesClient", client);
     }
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
+        OutputStream stdin = (OutputStream) session.getAttributes().get("stdin");
         if (stdin != null) {
             ByteBuffer buffer = message.getPayload();
             byte[] bytes = new byte[buffer.remaining()];
@@ -81,6 +84,7 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+        OutputStream stdin = (OutputStream) session.getAttributes().get("stdin");
         if (stdin != null) {
             stdin.write(message.asBytes());
             stdin.flush();
@@ -89,6 +93,9 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        ExecWatch watch = (ExecWatch) session.getAttributes().get("execWatch");
+        KubernetesClient client = (KubernetesClient) session.getAttributes().get("kubernetesClient");
+        
         if (watch != null) {
             watch.close();
         }
