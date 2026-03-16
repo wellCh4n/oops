@@ -6,6 +6,7 @@
 ## Requirements:
 > - Kubernetes cluster
 > - SQLite or MySQL database
+> - Traefik (Optional, for ingress)
 
 ## Snapshots:
 ![app_deploy.png](snapshots/app_deploy.png)
