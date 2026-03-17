@@ -25,9 +25,9 @@ export const getPipelineColumns = (
     cell: ({ row }) => {
       const status = row.original.status
       let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
-      if (status === "RUNNING") variant = "default"
+      if (status === "RUNNING" || status === "DEPLOYING") variant = "default"
       if (status === "SUCCEEDED") variant = "secondary"
-      if (status === "ERROR" || status === "STOPED") variant = "destructive"
+      if (status === "ERROR" || status === "STOPPED") variant = "destructive"
       
       return <Badge variant={variant}>{status}</Badge>
     }
@@ -49,7 +49,7 @@ export const getPipelineColumns = (
             <Eye className="mr-2 h-4 w-4" />
             查看
           </Button>
-          {(row.original.status === "RUNNING" || row.original.status === "PENDING") && (
+          {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
             <Button variant="destructive" size="sm" onClick={() => onStop(row.original)}>
               <Ban className="mr-2 h-4 w-4" />
               停止

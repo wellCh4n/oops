@@ -46,7 +46,7 @@ public class PipelineInstanceScanJob {
             try {
 
                 if (PipelineStatus.SUCCEEDED.equals(pipeline.getStatus()) || PipelineStatus.ERROR.equals(pipeline.getStatus())) {
-                    return;
+                    continue;
                 }
 
                 String environmentName = pipeline.getEnvironment();
@@ -55,6 +55,13 @@ public class PipelineInstanceScanJob {
                 try (var client = environment.getKubernetesApiServer().fabric8Client()) {
                     Job job = client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).withName(pipeline.getName()).get();
                     if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
+                        int claimed = pipelineRepository.updateStatusIfMatch(
+                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.DEPLOYING
+                        );
+                        if (claimed == 0) {
+                            continue;
+                        }
+
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
                         ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
                                 application.getNamespace(), application.getName(), pipeline.getEnvironment());
@@ -68,18 +75,24 @@ public class PipelineInstanceScanJob {
                         );
                         artifactDeployTask.call();
 
-                        pipeline.setStatus(PipelineStatus.SUCCEEDED);
-                        pipelineRepository.save(pipeline);
+                        pipelineRepository.updateStatusIfMatch(
+                                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED
+                        );
                     } else if (job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0) {
                         System.err.println("Error processing succeeded pipeline " + pipeline.getId());
-                        pipeline.setStatus(PipelineStatus.ERROR);
-                        pipelineRepository.save(pipeline);
+                        pipelineRepository.updateStatusIfMatch(
+                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
+                        );
                     }
                 }
             } catch (Exception e) {
                 System.out.println("Error scanning pipeline instance: " + e.getMessage());
-                pipeline.setStatus(PipelineStatus.ERROR);
-                pipelineRepository.save(pipeline);
+                pipelineRepository.updateStatusIfMatch(
+                        pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR
+                );
+                pipelineRepository.updateStatusIfMatch(
+                        pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
+                );
             }
         }
     }

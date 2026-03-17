@@ -5,7 +5,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -32,4 +36,11 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
     Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironment(String namespace, String applicationName, String environment, Pageable pageable);
 
     Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(String namespace, String applicationName, PipelineStatus status);
+
+    @Modifying
+    @Transactional
+    @Query("update Pipeline p set p.status = :target where p.id = :id and p.status = :expected")
+    int updateStatusIfMatch(@Param("id") String id,
+                            @Param("expected") PipelineStatus expected,
+                            @Param("target") PipelineStatus target);
 }

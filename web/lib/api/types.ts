@@ -83,7 +83,7 @@ export interface ApplicationPodStatus {
   podIP: string
 }
 
-export type PipelineStatus = 'INITIALIZED' | 'PENDING' | 'RUNNING' | 'STOPED' | 'SUCCEEDED' | 'ERROR'
+export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
 
 export interface Pipeline {
   id: string
