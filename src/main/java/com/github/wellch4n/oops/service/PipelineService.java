@@ -177,7 +177,7 @@ public class PipelineService {
                             .withSuspend(true)
                             .endSpec()
                             .build());
-            pipeline.setStatus(PipelineStatus.STOPED);
+            pipeline.setStatus(PipelineStatus.STOPPED);
             pipelineRepository.save(pipeline);
             return true;
         }
