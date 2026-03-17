@@ -16,4 +16,6 @@ public class Namespace extends BaseDataObject {
     private String id;
 
     private String name;
+    
+    private String description;
 }

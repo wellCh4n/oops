@@ -14,6 +14,16 @@ export interface NavGroup {
 
 export const navConfig: NavGroup[] = [
   {
+    title: "集群",
+    items: [
+      {
+        title: "节点概况",
+        url: "/nodes",
+        icon: Server,
+      },
+    ],
+  },
+  {
     title: "应用管理",
     items: [
       {

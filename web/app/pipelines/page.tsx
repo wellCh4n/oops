@@ -42,7 +42,7 @@ export default function PipelinesPage() {
       try {
         const res = await fetchNamespaces()
         if (res.data && Array.isArray(res.data)) {
-          const nsList = res.data.map((ns: string) => ({ id: ns, name: ns }))
+          const nsList = res.data.map((ns) => ({ id: ns.name, name: ns.name }))
           setNamespaces(nsList)
           if (nsList.length > 0) {
             setSelectedNamespace(nsList[0].id)

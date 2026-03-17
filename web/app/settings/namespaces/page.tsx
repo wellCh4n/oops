@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus } from "lucide-react"
+import { Plus, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,20 +32,33 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { toast } from "sonner"
-import { fetchNamespaces, createNamespace } from "@/lib/api/namespaces"
+import { fetchNamespaces, createNamespace, updateNamespace } from "@/lib/api/namespaces"
+import { Namespace } from "@/lib/api/types"
 
 const formSchema = z.object({
   name: z.string().min(1, "名称不能为空"),
+  description: z.string().optional(),
 })
 
 export default function NamespacesPage() {
-  const [namespaces, setNamespaces] = useState<string[]>([])
+  const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingNamespace, setEditingNamespace] = useState<Namespace | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      description: "",
+    },
+  })
+
+  const editForm = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      description: "",
     },
   })
 
@@ -57,7 +70,7 @@ export default function NamespacesPage() {
       } else {
         toast.error(res.message)
       }
-    } catch (error) {
+    } catch {
       toast.error("获取命名空间失败")
     }
   }
@@ -71,7 +84,7 @@ export default function NamespacesPage() {
         } else {
           toast.error(res.message)
         }
-      } catch (error) {
+      } catch {
         toast.error("获取命名空间失败")
       }
     })()
@@ -79,7 +92,7 @@ export default function NamespacesPage() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const res = await createNamespace(values.name)
+      const res = await createNamespace(values.name, values.description)
       if (res.success) {
         toast.success("命名空间创建成功")
         setDialogOpen(false)
@@ -88,8 +101,36 @@ export default function NamespacesPage() {
       } else {
         toast.error(res.message)
       }
-    } catch (error) {
+    } catch {
       toast.error("创建命名空间失败")
+    }
+  }
+
+  const handleEdit = (namespace: Namespace) => {
+    setEditingNamespace(namespace)
+    editForm.reset({
+      name: namespace.name,
+      description: namespace.description || "",
+    })
+    setEditDialogOpen(true)
+  }
+
+  const onEditSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!editingNamespace) return
+    
+    try {
+      const res = await updateNamespace(editingNamespace.name, values.description || "")
+      if (res.success) {
+        toast.success("命名空间更新成功")
+        setEditDialogOpen(false)
+        setEditingNamespace(null)
+        editForm.reset()
+        loadNamespaces()
+      } else {
+        toast.error(res.message)
+      }
+    } catch {
+      toast.error("更新命名空间失败")
     }
   }
 
@@ -108,19 +149,35 @@ export default function NamespacesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>名称</TableHead>
+              <TableHead>描述</TableHead>
+              <TableHead className="text-right"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {namespaces.length === 0 ? (
                <TableRow>
-                <TableCell colSpan={1} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   暂无数据
                 </TableCell>
               </TableRow>
             ) : (
               namespaces.map((ns) => (
-                <TableRow key={ns}>
-                  <TableCell>{ns}</TableCell>
+                <TableRow key={ns.id}>
+                  <TableCell>{ns.name}</TableCell>
+                  <TableCell>{ns.description || "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(ns)}
+                        title="编辑"
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        编辑
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -145,7 +202,64 @@ export default function NamespacesPage() {
                   <FormItem>
                     <FormLabel>名称</FormLabel>
                     <FormControl>
-                      <Input placeholder="default" {...field} autoComplete="off" />
+                      <Input {...field} autoComplete="off" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>描述</FormLabel>
+                    <FormControl>
+                      <Input {...field} autoComplete="off" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="submit">保存</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑命名空间</DialogTitle>
+            <DialogDescription>
+              更新命名空间的描述信息。
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+              <FormField
+                control={editForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>名称</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled autoComplete="off" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>描述</FormLabel>
+                    <FormControl>
+                      <Input {...field} autoComplete="off" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

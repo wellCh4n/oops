@@ -5,19 +5,27 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.service.PipelineService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 
@@ -77,12 +85,21 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     if (spec.getInitContainers() != null) spec.getInitContainers().forEach(c -> containers.add(c.getName()));
                     if (spec.getContainers() != null) spec.getContainers().forEach(c -> containers.add(c.getName()));
 
-                    String stepsJson = objectMapper.writeValueAsString(containers);
-                    session.sendMessage(new TextMessage("STEPS:" + stepsJson));
+                    // Send steps as JSON format
+                    String stepsJson = objectMapper.writeValueAsString(Map.of(
+                        "type", "steps",
+                        "data", containers
+                    ));
+                    session.sendMessage(new TextMessage(stepsJson));
                 }
             }
         } catch (Exception e) {
-            session.sendMessage(new TextMessage("ERROR:Failed to get pipeline steps: " + e.getMessage()));
+            // Send error as JSON format
+            String errorJson = objectMapper.writeValueAsString(Map.of(
+                "type", "error",
+                "data", "Failed to get pipeline steps: " + e.getMessage()
+            ));
+            session.sendMessage(new TextMessage(errorJson));
         }
 
         // Start watching pipeline logs
@@ -95,7 +112,11 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                 var pipeline = pipelineService.getPipeline(namespace, name, pipelineId);
                 if (pipeline == null) {
                     if (session.isOpen()) {
-                        session.sendMessage(new TextMessage("ERROR:Pipeline not found"));
+                        String errorJson = objectMapper.writeValueAsString(Map.of(
+                            "type", "error",
+                            "data", "Pipeline not found"
+                        ));
+                        session.sendMessage(new TextMessage(errorJson));
                     }
                     return;
                 }
@@ -108,7 +129,11 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     var job = client.batch().v1().jobs().inNamespace(workNamespace).withName(jobName).get();
                     if (job == null) {
                         if (session.isOpen()) {
-                            session.sendMessage(new TextMessage("ERROR:Job not found"));
+                            String errorJson = objectMapper.writeValueAsString(Map.of(
+                                "type", "error",
+                                "data", "Job not found"
+                            ));
+                            session.sendMessage(new TextMessage(errorJson));
                         }
                         return;
                     }
@@ -120,21 +145,27 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 
                     for (String containerName : containers) {
                         var pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
-                                .waitUntilCondition(java.util.Objects::nonNull, 2, java.util.concurrent.TimeUnit.MINUTES);
+                                .waitUntilCondition(Objects::nonNull, 2, TimeUnit.MINUTES);
 
                         if (pod == null) continue;
 
                         client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
-                                .waitUntilCondition(p -> isContainerReady(p, containerName), 2, java.util.concurrent.TimeUnit.MINUTES);
+                                .waitUntilCondition(p -> isContainerReady(p, containerName), 2, TimeUnit.MINUTES);
 
                         try (var logWatch = client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
                                 .inContainer(containerName)
                                 .watchLog()) {
                             
-                            try (var reader = new java.io.BufferedReader(new java.io.InputStreamReader(logWatch.getOutput(), java.nio.charset.StandardCharsets.UTF_8))) {
+                            try (var reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8))) {
                                 String line;
                                 while (session.isOpen() && (line = reader.readLine()) != null) {
-                                    session.sendMessage(new TextMessage(containerName + ":" + line));
+                                    // Send log as JSON format
+                                    String jsonLog = objectMapper.writeValueAsString(Map.of(
+                                        "type", "step",
+                                        "data", "[" + containerName + "] " + line,
+                                        "container", containerName
+                                    ));
+                                    session.sendMessage(new TextMessage(jsonLog));
                                 }
                             }
                         }
@@ -143,18 +174,22 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
             } catch (Exception e) {
                 if (session.isOpen()) {
                     try {
-                        session.sendMessage(new TextMessage("ERROR:Failed to watch pipeline logs: " + e.getMessage()));
+                        String errorJson = objectMapper.writeValueAsString(Map.of(
+                            "type", "error",
+                            "data", "Failed to watch pipeline logs: " + e.getMessage()
+                        ));
+                        session.sendMessage(new TextMessage(errorJson));
                     } catch (IOException ignored) {}
                 }
             }
         });
     }
 
-    private boolean isContainerReady(io.fabric8.kubernetes.api.model.Pod pod, String containerName) {
+    private boolean isContainerReady(Pod pod, String containerName) {
         if (pod == null || pod.getStatus() == null) return false;
-        return java.util.stream.Stream.concat(
-                java.util.Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(java.util.List.of()).stream(),
-                java.util.Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(java.util.List.of()).stream()
+        return Stream.concat(
+                Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(List.of()).stream(),
+                Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
         ).anyMatch(s -> s.getName().equals(containerName) &&
                 (s.getState().getRunning() != null || s.getState().getTerminated() != null));
     }

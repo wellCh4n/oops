@@ -45,7 +45,7 @@ export function ApplicationBasicInfo({
     const loadData = async () => {
       try {
         const nsRes = await fetchNamespaces()
-        setNamespaces(nsRes.data)
+        setNamespaces(nsRes.data.map((ns) => ns.name))
 
         const envRes = await fetchEnvironments()
         setEnvironments(envRes.data)

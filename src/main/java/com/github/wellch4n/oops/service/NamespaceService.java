@@ -4,8 +4,7 @@ import com.github.wellch4n.oops.data.Namespace;
 import com.github.wellch4n.oops.data.NamespaceRepository;
 import org.springframework.stereotype.Service;
 
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
 
 /**
  * @author wellCh4n
@@ -22,15 +21,23 @@ public class NamespaceService {
     }
 
 
-    public Set<String> getNamespaces() {
-        return namespaceRepository.findAll().stream()
-                .map(Namespace::getName)
-                .collect(Collectors.toSet());
+    public List<Namespace> getNamespaces() {
+        return namespaceRepository.findAll();
     }
 
-    public void createNamespace(String name) {
+    public void createNamespace(String name, String description) {
         Namespace namespace = new Namespace();
         namespace.setName(name);
+        namespace.setDescription(description);
+        namespaceRepository.save(namespace);
+    }
+
+    public void updateNamespace(String name, String description) {
+        Namespace namespace = namespaceRepository.findFirstByName(name);
+        if (namespace == null) {
+            throw new RuntimeException("Namespace not found");
+        }
+        namespace.setDescription(description);
         namespaceRepository.save(namespace);
     }
 }

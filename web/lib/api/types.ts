@@ -29,6 +29,26 @@ export interface Workspace {
   name: string
 }
 
+export interface Namespace {
+  id: string
+  name: string
+  description?: string
+}
+
+export interface NodeStatus {
+  name: string
+  ready: boolean
+  roles: string
+  internalIP: string
+  kubeletVersion: string
+  osImage: string
+  containerRuntimeVersion: string
+  cpu: string
+  memory: string
+  pods: string
+  creationTimestamp: string
+}
+
 export interface Application {
   id: string
   workspaceId: string

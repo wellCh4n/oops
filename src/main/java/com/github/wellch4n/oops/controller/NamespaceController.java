@@ -6,11 +6,12 @@ import com.github.wellch4n.oops.service.NamespaceService;
 import com.github.wellch4n.oops.data.Namespace;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Set;
+import java.util.List;
 
 /**
  * @author wellCh4n
@@ -29,13 +30,19 @@ public class NamespaceController {
     }
 
     @GetMapping
-    public Result<Set<String>> getNamespaces() {
+    public Result<List<Namespace>> getNamespaces() {
         return Result.success(namespaceService.getNamespaces());
     }
 
     @PostMapping
     public Result<Boolean> createNamespace(@RequestBody Namespace namespace) {
-        namespaceService.createNamespace(namespace.getName());
+        namespaceService.createNamespace(namespace.getName(), namespace.getDescription());
+        return Result.success(true);
+    }
+
+    @PutMapping
+    public Result<Boolean> updateNamespace(@RequestBody Namespace namespace) {
+        namespaceService.updateNamespace(namespace.getName(), namespace.getDescription());
         return Result.success(true);
     }
 }

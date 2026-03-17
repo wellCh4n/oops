@@ -59,25 +59,46 @@ export default function PipelineDetailPage({ params }: PageProps) {
       ws.onmessage = (event) => {
         const message = event.data
         
-        // Handle different message types
-        if (message.startsWith("STEPS:")) {
-          try {
-            const stepNames = JSON.parse(message.substring(6)) as string[]
-            setSteps(stepNames)
-          } catch (e) {
-            console.error("Failed to parse steps", e)
+        try {
+          // Try to parse as JSON
+          const jsonData = JSON.parse(message)
+          
+          // Handle different message types based on type field
+          if (jsonData.type === "steps") {
+            // Handle steps list
+            setSteps(jsonData.data as string[])
+          } else if (jsonData.type === "step") {
+            // Handle step log
+            setLogs(prev => [...prev, jsonData.data as string])
+            setActiveStep(jsonData.container as string)
+          } else if (jsonData.type === "error") {
+            // Handle error messages
+            console.error("Pipeline error:", jsonData.data)
+          } else {
+            // Fallback for unknown types
+            console.warn("Unknown message type:", jsonData.type)
           }
-        } else if (message.startsWith("ERROR:")) {
-          console.error("Pipeline error:", message.substring(6))
-        } else if (message.includes(":")) {
-          // Format: "stepName:logLine"
-          const [stepName, ...logParts] = message.split(":")
-          const logLine = logParts.join(":") // Handle case where log line contains colons
-          setLogs(prev => [...prev, logLine])
-          setActiveStep(stepName)
-        } else {
-          // Fallback for plain log messages
-          setLogs(prev => [...prev, message])
+        } catch (e) {
+          // Fallback for non-JSON messages (backward compatibility)
+          if (message.startsWith("STEPS:")) {
+            try {
+              const stepNames = JSON.parse(message.substring(6)) as string[]
+              setSteps(stepNames)
+            } catch (parseError) {
+              console.error("Failed to parse legacy steps format", parseError)
+            }
+          } else if (message.startsWith("ERROR:")) {
+            console.error("Pipeline error:", message.substring(6))
+          } else if (message.includes(":")) {
+            // Legacy format: "stepName:logLine"
+            const [stepName, ...logParts] = message.split(":")
+            const logLine = logParts.join(":")
+            setLogs(prev => [...prev, logLine])
+            setActiveStep(stepName)
+          } else {
+            // Fallback for plain log messages
+            setLogs(prev => [...prev, message])
+          }
         }
       }
 
