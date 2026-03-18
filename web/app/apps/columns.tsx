@@ -1,8 +1,9 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity, List } from "lucide-react"
+import { Pencil, Rocket, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Copyable } from "@/components/ui/copyable"
 import { Application } from "@/lib/api/types"
 
 // Define the shape of our table meta to include handlers
@@ -16,6 +17,7 @@ export const columns: ColumnDef<Application>[] = [
   {
     accessorKey: "name",
     header: "名称",
+    cell: ({ row }) => <Copyable value={row.original.name} className="font-sans" />,
   },
   {
     accessorKey: "description",

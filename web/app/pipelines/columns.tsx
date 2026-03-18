@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Pipeline } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Copyable } from "@/components/ui/copyable"
 import { Eye, Ban } from "lucide-react"
 
 export const getPipelineColumns = (
@@ -13,7 +14,7 @@ export const getPipelineColumns = (
   {
     accessorKey: "id",
     header: "ID",
-    cell: ({ row }) => <span className="font-mono text-xs">{row.original.id}</span>
+    cell: ({ row }) => <Copyable value={row.original.id} />
   },
   {
     accessorKey: "environment",
