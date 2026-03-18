@@ -6,9 +6,7 @@ import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
 import com.github.wellch4n.oops.service.PipelineService;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -121,6 +119,12 @@ public class ApplicationController {
     @PutMapping("/{name}/service")
     public Result<Boolean> updateService(@PathVariable String namespace, @PathVariable String name, @RequestBody ApplicationServiceConfig config) {
         return Result.success(applicationService.updateApplicationServiceConfig(namespace, name, config));
+    }
+
+    @GetMapping("/{name}/service/cluster-domain")
+    public Result<String> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
+                                           @RequestParam String env) {
+        return Result.success(applicationService.getClusterDomain(namespace, name, env));
     }
 
     @GetMapping("/{name}/status")

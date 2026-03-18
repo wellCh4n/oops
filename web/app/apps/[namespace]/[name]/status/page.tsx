@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
-import { getApplicationStatus, restartApplicationPod } from "@/lib/api/applications"
+import { getApplicationStatus, restartApplicationPod, getClusterDomain } from "@/lib/api/applications"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { ApplicationPodStatus, Environment } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
+import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
@@ -37,6 +38,7 @@ export default function ApplicationStatusPage() {
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
+  const [clusterDomain, setClusterDomain] = useState<string>("")
 
   // Fetch environments on mount
   useEffect(() => {
@@ -88,6 +90,11 @@ export default function ApplicationStatusPage() {
         if (showLoading) setLoading(false)
       }
     }
+
+    // Fetch cluster domain
+    getClusterDomain(namespace, name, selectedEnv)
+      .then(res => setClusterDomain(res.data ?? ""))
+      .catch(() => setClusterDomain(""))
 
     // Initial fetch
     fetchStatus(true)
@@ -154,6 +161,13 @@ export default function ApplicationStatusPage() {
             ))}
           </TabsList>
         </Tabs>
+      )}
+
+      {clusterDomain && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">内部域名: </span>
+          <Copyable value={clusterDomain} />
+        </div>
       )}
 
       <div className="rounded-md">

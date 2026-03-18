@@ -249,6 +249,14 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
   return response.json();
 };
 
+export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<string>> => {
+  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch cluster domain");
+  }
+  return response.json();
+};
+
 export const getLastSuccessfulBranch = async (namespace: string, name: string): Promise<ApiResponse<string>> => {
   const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/last-successful-branch`);
   if (!response.ok) {

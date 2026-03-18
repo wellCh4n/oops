@@ -4,23 +4,13 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import io.fabric8.kubernetes.api.model.Container;
-import io.fabric8.kubernetes.client.dsl.LogWatch;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author wellCh4n
@@ -30,6 +20,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @Slf4j
 @Service
 public class ApplicationService {
+
+    private static final String CLUSTER_SUFFIX = "cluster.local";
+    private static final String CLUSTER_DOMAIN_FORMAT = "%s.%s.svc.%s";
 
     private final ApplicationRepository applicationRepository;
     private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
@@ -228,82 +221,31 @@ public class ApplicationService {
         }
     }
 
-    public SseEmitter getApplicationPodLogs(String namespace, String name, String podName, String environmentName) {
-        log.info("Starting to stream logs for pod {} in environment {}", podName, environmentName);
-        SseEmitter emitter = new SseEmitter(60 * 60 * 1000L);
-        AtomicBoolean closed = new AtomicBoolean(false);
-        AtomicReference<InputStream> activeStream = new AtomicReference<>();
-
-        Runnable cleanup = () -> {
-            if (!closed.compareAndSet(false, true)) return;
-            InputStream stream = activeStream.getAndSet(null);
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (Exception ignored) {
-                }
+    public String getClusterDomain(String namespace, String name, String environmentName) {
+        try {
+            Environment environment = environmentRepository.findFirstByName(environmentName);
+            if (environment == null) {
+                throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
-        };
+            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                var services = client.services().inNamespace(namespace).withLabel("oops.app.name", name).list().getItems();
 
-        emitter.onCompletion(cleanup);
-        emitter.onTimeout(() -> {
-            cleanup.run();
-            emitter.complete();
-        });
-        emitter.onError((e) -> cleanup.run());
-
-        Thread.startVirtualThread(() -> {
-            while (!closed.get()) {
-                try {
-                    Thread.sleep(15_000);
-                    emitter.send(SseEmitter.event().comment("keepalive"));
-                } catch (Exception e) {
-                    cleanup.run();
-                    break;
+                if (services.isEmpty()) {
+                    return null;
                 }
+
+                var service = services.getFirst();
+                String serviceName = service.getMetadata().getName();
+                String serviceNamespace = service.getMetadata().getNamespace();
+
+
+
+                return String.format(CLUSTER_DOMAIN_FORMAT, serviceName, serviceNamespace, CLUSTER_SUFFIX);
+
             }
-        });
-
-        Thread.startVirtualThread(() -> {
-            log.info("Virtual thread started for streaming logs of pod {} in environment {}", podName, environmentName);
-            try {
-                Environment environment = environmentRepository.findFirstByName(environmentName);
-                if (environment == null) {
-                    throw new IllegalArgumentException("Environment not found: " + environmentName);
-                }
-
-                try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-                    client.pods().inNamespace(namespace).withName(podName).waitUntilReady(10, TimeUnit.SECONDS);
-
-                    try (LogWatch watch = client.pods().inNamespace(namespace).withName(podName).watchLog()) {
-
-                        activeStream.set(watch.getOutput());
-
-                        BufferedReader bufferedReader = new BufferedReader(
-                                new InputStreamReader(watch.getOutput(), StandardCharsets.UTF_8)
-                        );
-
-                        String line;
-                        while (!closed.get() && (line = bufferedReader.readLine()) != null) {
-                            SseEmitter.SseEventBuilder event = SseEmitter.event()
-                                    .name("log")
-                                    .data(line);
-                            emitter.send(event);
-                        }
-
-                        activeStream.compareAndSet(watch.getOutput(), null);
-
-                        if (!closed.get()) {
-                            log.info("Finished streaming logs for pod {} in environment {}", podName, environmentName);
-                            emitter.complete();
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                cleanup.run();
-                emitter.complete();
-            }
-        });
-        return emitter;
+        } catch (Exception e) {
+            log.error("Failed to get cluster domain: {}", e.getMessage(), e);
+        }
+        return null;
     }
 }
