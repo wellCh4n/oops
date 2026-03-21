@@ -59,7 +59,10 @@ export function DataTable<TData, TValue>({
     return table.getRowModel().rows.map((row) => (
       <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
         {row.getVisibleCells().map((cell) => (
-          <TableCell key={cell.id}>
+          <TableCell
+            key={cell.id}
+            style={cell.column.columnDef.size !== undefined ? { width: cell.column.columnDef.size, minWidth: cell.column.columnDef.size } : undefined}
+          >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </TableCell>
         ))}
@@ -74,7 +77,10 @@ export function DataTable<TData, TValue>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
+                <TableHead
+                  key={header.id}
+                  style={header.column.columnDef.size !== undefined ? { width: header.column.columnDef.size, minWidth: header.column.columnDef.size } : undefined}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(header.column.columnDef.header, header.getContext())}

@@ -31,9 +31,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="overflow-x-auto">
         <HeaderTitle />
-        <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-y-auto">
+        <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-y-auto min-w-[720px]">
           {children}
         </div>
       </SidebarInset>

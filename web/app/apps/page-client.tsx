@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
 import { columns } from "./columns"
 import { Application } from "@/lib/api/types"
-import { getApplications, getApplication, deleteApplication } from "@/lib/api/applications"
+import { getApplications, getApplication } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { useRouter, usePathname } from "next/navigation"
 import {
@@ -130,14 +130,6 @@ export default function ClientApps({
     router.push(`/apps/${app.namespace}/${app.name}`)
   }
 
-  const handleDelete = (id: string) => {
-    deleteApplication(selectedNamespace, id).then(() => {
-      setApplications(applications.filter(app => app.id !== id))
-      toast.success("Application deleted successfully")
-    }).catch(() => {
-      toast.error("Failed to delete application")
-    })
-  }
 
   const handlePublish = (app: Application) => {
     router.push(`/apps/${app.namespace}/${app.name}/publish`)
@@ -151,7 +143,7 @@ export default function ClientApps({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight">应用</h2>
+          <h2 className="text-2xl font-bold tracking-tight shrink-0">应用</h2>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
             <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>

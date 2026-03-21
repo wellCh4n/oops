@@ -14,9 +14,10 @@ export const getPipelineColumns = (
   {
     accessorKey: "id",
     header: "ID",
+    size: 300,
     cell: ({ row }) => (
-      <div className="whitespace-normal break-all">
-        <Copyable value={row.original.id} />
+      <div className="whitespace-nowrap">
+        <Copyable value={row.original.id} maxLength={Infinity} />
       </div>
     ),
   },
