@@ -139,6 +139,10 @@ export default function ClientApps({
     router.push(`/apps/${app.namespace}/${app.name}/status`)
   }
 
+  const handlePipelines = (app: Application) => {
+    router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -190,6 +194,7 @@ export default function ClientApps({
           onEdit: handleEdit,
           onPublish: handlePublish,
           onStatus: handleStatus,
+          onPipelines: handlePipelines,
         }}
       />
 

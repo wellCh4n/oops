@@ -4,6 +4,7 @@ import { use, useState, useEffect, useRef } from "react"
 import { getPipeline } from "@/lib/api/pipelines"
 import { Pipeline } from "@/lib/api/types"
 import { API_BASE_URL } from "@/lib/api/config"
+import { getToken } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { Copyable } from "@/components/ui/copyable"
 import { toast } from "sonner"
@@ -46,7 +47,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
       ? API_BASE_URL.replace(/^http/, 'ws')
       : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log`
+    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log?token=${getToken()}`
     let ws: WebSocket | null = null
 
     // Use a small timeout to prevent double connection in React Strict Mode

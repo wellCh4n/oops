@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity } from "lucide-react"
+import { Pencil, Rocket, Activity, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Application } from "@/lib/api/types"
@@ -11,6 +11,7 @@ interface TableMeta {
   onEdit: (application: Application) => void
   onPublish: (application: Application) => void
   onStatus: (application: Application) => void
+  onPipelines: (application: Application) => void
 }
 
 export const columns: ColumnDef<Application>[] = [
@@ -61,6 +62,15 @@ export const columns: ColumnDef<Application>[] = [
           >
             <Activity className="mr-2 h-4 w-4" />
             状态
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => meta?.onPipelines(application)}
+            title="流水线"
+          >
+            <GitBranch className="mr-2 h-4 w-4" />
+            流水线
           </Button>
         </div>
       )

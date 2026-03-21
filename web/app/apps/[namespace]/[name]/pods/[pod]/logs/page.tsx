@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { API_BASE_URL } from "@/lib/api/config"
+import { getToken } from "@/lib/auth"
 
 export default function ApplicationPodLogsPage() {
   const params = useParams()
@@ -30,7 +31,7 @@ export default function ApplicationPodLogsPage() {
       ? API_BASE_URL.replace(/^http/, 'ws')
       : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}`
+    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}&token=${getToken()}`
     let ws: WebSocket | null = null
 
     // Use a small timeout to prevent double connection in React Strict Mode

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useCallback, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
 import { getPipelines, stopPipeline } from "@/lib/api/pipelines"
 import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
@@ -20,98 +20,113 @@ import {
 } from "@/components/ui/select"
 
 export default function PipelinesPage() {
+  return (
+    <Suspense>
+      <PipelinesContent />
+    </Suspense>
+  )
+}
+
+function PipelinesContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
-  const [page, setPage] = useState(0)
-  const [size, setSize] = useState(20)
   const [hasNext, setHasNext] = useState(false)
-  
-  const [namespaces, setNamespaces] = useState<{id: string, name: string}[]>([])
-  const [selectedNamespace, setSelectedNamespace] = useState<string>("")
-  
-  const [applications, setApplications] = useState<Application[]>([])
-  const [selectedApp, setSelectedApp] = useState<string>("")
-  
-  const [environments, setEnvironments] = useState<string[]>([])
-  const [selectedEnv, setSelectedEnv] = useState<string>("all")
 
-  // Fetch namespaces on mount
+  const [namespaces, setNamespaces] = useState<{id: string, name: string}[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
+  const [environments, setEnvironments] = useState<string[]>([])
+
+  const [initialized, setInitialized] = useState(false)
+
+  const selectedNamespace = searchParams.get("namespace") ?? ""
+  const selectedApp = searchParams.get("app") ?? ""
+  const selectedEnv = searchParams.get("env") ?? "all"
+  const page = Number(searchParams.get("page") ?? "0")
+  const size = 20
+
+  const updateParams = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v) params.set(k, v)
+      else params.delete(k)
+    })
+    router.replace(`/pipelines?${params.toString()}`)
+  }, [router, searchParams])
+
+  // Load namespaces once
   useEffect(() => {
-    const loadNamespaces = async () => {
+    const load = async () => {
       try {
         const res = await fetchNamespaces()
         if (res.data && Array.isArray(res.data)) {
           const nsList = res.data.map((ns) => ({ id: ns.name, name: ns.name }))
           setNamespaces(nsList)
-          if (nsList.length > 0) {
-            setSelectedNamespace(nsList[0].id)
+          if (!searchParams.get("namespace") && nsList.length > 0) {
+            updateParams({ namespace: nsList[0].id, page: "0" })
           }
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to fetch namespaces")
+      } finally {
+        setInitialized(true)
       }
     }
-    loadNamespaces()
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Fetch applications when namespace changes
+  // Load applications when namespace changes
   useEffect(() => {
-    const loadApplications = async () => {
-      if (!selectedNamespace) {
-        setApplications([])
-        setSelectedApp("")
-        setEnvironments([])
-        setSelectedEnv("all")
-        return
-      }
+    if (!selectedNamespace) {
+      setApplications([])
+      return
+    }
+    const load = async () => {
       try {
         const res = await getApplications(selectedNamespace)
         if (res.data) {
           setApplications(res.data)
-          if (res.data.length > 0) {
-            setSelectedApp(res.data[0].name)
-          } else {
-             setSelectedApp("")
+          if (!searchParams.get("app") && res.data.length > 0) {
+            updateParams({ app: res.data[0].name, page: "0" })
           }
         }
-      } catch (error) {
+      } catch {
         toast.error("Failed to fetch applications")
         setApplications([])
-        setSelectedApp("")
       }
     }
-    loadApplications()
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace])
 
+  // Load environments when app changes
   useEffect(() => {
-    const loadEnvironments = async () => {
-        if (!selectedNamespace || !selectedApp) {
-            setEnvironments([])
-            setSelectedEnv("all")
-            return
-        }
-        try {
-            const res = await getApplicationBuildEnvConfigs(selectedNamespace, selectedApp)
-            if (res.data) {
-                setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
-                setSelectedEnv("all")
-            }
-        } catch (error) {
-            console.error("Failed to fetch environments:", error)
-            setEnvironments([])
-            setSelectedEnv("all")
-        }
+    if (!selectedNamespace || !selectedApp) {
+      setEnvironments([])
+      return
     }
-    loadEnvironments()
+    const load = async () => {
+      try {
+        const res = await getApplicationBuildEnvConfigs(selectedNamespace, selectedApp)
+        if (res.data) {
+          setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
+        }
+      } catch {
+        setEnvironments([])
+      }
+    }
+    load()
   }, [selectedNamespace, selectedApp])
 
-  const fetchPipelines = async () => {
+  // Fetch pipelines
+  const fetchPipelines = useCallback(async () => {
     if (!selectedNamespace || !selectedApp) {
-        setPipelines([])
-        return
+      setPipelines([])
+      return
     }
-
     setLoading(true)
     try {
       const res = await getPipelines(selectedNamespace, selectedApp, selectedEnv, page, size)
@@ -119,16 +134,16 @@ export default function PipelinesPage() {
         setPipelines(res.data)
         setHasNext(res.data.length === size)
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to fetch pipelines")
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedNamespace, selectedApp, selectedEnv, page, size])
 
   useEffect(() => {
-    fetchPipelines()
-  }, [selectedNamespace, selectedApp, selectedEnv, page, size])
+    if (initialized) fetchPipelines()
+  }, [initialized, fetchPipelines])
 
   const handleView = (pipeline: Pipeline) => {
     router.push(`/apps/${selectedNamespace}/${selectedApp}/pipelines/${pipeline.id}`)
@@ -139,7 +154,7 @@ export default function PipelinesPage() {
       await stopPipeline(selectedNamespace, selectedApp, pipeline.id)
       toast.success("Pipeline stop requested")
       fetchPipelines()
-    } catch (error) {
+    } catch {
       toast.error("Failed to stop pipeline")
     }
   }
@@ -148,11 +163,11 @@ export default function PipelinesPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1 flex-wrap">
-          <h2 className="text-2xl font-bold tracking-tight whitespace-nowrap">流水线</h2>
+          <h2 className="text-2xl font-bold tracking-tight whitespace-nowrap shrink-0">流水线</h2>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
-            <Select value={selectedNamespace} onValueChange={setSelectedNamespace}>
-              <SelectTrigger className="w-[150px]">
+            <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="选择命名空间" />
               </SelectTrigger>
               <SelectContent>
@@ -164,8 +179,8 @@ export default function PipelinesPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">应用:</span>
-            <Select value={selectedApp} onValueChange={setSelectedApp} disabled={!selectedNamespace}>
-              <SelectTrigger className="w-[150px]">
+            <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="选择应用" />
               </SelectTrigger>
               <SelectContent>
@@ -177,8 +192,8 @@ export default function PipelinesPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">环境:</span>
-            <Select value={selectedEnv} onValueChange={setSelectedEnv} disabled={!selectedNamespace || !selectedApp}>
-              <SelectTrigger className="w-[150px]">
+            <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="选择环境" />
               </SelectTrigger>
               <SelectContent>
@@ -195,7 +210,7 @@ export default function PipelinesPage() {
           刷新
         </Button>
       </div>
-      
+
       <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} loading={loading} />
       {selectedApp && (
         <div className="flex items-center justify-end gap-2 mt-2">
@@ -203,7 +218,7 @@ export default function PipelinesPage() {
             variant="outline"
             size="sm"
             disabled={page === 0 || loading}
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            onClick={() => updateParams({ page: String(page - 1) })}
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             上一页
@@ -213,7 +228,7 @@ export default function PipelinesPage() {
             variant="outline"
             size="sm"
             disabled={!hasNext || loading}
-            onClick={() => setPage((p) => p + 1)}
+            onClick={() => updateParams({ page: String(page + 1) })}
           >
             下一页
             <ChevronRight className="ml-2 h-4 w-4" />

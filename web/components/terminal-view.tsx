@@ -6,6 +6,7 @@ import { FitAddon } from "@xterm/addon-fit"
 import { WebLinksAddon } from "@xterm/addon-web-links"
 import "@xterm/xterm/css/xterm.css"
 import { API_BASE_URL } from "@/lib/api/config"
+import { getToken } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 
 interface TerminalViewProps {
@@ -75,7 +76,7 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
             ? API_BASE_URL.replace(/^http/, 'ws')
             : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-        const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/terminal?environment=${env}`
+        const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/terminal?environment=${env}&token=${getToken()}`
 
         let ws: WebSocket | null = null
 
