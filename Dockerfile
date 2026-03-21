@@ -18,7 +18,7 @@ ENV NODE_ENV=production \
     BACKEND_PORT=8080
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates nginx apache2-utils \
+    && apt-get install -y --no-install-recommends ca-certificates nginx \
     && rm -f /etc/nginx/sites-enabled/default \
     && rm -rf /var/lib/apt/lists/*
 

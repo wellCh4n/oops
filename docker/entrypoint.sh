@@ -3,28 +3,6 @@ set -e
 
 export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -XX:+ExitOnOutOfMemoryError"
 
-if [ -n "${BASIC_AUTH_USER:-}" ] || [ -n "${BASIC_AUTH_PASS:-}" ]; then
-  if [ -z "${BASIC_AUTH_USER:-}" ] || [ -z "${BASIC_AUTH_PASS:-}" ]; then
-    echo "BASIC_AUTH_USER 和 BASIC_AUTH_PASS 必须同时设置" >&2
-    exit 1
-  fi
-  if ! command -v htpasswd >/dev/null 2>&1; then
-    echo "找不到 htpasswd，请在镜像中安装 apache2-utils" >&2
-    exit 1
-  fi
-  mkdir -p /etc/nginx
-  printf "%s\n" "${BASIC_AUTH_PASS}" | htpasswd -ic /etc/nginx/.htpasswd "${BASIC_AUTH_USER}"
-  # 调整属组与权限，确保 Nginx 进程可读
-  if getent group www-data >/dev/null 2>&1; then
-    chgrp www-data /etc/nginx/.htpasswd || true
-    chmod 640 /etc/nginx/.htpasswd || true
-  elif getent group nginx >/dev/null 2>&1; then
-    chgrp nginx /etc/nginx/.htpasswd || true
-    chmod 640 /etc/nginx/.htpasswd || true
-  else
-    chmod 644 /etc/nginx/.htpasswd || true
-  fi
-fi
 
 CONFIG_ARGS=""
 if [ -n "${SPRING_CONFIG_LOCATION:-}" ]; then
