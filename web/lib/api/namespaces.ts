@@ -1,8 +1,8 @@
-import { API_BASE_URL } from "./config"
+import { apiFetch } from "./client"
 import { ApiResponse, Namespace } from "./types"
 
 export async function fetchNamespaces(): Promise<ApiResponse<Namespace[]>> {
-  const res = await fetch(`${API_BASE_URL}/api/namespaces`)
+  const res = await apiFetch(`/api/namespaces`)
   if (!res.ok) {
     throw new Error("Failed to fetch namespaces")
   }
@@ -10,7 +10,7 @@ export async function fetchNamespaces(): Promise<ApiResponse<Namespace[]>> {
 }
 
 export async function createNamespace(name: string, description?: string): Promise<ApiResponse<boolean>> {
-  const res = await fetch(`${API_BASE_URL}/api/namespaces`, {
+  const res = await apiFetch(`/api/namespaces`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -24,7 +24,7 @@ export async function createNamespace(name: string, description?: string): Promi
 }
 
 export async function updateNamespace(name: string, description: string): Promise<ApiResponse<boolean>> {
-  const res = await fetch(`${API_BASE_URL}/api/namespaces`, {
+  const res = await apiFetch(`/api/namespaces`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

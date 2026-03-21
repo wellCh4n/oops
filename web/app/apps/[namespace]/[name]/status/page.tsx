@@ -8,7 +8,6 @@ import { ApplicationPodStatus, Environment } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
-import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -171,18 +170,11 @@ export default function ApplicationStatusPage() {
       )}
 
       <div className="rounded-md">
-        {loading ? (
-          <div className="p-4 space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : (
-          <DataTable 
-            columns={columns} 
-            data={podStatuses} 
-          />
-        )}
+        <DataTable
+          columns={columns}
+          data={podStatuses}
+          loading={loading}
+        />
       </div>
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>

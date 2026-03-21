@@ -42,6 +42,7 @@ const formSchema = z.object({
 
 export default function NamespacesPage() {
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
+  const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingNamespace, setEditingNamespace] = useState<Namespace | null>(null)
@@ -63,6 +64,7 @@ export default function NamespacesPage() {
   })
 
   const loadNamespaces = async () => {
+    setLoading(true)
     try {
       const res = await fetchNamespaces()
       if (res.success) {
@@ -72,22 +74,13 @@ export default function NamespacesPage() {
       }
     } catch {
       toast.error("获取命名空间失败")
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetchNamespaces()
-        if (res.success) {
-          setNamespaces(res.data)
-        } else {
-          toast.error(res.message)
-        }
-      } catch {
-        toast.error("获取命名空间失败")
-      }
-    })()
+    void loadNamespaces()
   }, [])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -154,9 +147,15 @@ export default function NamespacesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {namespaces.length === 0 ? (
-               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={3} className="py-2 text-center text-muted-foreground">
+                  加载中...
+                </TableCell>
+              </TableRow>
+            ) : namespaces.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                   暂无数据
                 </TableCell>
               </TableRow>

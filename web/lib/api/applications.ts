@@ -1,212 +1,190 @@
-import { API_BASE_URL } from "./config";
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types";
+import { apiFetch } from "./client"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types"
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications`)
   if (!response.ok) {
-    throw new Error("Failed to fetch applications");
+    throw new Error("Failed to fetch applications")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationService = async (namespace: string, name: string): Promise<ApiResponse<ApplicationServiceConfig>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application service config");
+    throw new Error("Failed to fetch application service config")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplicationService = async (
   namespace: string,
   name: string,
   config: Pick<ApplicationServiceConfig, "port" | "environmentConfigs">
 ): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to update application service config");
+    throw new Error("Failed to update application service config")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplication = async (namespace: string, name: string): Promise<ApiResponse<Application>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application");
+    throw new Error("Failed to fetch application")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const createApplication = async (application: Partial<Application>): Promise<ApiResponse<string>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${application.namespace}/applications`, {
+  const response = await apiFetch(`/api/namespaces/${application.namespace}/applications`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(application),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to create application");
+    throw new Error("Failed to create application")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplication = async (application: Partial<Application>): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${application.namespace}/applications/${application.name}`, {
+  const response = await apiFetch(`/api/namespaces/${application.namespace}/applications/${application.name}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(application),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to update application");
+    throw new Error("Failed to update application")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const deleteApplication = async (namespace: string, id: string): Promise<void> => {
-  // Assuming delete API structure, though not explicitly requested yet.
-  // Using ID or Name? Usually name in K8s, but let's stick to ID if that's what we have.
-  // User asked for GET /api/namespaces/{namespace}/applications/{name} as search.
-  // I'll leave delete for now or assume standard REST.
-  // But wait, the list has ID.
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${id}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${id}`, {
     method: "DELETE",
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to delete application");
+    throw new Error("Failed to delete application")
   }
-};
+}
 
 export const getApplicationBuildConfig = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildConfig>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/build/config`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/build/config`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application build config");
+    throw new Error("Failed to fetch application build config")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplicationBuildConfig = async (namespace: string, name: string, config: ApplicationBuildConfig): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/build/config`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/build/config`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to update application build config");
+    throw new Error("Failed to update application build config")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationBuildEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/build/configs`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/build/configs`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application build environment configs");
+    throw new Error("Failed to fetch application build environment configs")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application performance environment configs");
+    throw new Error("Failed to fetch application performance environment configs")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application environments");
+    throw new Error("Failed to fetch application environments")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationConfigMaps = async (namespace: string, name: string, environment: string): Promise<ApiResponse<ConfigMap[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application config maps");
+    throw new Error("Failed to fetch application config maps")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplicationConfigMaps = async (namespace: string, name: string, environment: string, configMaps: ConfigMap[]): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/configmaps?environment=${environment}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configMaps),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to update application config maps");
+    throw new Error("Failed to update application config maps")
   }
-  return response.json();
-};
-
+  return response.json()
+}
 
 export const updateApplicationBuildEnvConfigs = async (
   namespace: string,
   name: string,
   configs: ApplicationBuildEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/build/configs`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/build/configs`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configs),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to save application build environment configs");
+    throw new Error("Failed to save application build environment configs")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplicationPerformanceEnvConfigs = async (
   namespace: string,
   name: string,
   configs: ApplicationPerformanceConfigEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configs),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to save application performance environment configs");
+    throw new Error("Failed to save application performance environment configs")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const updateApplicationEnvironments = async (
   namespace: string,
   name: string,
   configs: ApplicationEnvironment[]
 ): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/environments`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configs),
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to save application environments");
+    throw new Error("Failed to save application environments")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const deployApplication = async (
   namespace: string,
@@ -214,53 +192,47 @@ export const deployApplication = async (
   environment: string,
   branch: string = "main"
 ): Promise<ApiResponse<string>> => {
-  const params = new URLSearchParams({
-    environment,
-    branch: branch || "main",
-  })
-
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/deployments?${params.toString()}`, {
+  const params = new URLSearchParams({ environment, branch: branch || "main" })
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/deployments?${params.toString()}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+    headers: { "Content-Type": "application/json" },
+  })
   if (!response.ok) {
-    throw new Error("Failed to deploy application");
+    throw new Error("Failed to deploy application")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getApplicationStatus = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationPodStatus[]>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/status?env=${env}`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/status?env=${env}`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application status");
+    throw new Error("Failed to fetch application status")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?env=${env}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?env=${env}`, {
     method: "PUT",
-  });
+  })
   if (!response.ok) {
-    throw new Error("Failed to restart application pod");
+    throw new Error("Failed to restart application pod")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<string>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`)
   if (!response.ok) {
-    throw new Error("Failed to fetch cluster domain");
+    throw new Error("Failed to fetch cluster domain")
   }
-  return response.json();
-};
+  return response.json()
+}
 
 export const getLastSuccessfulBranch = async (namespace: string, name: string): Promise<ApiResponse<string>> => {
-  const response = await fetch(`${API_BASE_URL}/api/namespaces/${namespace}/applications/${name}/last-successful-branch`);
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/last-successful-branch`)
   if (!response.ok) {
-    throw new Error("Failed to fetch last successful branch");
+    throw new Error("Failed to fetch last successful branch")
   }
-  return response.json();
-};
+  return response.json()
+}

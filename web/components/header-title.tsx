@@ -12,7 +12,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { navConfig } from "@/lib/nav-config"
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -27,6 +27,8 @@ import { useTheme } from "next-themes"
 export function HeaderTitle() {
   const pathname = usePathname()
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const getBreadcrumbs = () => {
     const items = [{ title: "首页", url: "/" }]
@@ -79,7 +81,7 @@ export function HeaderTitle() {
             size="icon"
             aria-label="切换主题"
           >
-            {resolvedTheme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            {mounted && resolvedTheme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

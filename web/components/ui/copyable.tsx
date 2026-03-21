@@ -5,15 +5,21 @@ import { cn } from "@/lib/utils"
 
 interface CopyableProps {
   value: string
+  maxLength?: number
   className?: string
   displayClassName?: string
 }
 
-export function Copyable({ value, className, displayClassName }: CopyableProps) {
+export function Copyable({ value, maxLength = 10, className, displayClassName }: CopyableProps) {
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value)
     toast.success("已复制")
   }
+
+  const display =
+    value.length > maxLength
+      ? `${value.slice(0, 5)}...${value.slice(-5)}`
+      : value
 
   return (
     <button
@@ -23,9 +29,9 @@ export function Copyable({ value, className, displayClassName }: CopyableProps) 
         displayClassName,
         className
       )}
-      title="点击复制"
+      title={value}
     >
-      {value}
+      {display}
     </button>
   )
 }

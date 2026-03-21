@@ -38,14 +38,29 @@ export const columns: ColumnDef<Environment>[] = [
   {
     accessorKey: "kubernetesApiServer.url",
     header: "API Server URL",
+    cell: ({ row }) => (
+      <div className="whitespace-normal break-all ">
+        {row.original.kubernetesApiServer?.url ?? "-"}
+      </div>
+    ),
   },
   {
     accessorKey: "workNamespace",
     header: "工作命名空间",
+    cell: ({ row }) => (
+      <div className="whitespace-normal break-all ">
+        {row.original.workNamespace ?? "-"}
+      </div>
+    ),
   },
   {
     accessorKey: "imageRepository.url",
     header: "镜像仓库",
+    cell: ({ row }) => (
+      <div className="whitespace-normal break-all ">
+        {row.original.imageRepository?.url ?? "-"}
+      </div>
+    ),
   },
   {
     id: "actions",

@@ -151,6 +151,7 @@ export default function ClientApps({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4 flex-1">
+          <h2 className="text-2xl font-bold tracking-tight">应用</h2>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
             <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
@@ -192,6 +193,7 @@ export default function ClientApps({
       <DataTable
         columns={columns}
         data={filteredApplications}
+        loading={loading}
         meta={{
           onEdit: handleEdit,
           onPublish: handlePublish,

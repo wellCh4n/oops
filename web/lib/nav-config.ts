@@ -17,7 +17,7 @@ export const navConfig: NavGroup[] = [
     title: "集群",
     items: [
       {
-        title: "节点概况",
+        title: "节点",
         url: "/nodes",
         icon: Server,
       },
@@ -43,12 +43,12 @@ export const navConfig: NavGroup[] = [
     url: "/settings",
     items: [
       {
-        title: "用户管理",
+        title: "用户",
         url: "/settings/users",
         icon: Users,
       },
       {
-        title: "环境管理",
+        title: "环境",
         url: "/settings/environments",
         icon: Server,
       },

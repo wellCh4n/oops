@@ -62,7 +62,7 @@ export default function NodesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">节点概况</h2>
+        <h2 className="text-2xl font-bold tracking-tight">节点</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium whitespace-nowrap">环境:</span>
           <Select value={selectedEnv} onValueChange={setSelectedEnv}>
@@ -97,13 +97,13 @@ export default function NodesPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={8} className="py-2 text-center text-muted-foreground">
                   加载中...
                 </TableCell>
               </TableRow>
             ) : nodes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                   暂无数据
                 </TableCell>
               </TableRow>

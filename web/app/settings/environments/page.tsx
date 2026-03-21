@@ -121,19 +121,17 @@ export default function EnvironmentsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Input
-          placeholder="搜索环境..."
-          className="max-w-sm"
-        />
+        <h2 className="text-2xl font-bold tracking-tight">环境</h2>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
           创建环境
         </Button>
       </div>
 
-      <DataTable 
-        columns={columns} 
-        data={environments} 
+      <DataTable
+        columns={columns}
+        data={environments}
+        loading={isLoading}
         meta={{
           onView: handleView,
         }}

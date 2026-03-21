@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { LogOut } from "lucide-react"
 
 import {
   Sidebar,
@@ -18,9 +20,23 @@ import {
 } from "@/components/ui/sidebar"
 import { navConfig } from "@/lib/nav-config"
 import { usePathname } from "next/navigation"
+import { useState, useEffect } from "react"
+import { clearAuth, getUsername } from "@/lib/auth"
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [username, setUsername] = useState<string | null>(null)
+
+  useEffect(() => {
+    setUsername(getUsername())
+  }, [])
+
+  function handleLogout() {
+    clearAuth()
+    router.replace("/login")
+  }
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -71,6 +87,16 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <div className="flex items-center justify-between px-2 py-1">
+              <span className="text-sm text-muted-foreground truncate">{username}</span>
+              <button onClick={handleLogout} className="text-muted-foreground hover:text-foreground transition-colors ml-2 shrink-0 cursor-pointer" title="退出登录">
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

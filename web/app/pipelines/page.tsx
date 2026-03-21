@@ -147,11 +147,12 @@ export default function PipelinesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 flex-wrap">
+          <h2 className="text-2xl font-bold tracking-tight whitespace-nowrap">流水线</h2>
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
             <Select value={selectedNamespace} onValueChange={setSelectedNamespace}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="选择命名空间" />
               </SelectTrigger>
               <SelectContent>
@@ -161,11 +162,10 @@ export default function PipelinesPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">应用:</span>
             <Select value={selectedApp} onValueChange={setSelectedApp} disabled={!selectedNamespace}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="选择应用" />
               </SelectTrigger>
               <SelectContent>
@@ -175,11 +175,10 @@ export default function PipelinesPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium whitespace-nowrap">环境:</span>
             <Select value={selectedEnv} onValueChange={setSelectedEnv} disabled={!selectedNamespace || !selectedApp}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="选择环境" />
               </SelectTrigger>
               <SelectContent>
@@ -197,37 +196,29 @@ export default function PipelinesPage() {
         </Button>
       </div>
       
-      {!selectedApp && (
-          <div className="text-center py-10 text-muted-foreground border rounded-md border-dashed">
-            请先选择应用查看流水线
-          </div>
-      )}
-
+      <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} loading={loading} />
       {selectedApp && (
-         <>
-           <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} />
-           <div className="flex items-center justify-end gap-2 mt-2">
-             <Button
-               variant="outline"
-               size="sm"
-               disabled={page === 0 || loading}
-               onClick={() => setPage((p) => Math.max(0, p - 1))}
-             >
-               <ChevronLeft className="mr-2 h-4 w-4" />
-               上一页
-             </Button>
-             <span className="text-sm text-muted-foreground">第 {page + 1} 页</span>
-             <Button
-               variant="outline"
-               size="sm"
-               disabled={!hasNext || loading}
-               onClick={() => setPage((p) => p + 1)}
-             >
-               下一页
-               <ChevronRight className="ml-2 h-4 w-4" />
-             </Button>
-           </div>
-         </>
+        <div className="flex items-center justify-end gap-2 mt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0 || loading}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            上一页
+          </Button>
+          <span className="text-sm text-muted-foreground">第 {page + 1} 页</span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!hasNext || loading}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            下一页
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   )
