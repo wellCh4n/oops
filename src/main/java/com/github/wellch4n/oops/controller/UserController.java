@@ -34,6 +34,14 @@ public class UserController {
         return Result.success(userService.listUsers());
     }
 
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public Result<User> me(org.springframework.security.core.Authentication authentication) {
+        return userService.findByUsername(authentication.getName())
+                .map(Result::success)
+                .orElse(Result.failure("用户不存在"));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> createUser(@RequestBody CreateUserRequest request) {

@@ -21,15 +21,16 @@ import {
 import { navConfig } from "@/lib/nav-config"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { clearAuth, getUsername } from "@/lib/auth"
+import { clearAuth } from "@/lib/auth"
+import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [username, setUsername] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
   useEffect(() => {
-    setUsername(getUsername())
+    getCurrentUser().then(setCurrentUser)
   }, [])
 
   function handleLogout() {
@@ -90,7 +91,12 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <div className="flex items-center justify-between px-2 py-1">
-              <span className="text-sm text-muted-foreground truncate">{username}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm text-muted-foreground truncate">{currentUser?.username}</span>
+                {currentUser?.email && (
+                  <span className="text-xs text-muted-foreground/70 truncate">{currentUser.email}</span>
+                )}
+              </div>
               <button onClick={handleLogout} className="text-muted-foreground hover:text-foreground transition-colors ml-2 shrink-0 cursor-pointer" title="退出登录">
                 <LogOut className="h-4 w-4" />
               </button>
