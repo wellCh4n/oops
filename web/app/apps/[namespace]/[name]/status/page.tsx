@@ -9,6 +9,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { toast } from "sonner"
+import { ExternalLink } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
@@ -172,6 +173,9 @@ export default function ApplicationStatusPage() {
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">外部域名: </span>
                 <Copyable value={clusterDomain.externalDomain} maxLength={Infinity} />
+                <a href={clusterDomain.externalDomain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </div>
             )}
           </div>
