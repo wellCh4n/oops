@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo } from "./types"
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications`)
@@ -221,7 +221,7 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
   return response.json()
 }
 
-export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<string>> => {
+export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<ClusterDomainInfo>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`)
   if (!response.ok) {
     throw new Error("Failed to fetch cluster domain")

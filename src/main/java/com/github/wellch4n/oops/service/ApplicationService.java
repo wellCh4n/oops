@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import io.fabric8.kubernetes.api.model.Container;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -221,28 +222,36 @@ public class ApplicationService {
         }
     }
 
-    public String getClusterDomain(String namespace, String name, String environmentName) {
+    public ClusterDomainResponse getClusterDomain(String namespace, String name, String environmentName) {
         try {
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
                 throw new IllegalArgumentException("Environment not found: " + environmentName);
             }
+
+            String internalDomain = null;
             try (var client = environment.getKubernetesApiServer().fabric8Client()) {
                 var services = client.services().inNamespace(namespace).withLabel("oops.app.name", name).list().getItems();
-
-                if (services.isEmpty()) {
-                    return null;
+                if (!services.isEmpty()) {
+                    var service = services.getFirst();
+                    internalDomain = String.format(CLUSTER_DOMAIN_FORMAT,
+                            service.getMetadata().getName(),
+                            service.getMetadata().getNamespace(),
+                            CLUSTER_SUFFIX);
                 }
-
-                var service = services.getFirst();
-                String serviceName = service.getMetadata().getName();
-                String serviceNamespace = service.getMetadata().getNamespace();
-
-
-
-                return String.format(CLUSTER_DOMAIN_FORMAT, serviceName, serviceNamespace, CLUSTER_SUFFIX);
-
             }
+
+            String externalDomain = null;
+            var serviceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+            if (serviceConfig.isPresent()) {
+                var envConfig = serviceConfig.get().getEnvironmentConfig(environmentName);
+                if (envConfig != null && envConfig.getHost() != null && !envConfig.getHost().isBlank()) {
+                    String scheme = Boolean.TRUE.equals(envConfig.getHttps()) ? "https" : "http";
+                    externalDomain = scheme + "://" + envConfig.getHost();
+                }
+            }
+
+            return new ClusterDomainResponse(internalDomain, externalDomain);
         } catch (Exception e) {
             log.error("Failed to get cluster domain: {}", e.getMessage(), e);
         }

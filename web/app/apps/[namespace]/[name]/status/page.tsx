@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
 import { getApplicationStatus, restartApplicationPod, getClusterDomain } from "@/lib/api/applications"
 import { fetchEnvironments } from "@/lib/api/environments"
-import { ApplicationPodStatus, Environment } from "@/lib/api/types"
+import { ApplicationPodStatus, Environment, ClusterDomainInfo } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
@@ -39,7 +39,7 @@ export default function ApplicationStatusPage() {
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
-  const [clusterDomain, setClusterDomain] = useState<string>("")
+  const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
 
   // Fetch environments on mount
   useEffect(() => {
@@ -94,8 +94,8 @@ export default function ApplicationStatusPage() {
 
     // Fetch cluster domain
     getClusterDomain(namespace, name, selectedEnv)
-      .then(res => setClusterDomain(res.data ?? ""))
-      .catch(() => setClusterDomain(""))
+      .then(res => setClusterDomain(res.data ?? null))
+      .catch(() => setClusterDomain(null))
 
     // Initial fetch
     fetchStatus(true)
@@ -162,10 +162,16 @@ export default function ApplicationStatusPage() {
                 </TabsList>
               </Tabs>
             )}
-            {clusterDomain && (
+            {clusterDomain?.internalDomain && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span className="font-medium text-foreground">内部域名: </span>
-                <Copyable value={clusterDomain} maxLength={Infinity} />
+                <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
+              </div>
+            )}
+            {clusterDomain?.externalDomain && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">外部域名: </span>
+                <Copyable value={clusterDomain.externalDomain} maxLength={Infinity} />
               </div>
             )}
           </div>

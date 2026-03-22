@@ -18,7 +18,7 @@ export const columns: ColumnDef<Application>[] = [
   {
     accessorKey: "name",
     header: "名称",
-    cell: ({ row }) => <Copyable value={row.original.name} className="font-sans" />,
+    cell: ({ row }) => <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />,
   },
   {
     accessorKey: "description",

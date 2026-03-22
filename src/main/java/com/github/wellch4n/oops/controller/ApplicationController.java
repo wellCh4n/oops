@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
@@ -122,8 +123,8 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/service/cluster-domain")
-    public Result<String> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
-                                           @RequestParam String env) {
+    public Result<ClusterDomainResponse> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
+                                                          @RequestParam String env) {
         return Result.success(applicationService.getClusterDomain(namespace, name, env));
     }
 

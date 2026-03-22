@@ -1,3 +1,8 @@
+export interface ClusterDomainInfo {
+  internalDomain: string | null
+  externalDomain: string | null
+}
+
 export interface ApiResponse<T> {
   success: boolean
   message: string
