@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from "@/components/app-layout";
+import { cookies } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,11 +20,15 @@ export const metadata: Metadata = {
   description: "OOPS: Kubernetes Is All You Need.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies()
+  const sidebarState = cookieStore.get("sidebar_state")
+  const defaultSidebarOpen = sidebarState ? sidebarState.value === "true" : true
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -35,7 +40,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppLayout>{children}</AppLayout>
+          <AppLayout defaultSidebarOpen={defaultSidebarOpen}>{children}</AppLayout>
         </ThemeProvider>
       </body>
     </html>

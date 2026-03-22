@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
@@ -28,12 +28,16 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function EnvironmentsPage() {
   const router = useRouter()
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
 
   const form = useForm<EnvironmentFormValues>({
     resolver: zodResolver(environmentSchema),
@@ -95,7 +99,6 @@ export default function EnvironmentsPage() {
 
   const onSubmit = async (data: EnvironmentFormValues) => {
     try {
-      // Create
       const res = await createEnvironment(data)
       if (res.success) {
           toast.success("环境创建成功")
@@ -110,31 +113,45 @@ export default function EnvironmentsPage() {
     }
   }
 
-  const openCreateDialog = () => {
-    setDialogOpen(true)
-  }
-
   const handleView = (env: Environment) => {
     router.push(`/settings/environments/${env.id}`)
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">环境</h2>
-        <Button onClick={openCreateDialog}>
-          <Plus className="mr-2 h-4 w-4" />
-          创建环境
-        </Button>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={environments}
-        loading={isLoading}
-        meta={{
-          onView: handleView,
-        }}
+    <ContentPage title="环境">
+      <TableForm
+        options={
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium whitespace-nowrap">名称:</span>
+              <Input
+                placeholder="搜索名称..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
+                className="w-56"
+              />
+              <Button variant="outline" onClick={() => setAppliedSearch(search)}>
+                <Search className="mr-2 h-4 w-4" />
+                搜索
+              </Button>
+            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              创建环境
+            </Button>
+          </div>
+        }
+        table={
+          <DataTable
+            columns={columns}
+            data={appliedSearch ? environments.filter(e => e.name.toLowerCase().includes(appliedSearch.toLowerCase())) : environments}
+            loading={isLoading}
+            meta={{
+              onView: handleView,
+            }}
+          />
+        }
       />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -170,6 +187,6 @@ export default function EnvironmentsPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </ContentPage>
   )
 }

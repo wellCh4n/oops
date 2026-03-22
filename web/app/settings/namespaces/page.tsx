@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Pencil } from "lucide-react"
+import { Plus, Pencil, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -34,6 +34,8 @@ import * as z from "zod"
 import { toast } from "sonner"
 import { fetchNamespaces, createNamespace, updateNamespace } from "@/lib/api/namespaces"
 import { Namespace } from "@/lib/api/types"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 const formSchema = z.object({
   name: z.string().min(1, "名称不能为空"),
@@ -44,6 +46,8 @@ export default function NamespacesPage() {
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editingNamespace, setEditingNamespace] = useState<Namespace | null>(null)
 
@@ -110,7 +114,7 @@ export default function NamespacesPage() {
 
   const onEditSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!editingNamespace) return
-    
+
     try {
       const res = await updateNamespace(editingNamespace.name, values.description || "")
       if (res.success) {
@@ -128,61 +132,87 @@ export default function NamespacesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">命名空间</h2>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          创建命名空间
-        </Button>
-      </div>
-
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>名称</TableHead>
-              <TableHead>描述</TableHead>
-              <TableHead className="text-right"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={3} className="py-2 text-center text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : namespaces.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              namespaces.map((ns) => (
-                <TableRow key={ns.id}>
-                  <TableCell>{ns.name}</TableCell>
-                  <TableCell>{ns.description || "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(ns)}
-                        title="编辑"
-                      >
-                        <Pencil className="mr-2 h-4 w-4" />
-                        编辑
-                      </Button>
-                    </div>
-                  </TableCell>
+    <ContentPage title="命名空间">
+      <TableForm
+        options={
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium whitespace-nowrap">名称或描述:</span>
+              <Input
+                placeholder="搜索名称或描述..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
+                className="w-56"
+              />
+              <Button variant="outline" onClick={() => setAppliedSearch(search)}>
+                <Search className="mr-2 h-4 w-4" />
+                搜索
+              </Button>
+            </div>
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              创建命名空间
+            </Button>
+          </div>
+        }
+        table={
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead className="text-right"></TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="py-2 text-center text-muted-foreground">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : namespaces.filter(ns =>
+                    !appliedSearch ||
+                    ns.name.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                    (ns.description ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
+                  ).length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  namespaces.filter(ns =>
+                    !appliedSearch ||
+                    ns.name.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+                    (ns.description ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
+                  ).map((ns) => (
+                    <TableRow key={ns.id}>
+                      <TableCell>{ns.name}</TableCell>
+                      <TableCell>{ns.description || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(ns)}
+                            title="编辑"
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            编辑
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        }
+      />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -271,6 +301,6 @@ export default function NamespacesPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </ContentPage>
   )
 }

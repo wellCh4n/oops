@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -XX:+ExitOnOutOfMemoryError --sun-misc-unsafe-memory-access=allow"
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -XX:+ExitOnOutOfMemoryError"
 
 
 CONFIG_ARGS=""

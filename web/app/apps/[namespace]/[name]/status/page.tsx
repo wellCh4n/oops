@@ -20,13 +20,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function ApplicationStatusPage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
   const pathname = usePathname()
-  
+
   const namespace = params.namespace as string
   const name = params.name as string
   const envParam = searchParams.get("env")
@@ -46,13 +48,13 @@ export default function ApplicationStatusPage() {
         const res = await fetchEnvironments()
         if (res.data && Array.isArray(res.data) && res.data.length > 0) {
           setEnvironments(res.data)
-          
+
           // Determine initial environment
           let initialEnv = res.data[0].name
           if (envParam && res.data.some(e => e.name === envParam)) {
             initialEnv = envParam
           }
-          
+
           setSelectedEnv(initialEnv)
 
           // Sync URL if needed
@@ -145,37 +147,39 @@ export default function ApplicationStatusPage() {
   const columns = getStatusColumns(handleRestartClick, handleViewLogs, handleTerminal)
 
   return (
-    <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">运行状态</h2>
-      </div>
-      
-      {environments.length > 0 && (
-        <Tabs value={selectedEnv} onValueChange={handleTabChange} className="w-full">
-          <TabsList>
-            {environments.map((env) => (
-              <TabsTrigger key={env.id} value={env.name} className="px-8">
-                {env.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      )}
-
-      {clusterDomain && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">内部域名: </span>
-          <Copyable value={clusterDomain} />
-        </div>
-      )}
-
-      <div className="rounded-md">
-        <DataTable
-          columns={columns}
-          data={podStatuses}
-          loading={loading}
-        />
-      </div>
+    <ContentPage title="运行状态">
+      <TableForm
+        options={
+          <div className="space-y-2">
+            {environments.length > 0 && (
+              <Tabs value={selectedEnv} onValueChange={handleTabChange} className="w-full">
+                <TabsList>
+                  {environments.map((env) => (
+                    <TabsTrigger key={env.id} value={env.name} className="px-8">
+                      {env.name}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            )}
+            {clusterDomain && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">内部域名: </span>
+                <Copyable value={clusterDomain} maxLength={Infinity} />
+              </div>
+            )}
+          </div>
+        }
+        table={
+          <div className="rounded-md">
+            <DataTable
+              columns={columns}
+              data={podStatuses}
+              loading={loading}
+            />
+          </div>
+        }
+      />
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
         <AlertDialogContent>
@@ -191,6 +195,6 @@ export default function ApplicationStatusPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ContentPage>
   )
 }

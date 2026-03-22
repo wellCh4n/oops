@@ -13,6 +13,8 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/api/client"
 import { isAdmin } from "@/lib/auth"
 import { columns, User } from "./columns"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -27,6 +29,7 @@ export default function UsersPage() {
   const [tableLoading, setTableLoading] = useState(true)
   const [admin, setAdmin] = useState(false)
   const [search, setSearch] = useState("")
+  const [appliedSearch, setAppliedSearch] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [editTarget, setEditTarget] = useState<User | null>(null)
   const [editRole, setEditRole] = useState<string>("USER")
@@ -180,119 +183,125 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight">用户</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">用户名或邮箱:</span>
-            <div className="flex items-center space-x-2">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索用户名或邮箱..."
-                className="w-56"
-              />
-              <Button size="icon" variant="ghost" onClick={() => {}}>
-                <Search className="h-4 w-4" />
-              </Button>
+    <ContentPage title="用户">
+      <TableForm
+        options={
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium whitespace-nowrap">用户名或邮箱:</span>
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
+                  placeholder="搜索用户名或邮箱..."
+                  className="w-56"
+                />
+                <Button variant="outline" onClick={() => setAppliedSearch(search)}>
+                  <Search className="mr-2 h-4 w-4" />
+                  搜索
+                </Button>
+              </div>
             </div>
+            {admin && (
+              <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setUsername(""); setEmail(""); setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirm(false) } }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    创建用户
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>创建用户</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleCreate} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-username">用户名</Label>
+                      <Input
+                        id="new-username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-email">邮箱（可选）</Label>
+                      <Input
+                        id="new-email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">密码</Label>
+                      <div className="relative">
+                        <Input
+                          id="new-password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className="pr-9"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-password">确认密码</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirm-password"
+                          type={showConfirm ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className="pr-9"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm(!showConfirm)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                          tabIndex={-1}
+                        >
+                          {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                        取消
+                      </Button>
+                      <Button type="submit" disabled={loading}>
+                        {loading ? "创建中..." : "创建"}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
-        </div>
-        {admin && <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setUsername(""); setEmail(""); setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirm(false) } }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              创建用户
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>创建用户</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="new-username">用户名</Label>
-                <Input
-                  id="new-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-email">邮箱（可选）</Label>
-                <Input
-                  id="new-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="user@example.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="new-password">密码</Label>
-                <div className="relative">
-                  <Input
-                    id="new-password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">确认密码</Label>
-                <div className="relative">
-                  <Input
-                    id="confirm-password"
-                    type={showConfirm ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="pr-9"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    tabIndex={-1}
-                  >
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  取消
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "创建中..." : "创建"}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>}
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={search ? users.filter(u =>
-          u.username.toLowerCase().includes(search.toLowerCase()) ||
-          (u.email ?? "").toLowerCase().includes(search.toLowerCase())
-        ) : users}
-        loading={tableLoading}
-        meta={{ onEdit: handleEdit, onChangePassword: handleChangePassword, onDelete: handleDelete, isAdmin: admin }}
+        }
+        table={
+          <DataTable
+            columns={columns}
+            data={appliedSearch ? users.filter(u =>
+              u.username.toLowerCase().includes(appliedSearch.toLowerCase()) ||
+              (u.email ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
+            ) : users}
+            loading={tableLoading}
+            meta={{ onEdit: handleEdit, onChangePassword: handleChangePassword, onDelete: handleDelete, isAdmin: admin }}
+          />
+        }
       />
 
       <Dialog open={!!editTarget} onOpenChange={(v) => { if (!v) setEditTarget(null) }}>
@@ -401,6 +410,6 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ContentPage>
   )
 }

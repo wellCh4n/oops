@@ -21,6 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function NodesPage() {
   const [environments, setEnvironments] = useState<Environment[]>([])
@@ -60,75 +62,76 @@ export default function NodesPage() {
   }, [selectedEnv])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">节点</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium whitespace-nowrap">环境:</span>
-          <Select value={selectedEnv} onValueChange={setSelectedEnv}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="选择环境" />
-            </SelectTrigger>
-            <SelectContent>
-              {environments.map((env) => (
-                <SelectItem key={env.id} value={env.name}>
-                  {env.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>节点</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>角色</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>CPU</TableHead>
-              <TableHead>内存</TableHead>
-              <TableHead>Pods</TableHead>
-              <TableHead>版本</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-2 text-center text-muted-foreground">
-                  加载中...
-                </TableCell>
-              </TableRow>
-            ) : nodes.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  暂无数据
-                </TableCell>
-              </TableRow>
-            ) : (
-              nodes.map((node) => (
-                <TableRow key={node.name}>
-                  <TableCell className="font-medium">{node.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={node.ready ? "default" : "destructive"}>
-                      {node.ready ? "Ready" : "NotReady"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{node.roles || "-"}</TableCell>
-                  <TableCell>{node.internalIP || "-"}</TableCell>
-                  <TableCell>{node.cpu || "-"}</TableCell>
-                  <TableCell>{node.memory || "-"}</TableCell>
-                  <TableCell>{node.pods || "-"}</TableCell>
-                  <TableCell>{node.kubeletVersion || "-"}</TableCell>
+    <ContentPage title="节点">
+      <TableForm
+        options={
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium whitespace-nowrap">环境:</span>
+            <Select value={selectedEnv} onValueChange={setSelectedEnv}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="选择环境" />
+              </SelectTrigger>
+              <SelectContent>
+                {environments.map((env) => (
+                  <SelectItem key={env.id} value={env.name}>
+                    {env.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        table={
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>节点</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead>角色</TableHead>
+                  <TableHead>IP</TableHead>
+                  <TableHead>CPU</TableHead>
+                  <TableHead>内存</TableHead>
+                  <TableHead>Pods</TableHead>
+                  <TableHead>版本</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="py-2 text-center text-muted-foreground">
+                      加载中...
+                    </TableCell>
+                  </TableRow>
+                ) : nodes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                      暂无数据
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  nodes.map((node) => (
+                    <TableRow key={node.name}>
+                      <TableCell className="font-medium">{node.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={node.ready ? "default" : "destructive"}>
+                          {node.ready ? "Ready" : "NotReady"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{node.roles || "-"}</TableCell>
+                      <TableCell>{node.internalIP || "-"}</TableCell>
+                      <TableCell>{node.cpu || "-"}</TableCell>
+                      <TableCell>{node.memory || "-"}</TableCell>
+                      <TableCell>{node.pods || "-"}</TableCell>
+                      <TableCell>{node.kubeletVersion || "-"}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        }
+      />
+    </ContentPage>
   )
 }
-

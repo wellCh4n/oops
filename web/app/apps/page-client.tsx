@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { ApplicationCreateDialog } from "./components/application-create-dialog"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function ClientApps({
   searchParams,
@@ -120,16 +122,9 @@ export default function ClientApps({
     }
   }
 
-  const filteredApplications = applications
-
-  const handleCreate = () => {
-    setIsCreateOpen(true)
-  }
-
   const handleEdit = (app: Application) => {
     router.push(`/apps/${app.namespace}/${app.name}`)
   }
-
 
   const handlePublish = (app: Application) => {
     router.push(`/apps/${app.namespace}/${app.name}/publish`)
@@ -144,58 +139,63 @@ export default function ClientApps({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-          <h2 className="text-2xl font-bold tracking-tight shrink-0">应用</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
-            <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="选择命名空间" />
-              </SelectTrigger>
-              <SelectContent>
-                {namespaces.map(ns => (
-                  <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">应用名称:</span>
-            <div className="flex w-full max-w-sm items-center space-x-2">
-              <Input
-                placeholder="搜索应用..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSearch()
-                  }
-                }}
-              />
-              <Button size="icon" variant="ghost" onClick={handleSearch}>
-                <Search className="h-4 w-4" />
-              </Button>
+    <ContentPage title="应用">
+      <TableForm
+        options={
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
+                <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="选择命名空间" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {namespaces.map(ns => (
+                      <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">应用名称:</span>
+                <div className="flex w-full max-w-sm items-center space-x-2">
+                  <Input
+                    placeholder="搜索应用..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch()
+                      }
+                    }}
+                  />
+                  <Button variant="outline" onClick={handleSearch}>
+                    <Search className="mr-2 h-4 w-4" />
+                    搜索
+                  </Button>
+                </div>
+              </div>
             </div>
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              创建应用
+            </Button>
           </div>
-        </div>
-        <Button onClick={handleCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          创建应用
-        </Button>
-      </div>
-
-      <DataTable
-        columns={columns}
-        data={filteredApplications}
-        loading={loading}
-        meta={{
-          onEdit: handleEdit,
-          onPublish: handlePublish,
-          onStatus: handleStatus,
-          onPipelines: handlePipelines,
-        }}
+        }
+        table={
+          <DataTable
+            columns={columns}
+            data={applications}
+            loading={loading}
+            meta={{
+              onEdit: handleEdit,
+              onPublish: handlePublish,
+              onStatus: handleStatus,
+              onPipelines: handlePipelines,
+            }}
+          />
+        }
       />
 
       <ApplicationCreateDialog
@@ -204,6 +204,6 @@ export default function ClientApps({
         namespaces={namespaces}
         defaultNamespace={selectedNamespace}
       />
-    </div>
+    </ContentPage>
   )
 }

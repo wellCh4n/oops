@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
 
 export default function PipelinesPage() {
   return (
@@ -160,81 +162,87 @@ function PipelinesContent() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1 flex-wrap">
-          <h2 className="text-2xl font-bold tracking-tight whitespace-nowrap shrink-0">流水线</h2>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
-            <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="选择命名空间" />
-              </SelectTrigger>
-              <SelectContent>
-                {namespaces.map(ns => (
-                  <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <ContentPage title="流水线">
+      <TableForm
+        options={
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
+                <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="选择命名空间" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {namespaces.map(ns => (
+                      <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">应用:</span>
+                <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="选择应用" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {applications.map(app => (
+                      <SelectItem key={app.name} value={app.name}>{app.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium whitespace-nowrap">环境:</span>
+                <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="选择环境" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部</SelectItem>
+                    {environments.map(env => (
+                      <SelectItem key={env} value={env}>{env}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchPipelines} disabled={loading || !selectedApp}>
+              <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              刷新
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">应用:</span>
-            <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="选择应用" />
-              </SelectTrigger>
-              <SelectContent>
-                {applications.map(app => (
-                  <SelectItem key={app.name} value={app.name}>{app.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">环境:</span>
-            <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="选择环境" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                {environments.map(env => (
-                  <SelectItem key={env} value={env}>{env}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={fetchPipelines} disabled={loading || !selectedApp}>
-          <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          刷新
-        </Button>
-      </div>
-
-      <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} loading={loading} />
-      {selectedApp && (
-        <div className="flex items-center justify-end gap-2 mt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page === 0 || loading}
-            onClick={() => updateParams({ page: String(page - 1) })}
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            上一页
-          </Button>
-          <span className="text-sm text-muted-foreground">第 {page + 1} 页</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!hasNext || loading}
-            onClick={() => updateParams({ page: String(page + 1) })}
-          >
-            下一页
-            <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
+        }
+        table={
+          <>
+            <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} loading={loading} />
+            {selectedApp && (
+              <div className="flex items-center justify-end gap-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0 || loading}
+                  onClick={() => updateParams({ page: String(page - 1) })}
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  上一页
+                </Button>
+                <span className="text-sm text-muted-foreground">第 {page + 1} 页</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!hasNext || loading}
+                  onClick={() => updateParams({ page: String(page + 1) })}
+                >
+                  下一页
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </>
+        }
+      />
+    </ContentPage>
   )
 }
