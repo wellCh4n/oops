@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode } from "./types"
 
 export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications`)
@@ -190,9 +190,10 @@ export const deployApplication = async (
   namespace: string,
   name: string,
   environment: string,
-  branch: string = "main"
+  branch: string = "main",
+  deployMode: DeployMode = "IMMEDIATE"
 ): Promise<ApiResponse<string>> => {
-  const params = new URLSearchParams({ environment, branch: branch || "main" })
+  const params = new URLSearchParams({ environment, branch: branch || "main", deployMode })
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/deployments?${params.toString()}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

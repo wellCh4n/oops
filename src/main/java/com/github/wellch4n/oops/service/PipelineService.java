@@ -1,10 +1,10 @@
 package com.github.wellch4n.oops.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.wellch4n.oops.data.Environment;
-import com.github.wellch4n.oops.data.Pipeline;
-import com.github.wellch4n.oops.data.PipelineRepository;
+import com.github.wellch4n.oops.config.IngressConfig;
+import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodSpec;
@@ -44,10 +44,22 @@ public class PipelineService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
+    private final ApplicationRepository applicationRepository;
+    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
+    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
+    private final IngressConfig ingressConfig;
 
-    public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService) {
+    public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
+                           ApplicationRepository applicationRepository,
+                           ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+                           ApplicationServiceConfigRepository applicationServiceConfigRepository,
+                           IngressConfig ingressConfig) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
+        this.applicationRepository = applicationRepository;
+        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
+        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
+        this.ingressConfig = ingressConfig;
     }
 
     public List<Pipeline> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
@@ -157,6 +169,53 @@ public class PipelineService {
                 java.util.Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
         ).anyMatch(s -> s.getName().equals(containerName) &&
                 (s.getState().getRunning() != null || s.getState().getTerminated() != null));
+    }
+
+    public Boolean deployPipeline(String namespace, String applicationName, String id) {
+        Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
+        if (pipeline == null) {
+            throw new RuntimeException("Pipeline not found");
+        }
+        if (!PipelineStatus.BUILD_SUCCEEDED.equals(pipeline.getStatus())) {
+            throw new RuntimeException("Pipeline is not in BUILD_SUCCEEDED state");
+        }
+
+        int claimed = pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
+        if (claimed == 0) {
+            throw new RuntimeException("Pipeline state changed concurrently, please retry");
+        }
+
+        try {
+            Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+            Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
+
+            ApplicationPerformanceConfig.EnvironmentConfig performanceConfig = null;
+            ApplicationPerformanceConfig perfConfig = applicationPerformanceConfigRepository
+                    .findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+            if (perfConfig != null && perfConfig.getEnvironmentConfigs() != null) {
+                performanceConfig = perfConfig.getEnvironmentConfigs().stream()
+                        .filter(c -> pipeline.getEnvironment().equals(c.getEnvironmentName()))
+                        .findFirst().orElse(null);
+            }
+            if (performanceConfig == null) {
+                performanceConfig = new ApplicationPerformanceConfig.EnvironmentConfig();
+            }
+
+            ApplicationServiceConfig serviceConfig = applicationServiceConfigRepository
+                    .findByNamespaceAndApplicationName(namespace, applicationName)
+                    .orElse(new ApplicationServiceConfig());
+
+            ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
+                    pipeline, application, environment, performanceConfig, serviceConfig, ingressConfig
+            );
+            artifactDeployTask.call();
+
+            pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+        } catch (Exception e) {
+            pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
+            throw new RuntimeException("Deploy failed: " + e.getMessage(), e);
+        }
+        return true;
     }
 
     public Boolean stopPipeline(String namespace, String applicationName, String id) {

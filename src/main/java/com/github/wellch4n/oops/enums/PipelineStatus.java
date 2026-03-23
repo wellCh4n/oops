@@ -5,7 +5,7 @@ package com.github.wellch4n.oops.enums;
  * @date 2025/7/5
  */
 public enum PipelineStatus {
-    INITIALIZED, RUNNING, DEPLOYING,
+    INITIALIZED, RUNNING, BUILD_SUCCEEDED, DEPLOYING,
     STOPPED,
     SUCCEEDED, ERROR
 }

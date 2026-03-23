@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.Result;
@@ -155,7 +156,8 @@ public class ApplicationController {
     public Result<String> deployApplication(@PathVariable String namespace,
                                             @PathVariable String name,
                                             @RequestParam("environment") String environment,
-                                            @RequestParam(value = "branch", defaultValue = "main") String branch) {
-        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch));
+                                            @RequestParam(value = "branch", defaultValue = "main") String branch,
+                                            @RequestParam(value = "deployMode", defaultValue = "IMMEDIATE") DeployMode deployMode) {
+        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch, deployMode));
     }
 }

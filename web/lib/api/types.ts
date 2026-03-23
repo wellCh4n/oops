@@ -108,7 +108,9 @@ export interface ApplicationPodStatus {
   podIP: string
 }
 
-export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
+export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
+
+export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 
 export interface Pipeline {
   id: string
@@ -118,6 +120,7 @@ export interface Pipeline {
   artifact: string
   environment: string
   createdTime: string
+  deployMode?: DeployMode
 }
 
 export interface ConfigMap {

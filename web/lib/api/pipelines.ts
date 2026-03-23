@@ -39,3 +39,13 @@ export const stopPipeline = async (namespace: string, name: string, id: string):
   }
   return response.json()
 }
+
+export const deployPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<boolean>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pipelines/${id}/deploy`, {
+    method: "PUT",
+  })
+  if (!response.ok) {
+    throw new Error("Failed to deploy pipeline")
+  }
+  return response.json()
+}
