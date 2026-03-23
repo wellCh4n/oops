@@ -53,4 +53,11 @@ public class PipelineController {
                                         @PathVariable String id) {
         return Result.success(pipelineService.stopPipeline(namespace, name, id));
     }
+
+    @PutMapping("/{id}/deploy")
+    public Result<Boolean> deployPipeline(@PathVariable String namespace,
+                                          @PathVariable String name,
+                                          @PathVariable String id) {
+        return Result.success(pipelineService.deployPipeline(namespace, name, id));
+    }
 }

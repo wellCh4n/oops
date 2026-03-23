@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.task.PipelineExecuteTask;
@@ -26,7 +27,7 @@ public class DeploymentService {
         this.environmentService = environmentService;
     }
 
-    public String deployApplication(String namespace, String applicationName, String environmentName, String branch) {
+    public String deployApplication(String namespace, String applicationName, String environmentName, String branch, DeployMode deployMode) {
         try {
             Environment environment = environmentService.getEnvironment(environmentName);
 
@@ -38,6 +39,7 @@ public class DeploymentService {
             pipeline.setStatus(PipelineStatus.INITIALIZED);
             pipeline.setEnvironment(environment.getName());
             pipeline.setBranch(branch);
+            pipeline.setDeployMode(deployMode != null ? deployMode : DeployMode.IMMEDIATE);
             pipelineRepository.save(pipeline);
 
             PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);

@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.job;
 
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
@@ -55,6 +56,13 @@ public class PipelineInstanceScanJob {
                 try (var client = environment.getKubernetesApiServer().fabric8Client()) {
                     Job job = client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).withName(pipeline.getName()).get();
                     if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
+                        if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
+                            pipelineRepository.updateStatusIfMatch(
+                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
+                            );
+                            continue;
+                        }
+
                         int claimed = pipelineRepository.updateStatusIfMatch(
                                 pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.DEPLOYING
                         );

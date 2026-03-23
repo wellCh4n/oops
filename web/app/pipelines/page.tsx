@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
-import { getPipelines, stopPipeline } from "@/lib/api/pipelines"
+import { getPipelines, stopPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { Pipeline, Application } from "@/lib/api/types"
@@ -161,6 +161,16 @@ function PipelinesContent() {
     }
   }
 
+  const handleDeploy = async (pipeline: Pipeline) => {
+    try {
+      await deployPipeline(selectedNamespace, selectedApp, pipeline.id)
+      toast.success("已触发发布")
+      fetchPipelines()
+    } catch {
+      toast.error("发布失败")
+    }
+  }
+
   return (
     <ContentPage title="流水线">
       <TableForm
@@ -216,7 +226,7 @@ function PipelinesContent() {
         }
         table={
           <>
-            <DataTable columns={getPipelineColumns(handleView, handleStop)} data={pipelines} loading={loading} />
+            <DataTable columns={getPipelineColumns(handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
             {selectedApp && (
               <div className="flex items-center justify-end gap-2 mt-2">
                 <Button

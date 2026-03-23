@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Rocket } from "lucide-react"
 import { toast } from "sonner"
 import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulBranch } from "@/lib/api/applications"
-import { Application, ApplicationEnvironment } from "@/lib/api/types"
+import { Application, ApplicationEnvironment, DeployMode } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,7 @@ export default function PublishPage({ params }: PageProps) {
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [branch, setBranch] = useState<string>("main")
   const [lastSuccessfulBranch, setLastSuccessfulBranch] = useState<string | null>(null)
+  const [deployMode, setDeployMode] = useState<DeployMode>("IMMEDIATE")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function PublishPage({ params }: PageProps) {
 
     setLoading(true)
     try {
-      const res = await deployApplication(namespace, name, selectedEnv, branch.trim() || "main")
+      const res = await deployApplication(namespace, name, selectedEnv, branch.trim() || "main", deployMode)
       if (res.success) {
         toast.success(`已提交发布到 ${selectedEnv}`)
         // Assuming the backend returns the pipeline ID in res.data
@@ -142,10 +143,24 @@ export default function PublishPage({ params }: PageProps) {
           />
         </div>
         
+        <div className="grid gap-2">
+          <Label>发布模式</Label>
+          <RadioGroup value={deployMode} onValueChange={(v) => setDeployMode(v as DeployMode)} className="flex flex-row gap-6">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="IMMEDIATE" id="mode-immediate" />
+              <Label htmlFor="mode-immediate">立即发布</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="MANUAL" id="mode-manual" />
+              <Label htmlFor="mode-manual">编译后手动发布</Label>
+            </div>
+          </RadioGroup>
+        </div>
+
         <div className="pt-4">
           <Button onClick={handlePublish} disabled={loading || !selectedEnv}>
             <Rocket className="mr-2 h-4 w-4" />
-            {loading ? "发布中..." : "确认发布"}
+            {loading ? "提交中..." : deployMode === "MANUAL" ? "提交编译" : "确认发布"}
           </Button>
         </div>
       </div>

@@ -5,11 +5,12 @@ import { Pipeline } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
-import { Eye, Ban } from "lucide-react"
+import { Eye, Ban, Rocket } from "lucide-react"
 
 export const getPipelineColumns = (
   onView: (pipeline: Pipeline) => void,
-  onStop: (pipeline: Pipeline) => void
+  onStop: (pipeline: Pipeline) => void,
+  onDeploy: (pipeline: Pipeline) => void
 ): ColumnDef<Pipeline>[] => [
   {
     accessorKey: "id",
@@ -34,8 +35,18 @@ export const getPipelineColumns = (
       if (status === "RUNNING" || status === "DEPLOYING") variant = "default"
       if (status === "SUCCEEDED") variant = "secondary"
       if (status === "ERROR" || status === "STOPPED") variant = "destructive"
-      
-      return <Badge variant={variant}>{status}</Badge>
+
+      const statusLabel: Record<string, string> = {
+        BUILD_SUCCEEDED: "编译完成",
+        INITIALIZED: "初始化",
+        RUNNING: "运行中",
+        DEPLOYING: "发布中",
+        SUCCEEDED: "成功",
+        ERROR: "失败",
+        STOPPED: "已停止",
+      }
+
+      return <Badge variant={variant}>{statusLabel[status] ?? status}</Badge>
     }
   },
   {
@@ -55,6 +66,12 @@ export const getPipelineColumns = (
             <Eye className="mr-2 h-4 w-4" />
             查看
           </Button>
+          {row.original.status === "BUILD_SUCCEEDED" && (
+            <Button variant="default" size="sm" onClick={() => onDeploy(row.original)}>
+              <Rocket className="mr-2 h-4 w-4" />
+              发布
+            </Button>
+          )}
           {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
             <Button variant="destructive" size="sm" onClick={() => onStop(row.original)}>
               <Ban className="mr-2 h-4 w-4" />

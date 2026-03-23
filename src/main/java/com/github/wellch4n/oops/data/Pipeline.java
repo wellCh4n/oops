@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.data;
 
+import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -23,7 +24,6 @@ public class Pipeline extends BaseDataObject {
 
     private String applicationName;
 
-    @Enumerated(EnumType.STRING)
     private PipelineStatus status;
 
     private String artifact;
@@ -31,6 +31,8 @@ public class Pipeline extends BaseDataObject {
     private String environment;
 
     private String branch;
+
+    private DeployMode deployMode;
 
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, id);
