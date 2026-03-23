@@ -69,7 +69,7 @@ export const getPipelineColumns = (
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" onClick={() => onDeploy(row.original)}>
               <Rocket className="mr-2 h-4 w-4" />
-              发布
+              应用此发布
             </Button>
           )}
           {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (

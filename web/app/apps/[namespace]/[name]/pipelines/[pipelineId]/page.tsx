@@ -1,14 +1,33 @@
 "use client"
 
 import { use, useState, useEffect, useRef } from "react"
-import { getPipeline } from "@/lib/api/pipelines"
+import { getPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { Pipeline } from "@/lib/api/types"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
+import { Rocket } from "lucide-react"
 import { toast } from "sonner"
 import dayjs from "dayjs"
+
+const statusLabel: Record<string, string> = {
+  BUILD_SUCCEEDED: "编译完成",
+  INITIALIZED: "初始化",
+  RUNNING: "运行中",
+  DEPLOYING: "发布中",
+  SUCCEEDED: "成功",
+  ERROR: "失败",
+  STOPPED: "已停止",
+}
+
+function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
+  if (status === "RUNNING" || status === "DEPLOYING") return "default"
+  if (status === "SUCCEEDED") return "secondary"
+  if (status === "ERROR" || status === "STOPPED") return "destructive"
+  return "outline"
+}
 
 interface PageProps {
   params: Promise<{
@@ -26,18 +45,31 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [activeStep, setActiveStep] = useState<string>("")
   const logContainerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const fetchPipeline = async () => {
-      try {
-        const res = await getPipeline(namespace, name, pipelineId)
-        if (res.data) {
-          setPipeline(res.data)
-        }
-      } catch (error) {
-        toast.error("Failed to fetch pipeline details")
+  const fetchPipeline = async () => {
+    try {
+      const res = await getPipeline(namespace, name, pipelineId)
+      if (res.data) {
+        setPipeline(res.data)
       }
+    } catch {
+      toast.error("Failed to fetch pipeline details")
     }
+  }
+
+  const handleDeploy = async () => {
+    try {
+      await deployPipeline(namespace, name, pipelineId)
+      toast.success("已触发发布")
+      fetchPipeline()
+    } catch {
+      toast.error("发布失败")
+    }
+  }
+
+  useEffect(() => {
     fetchPipeline()
+    const interval = setInterval(fetchPipeline, 5000)
+    return () => clearInterval(interval)
   }, [namespace, name, pipelineId])
 
   useEffect(() => {
@@ -138,10 +170,18 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <h2 className="text-xl font-bold">流水线详情</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {pipeline && <>ID: <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></>}
-                {pipeline && <>状态: <Badge variant="outline">{pipeline.status}</Badge></>}
+                {pipeline && <>状态: <Badge variant={getStatusVariant(pipeline.status)}>{statusLabel[pipeline.status] ?? pipeline.status}</Badge></>}
                 {pipeline && <>创建时间: <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
               </div>
             </div>
+          </div>
+          <div>
+            {pipeline?.status === "BUILD_SUCCEEDED" && (
+              <Button variant="default" size="sm" onClick={handleDeploy}>
+                <Rocket className="mr-2 h-4 w-4" />
+                应用此发布
+              </Button>
+            )}
           </div>
         </div>
 
