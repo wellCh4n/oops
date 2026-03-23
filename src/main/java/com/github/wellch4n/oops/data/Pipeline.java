@@ -24,7 +24,6 @@ public class Pipeline extends BaseDataObject {
 
     private String applicationName;
 
-    @Enumerated(EnumType.STRING)
     private PipelineStatus status;
 
     private String artifact;
@@ -33,7 +32,6 @@ public class Pipeline extends BaseDataObject {
 
     private String branch;
 
-    @Enumerated(EnumType.STRING)
     private DeployMode deployMode;
 
     public String getName() {
