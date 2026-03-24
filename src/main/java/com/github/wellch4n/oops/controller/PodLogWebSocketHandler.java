@@ -92,6 +92,13 @@ public class PodLogWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+        if ("ping".equals(message.getPayload())) {
+            session.sendMessage(new TextMessage("pong"));
+        }
+    }
+
+    @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         LogWatch logWatch = (LogWatch) session.getAttributes().get("logWatch");
         KubernetesClient client = (KubernetesClient) session.getAttributes().get("kubernetesClient");

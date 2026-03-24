@@ -195,6 +195,13 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
     }
 
     @Override
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
+        if ("ping".equals(message.getPayload())) {
+            session.sendMessage(new TextMessage("pong"));
+        }
+    }
+
+    @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         URI uri = session.getUri();
         if (uri != null) {

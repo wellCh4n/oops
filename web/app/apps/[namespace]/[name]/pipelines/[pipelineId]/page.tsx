@@ -127,6 +127,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
     const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log?token=${getToken()}`
     let ws: WebSocket | null = null
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
 
     // Use a small timeout to prevent double connection in React Strict Mode
     const connectTimeout = setTimeout(() => {
@@ -134,10 +135,16 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
       ws.onopen = () => {
         console.log("WebSocket connected for pipeline logs")
+        heartbeatInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send("ping")
+          }
+        }, 10000)
       }
 
       ws.onmessage = (event) => {
         const message = event.data
+        if (message === "pong") return
 
         try {
           // Try to parse as JSON
@@ -191,11 +198,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
       ws.onclose = () => {
         console.log("WebSocket connection closed")
+        if (heartbeatInterval) clearInterval(heartbeatInterval)
       }
     }, 100)
 
     return () => {
       clearTimeout(connectTimeout)
+      if (heartbeatInterval) clearInterval(heartbeatInterval)
       if (ws) {
         ws.close()
       }

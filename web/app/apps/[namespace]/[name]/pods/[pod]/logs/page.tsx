@@ -34,16 +34,24 @@ export default function ApplicationPodLogsPage() {
     const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}&token=${getToken()}`
     let ws: WebSocket | null = null
 
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+
     // Use a small timeout to prevent double connection in React Strict Mode
     const connectTimeout = setTimeout(() => {
       ws = new WebSocket(wsUrl)
-      
+
       ws.onopen = () => {
         setConnectionStatus("connected")
         setError(null)
+        heartbeatInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send("ping")
+          }
+        }, 10000)
       }
 
       ws.onmessage = (event) => {
+        if (event.data === "pong") return
         const logLine = event.data
         setLogs((prev) => [...prev, logLine])
       }
@@ -56,11 +64,13 @@ export default function ApplicationPodLogsPage() {
 
       ws.onclose = () => {
         setConnectionStatus("disconnected")
+        if (heartbeatInterval) clearInterval(heartbeatInterval)
       }
     }, 100)
 
     return () => {
       clearTimeout(connectTimeout)
+      if (heartbeatInterval) clearInterval(heartbeatInterval)
       if (ws) {
         ws.close()
       }
