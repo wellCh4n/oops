@@ -27,6 +27,15 @@ export const getPipelineColumns = (
     header: "环境",
   },
   {
+    accessorKey: "deployMode",
+    header: "发布方式",
+    cell: ({ row }) => {
+      const deployMode = row.original.deployMode
+      if (!deployMode) return <span className="text-muted-foreground">-</span>
+      return deployMode === "IMMEDIATE" ? "立即发布" : "手动发布"
+    }
+  },
+  {
     accessorKey: "status",
     header: "状态",
     cell: ({ row }) => {

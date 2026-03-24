@@ -28,7 +28,7 @@ export default function PublishPage({ params }: PageProps) {
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [branch, setBranch] = useState<string>("main")
   const [lastSuccessfulBranch, setLastSuccessfulBranch] = useState<string | null>(null)
-  const [deployMode, setDeployMode] = useState<DeployMode>("IMMEDIATE")
+  const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -147,12 +147,12 @@ export default function PublishPage({ params }: PageProps) {
           <Label>发布模式</Label>
           <RadioGroup value={deployMode} onValueChange={(v) => setDeployMode(v as DeployMode)} className="flex flex-row gap-6">
             <div className="flex items-center space-x-2">
-              <RadioGroupItem value="IMMEDIATE" id="mode-immediate" />
-              <Label htmlFor="mode-immediate">立即发布</Label>
-            </div>
-            <div className="flex items-center space-x-2">
               <RadioGroupItem value="MANUAL" id="mode-manual" />
               <Label htmlFor="mode-manual">编译后手动发布</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="IMMEDIATE" id="mode-immediate" />
+              <Label htmlFor="mode-immediate">立即发布</Label>
             </div>
           </RadioGroup>
         </div>

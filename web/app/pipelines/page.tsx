@@ -20,6 +20,16 @@ import {
 } from "@/components/ui/select"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 export default function PipelinesPage() {
   return (
@@ -36,6 +46,7 @@ function PipelinesContent() {
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
   const [hasNext, setHasNext] = useState(false)
+  const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
 
   const [namespaces, setNamespaces] = useState<{id: string, name: string}[]>([])
   const [applications, setApplications] = useState<Application[]>([])
@@ -161,13 +172,20 @@ function PipelinesContent() {
     }
   }
 
-  const handleDeploy = async (pipeline: Pipeline) => {
+  const handleDeploy = (pipeline: Pipeline) => {
+    setDeployTarget(pipeline)
+  }
+
+  const confirmDeploy = async () => {
+    if (!deployTarget) return
     try {
-      await deployPipeline(selectedNamespace, selectedApp, pipeline.id)
+      await deployPipeline(selectedNamespace, selectedApp, deployTarget.id)
       toast.success("已触发发布")
       fetchPipelines()
     } catch {
       toast.error("发布失败")
+    } finally {
+      setDeployTarget(null)
     }
   }
 
@@ -253,6 +271,20 @@ function PipelinesContent() {
           </>
         }
       />
+      <AlertDialog open={!!deployTarget} onOpenChange={(open) => { if (!open) setDeployTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认应用此发布？</AlertDialogTitle>
+            <AlertDialogDescription>
+              将把当前编译产物部署到环境 <strong>{deployTarget?.environment}</strong>，该操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeploy}>确认发布</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ContentPage>
   )
 }
