@@ -36,9 +36,11 @@ public class ConfigMapService {
                     .inNamespace(namespace)
                     .withName(applicationName)
                     .get();
-            Map<String, String> data = configMap.getData();
+            if (configMap == null || configMap.getData() == null) {
+                return new ArrayList<>();
+            }
             List<ConfigMapItem> items = new ArrayList<>();
-            data.forEach((key, value) -> {
+            configMap.getData().forEach((key, value) -> {
                 ConfigMapItem item = new ConfigMapItem();
                 item.setKey(key);
                 item.setValue(value);

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
-import { Copy } from "lucide-react"
+import { Copy, Plug, Globe } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -91,7 +91,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-2 max-w-xs">
-        <Label htmlFor="service-port">端口</Label>
+        <Label htmlFor="service-port" className="flex items-center gap-1"><Plug className="h-3.5 w-3.5" />端口</Label>
         <Input
           id="service-port"
           type="number"
@@ -115,7 +115,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
           {environmentConfigs.map((config, index) => (
             <TabsContent key={config.environmentName} value={config.environmentName}>
               <div className="grid gap-2 max-w-xl">
-                <Label htmlFor={`service-host-${config.environmentName}`}>Host</Label>
+                <Label htmlFor={`service-host-${config.environmentName}`} className="flex items-center gap-1"><Globe className="h-3.5 w-3.5" />Host</Label>
                 <div className="flex w-full items-center gap-2">
                   <div className="flex items-center gap-2">
                     <Checkbox
@@ -133,15 +133,13 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                     <Label htmlFor={`service-https-${config.environmentName}`}>HTTPS</Label>
                   </div>
 
-                  <div className="flex flex-1 items-center">
-                    <div
-                      className="flex h-9 items-center whitespace-nowrap rounded-md rounded-r-none border border-input bg-muted px-3 text-sm text-muted-foreground"
-                    >
+                  <div className="relative flex-1">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
                       {config.https ?? true ? "https://" : "http://"}
-                    </div>
+                    </span>
                     <Input
                       id={`service-host-${config.environmentName}`}
-                      className="rounded-l-none"
+                      className="pl-[4.5rem]"
                       value={config.host ?? ""}
                       onChange={(e) => {
                         const host = normalizeHost(e.target.value)

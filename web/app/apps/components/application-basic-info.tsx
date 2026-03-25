@@ -29,6 +29,7 @@ import { Application, Environment, ApplicationEnvironment } from "@/lib/api/type
 import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
+import { AppWindow, Layers, AlignLeft, Server } from "lucide-react"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -119,7 +120,7 @@ export function ApplicationBasicInfo({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>应用名称</FormLabel>
+              <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />应用名称</FormLabel>
               <FormControl>
                 <Input placeholder="输入应用名称" {...field} disabled={!!initialData} />
               </FormControl>
@@ -133,7 +134,7 @@ export function ApplicationBasicInfo({
           name="namespace"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>命名空间</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />命名空间</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!!initialData}>
                 <FormControl>
                   <SelectTrigger>
@@ -158,7 +159,7 @@ export function ApplicationBasicInfo({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>描述</FormLabel>
+              <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />描述</FormLabel>
               <FormControl>
                 <Textarea placeholder="输入应用描述" {...field} />
               </FormControl>
@@ -169,7 +170,7 @@ export function ApplicationBasicInfo({
 
         {initialData && (
             <FormItem>
-                <FormLabel>部署环境</FormLabel>
+                <FormLabel className="flex items-center gap-1"><Server className="h-3.5 w-3.5" />部署环境</FormLabel>
                 <div className="grid grid-cols-2 gap-4">
                     {environments.map(env => (
                         <div key={env.id} className="flex items-center space-x-2">

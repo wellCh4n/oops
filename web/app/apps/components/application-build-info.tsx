@@ -19,6 +19,7 @@ import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { TabsContent } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
+import { GitBranch, FileCode, Box, Terminal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useTheme } from "next-themes"
@@ -130,7 +131,7 @@ export function ApplicationBuildInfo({
               name="repository"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>代码仓库</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />代码仓库</FormLabel>
                   <FormControl>
                     <Input placeholder="输入代码仓库地址" {...field} />
                   </FormControl>
@@ -145,7 +146,7 @@ export function ApplicationBuildInfo({
                 name="dockerFile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dockerfile 路径</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />Dockerfile 路径</FormLabel>
                     <FormControl>
                       <Input placeholder="Dockerfile" {...field} />
                     </FormControl>
@@ -159,7 +160,7 @@ export function ApplicationBuildInfo({
                 name="buildImage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>构建镜像</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />构建镜像</FormLabel>
                     <FormControl>
                       <Input placeholder="输入构建镜像" {...field} />
                     </FormControl>
@@ -218,7 +219,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
         name={`environmentConfigs.${index}.buildCommand`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>构建命令</FormLabel>
+            <FormLabel className="flex items-center gap-1"><Terminal className="h-3.5 w-3.5" />构建命令</FormLabel>
             <FormControl>
               <div className="border rounded-md overflow-hidden">
                 <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">

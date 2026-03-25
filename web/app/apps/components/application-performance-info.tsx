@@ -17,6 +17,7 @@ import { ApplicationPerformanceEnvFormValues, applicationPerformanceEnvSchema } 
 import { TabsContent } from "@/components/ui/tabs"
 import { ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
+import { Cpu, MemoryStick, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 
@@ -190,7 +191,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
         name={`environmentConfigs.${index}.replicas`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>副本数</FormLabel>
+            <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />副本数</FormLabel>
             <FormControl>
               <ReplicasInput value={field.value} onChange={field.onChange} />
             </FormControl>
@@ -198,19 +199,18 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           </FormItem>
         )}
       />
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-4 w-fit">
         <FormField
           control={control}
           name={`environmentConfigs.${index}.cpuRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>CPU 请求 (core)</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />CPU 请求</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="例如 0.1"
-                  {...field}
-                  autoComplete="off"
-                />
+                <div className="relative w-24">
+                  <Input placeholder="0.1" {...field} autoComplete="off" className="pr-10" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -221,32 +221,28 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.cpuLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>CPU 限制 (core)</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />CPU 限制</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="例如 1"
-                  {...field}
-                  autoComplete="off"
-                />
+                <div className="relative w-24">
+                  <Input placeholder="1" {...field} autoComplete="off" className="pr-10" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
         <FormField
           control={control}
           name={`environmentConfigs.${index}.memoryRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>内存 请求 (Mi)</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />内存 请求</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="例如 128"
-                  {...field}
-                  autoComplete="off"
-                />
+                <div className="relative w-24">
+                  <Input placeholder="128" {...field} autoComplete="off" className="pr-8" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -257,13 +253,12 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.memoryLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>内存 限制 (Mi)</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />内存 限制</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="例如 512"
-                  {...field}
-                  autoComplete="off"
-                />
+                <div className="relative w-24">
+                  <Input placeholder="512" {...field} autoComplete="off" className="pr-8" />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
