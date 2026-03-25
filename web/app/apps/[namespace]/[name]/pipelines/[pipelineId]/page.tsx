@@ -21,7 +21,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
-import { getStatusColumns } from "../../status/columns"
+import { getPipelineStatusColumns } from "../columns"
 import { Rocket } from "lucide-react"
 import { toast } from "sonner"
 import dayjs from "dayjs"
@@ -61,6 +61,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [activeStep, setActiveStep] = useState<string>("")
   const logContainerRef = useRef<HTMLDivElement>(null)
 
+  const [wsDisconnected, setWsDisconnected] = useState(false)
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
   const [statusLoading, setStatusLoading] = useState(false)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
@@ -199,6 +200,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
       ws.onclose = () => {
         console.log("WebSocket connection closed")
         if (heartbeatInterval) clearInterval(heartbeatInterval)
+        setWsDisconnected(true)
       }
     }, 100)
 
@@ -217,14 +219,26 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [logs])
 
-  const statusColumns = getStatusColumns(() => {}, () => {}, () => {}).filter(col => (col as { id?: string }).id !== "actions")
+  const statusColumns = getPipelineStatusColumns(namespace, name, pipelineId)
 
   const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? "立即发布" : pipeline?.deployMode === "MANUAL" ? "手动发布" : null
 
   const activeIndex = steps.indexOf(activeStep)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-col gap-4 relative">
+      {wsDisconnected && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground">连接已断开</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            刷新页面
+          </button>
+        </div>
+      )}
+
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">

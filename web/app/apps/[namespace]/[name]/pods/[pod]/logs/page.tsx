@@ -90,7 +90,18 @@ export default function ApplicationPodLogsPage() {
   const isConnected = connectionStatus === "connected"
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col relative">
+      {connectionStatus === "disconnected" && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
+          <p className="text-sm text-muted-foreground">连接已断开</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            刷新页面
+          </button>
+        </div>
+      )}
       <div className="flex-1 min-h-0 rounded-md border bg-background shadow-sm overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <div className="flex items-center gap-3 min-w-0">

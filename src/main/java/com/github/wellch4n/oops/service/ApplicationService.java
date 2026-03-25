@@ -5,7 +5,10 @@ import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,8 +136,57 @@ public class ApplicationService {
                     config.setApplicationName(appName);
                     return config;
                 });
+
+        List<ApplicationPerformanceConfig.EnvironmentConfig> existingConfigs =
+                performanceConfig.getEnvironmentConfigs() != null ? performanceConfig.getEnvironmentConfigs() : Collections.emptyList();
+
         performanceConfig.setEnvironmentConfigs(configs);
         applicationPerformanceConfigRepository.save(performanceConfig);
+
+        for (ApplicationPerformanceConfig.EnvironmentConfig config : configs) {
+            ApplicationPerformanceConfig.EnvironmentConfig existing = existingConfigs.stream()
+                    .filter(c -> c.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .findFirst().orElse(null);
+
+            boolean replicasChanged = config.getReplicas() != null
+                    && !config.getReplicas().equals(existing != null ? existing.getReplicas() : null);
+            boolean resourceChanged = !StringUtils.equals(config.getCpuRequest(), existing != null ? existing.getCpuRequest() : null)
+                    || !StringUtils.equals(config.getCpuLimit(), existing != null ? existing.getCpuLimit() : null)
+                    || !StringUtils.equals(config.getMemoryRequest(), existing != null ? existing.getMemoryRequest() : null)
+                    || !StringUtils.equals(config.getMemoryLimit(), existing != null ? existing.getMemoryLimit() : null);
+
+            if (!replicasChanged && !resourceChanged) continue;
+
+            try {
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                if (environment == null) continue;
+                try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                    if (replicasChanged) {
+                        client.apps().statefulSets()
+                                .inNamespace(namespace)
+                                .withName(appName)
+                                .scale(config.getReplicas());
+                    }
+                    if (resourceChanged) {
+                        var resources = new ResourceRequirementsBuilder()
+                                .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(config.getCpuRequest(), "100m")))
+                                .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(config.getCpuLimit(), "500m")))
+                                .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(config.getMemoryRequest() + "Mi", "128Mi")))
+                                .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(config.getMemoryLimit() + "Mi", "512Mi")))
+                                .build();
+                        client.apps().statefulSets().inNamespace(namespace).withName(appName)
+                                .edit(ss -> {
+                                    ss.getSpec().getTemplate().getSpec().getContainers()
+                                            .forEach(c -> c.setResources(resources));
+                                    return ss;
+                                });
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to apply performance config for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
+            }
+        }
+
         return true;
     }
 
