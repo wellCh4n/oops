@@ -136,6 +136,50 @@ interface SingleEnvironmentConfigProps {
   index: number
 }
 
+function ReplicasInput({ value, onChange }: { value: number | undefined, onChange: (v: number | undefined) => void }) {
+  const [text, setText] = useState(value != null ? String(value) : '')
+
+  const update = (raw: string) => {
+    setText(raw)
+    onChange(raw === '' ? undefined : parseInt(raw, 10))
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={() => {
+          const next = Math.max(0, (parseInt(text, 10) || 0) - 1)
+          update(String(next))
+        }}
+      >
+        −
+      </Button>
+      <Input
+        value={text}
+        onChange={e => update(e.target.value.replace(/[^0-9]/g, ''))}
+        autoComplete="off"
+        className="w-16 text-center"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={() => {
+          const next = (parseInt(text, 10) || 0) + 1
+          update(String(next))
+        }}
+      >
+        +
+      </Button>
+    </div>
+  )
+}
+
 function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationPerformanceEnvFormValues>()
 
@@ -148,16 +192,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           <FormItem>
             <FormLabel>副本数</FormLabel>
             <FormControl>
-              <Input 
-                type="number" 
-                {...field}
-                value={field.value ?? ''}
-                onChange={e => {
-                  const val = e.target.valueAsNumber
-                  field.onChange(isNaN(val) ? undefined : val)
-                }}
-                autoComplete="off"
-              />
+              <ReplicasInput value={field.value} onChange={field.onChange} />
             </FormControl>
             <FormMessage />
           </FormItem>
