@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect, useRef } from "react"
+import { use, useState, useEffect, useRef, useMemo } from "react"
 import { getPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { getApplicationStatus, getClusterDomain } from "@/lib/api/applications"
 import { Pipeline, ApplicationPodStatus, ClusterDomainInfo } from "@/lib/api/types"
@@ -219,7 +219,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [logs])
 
-  const statusColumns = getPipelineStatusColumns(namespace, name, pipelineId)
+  const statusColumns = useMemo(() => getPipelineStatusColumns(namespace, name, pipelineId), [namespace, name, pipelineId])
 
   const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? "立即发布" : pipeline?.deployMode === "MANUAL" ? "手动发布" : null
 
@@ -355,7 +355,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                       )}
                   </div>
                 )}
-                <DataTable columns={statusColumns} data={podStatuses} loading={statusLoading} />
+                <DataTable columns={statusColumns} data={podStatuses} loading={statusLoading} getRowId={(row) => row.name} />
             </div>
         </div>
 

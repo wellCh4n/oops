@@ -22,6 +22,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   meta?: TableMeta<TData>
   loading?: boolean
+  getRowId?: (row: TData) => string
 }
 
 export function DataTable<TData, TValue>({
@@ -29,12 +30,14 @@ export function DataTable<TData, TValue>({
   data,
   meta,
   loading,
+  getRowId,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
     meta,
+    ...(getRowId ? { getRowId } : {}),
   })
 
   const renderBody = () => {

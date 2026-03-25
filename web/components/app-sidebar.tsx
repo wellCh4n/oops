@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { navConfig } from "@/lib/nav-config"
 import { usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { clearAuth } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
@@ -106,27 +106,29 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {navConfig.map((group) => (
-          <SidebarGroup key={group.title}>
-            {open && <SidebarGroupLabel>{group.title}</SidebarGroupLabel>}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
-                      tooltip={item.title}
-                    >
-                      <Link href={item.url}>
-                        <item.icon />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <React.Fragment key={group.title}>
+            <SidebarGroup>
+              {open && <SidebarGroupLabel>{group.title}</SidebarGroupLabel>}
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                        tooltip={item.title}
+                      >
+                        <Link href={item.url}>
+                          <item.icon />
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </React.Fragment>
         ))}
       </SidebarContent>
       <SidebarFooter>

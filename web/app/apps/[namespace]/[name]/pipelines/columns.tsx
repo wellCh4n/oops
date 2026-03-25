@@ -1,10 +1,54 @@
 "use client"
 
+import { memo } from "react"
 import { ColumnDef } from "@tanstack/react-table"
 import { ApplicationPodStatus } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
+import { Copyable } from "@/components/ui/copyable"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Check, X } from "lucide-react"
 import Link from "next/link"
+
+interface DeployStatusCellProps {
+  images: string[]
+  namespace: string
+  appName: string
+  pipelineId: string
+}
+
+const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: DeployStatusCellProps) => {
+  const tag = images.length > 0 && images[0].includes(":") ? images[0].split(":").pop()! : ""
+  const versionMached = tag === pipelineId
+  const icon = !tag ? null : versionMached ? (
+    <Check className="h-4 w-4 text-green-500" />
+  ) : (
+    <Link href={`/apps/${namespace}/${appName}/pipelines/${tag}`}>
+      <X className="h-4 w-4 text-red-500 cursor-pointer" />
+    </Link>
+  )
+  return (
+    <div className="flex items-center gap-1.5">
+      {tag && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <Copyable value={tag} copyValue={images[0]} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="w-fit max-w-[40rem] break-all">
+            <div className="flex flex-col gap-1">
+              {images.map((img, i) => (
+                <span key={i}>{img}</span>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+      {icon}
+    </div>
+  )
+})
+DeployStatusCell.displayName = "DeployStatusCell"
 
 export const getPipelineStatusColumns = (
   namespace: string,
@@ -36,31 +80,13 @@ export const getPipelineStatusColumns = (
     header: "是否当前版本",
     cell: ({ row }) => {
       const images = row.original.image ?? []
-      const tag = images.length > 0 && images[0].includes(":") ? images[0].split(":").pop()! : ""
-      if (!tag) return null
-      const versionMached = tag === pipelineId
-      return versionMached ? (
-        <Check className="h-4 w-4 text-green-500" />
-      ) : (
-        <Link href={`/apps/${namespace}/${appName}/pipelines/${tag}`}>
-          <X className="h-4 w-4 text-red-500 cursor-pointer" />
-        </Link>
-      )
-    },
-  },
-  {
-    accessorKey: "image",
-    header: "镜像",
-    cell: ({ row }) => {
-      const images = row.getValue("image") as string[]
       return (
-        <div className="flex max-w-[28rem] flex-col gap-1 whitespace-normal break-all">
-          {images.map((img, i) => (
-            <span key={i} className="text-sm text-muted-foreground">
-              {img}
-            </span>
-          ))}
-        </div>
+        <DeployStatusCell
+          images={images}
+          namespace={namespace}
+          appName={appName}
+          pipelineId={pipelineId}
+        />
       )
     },
   },
