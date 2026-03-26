@@ -174,14 +174,14 @@ export default function ClientApps({
                     }}
                   />
                   <Button variant="outline" onClick={handleSearch}>
-                    <Search className="mr-2 h-4 w-4" />
+                    <Search className="h-4 w-4" />
                     {t("apps.searchBtn")}
                   </Button>
                 </div>
               </div>
             </div>
             <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t("apps.createBtn")}
             </Button>
           </div>

@@ -35,7 +35,7 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
               <Copyable value={tag} copyValue={images[0]} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
             </span>
           </TooltipTrigger>
-          <TooltipContent className="w-fit max-w-[40rem] break-all">
+          <TooltipContent className="w-fit max-w-160 break-all">
             <div className="flex flex-col gap-1">
               {images.map((img, i) => (
                 <span key={i}>{img}</span>

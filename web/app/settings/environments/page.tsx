@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -59,7 +59,7 @@ export default function EnvironmentsPage() {
     },
   })
 
-  const loadEnvironments = async () => {
+  const loadEnvironments = useCallback(async () => {
     try {
       setIsLoading(true)
       const response = await fetchEnvironments()
@@ -74,11 +74,11 @@ export default function EnvironmentsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     loadEnvironments()
-  }, [])
+  }, [loadEnvironments])
 
   useEffect(() => {
     if (!dialogOpen) {
@@ -135,13 +135,13 @@ export default function EnvironmentsPage() {
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => setAppliedSearch(search)}>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="h-4 w-4" />
                   {t("common.search")}
                 </Button>
               </div>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t("env.createBtn")}
             </Button>
           </div>

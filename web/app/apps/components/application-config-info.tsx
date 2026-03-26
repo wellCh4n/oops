@@ -116,7 +116,7 @@ export function ApplicationConfigInfo({
     }
 
     fetchConfigMaps()
-  }, [namespace, applicationName, activeTab, form])
+  }, [namespace, applicationName, activeTab, form, t])
 
   const onSubmit = async (data: ApplicationConfigFormValues) => {
     if (!namespace || !applicationName || !activeTab) return
@@ -216,7 +216,7 @@ export function ApplicationConfigInfo({
                         onClick={() => append({ key: "", value: "" })}
                         disabled={isLoadingConfig}
                       >
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="h-4 w-4" />
                         {t("apps.config.addItem")}
                       </Button>
                     </TableCell>
@@ -227,7 +227,7 @@ export function ApplicationConfigInfo({
 
             <div className="flex">
               <Button type="submit" disabled={isSaving || isLoadingConfig}>
-                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t("common.save")}
               </Button>
             </div>

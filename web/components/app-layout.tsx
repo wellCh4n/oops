@@ -7,13 +7,16 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { getToken } from "@/lib/auth"
 import { LanguageProvider } from "@/contexts/language-context"
+import { Locale } from "@/lib/i18n"
 
 export function AppLayout({
   children,
   defaultSidebarOpen,
+  initialLocale,
 }: {
   children: React.ReactNode
   defaultSidebarOpen?: boolean
+  initialLocale: Locale
 }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -35,7 +38,7 @@ export function AppLayout({
   }
 
   return (
-    <LanguageProvider>
+    <LanguageProvider initialLocale={initialLocale}>
       <SidebarProvider defaultOpen={defaultSidebarOpen}>
         <AppSidebar />
         <SidebarInset className="overflow-x-auto">

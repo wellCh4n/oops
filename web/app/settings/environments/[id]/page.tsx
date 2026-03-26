@@ -126,7 +126,7 @@ export default function EnvironmentEditPage() {
     if (id) {
       loadEnvironment()
     }
-  }, [id, form, router])
+  }, [id, form, router, t])
 
   const handleCreateNamespace = async () => {
     try {
@@ -288,10 +288,10 @@ export default function EnvironmentEditPage() {
                           disabled={isValidatingK8s || isK8sValidated}
                           className={isK8sValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
                         >
-                          {isValidatingK8s && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                          {isValidatingK8s && <Loader2 className="h-3 w-3 animate-spin" />}
                           {isK8sValidated ? (
                             <>
-                              <Check className="mr-2 h-3 w-3" />
+                              <Check className="h-3 w-3" />
                               {t("env.validated")}
                             </>
                           ) : t("env.validate")}
@@ -389,10 +389,10 @@ export default function EnvironmentEditPage() {
                           disabled={isValidatingRepo || isRepoValidated}
                           className={isRepoValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
                         >
-                          {isValidatingRepo && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                          {isValidatingRepo && <Loader2 className="h-3 w-3 animate-spin" />}
                           {isRepoValidated ? (
                             <>
-                              <Check className="mr-2 h-3 w-3" />
+                              <Check className="h-3 w-3" />
                               {t("env.validated")}
                             </>
                           ) : t("env.validate")}
@@ -525,7 +525,7 @@ export default function EnvironmentEditPage() {
                 handleDelete()
               }}
             >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
               {t("env.deleteConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>

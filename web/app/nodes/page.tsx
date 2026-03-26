@@ -46,7 +46,7 @@ export default function NodesPage() {
         toast.error(t("nodes.fetchEnvError"))
       }
     })()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (!selectedEnv) return
@@ -62,7 +62,7 @@ export default function NodesPage() {
         setLoading(false)
       }
     })()
-  }, [selectedEnv])
+  }, [selectedEnv, t])
 
   return (
     <ContentPage title={t("nodes.title")}>

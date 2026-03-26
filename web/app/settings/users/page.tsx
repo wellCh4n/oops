@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Plus, Eye, EyeOff, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -48,7 +48,7 @@ export default function UsersPage() {
     setAdmin(isAdmin())
   }, [])
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setTableLoading(true)
     try {
       const res = await apiFetch("/api/users")
@@ -59,11 +59,11 @@ export default function UsersPage() {
     } finally {
       setTableLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     loadUsers()
-  }, [])
+  }, [loadUsers])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -200,7 +200,7 @@ export default function UsersPage() {
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => setAppliedSearch(search)}>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="h-4 w-4" />
                   {t("common.search")}
                 </Button>
               </div>
@@ -209,7 +209,7 @@ export default function UsersPage() {
               <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setUsername(""); setEmail(""); setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirm(false) } }}>
                 <DialogTrigger asChild>
                   <Button>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                     {t("users.createBtn")}
                   </Button>
                 </DialogTrigger>

@@ -83,7 +83,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       } else {
         toast.error(res.message || t("apps.service.saveError"))
       }
-    } catch (e) {
+    } catch {
       toast.error(t("apps.service.saveError"))
     } finally {
       setSaving(false)
@@ -168,7 +168,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                       try {
                         await navigator.clipboard.writeText(url)
                         toast.success(t("apps.service.copied"))
-                      } catch (e) {
+                      } catch {
                         toast.error(t("apps.service.copyError"))
                       }
                     }}

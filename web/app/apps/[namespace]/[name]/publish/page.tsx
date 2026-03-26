@@ -59,12 +59,12 @@ export default function PublishPage({ params }: PageProps) {
           setLastSuccessfulBranch(lastBranchRes.data)
           setBranch(lastBranchRes.data)
         }
-      } catch (error) {
+      } catch {
         toast.error(t("apps.publish.fetchError"))
       }
     }
     fetchData()
-  }, [namespace, name])
+  }, [namespace, name, t])
 
   const handlePublish = async () => {
     if (!selectedEnv) {
@@ -86,7 +86,7 @@ export default function PublishPage({ params }: PageProps) {
       } else {
         toast.error(res.message || t("apps.publish.submitError"))
       }
-    } catch (error) {
+    } catch {
       toast.error(t("apps.publish.submitError"))
     } finally {
       setLoading(false)
@@ -163,7 +163,7 @@ export default function PublishPage({ params }: PageProps) {
 
         <div className="pt-4">
           <Button onClick={handlePublish} disabled={loading || !selectedEnv}>
-            <Rocket className="mr-2 h-4 w-4" />
+            <Rocket className="h-4 w-4" />
             {loading ? t("apps.publish.submitting") : deployMode === "MANUAL" ? t("apps.publish.submitBuild") : t("apps.publish.confirmDeploy")}
           </Button>
         </div>

@@ -154,7 +154,7 @@ function PipelinesContent() {
     } finally {
       setLoading(false)
     }
-  }, [selectedNamespace, selectedApp, selectedEnv, page, size])
+  }, [selectedNamespace, selectedApp, selectedEnv, page, size, t])
 
   useEffect(() => {
     if (initialized) fetchPipelines()
@@ -239,7 +239,7 @@ function PipelinesContent() {
               </div>
             </div>
             <Button variant="outline" onClick={fetchPipelines} disabled={loading || !selectedApp}>
-              <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               {t("pipelines.refresh")}
             </Button>
           </div>
@@ -255,7 +255,7 @@ function PipelinesContent() {
                   disabled={page === 0 || loading}
                   onClick={() => updateParams({ page: String(page - 1) })}
                 >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4" />
                   {t("pipelines.prevPage")}
                 </Button>
                 <span className="text-sm text-muted-foreground">{t("pipelines.pagePrefix")}{page + 1}{t("pipelines.pageSuffix")}</span>

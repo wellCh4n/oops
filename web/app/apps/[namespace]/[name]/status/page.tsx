@@ -73,7 +73,7 @@ export default function ApplicationStatusPage() {
       }
     }
     loadEnvironments()
-  }, [])
+  }, [envParam, pathname, router, searchParams, t])
 
   // Fetch status when environment changes and poll
   useEffect(() => {
@@ -107,7 +107,7 @@ export default function ApplicationStatusPage() {
     const intervalId = setInterval(() => fetchStatus(false), 1000)
 
     return () => clearInterval(intervalId)
-  }, [namespace, name, selectedEnv])
+  }, [namespace, name, selectedEnv, t])
 
   const handleTabChange = (value: string) => {
     setSelectedEnv(value)

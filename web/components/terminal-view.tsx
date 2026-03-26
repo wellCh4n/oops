@@ -92,7 +92,7 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
                 // Fit again after connection just in case
                 try {
                     fitAddon.fit()
-                } catch (e) {}
+                } catch {}
             }
 
             ws.onmessage = (event) => {
@@ -113,7 +113,7 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
                 if (xtermRef.current) {
                     try {
                         term.write('\r\n\x1b[31mConnection closed\x1b[0m\r\n')
-                    } catch (e) {}
+                    } catch {}
                 }
             }
 
@@ -122,7 +122,7 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
                 if (xtermRef.current) {
                     try {
                         term.write('\r\n\x1b[31mConnection error\x1b[0m\r\n')
-                    } catch (e) {}
+                    } catch {}
                 }
             }
         }, 100)

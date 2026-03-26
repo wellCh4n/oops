@@ -4,7 +4,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { usePathname } from "next/navigation"
 import { navConfig } from "@/lib/nav-config"
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -19,8 +18,6 @@ import { useTheme } from "next-themes"
 export function HeaderTitle() {
   const pathname = usePathname()
   const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
 
   const getCurrentTitle = () => {
     if (pathname === "/") {
@@ -52,7 +49,7 @@ export function HeaderTitle() {
             size="icon"
             aria-label="切换主题"
           >
-            {mounted && resolvedTheme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            {resolvedTheme === "dark" ? <Moon className="size-4" /> : <Sun className="size-4" />}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

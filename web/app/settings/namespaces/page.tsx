@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Plus, Pencil, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,7 +69,7 @@ export default function NamespacesPage() {
     },
   })
 
-  const loadNamespaces = async () => {
+  const loadNamespaces = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetchNamespaces()
@@ -83,11 +83,11 @@ export default function NamespacesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [t])
 
   useEffect(() => {
     void loadNamespaces()
-  }, [])
+  }, [loadNamespaces])
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
@@ -149,13 +149,13 @@ export default function NamespacesPage() {
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => setAppliedSearch(search)}>
-                  <Search className="mr-2 h-4 w-4" />
+                  <Search className="h-4 w-4" />
                   {t("common.search")}
                 </Button>
               </div>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t("ns.createBtn")}
             </Button>
           </div>
@@ -204,7 +204,7 @@ export default function NamespacesPage() {
                             onClick={() => handleEdit(ns)}
                             title={t("common.edit")}
                           >
-                            <Pencil className="mr-2 h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                             {t("common.edit")}
                           </Button>
                         </div>

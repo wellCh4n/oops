@@ -73,18 +73,18 @@ export const getPipelineColumns = (
       return (
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => onView(row.original)}>
-            <Eye className="mr-2 h-4 w-4" />
+            <Eye className="h-4 w-4" />
             {t("pipelines.col.view")}
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" onClick={() => onDeploy(row.original)}>
-              <Rocket className="mr-2 h-4 w-4" />
+              <Rocket className="h-4 w-4" />
               {t("pipelines.col.deployBtn")}
             </Button>
           )}
           {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
             <Button variant="destructive" size="sm" onClick={() => onStop(row.original)}>
-              <Ban className="mr-2 h-4 w-4" />
+              <Ban className="h-4 w-4" />
               {t("pipelines.col.stop")}
             </Button>
           )}

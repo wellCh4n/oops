@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect, useRef, useMemo } from "react"
+import { use, useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { getPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { getApplicationStatus, getClusterDomain } from "@/lib/api/applications"
 import { Pipeline, ApplicationPodStatus, ClusterDomainInfo } from "@/lib/api/types"
@@ -69,7 +69,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const { t } = useLanguage()
 
 
-  const fetchPipeline = async () => {
+  const fetchPipeline = useCallback(async () => {
     try {
       const res = await getPipeline(namespace, name, pipelineId)
       if (res.data) {
@@ -78,7 +78,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
     } catch {
       toast.error(t("apps.pipeline.fetchError"))
     }
-  }
+  }, [namespace, name, pipelineId, t])
 
   const handleDeploy = async () => {
     try {
@@ -91,34 +91,35 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }
 
   useEffect(() => {
-    fetchPipeline()
     const interval = setInterval(fetchPipeline, 5000)
-    return () => clearInterval(interval)
-  }, [namespace, name, pipelineId])
+    const initialTimeout = setTimeout(fetchPipeline, 0)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(initialTimeout)
+    }
+  }, [fetchPipeline])
 
   // Poll application status when pipeline environment is known
   useEffect(() => {
     if (!pipeline?.environment) return
 
     const env = pipeline.environment
-
-    setStatusLoading(true)
-    getApplicationStatus(namespace, name, env)
-      .then(res => setPodStatuses(res.data ?? []))
-      .catch(() => setPodStatuses([]))
-      .finally(() => setStatusLoading(false))
-
-    getClusterDomain(namespace, name, env)
-      .then(res => setClusterDomain(res.data ?? null))
-      .catch(() => setClusterDomain(null))
-
-    const intervalId = setInterval(() => {
+    const loadStatus = () => {
+      setStatusLoading(true)
       getApplicationStatus(namespace, name, env)
         .then(res => setPodStatuses(res.data ?? []))
-        .catch(() => {})
-    }, 1000)
-
-    return () => clearInterval(intervalId)
+        .catch(() => setPodStatuses([]))
+        .finally(() => setStatusLoading(false))
+      getClusterDomain(namespace, name, env)
+        .then(res => setClusterDomain(res.data ?? null))
+        .catch(() => setClusterDomain(null))
+    }
+    const intervalId = setInterval(loadStatus, 1000)
+    const initialTimeout = setTimeout(loadStatus, 0)
+    return () => {
+      clearInterval(intervalId)
+      clearTimeout(initialTimeout)
+    }
   }, [namespace, name, pipeline?.environment])
 
   useEffect(() => {
@@ -168,7 +169,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
             // Fallback for unknown types
             console.warn("Unknown message type:", jsonData.type)
           }
-        } catch (e) {
+        } catch {
           // Fallback for non-JSON messages (backward compatibility)
           if (message.startsWith("STEPS:")) {
             try {
@@ -221,7 +222,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [logs])
 
-  const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, pipelineId), [namespace, name, pipelineId])
+  const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, pipelineId), [t, namespace, name, pipelineId])
 
   const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : pipeline?.deployMode === "MANUAL" ? t("apps.pipeline.modeManual") : null
 
@@ -260,7 +261,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="default" size="sm">
-                    <Rocket className="mr-2 h-4 w-4" />
+                    <Rocket className="h-4 w-4" />
                     {t("apps.pipeline.deployBtn")}
                   </Button>
                 </AlertDialogTrigger>

@@ -91,7 +91,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[]
             size="sm"
             onClick={() => meta?.onView(environment)}
           >
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="h-4 w-4" />
             {t("common.edit")}
           </Button>
         </div>

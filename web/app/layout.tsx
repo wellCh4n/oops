@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { AppLayout } from "@/components/app-layout";
 import { cookies } from "next/headers";
+import { Locale, defaultLocale } from "@/lib/i18n";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +29,11 @@ export default async function RootLayout({
   const cookieStore = await cookies()
   const sidebarState = cookieStore.get("sidebar_state")
   const defaultSidebarOpen = sidebarState ? sidebarState.value === "true" : true
+  const localeCookie = cookieStore.get("locale")?.value
+  const initialLocale: Locale = localeCookie === "en" || localeCookie === "zh" ? localeCookie : defaultLocale
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLocale} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
@@ -40,7 +43,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppLayout defaultSidebarOpen={defaultSidebarOpen}>{children}</AppLayout>
+          <AppLayout defaultSidebarOpen={defaultSidebarOpen} initialLocale={initialLocale}>{children}</AppLayout>
         </ThemeProvider>
       </body>
     </html>

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
   Form,
@@ -57,12 +56,12 @@ export function ApplicationBasicInfo({
             const appEnvRes = await getApplicationEnvironments(initialData.namespace, initialData.name)
             setSelectedEnvNames(appEnvRes.data.map(e => e.environmentName))
         }
-      } catch (error) {
+      } catch {
         toast.error(t("apps.basic.fetchError"))
       }
     }
     loadData()
-  }, [initialData])
+  }, [initialData, t])
 
   const form = useForm<ApplicationBasicFormValues>({
     resolver: zodResolver(applicationBasicSchema),

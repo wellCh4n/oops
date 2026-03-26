@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Globe } from "lucide-react"
+import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from "lucide-react"
 
 import {
   Sidebar,
@@ -52,11 +52,8 @@ export function AppSidebar() {
   const { open, toggleSidebar } = useSidebar()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const { theme, setTheme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const { theme, setTheme } = useTheme()
   const { locale, setLocale, t } = useLanguage()
-
-  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)

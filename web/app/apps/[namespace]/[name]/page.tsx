@@ -78,7 +78,7 @@ export default function EditAppPage() {
       }
     }
     fetchApp()
-  }, [namespace, name, router])
+  }, [namespace, name, router, t])
 
   if (loading) {
     return (

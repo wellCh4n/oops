@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useLanguage } from "@/contexts/language-context"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -32,6 +33,7 @@ export function DataTable<TData, TValue>({
   loading,
   getRowId,
 }: DataTableProps<TData, TValue>) {
+  const { t } = useLanguage()
   const table = useReactTable({
     data,
     columns,
@@ -45,7 +47,7 @@ export function DataTable<TData, TValue>({
       return (
         <TableRow>
           <TableCell colSpan={columns.length} className="py-2 text-center text-muted-foreground">
-            加载中...
+            {t("common.loading")}
           </TableCell>
         </TableRow>
       )
@@ -54,7 +56,7 @@ export function DataTable<TData, TValue>({
       return (
         <TableRow>
           <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-            暂无数据
+            {t("common.noData")}
           </TableCell>
         </TableRow>
       )
