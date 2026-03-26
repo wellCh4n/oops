@@ -15,7 +15,8 @@ FROM node:20-slim AS runtime
 ENV NODE_ENV=production \
     NEXT_PUBLIC_API_URL=/api \
     FRONTEND_PORT=3000 \
-    BACKEND_PORT=8080
+    BACKEND_PORT=8080 \
+    TZ=Asia/Shanghai
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates nginx \
