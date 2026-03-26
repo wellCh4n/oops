@@ -8,6 +8,7 @@ import { Copyable } from "@/components/ui/copyable"
 import { Eye, Ban, Rocket } from "lucide-react"
 
 export const getPipelineColumns = (
+  t: (key: string) => string,
   onView: (pipeline: Pipeline) => void,
   onStop: (pipeline: Pipeline) => void,
   onDeploy: (pipeline: Pipeline) => void
@@ -24,20 +25,20 @@ export const getPipelineColumns = (
   },
   {
     accessorKey: "environment",
-    header: "环境",
+    header: t("pipelines.col.environment"),
   },
   {
     accessorKey: "deployMode",
-    header: "发布方式",
+    header: t("pipelines.col.deployMode"),
     cell: ({ row }) => {
       const deployMode = row.original.deployMode
       if (!deployMode) return <span className="text-muted-foreground">-</span>
-      return deployMode === "IMMEDIATE" ? "立即发布" : "手动发布"
+      return deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
     }
   },
   {
     accessorKey: "status",
-    header: "状态",
+    header: t("pipelines.col.status"),
     cell: ({ row }) => {
       const status = row.original.status
       let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
@@ -45,22 +46,22 @@ export const getPipelineColumns = (
       if (status === "SUCCEEDED") variant = "secondary"
       if (status === "ERROR" || status === "STOPPED") variant = "destructive"
 
-      const statusLabel: Record<string, string> = {
-        BUILD_SUCCEEDED: "编译完成",
-        INITIALIZED: "初始化",
-        RUNNING: "运行中",
-        DEPLOYING: "发布中",
-        SUCCEEDED: "成功",
-        ERROR: "失败",
-        STOPPED: "已停止",
+      const statusKeyMap: Record<string, string> = {
+        BUILD_SUCCEEDED: "apps.pipeline.status.BUILD_SUCCEEDED",
+        INITIALIZED: "apps.pipeline.status.INITIALIZED",
+        RUNNING: "apps.pipeline.status.RUNNING",
+        DEPLOYING: "apps.pipeline.status.DEPLOYING",
+        SUCCEEDED: "apps.pipeline.status.SUCCEEDED",
+        ERROR: "apps.pipeline.status.ERROR",
+        STOPPED: "apps.pipeline.status.STOPPED",
       }
 
-      return <Badge variant={variant}>{statusLabel[status] ?? status}</Badge>
+      return <Badge variant={variant}>{t(statusKeyMap[status] ?? status)}</Badge>
     }
   },
   {
     accessorKey: "createdTime",
-    header: "创建时间",
+    header: t("pipelines.col.createdTime"),
     cell: ({ row }) => {
         if (!row.original.createdTime) return "-"
         return new Date(row.original.createdTime).toLocaleString()
@@ -73,18 +74,18 @@ export const getPipelineColumns = (
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => onView(row.original)}>
             <Eye className="mr-2 h-4 w-4" />
-            查看
+            {t("pipelines.col.view")}
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" onClick={() => onDeploy(row.original)}>
               <Rocket className="mr-2 h-4 w-4" />
-              应用此发布
+              {t("pipelines.col.deployBtn")}
             </Button>
           )}
           {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
             <Button variant="destructive" size="sm" onClick={() => onStop(row.original)}>
               <Ban className="mr-2 h-4 w-4" />
-              停止
+              {t("pipelines.col.stop")}
             </Button>
           )}
         </div>

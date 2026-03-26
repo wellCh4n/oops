@@ -7,7 +7,7 @@ export default function AppsPage({
   searchParams: Promise<{ namespace?: string }>
 }) {
   return (
-    <Suspense fallback={<div className="p-4">加载中...</div>}>
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
       <PageClient searchParams={searchParams} />
     </Suspense>
   )

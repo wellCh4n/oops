@@ -11,6 +11,7 @@ import { Copy, Plug, Globe } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { useLanguage } from "@/contexts/language-context"
 
 interface Props {
   initialServiceConfig?: ApplicationServiceConfig
@@ -23,6 +24,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [environmentConfigs, setEnvironmentConfigs] = useState<ApplicationServiceEnvironmentConfig[]>([])
   const [saving, setSaving] = useState(false)
+  const { t } = useLanguage()
 
   const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
 
@@ -67,7 +69,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     if (!namespace || !applicationName) return
     const num = Number(port)
     if (!Number.isInteger(num) || num <= 0 || num > 65535) {
-      toast.error("端口必须是 1-65535 的整数")
+      toast.error(t("apps.service.portError"))
       return
     }
     setSaving(true)
@@ -77,12 +79,12 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
         environmentConfigs,
       })
       if (res.success) {
-        toast.success("服务端口已保存")
+        toast.success(t("apps.service.saveSuccess"))
       } else {
-        toast.error(res.message || "保存失败")
+        toast.error(res.message || t("apps.service.saveError"))
       }
     } catch (e) {
-      toast.error("保存失败")
+      toast.error(t("apps.service.saveError"))
     } finally {
       setSaving(false)
     }
@@ -91,14 +93,14 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-2 max-w-xs">
-        <Label htmlFor="service-port" className="flex items-center gap-1"><Plug className="h-3.5 w-3.5" />端口</Label>
+        <Label htmlFor="service-port" className="flex items-center gap-1"><Plug className="h-3.5 w-3.5" />{t("apps.service.port")}</Label>
         <Input
           id="service-port"
           type="number"
           inputMode="numeric"
           value={port}
           onChange={(e) => setPort(e.target.value)}
-          placeholder="例如 8080"
+          placeholder={t("apps.service.portPlaceholder")}
           min={1}
           max={65535}
         />
@@ -149,7 +151,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                           return next
                         })
                       }}
-                      placeholder="例如 app.example.com"
+                      placeholder={t("apps.service.domainPlaceholder")}
                     />
                   </div>
 
@@ -157,7 +159,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                     type="button"
                     variant="outline"
                     size="icon"
-                    aria-label="复制完整地址"
+                    aria-label={t("apps.service.copyAddress")}
                     disabled={!((config.host ?? "").trim())}
                     onClick={async () => {
                       const scheme = (config.https ?? true) ? "https://" : "http://"
@@ -165,9 +167,9 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                       const url = `${scheme}${host}`
                       try {
                         await navigator.clipboard.writeText(url)
-                        toast.success("已复制")
+                        toast.success(t("apps.service.copied"))
                       } catch (e) {
-                        toast.error("复制失败")
+                        toast.error(t("apps.service.copyError"))
                       }
                     }}
                   >
@@ -181,7 +183,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       </div>
       <div>
         <Button onClick={onSave} disabled={saving || !namespace || !applicationName}>
-          {saving ? "保存中..." : "保存"}
+          {saving ? t("common.saving") : t("common.save")}
         </Button>
       </div>
     </div>

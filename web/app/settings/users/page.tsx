@@ -12,9 +12,10 @@ import { DataTable } from "@/components/ui/data-table"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/api/client"
 import { isAdmin } from "@/lib/auth"
-import { columns, User } from "./columns"
+import { getColumns, User } from "./columns"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -41,6 +42,7 @@ export default function UsersPage() {
   const [pwdShow, setPwdShow] = useState(false)
   const [pwdConfirmShow, setPwdConfirmShow] = useState(false)
   const [pwdLoading, setPwdLoading] = useState(false)
+  const { t } = useLanguage()
 
   useEffect(() => {
     setAdmin(isAdmin())
@@ -53,7 +55,7 @@ export default function UsersPage() {
       const data = await res.json()
       if (data.success) setUsers(data.data)
     } catch {
-      toast.error("加载用户列表失败")
+      toast.error(t("users.fetchError"))
     } finally {
       setTableLoading(false)
     }
@@ -66,7 +68,7 @@ export default function UsersPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (password !== confirmPassword) {
-      toast.error("两次输入的密码不一致")
+      toast.error(t("users.pwdMismatch"))
       return
     }
     setLoading(true)
@@ -78,7 +80,7 @@ export default function UsersPage() {
       })
       const data = await res.json()
       if (data.success) {
-        toast.success("用户创建成功")
+        toast.success(t("users.createSuccess"))
         setOpen(false)
         setUsername("")
         setEmail("")
@@ -86,10 +88,10 @@ export default function UsersPage() {
         setConfirmPassword("")
         loadUsers()
       } else {
-        toast.error(data.message || "创建失败")
+        toast.error(data.message || t("users.createError"))
       }
     } catch {
-      toast.error("创建失败")
+      toast.error(t("users.createError"))
     } finally {
       setLoading(false)
     }
@@ -112,14 +114,14 @@ export default function UsersPage() {
       })
       const data = await res.json()
       if (data.success) {
-        toast.success("用户已更新")
+        toast.success(t("users.updateSuccess"))
         setEditTarget(null)
         loadUsers()
       } else {
-        toast.error(data.message || "更新失败")
+        toast.error(data.message || t("users.updateError"))
       }
     } catch {
-      toast.error("更新失败")
+      toast.error(t("users.updateError"))
     } finally {
       setEditLoading(false)
     }
@@ -135,7 +137,7 @@ export default function UsersPage() {
 
   async function confirmChangePassword() {
     if (pwdNew !== pwdConfirm) {
-      toast.error("两次输入的密码不一致")
+      toast.error(t("users.pwdMismatch"))
       return
     }
     if (!pwdTarget) return
@@ -148,13 +150,13 @@ export default function UsersPage() {
       })
       const data = await res.json()
       if (data.success) {
-        toast.success("密码已修改")
+        toast.success(t("users.pwdChanged"))
         setPwdTarget(null)
       } else {
-        toast.error(data.message || "修改失败")
+        toast.error(data.message || t("users.changePwdError"))
       }
     } catch {
-      toast.error("修改失败")
+      toast.error(t("users.changePwdError"))
     } finally {
       setPwdLoading(false)
     }
@@ -170,36 +172,36 @@ export default function UsersPage() {
       const res = await apiFetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" })
       const data = await res.json()
       if (data.success) {
-        toast.success("用户已删除")
+        toast.success(t("users.deleteSuccess"))
         loadUsers()
       } else {
-        toast.error(data.message || "删除失败")
+        toast.error(data.message || t("users.deleteError"))
       }
     } catch {
-      toast.error("删除失败")
+      toast.error(t("users.deleteError"))
     } finally {
       setDeleteTarget(null)
     }
   }
 
   return (
-    <ContentPage title="用户">
+    <ContentPage title={t("users.title")}>
       <TableForm
         options={
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium whitespace-nowrap">用户名或邮箱:</span>
+              <span className="text-sm font-medium whitespace-nowrap">{t("users.searchLabel")}</span>
               <div className="flex items-center space-x-2">
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
-                  placeholder="搜索用户名或邮箱..."
+                  placeholder={t("users.searchPlaceholder")}
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => setAppliedSearch(search)}>
                   <Search className="mr-2 h-4 w-4" />
-                  搜索
+                  {t("common.search")}
                 </Button>
               </div>
             </div>
@@ -208,16 +210,16 @@ export default function UsersPage() {
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    创建用户
+                    {t("users.createBtn")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>创建用户</DialogTitle>
+                    <DialogTitle>{t("users.createTitle")}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleCreate} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="new-username">用户名</Label>
+                      <Label htmlFor="new-username">{t("users.col.username")}</Label>
                       <Input
                         id="new-username"
                         value={username}
@@ -226,7 +228,7 @@ export default function UsersPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="new-email">邮箱（可选）</Label>
+                      <Label htmlFor="new-email">{t("users.emailOptional")}</Label>
                       <Input
                         id="new-email"
                         type="email"
@@ -236,7 +238,7 @@ export default function UsersPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="new-password">密码</Label>
+                      <Label htmlFor="new-password">{t("users.password")}</Label>
                       <div className="relative">
                         <Input
                           id="new-password"
@@ -257,7 +259,7 @@ export default function UsersPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="confirm-password">确认密码</Label>
+                      <Label htmlFor="confirm-password">{t("users.confirmPassword")}</Label>
                       <div className="relative">
                         <Input
                           id="confirm-password"
@@ -279,10 +281,10 @@ export default function UsersPage() {
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                        取消
+                        {t("common.cancel")}
                       </Button>
                       <Button type="submit" disabled={loading}>
-                        {loading ? "创建中..." : "创建"}
+                        {loading ? t("users.creating") : t("users.create")}
                       </Button>
                     </div>
                   </form>
@@ -293,7 +295,7 @@ export default function UsersPage() {
         }
         table={
           <DataTable
-            columns={columns}
+            columns={getColumns(t)}
             data={appliedSearch ? users.filter(u =>
               u.username.toLowerCase().includes(appliedSearch.toLowerCase()) ||
               (u.email ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
@@ -307,15 +309,15 @@ export default function UsersPage() {
       <Dialog open={!!editTarget} onOpenChange={(v) => { if (!v) setEditTarget(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑用户</DialogTitle>
+            <DialogTitle>{t("users.editTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>用户名</Label>
+              <Label>{t("users.col.username")}</Label>
               <p className="text-sm font-mono">{editTarget?.username}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">邮箱</Label>
+              <Label htmlFor="edit-email">{t("users.col.email")}</Label>
               <Input
                 id="edit-email"
                 type="email"
@@ -325,21 +327,21 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-role">角色</Label>
+              <Label htmlFor="edit-role">{t("users.col.role")}</Label>
               <Select value={editRole} onValueChange={setEditRole}>
                 <SelectTrigger id="edit-role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USER">普通用户</SelectItem>
-                  <SelectItem value="ADMIN">管理员</SelectItem>
+                  <SelectItem value="USER">{t("users.role.user")}</SelectItem>
+                  <SelectItem value="ADMIN">{t("users.role.admin")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditTarget(null)}>取消</Button>
+              <Button variant="outline" onClick={() => setEditTarget(null)}>{t("common.cancel")}</Button>
               <Button onClick={confirmEdit} disabled={editLoading}>
-                {editLoading ? "保存中..." : "保存"}
+                {editLoading ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </div>
@@ -349,15 +351,15 @@ export default function UsersPage() {
       <Dialog open={!!pwdTarget} onOpenChange={(v) => { if (!v) setPwdTarget(null) }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>修改密码</DialogTitle>
+            <DialogTitle>{t("users.changePwdTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>用户名</Label>
+              <Label>{t("users.col.username")}</Label>
               <p className="text-sm font-mono">{pwdTarget?.username}</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pwd-new">新密码</Label>
+              <Label htmlFor="pwd-new">{t("users.newPassword")}</Label>
               <div className="relative">
                 <Input
                   id="pwd-new"
@@ -372,7 +374,7 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pwd-confirm">确认密码</Label>
+              <Label htmlFor="pwd-confirm">{t("users.confirmPassword")}</Label>
               <div className="relative">
                 <Input
                   id="pwd-confirm"
@@ -387,9 +389,9 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setPwdTarget(null)}>取消</Button>
+              <Button variant="outline" onClick={() => setPwdTarget(null)}>{t("common.cancel")}</Button>
               <Button onClick={confirmChangePassword} disabled={pwdLoading || !pwdNew}>
-                {pwdLoading ? "修改中..." : "确认修改"}
+                {pwdLoading ? t("users.changingPwd") : t("users.confirmChangePwd")}
               </Button>
             </div>
           </div>
@@ -399,14 +401,14 @@ export default function UsersPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除用户</AlertDialogTitle>
+            <AlertDialogTitle>{t("users.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除用户 <strong>{deleteTarget?.username}</strong> 吗？此操作不可撤销。
+              {t("users.deleteDescPrefix")}<strong>{deleteTarget?.username}</strong>{t("users.deleteDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDelete}>确认删除</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={confirmDelete}>{t("users.confirmDelete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Eye, EyeOff, Check, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { EnvironmentFormValues, environmentSchema } from "../columns"
+import { EnvironmentFormValues, getEnvironmentSchema } from "../columns"
 import { fetchEnvironment, updateEnvironment, validateKubernetes, validateImageRepository, createNamespace, deleteEnvironment } from "@/lib/api/environments"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { useLanguage } from "@/contexts/language-context"
 
 import {
   AlertDialog,
@@ -36,6 +37,7 @@ export default function EnvironmentEditPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
   const [showToken, setShowToken] = useState(false)
   const [showRepoPassword, setShowRepoPassword] = useState(false)
@@ -54,7 +56,7 @@ export default function EnvironmentEditPage() {
   const [isDeleting, setIsDeleting] = useState(false)
 
   const form = useForm<EnvironmentFormValues>({
-    resolver: zodResolver(environmentSchema),
+    resolver: zodResolver(getEnvironmentSchema(t)),
     defaultValues: {
       name: "",
       kubernetesApiServer: {
@@ -108,7 +110,7 @@ export default function EnvironmentEditPage() {
             },
           })
         } else {
-          toast.error("加载环境失败")
+          toast.error(t("env.loadError"))
           router.push("/settings/environments")
         }
       } catch (error) {
@@ -129,18 +131,18 @@ export default function EnvironmentEditPage() {
     try {
         setShowCreateNamespaceDialog(false)
         const k8sConfig = form.getValues("kubernetesApiServer")
-        const loadingToast = toast.loading("正在创建工作空间...")
+        const loadingToast = toast.loading(t("env.workspaceCreating"))
         const res = await createNamespace({
             kubernetesApiServer: k8sConfig!,
             workNamespace: missingNamespace
         })
         toast.dismiss(loadingToast)
         if (res.success) {
-            toast.success("工作空间创建成功")
+            toast.success(t("env.workspaceCreated"))
             // Re-validate immediately
             handleValidateK8s()
         } else {
-            toast.error("工作空间创建失败")
+            toast.error(t("env.workspaceCreateError"))
         }
     } catch {
         toast.dismiss()
@@ -155,7 +157,7 @@ export default function EnvironmentEditPage() {
       const workNamespace = form.getValues("workNamespace")
       
       if (!workNamespace) {
-        toast.error("请先填写工作命名空间")
+        toast.error(t("env.workNsRequired"))
         setIsValidatingK8s(false)
         return
       }
@@ -167,18 +169,18 @@ export default function EnvironmentEditPage() {
 
       if (res.success && res.data?.success) {
         setIsK8sValidated(true)
-        toast.success("Kubernetes 配置验证通过")
+        toast.success(t("env.k8sValidated"))
       } else if (res.data?.status === "NAMESPACE_MISSING") {
         setIsK8sValidated(false)
         setMissingNamespace(workNamespace)
         setShowCreateNamespaceDialog(true)
       } else {
         setIsK8sValidated(false)
-        toast.error(res.data?.message || "Kubernetes 配置验证失败")
+        toast.error(res.data?.message || t("env.k8sValidateFailed"))
       }
     } catch {
       setIsK8sValidated(false)
-      toast.error("验证过程出错")
+      toast.error(t("env.validateError"))
     } finally {
       setIsValidatingK8s(false)
     }
@@ -191,14 +193,14 @@ export default function EnvironmentEditPage() {
       const res = await validateImageRepository(repoConfig!)
       if (res.success && res.data) {
         setIsRepoValidated(true)
-        toast.success("镜像仓库配置验证通过")
+        toast.success(t("env.repoValidated"))
       } else {
         setIsRepoValidated(false)
-        toast.error("镜像仓库配置验证失败")
+        toast.error(t("env.repoValidateFailed"))
       }
     } catch {
       setIsRepoValidated(false)
-      toast.error("验证过程出错")
+      toast.error(t("env.validateError"))
     } finally {
       setIsValidatingRepo(false)
     }
@@ -208,10 +210,10 @@ export default function EnvironmentEditPage() {
     try {
       const res = await updateEnvironment(id, data)
       if (res.success) {
-        toast.success("环境更新成功")
+        toast.success(t("env.updateSuccess"))
         router.push("/settings/environments")
       } else {
-        toast.error("环境更新失败")
+        toast.error(t("env.updateError"))
       }
     } catch (e) {
       console.error(e)
@@ -227,10 +229,10 @@ export default function EnvironmentEditPage() {
       const res = await deleteEnvironment(id)
       if (res.success) {
         ok = true
-        toast.success("环境删除成功")
+        toast.success(t("env.deleteSuccess"))
         router.push("/settings/environments")
       } else {
-        toast.error("环境删除失败")
+        toast.error(t("env.deleteError"))
       }
     } catch (e) {
       console.error(e)
@@ -255,13 +257,13 @@ export default function EnvironmentEditPage() {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="space-y-4">
-                    <h4 className="text-sm font-medium leading-none text-muted-foreground">基本信息</h4>
+                    <h4 className="text-sm font-medium leading-none text-muted-foreground">{t("env.basicInfo")}</h4>
                     <FormField
                       control={form.control}
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>名称</FormLabel>
+                          <FormLabel>{t("env.col.name")}</FormLabel>
                           <FormControl>
                             <Input placeholder="Production" {...field} />
                           </FormControl>
@@ -275,7 +277,7 @@ export default function EnvironmentEditPage() {
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium leading-none text-muted-foreground">Kubernetes 配置</h4>
+                        <h4 className="text-sm font-medium leading-none text-muted-foreground">{t("env.k8sConfig")}</h4>
                         <Button
                           type="button"
                           variant={isK8sValidated ? "outline" : "secondary"}
@@ -288,9 +290,9 @@ export default function EnvironmentEditPage() {
                           {isK8sValidated ? (
                             <>
                               <Check className="mr-2 h-3 w-3" />
-                              验证通过
+                              {t("env.validated")}
                             </>
-                          ) : "验证连接"}
+                          ) : t("env.validate")}
                         </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -299,7 +301,7 @@ export default function EnvironmentEditPage() {
                         name="kubernetesApiServer.url"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
-                            <FormLabel>API 服务地址</FormLabel>
+                            <FormLabel>{t("env.apiServerUrl")}</FormLabel>
                             <FormControl>
                               <Input placeholder="https://api.example.com" {...field} />
                             </FormControl>
@@ -312,7 +314,7 @@ export default function EnvironmentEditPage() {
                         name="kubernetesApiServer.token"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
-                            <FormLabel>API 服务令牌</FormLabel>
+                            <FormLabel>{t("env.apiToken")}</FormLabel>
                             <FormControl>
                               <div className="relative w-full">
                                 <Textarea 
@@ -348,7 +350,7 @@ export default function EnvironmentEditPage() {
                         name="workNamespace"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>工作命名空间</FormLabel>
+                            <FormLabel>{t("env.workNamespace")}</FormLabel>
                             <FormControl>
                               <Input placeholder="default" {...field} />
                             </FormControl>
@@ -361,7 +363,7 @@ export default function EnvironmentEditPage() {
                         name="buildStorageClass"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>构建存储类</FormLabel>
+                            <FormLabel>{t("env.buildStorageClass")}</FormLabel>
                             <FormControl>
                               <Input placeholder="standard" {...field} />
                             </FormControl>
@@ -376,7 +378,7 @@ export default function EnvironmentEditPage() {
 
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium leading-none text-muted-foreground">镜像仓库配置</h4>
+                        <h4 className="text-sm font-medium leading-none text-muted-foreground">{t("env.imageRepoConfig")}</h4>
                         <Button
                           type="button"
                           variant={isRepoValidated ? "outline" : "secondary"}
@@ -389,9 +391,9 @@ export default function EnvironmentEditPage() {
                           {isRepoValidated ? (
                             <>
                               <Check className="mr-2 h-3 w-3" />
-                              验证通过
+                              {t("env.validated")}
                             </>
-                          ) : "验证连接"}
+                          ) : t("env.validate")}
                         </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -400,7 +402,7 @@ export default function EnvironmentEditPage() {
                         name="imageRepository.url"
                         render={({ field }) => (
                           <FormItem className="col-span-2">
-                            <FormLabel>仓库地址</FormLabel>
+                            <FormLabel>{t("env.repoUrl")}</FormLabel>
                             <FormControl>
                               <Input placeholder="docker.io/my-repo" {...field} />
                             </FormControl>
@@ -413,7 +415,7 @@ export default function EnvironmentEditPage() {
                         name="imageRepository.username"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>用户名</FormLabel>
+                            <FormLabel>{t("env.repoUsername")}</FormLabel>
                             <FormControl>
                               <Input placeholder="username" {...field} />
                             </FormControl>
@@ -426,7 +428,7 @@ export default function EnvironmentEditPage() {
                         name="imageRepository.password"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>密码</FormLabel>
+                            <FormLabel>{t("env.repoPassword")}</FormLabel>
                             <FormControl>
                               <div className="relative">
                                 <Input 
@@ -466,9 +468,9 @@ export default function EnvironmentEditPage() {
                         setShowDeleteDialog(true)
                       }}
                     >
-                      删除环境
+                      {t("env.delete")}
                     </Button>
-                    <Button type="submit" disabled={!isK8sValidated || !isRepoValidated}>保存配置</Button>
+                    <Button type="submit" disabled={!isK8sValidated || !isRepoValidated}>{t("env.save")}</Button>
                   </div>
                 </form>
               </Form>
@@ -478,14 +480,14 @@ export default function EnvironmentEditPage() {
       <AlertDialog open={showCreateNamespaceDialog} onOpenChange={setShowCreateNamespaceDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>工作空间不存在</AlertDialogTitle>
+            <AlertDialogTitle>{t("env.nsNotExistTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              检测到工作空间 <strong>{missingNamespace}</strong> 在集群中不存在，是否立即创建？
+              {t("env.nsNotExistDescPrefix")}<strong>{missingNamespace}</strong>{t("env.nsNotExistDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCreateNamespace}>创建并继续</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCreateNamespace}>{t("env.nsCreate")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -493,16 +495,16 @@ export default function EnvironmentEditPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除环境</AlertDialogTitle>
+            <AlertDialogTitle>{t("env.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作不可撤销。请输入环境名称 <strong>{environmentName}</strong> 以确认删除。
+              {t("env.deleteDescPrefix")}<strong>{environmentName}</strong>{t("env.deleteDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
             <Input
               value={deleteConfirmInput}
               onChange={(e) => setDeleteConfirmInput(e.target.value)}
-              placeholder={environmentName || "环境名称"}
+              placeholder={environmentName || t("env.namePlaceholder")}
               autoFocus
             />
           </div>
@@ -511,7 +513,7 @@ export default function EnvironmentEditPage() {
               disabled={isDeleting}
               onClick={() => setDeleteConfirmInput("")}
             >
-              取消
+              {t("common.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
@@ -522,7 +524,7 @@ export default function EnvironmentEditPage() {
               }}
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              确认删除
+              {t("env.deleteConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

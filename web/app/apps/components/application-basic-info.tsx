@@ -30,6 +30,7 @@ import { updateApplication, getApplicationEnvironments, updateApplicationEnviron
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { AppWindow, Layers, AlignLeft, Server } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -41,7 +42,8 @@ export function ApplicationBasicInfo({
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
-  
+  const { t } = useLanguage()
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -56,7 +58,7 @@ export function ApplicationBasicInfo({
             setSelectedEnvNames(appEnvRes.data.map(e => e.environmentName))
         }
       } catch (error) {
-        toast.error("Failed to fetch initial data")
+        toast.error(t("apps.basic.fetchError"))
       }
     }
     loadData()
@@ -105,10 +107,10 @@ export function ApplicationBasicInfo({
         await updateApplicationEnvironments(data.namespace, data.name, envPayload)
       }
 
-      toast.success("应用更新成功")
+      toast.success(t("apps.basic.updateSuccess"))
     } catch (error) {
       console.error(error)
-      toast.error("保存失败")
+      toast.error(t("apps.basic.updateError"))
     }
   }
 
@@ -120,9 +122,9 @@ export function ApplicationBasicInfo({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />应用名称</FormLabel>
+              <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
               <FormControl>
-                <Input placeholder="输入应用名称" {...field} disabled={!!initialData} />
+                <Input placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -134,11 +136,11 @@ export function ApplicationBasicInfo({
           name="namespace"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />命名空间</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />{t("common.namespace")}</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!!initialData}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="选择命名空间" />
+                    <SelectValue placeholder={t("apps.basic.nsPlaceholder")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -159,9 +161,9 @@ export function ApplicationBasicInfo({
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />描述</FormLabel>
+              <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
               <FormControl>
-                <Textarea placeholder="输入应用描述" {...field} />
+                <Textarea placeholder={t("apps.basic.descPlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -170,7 +172,7 @@ export function ApplicationBasicInfo({
 
         {initialData && (
             <FormItem>
-                <FormLabel className="flex items-center gap-1"><Server className="h-3.5 w-3.5" />部署环境</FormLabel>
+                <FormLabel className="flex items-center gap-1"><Server className="h-3.5 w-3.5" />{t("apps.basic.deployEnv")}</FormLabel>
                 <div className="grid grid-cols-2 gap-4">
                     {environments.map(env => (
                         <div key={env.id} className="flex items-center space-x-2">
@@ -193,7 +195,7 @@ export function ApplicationBasicInfo({
 
         <div className="flex">
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "保存中..." : "保存"}
+            {isSubmitting ? t("common.saving") : t("common.save")}
           </Button>
         </div>
       </form>

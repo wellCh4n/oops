@@ -8,6 +8,7 @@ import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationPerformanceInfo } from "./components/application-performance-info"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationFormProps {
   initialData?: Application
@@ -17,8 +18,8 @@ interface ApplicationFormProps {
   initialServiceConfig?: ApplicationServiceConfig
 }
 
-export function ApplicationForm({ 
-  initialData, 
+export function ApplicationForm({
+  initialData,
   initialBuildConfig,
   initialBuildEnvConfigs,
   initialPerformanceEnvConfigs,
@@ -28,9 +29,10 @@ export function ApplicationForm({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const rawTab = searchParams.get("tab")
-  const currentTab = (rawTab === "source-info" || rawTab === "build-info") 
-    ? "build-config" 
+  const currentTab = (rawTab === "source-info" || rawTab === "build-info")
+    ? "build-config"
     : (rawTab || "app-info")
+  const { t } = useLanguage()
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -43,11 +45,11 @@ export function ApplicationForm({
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex items-center justify-between">
           <TabsList>
-            <TabsTrigger value="app-info" className="px-6 cursor-pointer">应用信息</TabsTrigger>
-            <TabsTrigger value="build-config" className="px-6 cursor-pointer">构建配置</TabsTrigger>
-            <TabsTrigger value="performance-info" className="px-6 cursor-pointer">性能配置</TabsTrigger>
-            <TabsTrigger value="service-info" className="px-6 cursor-pointer">服务配置</TabsTrigger>
-            <TabsTrigger value="config-info" className="px-6 cursor-pointer">配置管理</TabsTrigger>
+            <TabsTrigger value="app-info" className="px-6 cursor-pointer">{t("apps.tab.appInfo")}</TabsTrigger>
+            <TabsTrigger value="build-config" className="px-6 cursor-pointer">{t("apps.tab.buildConfig")}</TabsTrigger>
+            <TabsTrigger value="performance-info" className="px-6 cursor-pointer">{t("apps.tab.performanceConfig")}</TabsTrigger>
+            <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
+            <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
           </TabsList>
         </div>
 

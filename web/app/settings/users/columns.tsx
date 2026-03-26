@@ -20,7 +20,7 @@ interface TableMeta {
   isAdmin: boolean
 }
 
-export const columns: ColumnDef<User>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
   {
     accessorKey: "id",
     header: "ID",
@@ -33,30 +33,30 @@ export const columns: ColumnDef<User>[] = [
   },
   {
     accessorKey: "username",
-    header: "用户名",
+    header: t("users.col.username"),
     cell: ({ row }) => <Copyable value={row.original.username} maxLength={20} />,
   },
   {
     accessorKey: "email",
-    header: "邮箱",
+    header: t("users.col.email"),
     cell: ({ row }) => row.original.email
       ? <Copyable value={row.original.email} maxLength={30} />
       : <span className="text-muted-foreground">-</span>,
   },
   {
     accessorKey: "role",
-    header: "角色",
+    header: t("users.col.role"),
     cell: ({ row }) => (
-      <span>{row.original.role === "ADMIN" ? "管理员" : "普通用户"}</span>
+      <span>{row.original.role === "ADMIN" ? t("users.role.admin") : t("users.role.user")}</span>
     ),
   },
   {
     accessorKey: "createdTime",
-    header: "创建时间",
+    header: t("users.col.createdTime"),
     cell: ({ row }) => (
       <span>
         {row.original.createdTime
-          ? new Date(row.original.createdTime).toLocaleString("zh-CN")
+          ? new Date(row.original.createdTime).toLocaleString()
           : "-"}
       </span>
     ),
@@ -75,7 +75,7 @@ export const columns: ColumnDef<User>[] = [
             onClick={() => meta?.onEdit(user)}
           >
             <Pencil className="mr-2 h-4 w-4" />
-            编辑
+            {t("users.col.edit")}
           </Button>
           <Button
             variant="outline"
@@ -83,7 +83,7 @@ export const columns: ColumnDef<User>[] = [
             onClick={() => meta?.onChangePassword(user)}
           >
             <KeyRound className="mr-2 h-4 w-4" />
-            修改密码
+            {t("users.col.changePassword")}
           </Button>
           {user.role !== "ADMIN" && (
             <Button
@@ -92,7 +92,7 @@ export const columns: ColumnDef<User>[] = [
               onClick={() => meta?.onDelete(user)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              删除
+              {t("users.col.delete")}
             </Button>
           )}
         </div>

@@ -27,15 +27,16 @@ import { toast } from "sonner"
 import dayjs from "dayjs"
 import { ExternalLink, Check, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
+import { useLanguage } from "@/contexts/language-context"
 
 const statusLabel: Record<string, string> = {
-  BUILD_SUCCEEDED: "编译完成",
-  INITIALIZED: "初始化",
-  RUNNING: "运行中",
-  DEPLOYING: "发布中",
-  SUCCEEDED: "成功",
-  ERROR: "失败",
-  STOPPED: "已停止",
+  BUILD_SUCCEEDED: "apps.pipeline.status.BUILD_SUCCEEDED",
+  INITIALIZED: "apps.pipeline.status.INITIALIZED",
+  RUNNING: "apps.pipeline.status.RUNNING",
+  DEPLOYING: "apps.pipeline.status.DEPLOYING",
+  SUCCEEDED: "apps.pipeline.status.SUCCEEDED",
+  ERROR: "apps.pipeline.status.ERROR",
+  STOPPED: "apps.pipeline.status.STOPPED",
 }
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
@@ -65,6 +66,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
   const [statusLoading, setStatusLoading] = useState(false)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
+  const { t } = useLanguage()
 
 
   const fetchPipeline = async () => {
@@ -74,17 +76,17 @@ export default function PipelineDetailPage({ params }: PageProps) {
         setPipeline(res.data)
       }
     } catch {
-      toast.error("Failed to fetch pipeline details")
+      toast.error(t("apps.pipeline.fetchError"))
     }
   }
 
   const handleDeploy = async () => {
     try {
       await deployPipeline(namespace, name, pipelineId)
-      toast.success("已触发发布")
+      toast.success(t("apps.pipeline.deploySuccess"))
       fetchPipeline()
     } catch {
-      toast.error("发布失败")
+      toast.error(t("apps.pipeline.deployError"))
     }
   }
 
@@ -219,9 +221,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [logs])
 
-  const statusColumns = useMemo(() => getPipelineStatusColumns(namespace, name, pipelineId), [namespace, name, pipelineId])
+  const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, pipelineId), [namespace, name, pipelineId])
 
-  const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? "立即发布" : pipeline?.deployMode === "MANUAL" ? "手动发布" : null
+  const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : pipeline?.deployMode === "MANUAL" ? t("apps.pipeline.modeManual") : null
 
   const activeIndex = steps.indexOf(activeStep)
 
@@ -229,12 +231,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
     <div className="flex h-full min-h-0 flex-col gap-4 relative">
       {wsDisconnected && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground">连接已断开</p>
+          <p className="text-sm text-muted-foreground">{t("common.disconnected")}</p>
           <button
             onClick={() => window.location.reload()}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            刷新页面
+            {t("common.refresh")}
           </button>
         </div>
       )}
@@ -243,13 +245,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
             <div>
-              <h2 className="text-xl font-bold">流水线详情</h2>
+              <h2 className="text-xl font-bold">{t("apps.pipeline.title")}</h2>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {pipeline && <>ID: <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></>}
-                {pipeline && <>环境: <Badge variant="outline">{pipeline.environment}</Badge></>}
-                {pipeline && <>状态: <Badge variant={getStatusVariant(pipeline.status)}>{statusLabel[pipeline.status] ?? pipeline.status}</Badge></>}
-                {pipeline && <>创建时间: <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
-                {deployModeLabel && <>发布方式: <Badge variant="outline">{deployModeLabel}</Badge></>}
+                {pipeline && <>{t("apps.pipeline.id")} <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></>}
+                {pipeline && <>{t("apps.pipeline.envLabel")} <Badge variant="outline">{pipeline.environment}</Badge></>}
+                {pipeline && <>{t("apps.pipeline.statusLabel")} <Badge variant={getStatusVariant(pipeline.status)}>{t(statusLabel[pipeline.status] ?? pipeline.status)}</Badge></>}
+                {pipeline && <>{t("apps.pipeline.createdAt")} <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
+                {deployModeLabel && <>{t("apps.pipeline.deployMode")} <Badge variant="outline">{deployModeLabel}</Badge></>}
               </div>
             </div>
           </div>
@@ -259,19 +261,19 @@ export default function PipelineDetailPage({ params }: PageProps) {
                 <AlertDialogTrigger asChild>
                   <Button variant="default" size="sm">
                     <Rocket className="mr-2 h-4 w-4" />
-                    应用此发布
+                    {t("apps.pipeline.deployBtn")}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>确认应用此发布？</AlertDialogTitle>
+                    <AlertDialogTitle>{t("apps.pipeline.confirmTitle")}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      将把当前编译产物部署到环境 <strong>{pipeline.environment}</strong>，该操作无法撤销。
+                      {t("apps.pipeline.confirmDescPrefix")}<strong>{pipeline.environment}</strong>{t("apps.pipeline.confirmDescSuffix")}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>取消</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeploy}>确认发布</AlertDialogAction>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeploy}>{t("apps.pipeline.confirm")}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -325,13 +327,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
             {/* Application Status (right) */}
             <div className="flex-1 border rounded-md p-4 flex flex-col gap-3 overflow-y-auto">
                 <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">运行状态</h3>
+                    <h3 className="font-semibold">{t("apps.pipeline.runningStatus")}</h3>
                     {pipeline?.environment && (
                         <Link
                             href={`/apps/${namespace}/${name}/status?env=${pipeline.environment}`}
                             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
-                            查看详情
+                            {t("apps.pipeline.viewDetails")}
                             <ArrowUpRight className="h-3.5 w-3.5" />
                         </Link>
                     )}
@@ -340,13 +342,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   <div className="flex flex-col gap-1 text-sm">
                       {clusterDomain?.internalDomain && (
                           <div className="flex items-center gap-2">
-                              <span className="font-medium">内部域名:</span>
+                              <span className="font-medium">{t("apps.pipeline.internalDomain")}</span>
                               <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
                           </div>
                       )}
                       {clusterDomain?.externalDomain && (
                           <div className="flex items-center gap-2">
-                              <span className="font-medium">外部域名:</span>
+                              <span className="font-medium">{t("apps.pipeline.externalDomain")}</span>
                               <Copyable value={clusterDomain.externalDomain} maxLength={Infinity} />
                               <a href={clusterDomain.externalDomain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                   <ExternalLink className="h-4 w-4" />

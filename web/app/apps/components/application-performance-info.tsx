@@ -20,6 +20,7 @@ import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
 import { Cpu, MemoryStick, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationPerformanceInfoProps {
   initialEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
@@ -50,6 +51,7 @@ export function ApplicationPerformanceInfo({
 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
+  const { t } = useLanguage()
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -86,17 +88,17 @@ export function ApplicationPerformanceInfo({
 
   const handleSave = async (data: ApplicationPerformanceEnvFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
-      toast.error("请先保存应用基本信息")
+      toast.error(t("apps.perf.noAppInfo"))
       return
     }
-    
+
     setIsSaving(true)
     try {
       await updateApplicationPerformanceEnvConfigs(namespace, applicationName, data.environmentConfigs)
-      toast.success("环境配置保存成功")
+      toast.success(t("apps.perf.saveSuccess"))
     } catch (error) {
       console.error(error)
-      toast.error("保存环境配置失败")
+      toast.error(t("apps.perf.saveError"))
     } finally {
       setIsSaving(false)
     }
@@ -125,7 +127,7 @@ export function ApplicationPerformanceInfo({
         </div>
         <div className="flex">
           <Button type="submit" disabled={isSaving}>
-            {isSaving ? "保存中..." : "保存"}
+            {isSaving ? t("common.saving") : t("common.save")}
           </Button>
         </div>
       </form>
@@ -183,6 +185,7 @@ function ReplicasInput({ value, onChange }: { value: number | undefined, onChang
 
 function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationPerformanceEnvFormValues>()
+  const { t } = useLanguage()
 
   return (
     <div className="flex flex-col gap-4">
@@ -191,7 +194,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
         name={`environmentConfigs.${index}.replicas`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />副本数</FormLabel>
+            <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.perf.replicas")}</FormLabel>
             <FormControl>
               <ReplicasInput value={field.value} onChange={field.onChange} />
             </FormControl>
@@ -205,7 +208,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.cpuRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />CPU 请求</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.perf.cpuRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input placeholder="0.1" {...field} autoComplete="off" className="pr-10" />
@@ -221,7 +224,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.cpuLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />CPU 限制</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.perf.cpuLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input placeholder="1" {...field} autoComplete="off" className="pr-10" />
@@ -237,7 +240,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.memoryRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />内存 请求</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.perf.memRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input placeholder="128" {...field} autoComplete="off" className="pr-8" />
@@ -253,7 +256,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.memoryLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />内存 限制</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.perf.memLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input placeholder="512" {...field} autoComplete="off" className="pr-8" />

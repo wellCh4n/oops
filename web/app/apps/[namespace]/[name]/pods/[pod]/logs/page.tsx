@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function ApplicationPodLogsPage() {
   const params = useParams()
@@ -21,6 +22,7 @@ export default function ApplicationPodLogsPage() {
     "connecting" | "connected" | "disconnected"
   >("connecting")
   const bottomRef = useRef<HTMLDivElement>(null)
+  const { t } = useLanguage()
 
   useEffect(() => {
     if (!env || !namespace || !name || !pod) return
@@ -93,12 +95,12 @@ export default function ApplicationPodLogsPage() {
     <div className="flex h-full min-h-0 flex-col relative">
       {connectionStatus === "disconnected" && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground">连接已断开</p>
+          <p className="text-sm text-muted-foreground">{t("common.disconnected")}</p>
           <button
             onClick={() => window.location.reload()}
             className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            刷新页面
+            {t("common.refresh")}
           </button>
         </div>
       )}
@@ -109,7 +111,7 @@ export default function ApplicationPodLogsPage() {
               className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
             />
             <div className="text-xs font-medium text-muted-foreground shrink-0">
-              日志
+              {t("apps.logs.label")}
             </div>
             <Badge className="bg-orange-500 text-white">{env}</Badge>
             <div className="text-sm font-semibold text-foreground truncate">

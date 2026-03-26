@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from "lucide-react"
+import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Globe } from "lucide-react"
 
 import {
   Sidebar,
@@ -43,6 +43,8 @@ import React, { useState, useEffect } from "react"
 import { clearAuth } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
+import { useLanguage } from "@/contexts/language-context"
+import { Locale } from "@/lib/i18n"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -52,6 +54,7 @@ export function AppSidebar() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const { locale, setLocale, t } = useLanguage()
 
   useEffect(() => setMounted(true), [])
 
@@ -74,11 +77,11 @@ export function AppSidebar() {
     <AlertDialog open={logoutOpen} onOpenChange={setLogoutOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认退出登录?</AlertDialogTitle>
+          <AlertDialogTitle>{t("sidebar.logoutConfirm")}</AlertDialogTitle>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmLogout}>退出登录</AlertDialogAction>
+          <AlertDialogCancel>{t("sidebar.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmLogout}>{t("sidebar.logout")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -108,7 +111,7 @@ export function AppSidebar() {
         {navConfig.map((group) => (
           <React.Fragment key={group.title}>
             <SidebarGroup>
-              {open && <SidebarGroupLabel>{group.title}</SidebarGroupLabel>}
+              {open && <SidebarGroupLabel>{t(group.title)}</SidebarGroupLabel>}
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => (
@@ -116,11 +119,11 @@ export function AppSidebar() {
                       <SidebarMenuButton
                         asChild
                         isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
-                        tooltip={item.title}
+                        tooltip={t(item.title)}
                       >
                         <Link href={item.url}>
                           <item.icon />
-                          <span>{item.title}</span>
+                          <span>{t(item.title)}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -136,10 +139,10 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleSidebar}
-              tooltip={open ? undefined : "展开侧边栏"}
+              tooltip={open ? undefined : t("sidebar.expand")}
             >
               {open ? <PanelLeftClose /> : <PanelLeftOpen />}
-              <span>折叠</span>
+              <span>{t("sidebar.collapse")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -151,63 +154,71 @@ export function AppSidebar() {
                     <span className="text-xs text-muted-foreground/70 truncate">{currentUser.email}</span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 ml-2 shrink-0">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" aria-label="切换主题">
-                        {mounted && resolvedTheme === "dark"
-                          ? <Moon className="h-4 w-4" />
-                          : <Sun className="h-4 w-4" />}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" side="top">
-                      <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
-                        <DropdownMenuRadioItem value="system">
-                          <Monitor className="size-4" />
-                          系统
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="light">
-                          <Sun className="size-4" />
-                          明亮
-                        </DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="dark">
-                          <Moon className="size-4" />
-                          暗黑
-                        </DropdownMenuRadioItem>
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <button onClick={() => setLogoutOpen(true)} className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer" title="退出登录">
-                    <LogOut className="h-4 w-4" />
-                  </button>
-                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="top">
+                    <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+                      <DropdownMenuRadioItem value="zh">{t("lang.zh")}</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="en">{t("lang.en")}</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                      <DropdownMenuRadioItem value="system">
+                        <Monitor className="size-4" />
+                        {t("sidebar.themeSystem")}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="light">
+                        <Sun className="size-4" />
+                        {t("sidebar.themeLight")}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="dark">
+                        <Moon className="size-4" />
+                        {t("sidebar.themeDark")}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
+                      <LogOut className="size-4 text-destructive" />
+                      {t("sidebar.logout")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton tooltip="更多">
+                  <SidebarMenuButton tooltip={t("sidebar.more")}>
                     <MoreHorizontal />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" align="end">
+                  <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
+                    <DropdownMenuRadioItem value="zh">{t("lang.zh")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="en">{t("lang.en")}</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                  <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
                     <DropdownMenuRadioItem value="system">
                       <Monitor className="size-4" />
-                      系统
+                      {t("sidebar.themeSystem")}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="light">
                       <Sun className="size-4" />
-                      明亮
+                      {t("sidebar.themeLight")}
                     </DropdownMenuRadioItem>
                     <DropdownMenuRadioItem value="dark">
                       <Moon className="size-4" />
-                      暗黑
+                      {t("sidebar.themeDark")}
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
-                    <LogOut className="size-4" />
-                    退出登录
+                    <LogOut className="size-4 text-destructive" />
+                    {t("sidebar.logout")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

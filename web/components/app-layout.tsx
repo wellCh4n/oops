@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/sonner"
 import { getToken } from "@/lib/auth"
+import { LanguageProvider } from "@/contexts/language-context"
 
 export function AppLayout({
   children,
@@ -34,14 +35,16 @@ export function AppLayout({
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultSidebarOpen}>
-      <AppSidebar />
-      <SidebarInset className="overflow-x-auto">
-        <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-y-auto min-w-[720px]">
-          {children}
-        </div>
-      </SidebarInset>
-      <Toaster position="top-center" />
-    </SidebarProvider>
+    <LanguageProvider>
+      <SidebarProvider defaultOpen={defaultSidebarOpen}>
+        <AppSidebar />
+        <SidebarInset className="overflow-x-auto">
+          <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-y-auto min-w-[720px]">
+            {children}
+          </div>
+        </SidebarInset>
+        <Toaster position="top-center" />
+      </SidebarProvider>
+    </LanguageProvider>
   )
 }

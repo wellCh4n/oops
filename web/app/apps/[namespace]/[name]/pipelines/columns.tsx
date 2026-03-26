@@ -51,6 +51,7 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
 DeployStatusCell.displayName = "DeployStatusCell"
 
 export const getPipelineStatusColumns = (
+  t: (key: string) => string,
   namespace: string,
   appName: string,
   pipelineId: string
@@ -65,7 +66,7 @@ export const getPipelineStatusColumns = (
   },
   {
     accessorKey: "status",
-    header: "状态",
+    header: t("apps.pipeline.col.status"),
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
@@ -77,7 +78,7 @@ export const getPipelineStatusColumns = (
   },
   {
     id: "deployStatus",
-    header: "是否当前版本",
+    header: t("apps.pipeline.col.currentVersion"),
     cell: ({ row }) => {
       const images = row.original.image ?? []
       return (

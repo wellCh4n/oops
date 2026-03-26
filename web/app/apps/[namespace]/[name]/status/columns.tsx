@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { RotateCw, Terminal, FileText } from "lucide-react"
 
 export const getStatusColumns = (
+  t: (key: string) => string,
   onRestart: (podName: string) => void,
   onViewLogs: (podName: string) => void,
   onTerminal: (podName: string) => void
@@ -21,7 +22,7 @@ export const getStatusColumns = (
   },
   {
     accessorKey: "status",
-    header: "状态",
+    header: t("apps.status.col.status"),
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
@@ -33,11 +34,11 @@ export const getStatusColumns = (
   },
   {
     accessorKey: "podIP",
-    header: "IP 地址",
+    header: t("apps.status.col.ip"),
   },
   {
     accessorKey: "image",
-    header: "镜像",
+    header: t("apps.status.col.image"),
     cell: ({ row }) => {
       const images = row.getValue("image") as string[]
       return (
@@ -62,15 +63,15 @@ export const getStatusColumns = (
             onClick={() => onRestart(row.original.name)}
           >
             <RotateCw className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">重启</span>
+            <span className="ml-2 hidden lg:inline">{t("apps.status.col.restart")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onViewLogs(row.original.name)}>
             <FileText className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">日志</span>
+            <span className="ml-2 hidden lg:inline">{t("apps.status.col.logs")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
             <Terminal className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">终端</span>
+            <span className="ml-2 hidden lg:inline">{t("apps.status.col.terminal")}</span>
           </Button>
         </div>
       )

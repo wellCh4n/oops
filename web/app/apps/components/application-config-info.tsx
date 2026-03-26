@@ -27,6 +27,7 @@ import {
 import { getApplicationConfigMaps, updateApplicationConfigMaps } from "@/lib/api/applications"
 import { ApplicationEnvironment } from "@/lib/api/types"
 import { ApplicationConfigFormValues, applicationConfigSchema } from "../schema"
+import { useLanguage } from "@/contexts/language-context"
 
 function ConfigValueTextarea({
   value,
@@ -76,6 +77,7 @@ export function ApplicationConfigInfo({
   const [activeTab, setActiveTab] = useState<string>("")
   const [isLoadingConfig, setIsLoadingConfig] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const { t } = useLanguage()
 
   const form = useForm<ApplicationConfigFormValues>({
     resolver: zodResolver(applicationConfigSchema),
@@ -106,7 +108,7 @@ export function ApplicationConfigInfo({
           form.reset({ configMaps: res.data })
         }
       } catch (error) {
-        toast.error("Failed to fetch config maps")
+        toast.error(t("apps.config.fetchError"))
         console.error(error)
       } finally {
         setIsLoadingConfig(false)
@@ -122,9 +124,9 @@ export function ApplicationConfigInfo({
     setIsSaving(true)
     try {
       await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
-      toast.success("Config maps updated successfully")
+      toast.success(t("apps.config.updateSuccess"))
     } catch (error) {
-      toast.error("Failed to update config maps")
+      toast.error(t("apps.config.updateError"))
       console.error(error)
     } finally {
       setIsSaving(false)
@@ -201,7 +203,7 @@ export function ApplicationConfigInfo({
                   {fields.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center text-muted-foreground h-12">
-                        {isLoadingConfig ? "加载中..." : "暂无配置项"}
+                        {isLoadingConfig ? t("common.loading") : t("apps.config.noConfig")}
                       </TableCell>
                     </TableRow>
                   )}
@@ -215,7 +217,7 @@ export function ApplicationConfigInfo({
                         disabled={isLoadingConfig}
                       >
                         <Plus className="mr-2 h-4 w-4" />
-                        添加配置项
+                        {t("apps.config.addItem")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -226,7 +228,7 @@ export function ApplicationConfigInfo({
             <div className="flex">
               <Button type="submit" disabled={isSaving || isLoadingConfig}>
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                保存
+                {t("common.save")}
               </Button>
             </div>
           </form>

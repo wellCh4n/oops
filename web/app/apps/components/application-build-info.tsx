@@ -23,6 +23,7 @@ import { GitBranch, FileCode, Box, Terminal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useTheme } from "next-themes"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -58,6 +59,7 @@ export function ApplicationBuildInfo({
 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
+  const { t } = useLanguage()
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -90,7 +92,7 @@ export function ApplicationBuildInfo({
 
   const handleSave = async (data: ApplicationBuildFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
-      toast.error("请先保存应用基本信息")
+      toast.error(t("apps.build.noAppInfo"))
       return
     }
 
@@ -110,10 +112,10 @@ export function ApplicationBuildInfo({
       const envConfigs = data.environmentConfigs as ApplicationBuildEnvironmentConfig[]
       await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
 
-      toast.success("构建配置保存成功")
+      toast.success(t("apps.build.saveSuccess"))
     } catch (error) {
       console.error(error)
-      toast.error("保存配置失败")
+      toast.error(t("apps.build.saveError"))
     } finally {
       setIsSaving(false)
     }
@@ -125,15 +127,15 @@ export function ApplicationBuildInfo({
         <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
           <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-medium">源码配置</h3>
+            <h3 className="text-lg font-medium">{t("apps.build.sourceConfig")}</h3>
             <FormField
               control={form.control}
               name="repository"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />代码仓库</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />{t("apps.build.repository")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="输入代码仓库地址" {...field} />
+                    <Input placeholder={t("apps.build.repositoryPlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -146,7 +148,7 @@ export function ApplicationBuildInfo({
                 name="dockerFile"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />Dockerfile 路径</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
                     <FormControl>
                       <Input placeholder="Dockerfile" {...field} />
                     </FormControl>
@@ -160,9 +162,9 @@ export function ApplicationBuildInfo({
                 name="buildImage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />构建镜像</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />{t("apps.build.buildImage")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="输入构建镜像" {...field} />
+                      <Input placeholder={t("apps.build.buildImagePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -173,7 +175,7 @@ export function ApplicationBuildInfo({
 
           <Separator />
           <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-medium">环境构建配置</h3>
+            <h3 className="text-lg font-medium">{t("apps.build.envConfig")}</h3>
             <div className="w-full">
               <ApplicationEnvironmentSelector
                 namespace={namespace}
@@ -194,7 +196,7 @@ export function ApplicationBuildInfo({
 
           <div className="flex">
              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "保存中..." : "保存"}
+                {isSaving ? t("common.saving") : t("common.save")}
              </Button>
           </div>
         </div>
@@ -211,6 +213,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationBuildFormValues>()
   const { resolvedTheme } = useTheme()
   const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
+  const { t } = useLanguage()
 
   return (
     <div className="flex flex-col gap-4">
@@ -219,7 +222,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
         name={`environmentConfigs.${index}.buildCommand`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="flex items-center gap-1"><Terminal className="h-3.5 w-3.5" />构建命令</FormLabel>
+            <FormLabel className="flex items-center gap-1"><Terminal className="h-3.5 w-3.5" />{t("apps.build.buildCommand")}</FormLabel>
             <FormControl>
               <div className="border rounded-md overflow-hidden">
                 <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">

@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function PipelinesPage() {
   return (
@@ -53,6 +54,7 @@ function PipelinesContent() {
   const [environments, setEnvironments] = useState<string[]>([])
 
   const [initialized, setInitialized] = useState(false)
+  const { t } = useLanguage()
 
   const selectedNamespace = searchParams.get("namespace") ?? ""
   const selectedApp = searchParams.get("app") ?? ""
@@ -82,7 +84,7 @@ function PipelinesContent() {
           }
         }
       } catch {
-        toast.error("Failed to fetch namespaces")
+        toast.error(t("pipelines.fetchNsError"))
       } finally {
         setInitialized(true)
       }
@@ -107,7 +109,7 @@ function PipelinesContent() {
           }
         }
       } catch {
-        toast.error("Failed to fetch applications")
+        toast.error(t("pipelines.fetchAppsError"))
         setApplications([])
       }
     }
@@ -148,7 +150,7 @@ function PipelinesContent() {
         setHasNext(res.data.length === size)
       }
     } catch {
-      toast.error("Failed to fetch pipelines")
+      toast.error(t("pipelines.fetchError"))
     } finally {
       setLoading(false)
     }
@@ -165,10 +167,10 @@ function PipelinesContent() {
   const handleStop = async (pipeline: Pipeline) => {
     try {
       await stopPipeline(selectedNamespace, selectedApp, pipeline.id)
-      toast.success("Pipeline stop requested")
+      toast.success(t("pipelines.stopSuccess"))
       fetchPipelines()
     } catch {
-      toast.error("Failed to stop pipeline")
+      toast.error(t("pipelines.stopError"))
     }
   }
 
@@ -180,26 +182,26 @@ function PipelinesContent() {
     if (!deployTarget) return
     try {
       await deployPipeline(selectedNamespace, selectedApp, deployTarget.id)
-      toast.success("已触发发布")
+      toast.success(t("pipelines.deploySuccess"))
       fetchPipelines()
     } catch {
-      toast.error("发布失败")
+      toast.error(t("pipelines.deployError"))
     } finally {
       setDeployTarget(null)
     }
   }
 
   return (
-    <ContentPage title="流水线">
+    <ContentPage title={t("pipelines.title")}>
       <TableForm
         options={
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
+                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.nsLabel")}</span>
                 <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="选择命名空间" />
+                    <SelectValue placeholder={t("pipelines.selectNs")} />
                   </SelectTrigger>
                   <SelectContent>
                     {namespaces.map(ns => (
@@ -209,10 +211,10 @@ function PipelinesContent() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">应用:</span>
+                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.appLabel")}</span>
                 <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="选择应用" />
+                    <SelectValue placeholder={t("pipelines.selectApp")} />
                   </SelectTrigger>
                   <SelectContent>
                     {applications.map(app => (
@@ -222,13 +224,13 @@ function PipelinesContent() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">环境:</span>
+                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.envLabel")}</span>
                 <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="选择环境" />
+                    <SelectValue placeholder={t("pipelines.selectEnv")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">全部</SelectItem>
+                    <SelectItem value="all">{t("pipelines.allEnv")}</SelectItem>
                     {environments.map(env => (
                       <SelectItem key={env} value={env}>{env}</SelectItem>
                     ))}
@@ -238,13 +240,13 @@ function PipelinesContent() {
             </div>
             <Button variant="outline" size="sm" onClick={fetchPipelines} disabled={loading || !selectedApp}>
               <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              刷新
+              {t("pipelines.refresh")}
             </Button>
           </div>
         }
         table={
           <>
-            <DataTable columns={getPipelineColumns(handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
+            <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
             {selectedApp && (
               <div className="flex items-center justify-end gap-2 mt-2">
                 <Button
@@ -254,16 +256,16 @@ function PipelinesContent() {
                   onClick={() => updateParams({ page: String(page - 1) })}
                 >
                   <ChevronLeft className="mr-2 h-4 w-4" />
-                  上一页
+                  {t("pipelines.prevPage")}
                 </Button>
-                <span className="text-sm text-muted-foreground">第 {page + 1} 页</span>
+                <span className="text-sm text-muted-foreground">{t("pipelines.pagePrefix")}{page + 1}{t("pipelines.pageSuffix")}</span>
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={!hasNext || loading}
                   onClick={() => updateParams({ page: String(page + 1) })}
                 >
-                  下一页
+                  {t("pipelines.nextPage")}
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
@@ -274,14 +276,14 @@ function PipelinesContent() {
       <AlertDialog open={!!deployTarget} onOpenChange={(open) => { if (!open) setDeployTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认应用此发布？</AlertDialogTitle>
+            <AlertDialogTitle>{t("pipelines.confirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              将把当前编译产物部署到环境 <strong>{deployTarget?.environment}</strong>，该操作无法撤销。
+              {t("pipelines.confirmDescPrefix")}<strong>{deployTarget?.environment}</strong>{t("pipelines.confirmDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeploy}>确认发布</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeploy}>{t("pipelines.confirm")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

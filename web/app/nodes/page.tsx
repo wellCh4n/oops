@@ -23,12 +23,14 @@ import {
 } from "@/components/ui/table"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function NodesPage() {
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnv, setSelectedEnv] = useState("")
   const [nodes, setNodes] = useState<NodeStatus[]>([])
   const [loading, setLoading] = useState(false)
+  const { t } = useLanguage()
 
   useEffect(() => {
     void (async () => {
@@ -40,7 +42,7 @@ export default function NodesPage() {
           setSelectedEnv(envs[0].name)
         }
       } catch {
-        toast.error("获取环境列表失败")
+        toast.error(t("nodes.fetchEnvError"))
       }
     })()
   }, [])
@@ -53,7 +55,7 @@ export default function NodesPage() {
         const res = await fetchNodes(selectedEnv)
         setNodes(res.data ?? [])
       } catch {
-        toast.error("获取节点状态失败")
+        toast.error(t("nodes.fetchError"))
         setNodes([])
       } finally {
         setLoading(false)
@@ -62,14 +64,14 @@ export default function NodesPage() {
   }, [selectedEnv])
 
   return (
-    <ContentPage title="节点">
+    <ContentPage title={t("nodes.title")}>
       <TableForm
         options={
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">环境:</span>
+            <span className="text-sm font-medium whitespace-nowrap">{t("common.environment")}</span>
             <Select value={selectedEnv} onValueChange={setSelectedEnv}>
               <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder="选择环境" />
+                <SelectValue placeholder={t("common.selectEnvironment")} />
               </SelectTrigger>
               <SelectContent>
                 {environments.map((env) => (
@@ -86,27 +88,27 @@ export default function NodesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>节点</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>角色</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>CPU</TableHead>
-                  <TableHead>内存</TableHead>
-                  <TableHead>Pods</TableHead>
-                  <TableHead>版本</TableHead>
+                  <TableHead>{t("nodes.col.name")}</TableHead>
+                  <TableHead>{t("nodes.col.status")}</TableHead>
+                  <TableHead>{t("nodes.col.role")}</TableHead>
+                  <TableHead>{t("nodes.col.ip")}</TableHead>
+                  <TableHead>{t("nodes.col.cpu")}</TableHead>
+                  <TableHead>{t("nodes.col.memory")}</TableHead>
+                  <TableHead>{t("nodes.col.pods")}</TableHead>
+                  <TableHead>{t("nodes.col.version")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="py-2 text-center text-muted-foreground">
-                      加载中...
+                      {t("common.loading")}
                     </TableCell>
                   </TableRow>
                 ) : nodes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                      暂无数据
+                      {t("common.noData")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -115,7 +117,7 @@ export default function NodesPage() {
                       <TableCell className="font-medium">{node.name}</TableCell>
                       <TableCell>
                         <Badge variant={node.ready ? "default" : "destructive"}>
-                          {node.ready ? "Ready" : "NotReady"}
+                          {node.ready ? t("nodes.status.ready") : t("nodes.status.notReady")}
                         </Badge>
                       </TableCell>
                       <TableCell>{node.roles || "-"}</TableCell>

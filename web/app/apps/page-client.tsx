@@ -1,11 +1,11 @@
 "use client"
 
-import { use, useState, useEffect } from "react"
+import { use, useState, useEffect, useMemo } from "react"
 import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
-import { columns } from "./columns"
+import { getColumns } from "./columns"
 import { Application } from "@/lib/api/types"
 import { getApplications, getApplication } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function ClientApps({
   searchParams,
@@ -38,6 +39,8 @@ export default function ClientApps({
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const { t } = useLanguage()
+  const columns = useMemo(() => getColumns(t), [t])
 
   useEffect(() => {
     const loadNamespaces = async () => {
@@ -65,7 +68,7 @@ export default function ClientApps({
         }
       } catch (error) {
         console.error("Failed to fetch namespaces:", error)
-        toast.error("Failed to fetch namespaces")
+        toast.error(t("apps.fetchNsError"))
       }
     }
     loadNamespaces()
@@ -115,7 +118,7 @@ export default function ClientApps({
       }
     } catch (error) {
       console.error("Failed to fetch applications:", error)
-      toast.error("Failed to fetch applications")
+      toast.error(t("apps.fetchError"))
       setApplications([])
     } finally {
       setLoading(false)
@@ -139,16 +142,16 @@ export default function ClientApps({
   }
 
   return (
-    <ContentPage title="应用">
+    <ContentPage title={t("apps.title")}>
       <TableForm
         options={
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">命名空间:</span>
+                <span className="text-sm font-medium whitespace-nowrap">{t("apps.namespaceFilter")}</span>
                 <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
                   <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="选择命名空间" />
+                    <SelectValue placeholder={t("common.selectNamespace")} />
                   </SelectTrigger>
                   <SelectContent>
                     {namespaces.map(ns => (
@@ -158,10 +161,10 @@ export default function ClientApps({
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">应用名称:</span>
+                <span className="text-sm font-medium whitespace-nowrap">{t("apps.appNameFilter")}</span>
                 <div className="flex w-full max-w-sm items-center space-x-2">
                   <Input
-                    placeholder="搜索应用..."
+                    placeholder={t("apps.searchPlaceholder")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
@@ -172,14 +175,14 @@ export default function ClientApps({
                   />
                   <Button variant="outline" onClick={handleSearch}>
                     <Search className="mr-2 h-4 w-4" />
-                    搜索
+                    {t("apps.searchBtn")}
                   </Button>
                 </div>
               </div>
             </div>
             <Button onClick={() => setIsCreateOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              创建应用
+              {t("apps.createBtn")}
             </Button>
           </div>
         }

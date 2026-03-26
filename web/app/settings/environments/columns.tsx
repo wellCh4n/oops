@@ -9,7 +9,7 @@ import { Environment } from "@/lib/api/types"
 // Define Schema and Types here to avoid circular dependencies or multiple files
 export const environmentSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "名称不能为空"),
+  name: z.string().min(1),
   kubernetesApiServer: z.object({
     url: z.string().optional(),
     token: z.string().optional(),
@@ -25,15 +25,31 @@ export const environmentSchema = z.object({
 
 export type EnvironmentFormValues = z.infer<typeof environmentSchema>
 
+export const getEnvironmentSchema = (t: (key: string) => string) => z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, t("env.nameRequired")),
+  kubernetesApiServer: z.object({
+    url: z.string().optional(),
+    token: z.string().optional(),
+  }).optional(),
+  workNamespace: z.string().optional(),
+  imageRepository: z.object({
+    url: z.string().optional(),
+    username: z.string().optional(),
+    password: z.string().optional(),
+  }).optional(),
+  buildStorageClass: z.string().optional(),
+})
+
 // Define the shape of our table meta to include handlers
 interface TableMeta {
   onView: (environment: Environment) => void
 }
 
-export const columns: ColumnDef<Environment>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[] => [
   {
     accessorKey: "name",
-    header: "名称",
+    header: t("env.col.name"),
   },
   {
     accessorKey: "kubernetesApiServer.url",
@@ -46,7 +62,7 @@ export const columns: ColumnDef<Environment>[] = [
   },
   {
     accessorKey: "workNamespace",
-    header: "工作命名空间",
+    header: t("env.col.workNamespace"),
     cell: ({ row }) => (
       <div className="whitespace-normal break-all ">
         {row.original.workNamespace ?? "-"}
@@ -55,7 +71,7 @@ export const columns: ColumnDef<Environment>[] = [
   },
   {
     accessorKey: "imageRepository.url",
-    header: "镜像仓库",
+    header: t("env.col.imageRepo"),
     cell: ({ row }) => (
       <div className="whitespace-normal break-all ">
         {row.original.imageRepository?.url ?? "-"}
@@ -70,13 +86,13 @@ export const columns: ColumnDef<Environment>[] = [
 
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => meta?.onView(environment)}
           >
             <Pencil className="mr-2 h-4 w-4" />
-            编辑
+            {t("common.edit")}
           </Button>
         </div>
       )

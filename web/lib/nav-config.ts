@@ -14,46 +14,46 @@ export interface NavGroup {
 
 export const navConfig: NavGroup[] = [
   {
-    title: "集群",
+    title: "nav.cluster",
     items: [
       {
-        title: "节点",
+        title: "nav.nodes",
         url: "/nodes",
         icon: HardDrive,
       },
     ],
   },
   {
-    title: "应用管理",
+    title: "nav.appManagement",
     items: [
       {
-        title: "应用",
+        title: "nav.apps",
         url: "/apps",
         icon: LayoutGrid,
       },
       {
-        title: "流水线",
+        title: "nav.pipelines",
         url: "/pipelines",
         icon: GitBranch,
       },
     ],
   },
   {
-    title: "系统设置",
+    title: "nav.systemSettings",
     url: "/settings",
     items: [
       {
-        title: "用户",
+        title: "nav.users",
         url: "/settings/users",
         icon: Users,
       },
       {
-        title: "环境",
+        title: "nav.environments",
         url: "/settings/environments",
         icon: Server,
       },
       {
-        title: "命名空间",
+        title: "nav.namespaces",
         url: "/settings/namespaces",
         icon: Layers,
       },

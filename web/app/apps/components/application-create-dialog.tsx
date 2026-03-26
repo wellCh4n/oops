@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select"
 import { createApplication } from "@/lib/api/applications"
 import { createApplicationSchema, CreateApplicationFormValues } from "../schema"
+import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationCreateDialogProps {
   open: boolean
@@ -48,7 +49,8 @@ export function ApplicationCreateDialog({
   defaultNamespace,
 }: ApplicationCreateDialogProps) {
   const router = useRouter()
-  
+  const { t } = useLanguage()
+
   const form = useForm<CreateApplicationFormValues>({
     resolver: zodResolver(createApplicationSchema),
     defaultValues: {
@@ -79,14 +81,14 @@ export function ApplicationCreateDialog({
       }
       
       await createApplication(payload)
-      toast.success("应用创建成功")
+      toast.success(t("apps.create.success"))
       onOpenChange(false)
-      
+
       // Redirect to the edit page (detail page)
       router.push(`/apps/${data.namespace}/${data.name}`)
     } catch (error) {
       console.error(error)
-      toast.error("创建失败")
+      toast.error(t("apps.create.error"))
     }
   }
 
@@ -94,9 +96,9 @@ export function ApplicationCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>创建应用</DialogTitle>
+          <DialogTitle>{t("apps.create.title")}</DialogTitle>
           <DialogDescription>
-            请输入应用的基本信息
+            {t("apps.create.description")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -106,9 +108,9 @@ export function ApplicationCreateDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>应用名称</FormLabel>
+                  <FormLabel>{t("common.appName")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="输入应用名称" {...field} />
+                    <Input placeholder={t("apps.create.namePlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -119,11 +121,11 @@ export function ApplicationCreateDialog({
               name="namespace"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>命名空间</FormLabel>
+                  <FormLabel>{t("common.namespace")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="选择命名空间" />
+                        <SelectValue placeholder={t("apps.create.nsPlaceholder")} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -141,9 +143,9 @@ export function ApplicationCreateDialog({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>描述</FormLabel>
+                  <FormLabel>{t("common.description")}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="输入应用描述" {...field} />
+                    <Textarea placeholder={t("apps.create.descPlaceholder")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -151,10 +153,10 @@ export function ApplicationCreateDialog({
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                取消
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "创建中..." : "创建"}
+                {form.formState.isSubmitting ? t("apps.create.creating") : t("apps.create.submit")}
               </Button>
             </DialogFooter>
           </form>

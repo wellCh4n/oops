@@ -6,7 +6,7 @@ import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
-import { columns, EnvironmentFormValues, environmentSchema } from "./columns"
+import { getColumns, getEnvironmentSchema, EnvironmentFormValues } from "./columns"
 import { Environment } from "@/lib/api/types"
 import { fetchEnvironments, createEnvironment } from "@/lib/api/environments"
 import { useForm } from "react-hook-form"
@@ -30,9 +30,11 @@ import {
 import { Input } from "@/components/ui/input"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function EnvironmentsPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -40,7 +42,7 @@ export default function EnvironmentsPage() {
   const [appliedSearch, setAppliedSearch] = useState("")
 
   const form = useForm<EnvironmentFormValues>({
-    resolver: zodResolver(environmentSchema),
+    resolver: zodResolver(getEnvironmentSchema(t)),
     defaultValues: {
       name: "",
       kubernetesApiServer: {
@@ -64,10 +66,10 @@ export default function EnvironmentsPage() {
       if (response.success) {
         setEnvironments(response.data)
       } else {
-        toast.error(response.message || "获取环境列表失败")
+        toast.error(response.message || t("env.fetchError"))
       }
     } catch (error) {
-      toast.error("获取环境列表失败")
+      toast.error(t("env.fetchError"))
       console.error(error)
     } finally {
       setIsLoading(false)
@@ -101,15 +103,15 @@ export default function EnvironmentsPage() {
     try {
       const res = await createEnvironment(data)
       if (res.success) {
-          toast.success("环境创建成功")
+          toast.success(t("env.createSuccess"))
           setDialogOpen(false)
           loadEnvironments()
       } else {
-          toast.error("环境创建失败")
+          toast.error(t("env.createError"))
       }
     } catch (e) {
       console.error(e)
-      toast.error("环境创建失败")
+      toast.error(t("env.createError"))
     }
   }
 
@@ -118,14 +120,14 @@ export default function EnvironmentsPage() {
   }
 
   return (
-    <ContentPage title="环境">
+    <ContentPage title={t("env.title")}>
       <TableForm
         options={
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium whitespace-nowrap">名称:</span>
+              <span className="text-sm font-medium whitespace-nowrap">{t("env.searchLabel")}</span>
               <Input
-                placeholder="搜索名称..."
+                placeholder={t("env.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
@@ -133,18 +135,18 @@ export default function EnvironmentsPage() {
               />
               <Button variant="outline" onClick={() => setAppliedSearch(search)}>
                 <Search className="mr-2 h-4 w-4" />
-                搜索
+                {t("common.search")}
               </Button>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              创建环境
+              {t("env.createBtn")}
             </Button>
           </div>
         }
         table={
           <DataTable
-            columns={columns}
+            columns={getColumns(t)}
             data={appliedSearch ? environments.filter(e => e.name.toLowerCase().includes(appliedSearch.toLowerCase())) : environments}
             loading={isLoading}
             meta={{
@@ -157,9 +159,9 @@ export default function EnvironmentsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>创建环境</DialogTitle>
+            <DialogTitle>{t("env.createTitle")}</DialogTitle>
             <DialogDescription>
-              输入环境名称以创建新环境。
+              {t("env.createDesc")}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -170,7 +172,7 @@ export default function EnvironmentsPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>名称</FormLabel>
+                      <FormLabel>{t("env.col.name")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Production" {...field} />
                       </FormControl>
@@ -181,7 +183,7 @@ export default function EnvironmentsPage() {
               </div>
 
               <DialogFooter>
-                <Button type="submit">创建</Button>
+                <Button type="submit">{t("env.create")}</Button>
               </DialogFooter>
             </form>
           </Form>

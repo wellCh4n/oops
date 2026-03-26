@@ -10,6 +10,7 @@ import { Application, ApplicationEnvironment, DeployMode } from "@/lib/api/types
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { useLanguage } from "@/contexts/language-context"
 
 interface PageProps {
   params: Promise<{
@@ -30,6 +31,7 @@ export default function PublishPage({ params }: PageProps) {
   const [lastSuccessfulBranch, setLastSuccessfulBranch] = useState<string | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [loading, setLoading] = useState(false)
+  const { t } = useLanguage()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,7 +59,7 @@ export default function PublishPage({ params }: PageProps) {
           setBranch(lastBranchRes.data)
         }
       } catch (error) {
-        toast.error("Failed to fetch application details")
+        toast.error(t("apps.publish.fetchError"))
       }
     }
     fetchData()
@@ -65,7 +67,7 @@ export default function PublishPage({ params }: PageProps) {
 
   const handlePublish = async () => {
     if (!selectedEnv) {
-      toast.error("请选择发布环境")
+      toast.error(t("apps.publish.noEnvError"))
       return
     }
 
@@ -73,7 +75,7 @@ export default function PublishPage({ params }: PageProps) {
     try {
       const res = await deployApplication(namespace, name, selectedEnv, branch.trim() || "main", deployMode)
       if (res.success) {
-        toast.success(`已提交发布到 ${selectedEnv}`)
+        toast.success(t("apps.publish.submitSuccessPrefix") + selectedEnv)
         // Assuming the backend returns the pipeline ID in res.data
         if (res.data) {
              router.push(`/apps/${namespace}/${name}/pipelines/${res.data}`)
@@ -81,10 +83,10 @@ export default function PublishPage({ params }: PageProps) {
              router.push("/apps")
         }
       } else {
-        toast.error(res.message || "发布失败")
+        toast.error(res.message || t("apps.publish.submitError"))
       }
     } catch (error) {
-      toast.error("Failed to publish application")
+      toast.error(t("apps.publish.submitError"))
     } finally {
       setLoading(false)
     }
@@ -98,15 +100,15 @@ export default function PublishPage({ params }: PageProps) {
     <div className="space-y-6 p-6">
       <div className="space-y-4">
         <div className="grid gap-2">
-          <div className="text-sm font-medium">应用名称</div>
+          <div className="text-sm font-medium">{t("apps.publish.appName")}</div>
           <div className="text-sm text-muted-foreground">{application.name}</div>
         </div>
         <div className="grid gap-2">
-          <div className="text-sm font-medium">命名空间</div>
+          <div className="text-sm font-medium">{t("apps.publish.namespace")}</div>
           <div className="text-sm text-muted-foreground">{application.namespace}</div>
         </div>
         <div className="grid gap-2">
-          <Label>发布环境</Label>
+          <Label>{t("apps.publish.env")}</Label>
           <RadioGroup value={selectedEnv} onValueChange={setSelectedEnv} className="flex flex-row gap-6">
             {environments.map(env => (
               <div className="flex items-center space-x-2" key={env.environmentName}>
@@ -117,21 +119,21 @@ export default function PublishPage({ params }: PageProps) {
           </RadioGroup>
           {environments.length === 0 && (
             <p className="text-sm text-destructive">
-              该应用暂无环境配置，请先在应用详情页添加环境配置。
+              {t("apps.publish.noEnv")}
             </p>
           )}
         </div>
 
         <div className="grid gap-2">
           <Label htmlFor="branch">
-            发布分支
+            {t("apps.publish.branch")}
             {lastSuccessfulBranch && (
               <button
                 type="button"
                 onClick={() => setBranch(lastSuccessfulBranch)}
                 className="ml-2 text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer"
               >
-                上次发布分支：{lastSuccessfulBranch}
+                {t("apps.publish.lastBranch")}{lastSuccessfulBranch}
               </button>
             )}
           </Label>
@@ -144,15 +146,15 @@ export default function PublishPage({ params }: PageProps) {
         </div>
         
         <div className="grid gap-2">
-          <Label>发布模式</Label>
+          <Label>{t("apps.publish.mode")}</Label>
           <RadioGroup value={deployMode} onValueChange={(v) => setDeployMode(v as DeployMode)} className="flex flex-row gap-6">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="MANUAL" id="mode-manual" />
-              <Label htmlFor="mode-manual">编译后手动发布</Label>
+              <Label htmlFor="mode-manual">{t("apps.publish.modeManual")}</Label>
             </div>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="IMMEDIATE" id="mode-immediate" />
-              <Label htmlFor="mode-immediate">立即发布</Label>
+              <Label htmlFor="mode-immediate">{t("apps.publish.modeImmediate")}</Label>
             </div>
           </RadioGroup>
         </div>
@@ -160,7 +162,7 @@ export default function PublishPage({ params }: PageProps) {
         <div className="pt-4">
           <Button onClick={handlePublish} disabled={loading || !selectedEnv}>
             <Rocket className="mr-2 h-4 w-4" />
-            {loading ? "提交中..." : deployMode === "MANUAL" ? "提交编译" : "确认发布"}
+            {loading ? t("apps.publish.submitting") : deployMode === "MANUAL" ? t("apps.publish.submitBuild") : t("apps.publish.confirmDeploy")}
           </Button>
         </div>
       </div>

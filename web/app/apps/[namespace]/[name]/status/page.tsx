@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function ApplicationStatusPage() {
   const params = useParams()
@@ -41,6 +42,7 @@ export default function ApplicationStatusPage() {
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
+  const { t } = useLanguage()
 
   // Fetch environments on mount
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function ApplicationStatusPage() {
         }
       } catch (error) {
         console.error("Failed to fetch environments:", error)
-        toast.error("Failed to fetch environments")
+        toast.error(t("apps.status.fetchEnvError"))
       }
     }
     loadEnvironments()
@@ -85,7 +87,7 @@ export default function ApplicationStatusPage() {
       } catch (error) {
         console.error("Failed to fetch application status:", error)
         if (showLoading) {
-          toast.error("Failed to fetch application status")
+          toast.error(t("apps.status.fetchError"))
           setPodStatuses([])
         }
       } finally {
@@ -124,13 +126,13 @@ export default function ApplicationStatusPage() {
 
     try {
       await restartApplicationPod(namespace, name, podToRestart, selectedEnv)
-      toast.success("Pod restarted successfully")
+      toast.success(t("apps.status.restartSuccess"))
       // Refresh status immediately
       const res = await getApplicationStatus(namespace, name, selectedEnv)
       setPodStatuses(res.data ?? [])
     } catch (error) {
       console.error("Failed to restart pod:", error)
-      toast.error("Failed to restart pod")
+      toast.error(t("apps.status.restartError"))
     } finally {
       setIsRestartDialogOpen(false)
       setPodToRestart(null)
@@ -145,10 +147,10 @@ export default function ApplicationStatusPage() {
     window.open(`/apps/${namespace}/${name}/pods/${podName}/terminal?env=${selectedEnv}`, '_blank')
   }
 
-  const columns = getStatusColumns(handleRestartClick, handleViewLogs, handleTerminal)
+  const columns = getStatusColumns(t, handleRestartClick, handleViewLogs, handleTerminal)
 
   return (
-    <ContentPage title="运行状态">
+    <ContentPage title={t("apps.status.title")}>
       <TableForm
         options={
           <div className="space-y-2">
@@ -165,13 +167,13 @@ export default function ApplicationStatusPage() {
             )}
             {clusterDomain?.internalDomain && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">内部域名: </span>
+                <span className="font-medium text-foreground">{t("apps.status.internalDomain")} </span>
                 <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
               </div>
             )}
             {clusterDomain?.externalDomain && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">外部域名: </span>
+                <span className="font-medium text-foreground">{t("apps.status.externalDomain")} </span>
                 <Copyable value={clusterDomain.externalDomain} maxLength={Infinity} />
                 <a href={clusterDomain.externalDomain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                   <ExternalLink className="h-4 w-4" />
@@ -194,14 +196,14 @@ export default function ApplicationStatusPage() {
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认重启 Pod?</AlertDialogTitle>
+            <AlertDialogTitle>{t("apps.status.confirmRestart")}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作将重启 Pod {podToRestart}。该操作无法撤销。
+              {t("apps.status.restartDescPrefix")}{podToRestart}{t("apps.status.restartDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRestart}>确认</AlertDialogAction>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRestart}>{t("common.confirm")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

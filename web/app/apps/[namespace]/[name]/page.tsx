@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/types"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function EditAppPage() {
   const router = useRouter()
@@ -34,6 +35,7 @@ export default function EditAppPage() {
   const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
   
   const [loading, setLoading] = useState(true)
+  const { t } = useLanguage()
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -68,7 +70,7 @@ export default function EditAppPage() {
 
       } catch (error) {
         console.error("Failed to fetch application:", error)
-        toast.error("Failed to fetch application details")
+        toast.error(t("apps.detail.fetchError"))
         router.push("/apps")
       } finally {
         setLoading(false)
@@ -89,7 +91,7 @@ export default function EditAppPage() {
   }
 
   if (!application) {
-    return <div>Application not found</div>
+    return <div>{t("apps.detail.notFound")}</div>
   }
 
   return (

@@ -14,19 +14,19 @@ interface TableMeta {
   onPipelines: (application: Application) => void
 }
 
-export const columns: ColumnDef<Application>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
   {
     accessorKey: "name",
-    header: "名称",
+    header: t("apps.col.name"),
     cell: ({ row }) => <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />,
   },
   {
     accessorKey: "description",
-    header: "描述",
+    header: t("apps.col.description"),
   },
   {
     accessorKey: "namespace",
-    header: "命名空间",
+    header: t("apps.col.namespace"),
   },
   {
     id: "actions",
@@ -40,37 +40,37 @@ export const columns: ColumnDef<Application>[] = [
             variant="outline"
             size="sm"
             onClick={() => meta?.onEdit(application)}
-            title="编辑"
+            title={t("apps.col.edit")}
           >
             <Pencil className="mr-2 h-4 w-4" />
-            编辑
+            {t("apps.col.edit")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => meta?.onPublish(application)}
-            title="发布"
+            title={t("apps.col.publish")}
           >
             <Rocket className="mr-2 h-4 w-4" />
-            发布
+            {t("apps.col.publish")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => meta?.onStatus(application)}
-            title="状态"
+            title={t("apps.col.status")}
           >
             <Activity className="mr-2 h-4 w-4" />
-            状态
+            {t("apps.col.status")}
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => meta?.onPipelines(application)}
-            title="流水线"
+            title={t("apps.col.pipelines")}
           >
             <GitBranch className="mr-2 h-4 w-4" />
-            流水线
+            {t("apps.col.pipelines")}
           </Button>
         </div>
       )

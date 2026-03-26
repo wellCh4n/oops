@@ -36,13 +36,15 @@ import { fetchNamespaces, createNamespace, updateNamespace } from "@/lib/api/nam
 import { Namespace } from "@/lib/api/types"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
-
-const formSchema = z.object({
-  name: z.string().min(1, "名称不能为空"),
-  description: z.string().optional(),
-})
+import { useLanguage } from "@/contexts/language-context"
 
 export default function NamespacesPage() {
+  const { t } = useLanguage()
+
+  const formSchema = z.object({
+    name: z.string().min(1, t("ns.nameRequired")),
+    description: z.string().optional(),
+  })
   const [namespaces, setNamespaces] = useState<Namespace[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -77,7 +79,7 @@ export default function NamespacesPage() {
         toast.error(res.message)
       }
     } catch {
-      toast.error("获取命名空间失败")
+      toast.error(t("ns.fetchError"))
     } finally {
       setLoading(false)
     }
@@ -91,7 +93,7 @@ export default function NamespacesPage() {
     try {
       const res = await createNamespace(values.name, values.description)
       if (res.success) {
-        toast.success("命名空间创建成功")
+        toast.success(t("ns.createSuccess"))
         setDialogOpen(false)
         form.reset()
         loadNamespaces()
@@ -99,7 +101,7 @@ export default function NamespacesPage() {
         toast.error(res.message)
       }
     } catch {
-      toast.error("创建命名空间失败")
+      toast.error(t("ns.createError"))
     }
   }
 
@@ -118,7 +120,7 @@ export default function NamespacesPage() {
     try {
       const res = await updateNamespace(editingNamespace.name, values.description || "")
       if (res.success) {
-        toast.success("命名空间更新成功")
+        toast.success(t("ns.updateSuccess"))
         setEditDialogOpen(false)
         setEditingNamespace(null)
         editForm.reset()
@@ -127,19 +129,19 @@ export default function NamespacesPage() {
         toast.error(res.message)
       }
     } catch {
-      toast.error("更新命名空间失败")
+      toast.error(t("ns.updateError"))
     }
   }
 
   return (
-    <ContentPage title="命名空间">
+    <ContentPage title={t("ns.title")}>
       <TableForm
         options={
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium whitespace-nowrap">名称或描述:</span>
+              <span className="text-sm font-medium whitespace-nowrap">{t("ns.searchLabel")}</span>
               <Input
-                placeholder="搜索名称或描述..."
+                placeholder={t("ns.searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
@@ -147,12 +149,12 @@ export default function NamespacesPage() {
               />
               <Button variant="outline" onClick={() => setAppliedSearch(search)}>
                 <Search className="mr-2 h-4 w-4" />
-                搜索
+                {t("common.search")}
               </Button>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              创建命名空间
+              {t("ns.createBtn")}
             </Button>
           </div>
         }
@@ -161,8 +163,8 @@ export default function NamespacesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>名称</TableHead>
-                  <TableHead>描述</TableHead>
+                  <TableHead>{t("ns.col.name")}</TableHead>
+                  <TableHead>{t("common.description")}</TableHead>
                   <TableHead className="text-right"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -170,7 +172,7 @@ export default function NamespacesPage() {
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={3} className="py-2 text-center text-muted-foreground">
-                      加载中...
+                      {t("common.loading")}
                     </TableCell>
                   </TableRow>
                 ) : namespaces.filter(ns =>
@@ -180,7 +182,7 @@ export default function NamespacesPage() {
                   ).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
-                      暂无数据
+                      {t("common.noData")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -198,10 +200,10 @@ export default function NamespacesPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleEdit(ns)}
-                            title="编辑"
+                            title={t("common.edit")}
                           >
                             <Pencil className="mr-2 h-4 w-4" />
-                            编辑
+                            {t("common.edit")}
                           </Button>
                         </div>
                       </TableCell>
@@ -217,9 +219,9 @@ export default function NamespacesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>创建命名空间</DialogTitle>
+            <DialogTitle>{t("ns.createTitle")}</DialogTitle>
             <DialogDescription>
-              添加一个新的命名空间到系统。
+              {t("ns.createDesc")}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -229,7 +231,7 @@ export default function NamespacesPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>名称</FormLabel>
+                    <FormLabel>{t("ns.col.name")}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="off" />
                     </FormControl>
@@ -242,7 +244,7 @@ export default function NamespacesPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>描述</FormLabel>
+                    <FormLabel>{t("common.description")}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="off" />
                     </FormControl>
@@ -251,7 +253,7 @@ export default function NamespacesPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">保存</Button>
+                <Button type="submit">{t("common.save")}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -261,9 +263,9 @@ export default function NamespacesPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑命名空间</DialogTitle>
+            <DialogTitle>{t("ns.editTitle")}</DialogTitle>
             <DialogDescription>
-              更新命名空间的描述信息。
+              {t("ns.editDesc")}
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
@@ -273,7 +275,7 @@ export default function NamespacesPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>名称</FormLabel>
+                    <FormLabel>{t("ns.col.name")}</FormLabel>
                     <FormControl>
                       <Input {...field} disabled autoComplete="off" />
                     </FormControl>
@@ -286,7 +288,7 @@ export default function NamespacesPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>描述</FormLabel>
+                    <FormLabel>{t("common.description")}</FormLabel>
                     <FormControl>
                       <Input {...field} autoComplete="off" />
                     </FormControl>
@@ -295,7 +297,7 @@ export default function NamespacesPage() {
                 )}
               />
               <DialogFooter>
-                <Button type="submit">保存</Button>
+                <Button type="submit">{t("common.save")}</Button>
               </DialogFooter>
             </form>
           </Form>
