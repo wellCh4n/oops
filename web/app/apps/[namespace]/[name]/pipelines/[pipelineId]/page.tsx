@@ -104,18 +104,18 @@ export default function PipelineDetailPage({ params }: PageProps) {
     if (!pipeline?.environment) return
 
     const env = pipeline.environment
-    const loadStatus = () => {
-      setStatusLoading(true)
+    const loadStatus = (showLoading = false) => {
+      if (showLoading) setStatusLoading(true)
       getApplicationStatus(namespace, name, env)
         .then(res => setPodStatuses(res.data ?? []))
         .catch(() => setPodStatuses([]))
-        .finally(() => setStatusLoading(false))
+        .finally(() => { if (showLoading) setStatusLoading(false) })
       getClusterDomain(namespace, name, env)
         .then(res => setClusterDomain(res.data ?? null))
         .catch(() => setClusterDomain(null))
     }
-    const intervalId = setInterval(loadStatus, 1000)
-    const initialTimeout = setTimeout(loadStatus, 0)
+    const intervalId = setInterval(() => loadStatus(false), 1000)
+    const initialTimeout = setTimeout(() => loadStatus(true), 0)
     return () => {
       clearInterval(intervalId)
       clearTimeout(initialTimeout)
