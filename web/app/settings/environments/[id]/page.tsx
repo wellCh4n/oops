@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 
 import {
   AlertDialog,
@@ -251,7 +252,8 @@ export default function EnvironmentEditPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <ContentPage title={environmentName}>
+      <div className="space-y-6">
       <div className="flex gap-6">
         <div className="flex-1 min-w-0">
               <Form {...form}>
@@ -529,6 +531,7 @@ export default function EnvironmentEditPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </ContentPage>
   )
 }

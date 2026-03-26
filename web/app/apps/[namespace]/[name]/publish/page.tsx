@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 
 interface PageProps {
   params: Promise<{
@@ -93,12 +94,13 @@ export default function PublishPage({ params }: PageProps) {
   }
 
   if (!application) {
-    return <div className="p-8">Loading...</div>
+    return <ContentPage title={name}>Loading...</ContentPage>
   }
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="space-y-4">
+    <ContentPage title={application.name}>
+      <div className="rounded-md border bg-card p-4">
+        <div className="space-y-4">
         <div className="grid gap-2">
           <div className="text-sm font-medium">{t("apps.publish.appName")}</div>
           <div className="text-sm text-muted-foreground">{application.name}</div>
@@ -165,7 +167,8 @@ export default function PublishPage({ params }: PageProps) {
             {loading ? t("apps.publish.submitting") : deployMode === "MANUAL" ? t("apps.publish.submitBuild") : t("apps.publish.confirmDeploy")}
           </Button>
         </div>
+        </div>
       </div>
-    </div>
+    </ContentPage>
   )
 }

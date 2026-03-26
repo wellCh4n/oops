@@ -17,12 +17,14 @@ const LanguageContext = createContext<LanguageContextType>({
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem("locale") as Locale | null
     if (stored === "zh" || stored === "en") {
       setLocaleState(stored)
     }
+    setMounted(true)
   }, [])
 
   function setLocale(newLocale: Locale) {
@@ -32,6 +34,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   function t(key: string): string {
     return translations[locale][key] ?? key
+  }
+
+  if (!mounted) {
+    return null
   }
 
   return (

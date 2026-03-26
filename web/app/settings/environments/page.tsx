@@ -123,20 +123,22 @@ export default function EnvironmentsPage() {
     <ContentPage title={t("env.title")}>
       <TableForm
         options={
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium whitespace-nowrap">{t("env.searchLabel")}</span>
-              <Input
-                placeholder={t("env.searchPlaceholder")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
-                className="w-56"
-              />
-              <Button variant="outline" onClick={() => setAppliedSearch(search)}>
-                <Search className="mr-2 h-4 w-4" />
-                {t("common.search")}
-              </Button>
+          <div className="flex items-end justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="w-4 h-4" />{t("env.searchLabel")}</span>
+              <div className="flex items-center space-x-2">
+                <Input
+                  placeholder={t("env.searchPlaceholder")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") setAppliedSearch(search) }}
+                  className="w-56"
+                />
+                <Button variant="outline" onClick={() => setAppliedSearch(search)}>
+                  <Search className="mr-2 h-4 w-4" />
+                  {t("common.search")}
+                </Button>
+              </div>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />

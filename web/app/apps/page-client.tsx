@@ -1,7 +1,7 @@
 "use client"
 
 import { use, useState, useEffect, useMemo } from "react"
-import { Plus, Search } from "lucide-react"
+import { Plus, Search, Layers, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
@@ -145,10 +145,10 @@ export default function ClientApps({
     <ContentPage title={t("apps.title")}>
       <TableForm
         options={
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-end justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">{t("apps.namespaceFilter")}</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
                 <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("common.selectNamespace")} />
@@ -160,8 +160,8 @@ export default function ClientApps({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">{t("apps.appNameFilter")}</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
                 <div className="flex w-full max-w-sm items-center space-x-2">
                   <Input
                     placeholder={t("apps.searchPlaceholder")}

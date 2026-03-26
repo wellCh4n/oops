@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { Server } from "lucide-react"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchNodes } from "@/lib/api/nodes"
 import { Environment, NodeStatus } from "@/lib/api/types"
@@ -67,8 +68,8 @@ export default function NodesPage() {
     <ContentPage title={t("nodes.title")}>
       <TableForm
         options={
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium whitespace-nowrap">{t("common.environment")}</span>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("common.environment")}</span>
             <Select value={selectedEnv} onValueChange={setSelectedEnv}>
               <SelectTrigger className="w-[220px]">
                 <SelectValue placeholder={t("common.selectEnvironment")} />

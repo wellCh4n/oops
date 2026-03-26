@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 
 export default function EditAppPage() {
   const router = useRouter()
@@ -81,21 +82,21 @@ export default function EditAppPage() {
 
   if (loading) {
     return (
-      <div className="flex-1 space-y-4">
+      <ContentPage title={name}>
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
         <Skeleton className="h-12 w-full" />
-      </div>
+      </ContentPage>
     )
   }
 
   if (!application) {
-    return <div>{t("apps.detail.notFound")}</div>
+    return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
   }
 
   return (
-    <div className="flex-1 space-y-4">
+    <ContentPage title={application.name}>
       <ApplicationForm 
         initialData={application}
         initialBuildConfig={buildConfig}
@@ -103,6 +104,6 @@ export default function EditAppPage() {
         initialPerformanceEnvConfigs={performanceEnvConfigs}
         initialServiceConfig={serviceConfig}
       />
-    </div>
+    </ContentPage>
   )
 }

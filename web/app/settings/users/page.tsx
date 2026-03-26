@@ -188,9 +188,9 @@ export default function UsersPage() {
     <ContentPage title={t("users.title")}>
       <TableForm
         options={
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium whitespace-nowrap">{t("users.searchLabel")}</span>
+          <div className="flex items-end justify-between gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="w-4 h-4" />{t("users.searchLabel")}</span>
               <div className="flex items-center space-x-2">
                 <Input
                   value={search}

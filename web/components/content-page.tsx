@@ -9,8 +9,8 @@ interface ContentPageProps {
 export function ContentPage({ title, actions, children }: ContentPageProps) {
   return (
     <div className="flex-1 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+      <div className="-mx-4 -mt-4 w-[calc(100%+2rem)] bg-sidebar border-b border-sidebar-border px-4 py-2 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-sidebar-foreground/80 tracking-normal">{title}</h2>
         {actions && <div>{actions}</div>}
       </div>
       {children}

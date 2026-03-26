@@ -10,7 +10,7 @@ import { Pipeline, Application } from "@/lib/api/types"
 import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { RotateCcw, ChevronLeft, ChevronRight } from "lucide-react"
+import { RotateCcw, ChevronLeft, ChevronRight, Layers, LayoutGrid, Server } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -195,10 +195,10 @@ function PipelinesContent() {
     <ContentPage title={t("pipelines.title")}>
       <TableForm
         options={
-          <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-end justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.nsLabel")}</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("pipelines.nsLabel")}</span>
                 <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("pipelines.selectNs")} />
@@ -210,8 +210,8 @@ function PipelinesContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.appLabel")}</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("pipelines.appLabel")}</span>
                 <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("pipelines.selectApp")} />
@@ -223,8 +223,8 @@ function PipelinesContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">{t("pipelines.envLabel")}</span>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("pipelines.envLabel")}</span>
                 <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("pipelines.selectEnv")} />
@@ -238,7 +238,7 @@ function PipelinesContent() {
                 </Select>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={fetchPipelines} disabled={loading || !selectedApp}>
+            <Button variant="outline" onClick={fetchPipelines} disabled={loading || !selectedApp}>
               <RotateCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               {t("pipelines.refresh")}
             </Button>
