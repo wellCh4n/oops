@@ -3,7 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
 import { toast } from "sonner"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -28,6 +28,19 @@ import { getApplicationConfigMaps, updateApplicationConfigMaps } from "@/lib/api
 import { ApplicationEnvironment } from "@/lib/api/types"
 import { ApplicationConfigFormValues, applicationConfigSchema } from "../schema"
 import { useLanguage } from "@/contexts/language-context"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
 
 function ConfigValueTextarea({
   value,
@@ -78,6 +91,12 @@ export function ApplicationConfigInfo({
   const [isLoadingConfig, setIsLoadingConfig] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const { t } = useLanguage()
+
+  // Import dialog state
+  const [importInputDialogOpen, setImportInputDialogOpen] = useState(false)
+  const [importConfirmDialogOpen, setImportConfirmDialogOpen] = useState(false)
+  const [importContent, setImportContent] = useState("")
+  const [importMode, setImportMode] = useState<"key-only" | "key-value">("key-value")
 
   const form = useForm<ApplicationConfigFormValues>({
     resolver: zodResolver(applicationConfigSchema),
@@ -132,6 +151,64 @@ export function ApplicationConfigInfo({
       setIsSaving(false)
     }
   }
+
+  const handleImportConfirm = (result: {
+    toAdd: { key: string; value: string }[]
+    toReplace: { old: { key: string; value: string }; new: { key: string; value: string } }[]
+  }) => {
+    const currentConfigs = form.getValues("configMaps")
+    let newConfigs = [...currentConfigs]
+
+    // 添加新配置
+    for (const item of result.toAdd) {
+      if (!newConfigs.some(c => c.key === item.key)) {
+        newConfigs.push(item)
+      }
+    }
+
+    // 替换冲突配置
+    for (const item of result.toReplace) {
+      const index = newConfigs.findIndex(c => c.key === item.old.key)
+      if (index !== -1) {
+        newConfigs[index] = item.new
+      }
+    }
+
+    form.setValue("configMaps", newConfigs)
+    toast.success(t("apps.config.importSuccess"))
+  }
+
+  const handleImportSubmit = () => {
+    const parsed = parseEnvContent(importContent)
+    if (parsed.length === 0) {
+      toast.error(t("apps.config.importNoValid"))
+      return
+    }
+    setImportInputDialogOpen(false)
+    setImportConfirmDialogOpen(true)
+  }
+
+  const handleExportAll = async () => {
+    const configs = form.getValues("configMaps")
+    const envContent = configs
+      .map(c => {
+        // 如果值包含特殊字符，需要加引号
+        if (c.value.includes(" ") || c.value.includes("\n") || c.value.includes('"')) {
+          return `${c.key}="${c.value.replace(/"/g, '\\"')}"`
+        }
+        return `${c.key}=${c.value}`
+      })
+      .join("\n")
+
+    try {
+      await navigator.clipboard.writeText(envContent)
+      toast.success(t("apps.config.copySuccess"))
+    } catch {
+      toast.error(t("apps.config.copyError"))
+    }
+  }
+
+  const parsedImportContent = parseEnvContent(importContent)
 
   return (
     <div className="flex flex-col gap-6">
@@ -225,7 +302,78 @@ export function ApplicationConfigInfo({
               </Table>
             </div>
 
-            <div className="flex">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportAll}
+                disabled={isLoadingConfig}
+              >
+                <Copy className="h-4 w-4" />
+                {t("apps.config.copyAll")}
+              </Button>
+              <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoadingConfig}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {t("apps.config.import")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
+                  <DialogHeader>
+                    <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
+                    <DialogDescription>
+                      {t("apps.config.importDesc")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex items-center gap-6 mb-4">
+                      <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
+                      <RadioGroup
+                        value={importMode}
+                        onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
+                        className="flex gap-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="key-value" id="key-value" />
+                          <Label htmlFor="key-value" className="cursor-pointer">
+                            {t("apps.config.importKeyValue")}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="key-only" id="key-only" />
+                          <Label htmlFor="key-only" className="cursor-pointer">
+                            {t("apps.config.importKeyOnly")}
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    <Textarea
+                      id="import-content"
+                      placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
+                      value={importContent}
+                      onChange={(e) => setImportContent(e.target.value)}
+                      className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setImportInputDialogOpen(false)}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                    <Button onClick={handleImportSubmit}>
+                      {t("apps.config.previewImport")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Button type="submit" disabled={isSaving || isLoadingConfig}>
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                 {t("common.save")}
@@ -234,6 +382,15 @@ export function ApplicationConfigInfo({
           </form>
         </Form>
       </ApplicationEnvironmentSelector>
+
+      <EnvImportDialog
+        open={importConfirmDialogOpen}
+        onOpenChange={setImportConfirmDialogOpen}
+        currentConfigs={form.getValues("configMaps")}
+        parsedEnvContent={parsedImportContent}
+        importMode={importMode}
+        onConfirm={handleImportConfirm}
+      />
     </div>
   )
 }
