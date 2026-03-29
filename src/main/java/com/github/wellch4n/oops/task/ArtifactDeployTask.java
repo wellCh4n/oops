@@ -183,7 +183,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         if (envServiceConfig.getHttps() != null && envServiceConfig.getHttps()) {
             spec = IngressRouteSpec
                     .builder()
-                    .entryPoints(List.of("websecure"))
+                    .entryPoints(List.of("web", "websecure"))
                     .routes(
                             List.of(
                                     IngressRouteSpec.Route.builder()
