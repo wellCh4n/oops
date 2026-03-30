@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.data;
 
+import com.github.wellch4n.oops.utils.NanoIdUtils;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -14,8 +15,14 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class Application extends BaseDataObject {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    @PrePersist
+    public void generateId() {
+        if (this.id == null) {
+            this.id = NanoIdUtils.generate();
+        }
+    }
 
     private String name;
 

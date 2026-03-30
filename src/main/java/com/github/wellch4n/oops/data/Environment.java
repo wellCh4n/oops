@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.github.wellch4n.oops.utils.NanoIdUtils;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
@@ -28,8 +29,14 @@ public class Environment {
             .build();
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    @PrePersist
+    public void generateId() {
+        if (this.id == null) {
+            this.id = NanoIdUtils.generate();
+        }
+    }
 
     private String name;
 
