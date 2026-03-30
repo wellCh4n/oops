@@ -76,7 +76,7 @@ export default function UsersPage() {
       const res = await apiFetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email: email || null, password }),
+        body: JSON.stringify({ username, email, password }),
       })
       const data = await res.json()
       if (data.success) {
@@ -228,12 +228,13 @@ export default function UsersPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="new-email">{t("users.emailOptional")}</Label>
+                      <Label htmlFor="new-email">{t("users.email")}</Label>
                       <Input
                         id="new-email"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        required
                         placeholder="user@example.com"
                       />
                     </div>

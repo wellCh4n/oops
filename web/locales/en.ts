@@ -220,7 +220,7 @@ const en = {
   "users.col.delete": "Delete",
   "users.role.admin": "Admin",
   "users.role.user": "User",
-  "users.emailOptional": "Email (optional)",
+  "users.email": "Email",
   "users.password": "Password",
   "users.confirmPassword": "Confirm Password",
   "users.newPassword": "New Password",

@@ -220,7 +220,7 @@ const zh = {
   "users.col.delete": "删除",
   "users.role.admin": "管理员",
   "users.role.user": "普通用户",
-  "users.emailOptional": "邮箱（可选）",
+  "users.email": "邮箱",
   "users.password": "密码",
   "users.confirmPassword": "确认密码",
   "users.newPassword": "新密码",
