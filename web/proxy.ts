@@ -12,7 +12,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
-  if (!token) {
+  if (!token && !pathname.startsWith("/auth/feishu/callback") && !pathname.startsWith("/api/auth/feishu")) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 

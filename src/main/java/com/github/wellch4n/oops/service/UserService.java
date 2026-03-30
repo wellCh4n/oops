@@ -24,6 +24,14 @@ public class UserService {
         return userRepository.findByUsername(username);
     }
 
+    public Optional<User> findById(String id) {
+        return userRepository.findById(id);
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
     public Optional<User> findByUsernameOrEmail(String identifier) {
         Optional<User> user = userRepository.findByUsername(identifier);
         if (user.isPresent()) return user;
@@ -38,7 +46,9 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(rawPassword));
+        if (rawPassword != null && !rawPassword.isBlank()) {
+            user.setPassword(passwordEncoder.encode(rawPassword));
+        }
         user.setRole(role);
         return userRepository.save(user);
     }

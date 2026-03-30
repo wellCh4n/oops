@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { login } from "@/lib/api/auth"
+import { login, getFeishuLoginUrl } from "@/lib/api/auth"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,12 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleFeishuLogin() {
+    getFeishuLoginUrl().then((url) => {
+      window.location.href = url
+    })
   }
 
   return (
@@ -84,6 +90,22 @@ export default function LoginPage() {
             )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "登录中..." : "登录"}
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">或</span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleFeishuLogin}
+            >
+              使用飞书登录
             </Button>
           </form>
         </CardContent>
