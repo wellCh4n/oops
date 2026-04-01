@@ -22,7 +22,7 @@ public class UserInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (!userService.hasAdmin()) {
-            userService.createUser("admin", null, adminPassword, UserRole.ADMIN);
+            userService.createUser("admin", "admin@example.com", adminPassword, UserRole.ADMIN);
         }
     }
 }
