@@ -2,8 +2,7 @@ package com.github.wellch4n.oops.data;
 
 import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.enums.PipelineStatus;
-import com.github.wellch4n.oops.utils.NanoIdUtils;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -16,16 +15,6 @@ import lombok.EqualsAndHashCode;
 @Entity
 @EqualsAndHashCode(callSuper = true)
 public class Pipeline extends BaseDataObject {
-
-    @Id
-    private String id;
-
-    @PrePersist
-    public void generateId() {
-        if (this.id == null) {
-            this.id = NanoIdUtils.generate();
-        }
-    }
 
     private String namespace;
 
@@ -42,6 +31,6 @@ public class Pipeline extends BaseDataObject {
     private DeployMode deployMode;
 
     public String getName() {
-        return String.format("%s-pipeline-%s", applicationName, id);
+        return String.format("%s-pipeline-%s", applicationName, getId());
     }
 }
