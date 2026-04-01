@@ -1,12 +1,9 @@
 package com.github.wellch4n.oops.data;
 
 import com.github.wellch4n.oops.enums.UserRole;
-import com.github.wellch4n.oops.utils.NanoIdUtils;
 import jakarta.persistence.Entity;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -16,15 +13,6 @@ import lombok.EqualsAndHashCode;
 @Table(name = "user")
 @EqualsAndHashCode(callSuper = true)
 public class User extends BaseDataObject {
-    @Id
-    private String id;
-
-    @PrePersist
-    public void generateId() {
-        if (this.id == null) {
-            this.id = NanoIdUtils.generate();
-        }
-    }
 
     private String username;
 
