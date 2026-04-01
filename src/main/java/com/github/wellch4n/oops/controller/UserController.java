@@ -45,6 +45,12 @@ public class UserController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> createUser(@RequestBody CreateUserRequest request) {
+        if (request.username() == null || request.username().isBlank()) {
+            return Result.failure("用户名不能为空");
+        }
+        if (request.email() == null || request.email().isBlank()) {
+            return Result.failure("邮箱不能为空");
+        }
         userService.createUser(request.username(), request.email(), request.password(), UserRole.USER);
         return Result.success(true);
     }

@@ -21,14 +21,24 @@ export function AppLayout({
   const pathname = usePathname()
   const router = useRouter()
   const isLoginPage = pathname === "/login"
+  const isPublicPage = pathname === "/auth/feishu/callback"
 
   useEffect(() => {
-    if (!isLoginPage && !getToken()) {
+    if (!isLoginPage && !isPublicPage && !getToken()) {
       router.replace("/login")
     }
-  }, [isLoginPage, router])
+  }, [isLoginPage, isPublicPage, router])
 
   if (isLoginPage) {
+    return (
+      <>
+        {children}
+        <Toaster position="top-center" />
+      </>
+    )
+  }
+
+  if (isPublicPage) {
     return (
       <>
         {children}

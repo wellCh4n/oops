@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "./config"
 import { setAuth, getToken } from "@/lib/auth"
+import { apiFetch } from "./client"
 
 export interface LoginResult {
   token: string
@@ -12,6 +13,15 @@ export interface CurrentUser {
   username: string
   email: string | null
   role: string
+}
+
+export async function getFeishuLoginUrl(): Promise<string> {
+  const res = await apiFetch("/api/auth/feishu/redirect")
+  const data = await res.json()
+  if (!data.success || !data.data) {
+    throw new Error(data.message || "获取飞书登录地址失败")
+  }
+  return data.data
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
