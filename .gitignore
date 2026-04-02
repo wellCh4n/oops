@@ -67,3 +67,4 @@ web/next-env.d.ts
 
 *.db
 .claude
+src/main/resources/application.properties
