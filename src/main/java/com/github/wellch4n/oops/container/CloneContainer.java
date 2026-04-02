@@ -23,8 +23,8 @@ public class CloneContainer extends BaseContainer {
                 .withImage(image)
                 .withCommand("sh", "-c", String.format(CLONE_COMMAND_WITH_BRANCH, branch, applicationBuildConfig.getRepository()))
                 .addNewEnv()
-                .withName("GIT_SSH_COMMAND")
-                .withValue("ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null")
+                    .withName("GIT_SSH_COMMAND")
+                    .withValue("ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null")
                 .endEnv()
                 .build();
 

@@ -8,4 +8,5 @@ public enum OopsTypes {
     PIPELINE,
     APPLICATION,
     STORAGE,
+    IDE,
 }
