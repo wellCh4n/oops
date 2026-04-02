@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
  */
 
 @EqualsAndHashCode(callSuper = true)
-@Group("traefik.containo.us")
+@Group("traefik.io")
 @Version("v1alpha1")
 @Kind("IngressRoute")
 @Data
