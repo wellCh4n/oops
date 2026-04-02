@@ -7,6 +7,8 @@ import java.io.IOException;
 public interface ExternalAuthStrategy {
     ExternalAccountProvider getProvider();
 
+    boolean isEnabled();
+
     String getLoginUrl();
 
     String authenticate(String code) throws IOException;

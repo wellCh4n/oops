@@ -1,4 +1,14 @@
 const en = {
+  // Login
+  "login.username": "Username or Email",
+  "login.usernamePlaceholder": "Enter username or email",
+  "login.password": "Password",
+  "login.passwordPlaceholder": "Enter password",
+  "login.error": "Login failed",
+  "login.loading": "Signing in...",
+  "login.submit": "Sign In",
+  "login.or": "or",
+  "login.feishu": "Sign in with Feishu",
   // Navigation
   "nav.cluster": "Cluster",
   "nav.nodes": "Nodes",

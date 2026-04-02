@@ -47,6 +47,11 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
     }
 
     @Override
+    public boolean isEnabled() {
+        return feishuConfig.isEnabled();
+    }
+
+    @Override
     public String getLoginUrl() {
         return "https://open.feishu.cn/open-apis/authen/v1/authorize"
                 + "?app_id=" + feishuConfig.getAppId()

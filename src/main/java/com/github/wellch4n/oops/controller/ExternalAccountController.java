@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.service.ExternalAccountService;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth/external")
@@ -14,6 +15,11 @@ public class ExternalAccountController {
 
     public ExternalAccountController(ExternalAccountService externalAccountService) {
         this.externalAccountService = externalAccountService;
+    }
+
+    @GetMapping("/providers")
+    public Result<List<String>> getEnabledProviders() {
+        return Result.success(externalAccountService.getEnabledProviders());
     }
 
     @GetMapping("/{provider}/redirect")

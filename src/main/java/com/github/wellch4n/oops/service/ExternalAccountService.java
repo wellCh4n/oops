@@ -21,18 +21,28 @@ public class ExternalAccountService {
                 ));
     }
 
+    public List<String> getEnabledProviders() {
+        return strategies.values().stream()
+                .filter(ExternalAuthStrategy::isEnabled)
+                .map(s -> s.getProvider().name().toLowerCase())
+                .toList();
+    }
+
     public String getLoginUrl(String provider) {
-        return getStrategy(provider).getLoginUrl();
+        return getEnabledStrategy(provider).getLoginUrl();
     }
 
     public String authenticate(String provider, String code) throws IOException {
-        return getStrategy(provider).authenticate(code);
+        return getEnabledStrategy(provider).authenticate(code);
     }
 
-    private ExternalAuthStrategy getStrategy(String provider) {
+    private ExternalAuthStrategy getEnabledStrategy(String provider) {
         ExternalAuthStrategy strategy = strategies.get(provider.toLowerCase());
         if (strategy == null) {
             throw new IllegalArgumentException("Unsupported external login provider: " + provider);
+        }
+        if (!strategy.isEnabled()) {
+            throw new IllegalArgumentException("External login provider is disabled: " + provider);
         }
         return strategy;
     }
