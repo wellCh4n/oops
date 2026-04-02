@@ -16,7 +16,7 @@ export interface CurrentUser {
 }
 
 export async function getFeishuLoginUrl(): Promise<string> {
-  const res = await apiFetch("/api/auth/feishu/redirect")
+  const res = await apiFetch("/api/auth/external/feishu/redirect")
   const data = await res.json()
   if (!data.success || !data.data) {
     throw new Error(data.message || "获取飞书登录地址失败")
