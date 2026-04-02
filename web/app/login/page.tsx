@@ -1,22 +1,36 @@
 "use client"
 
-import { useState } from "react"
-import { Eye, EyeOff } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Eye, EyeOff, Languages } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { login, getFeishuLoginUrl } from "@/lib/api/auth"
+import { login, getFeishuLoginUrl, getEnabledProviders } from "@/lib/api/auth"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useLanguage } from "@/contexts/language-context"
+import { localeLabels, Locale } from "@/lib/i18n"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t, locale, setLocale } = useLanguage()
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [enabledProviders, setEnabledProviders] = useState<string[]>([])
+
+  useEffect(() => {
+    getEnabledProviders().then(setEnabledProviders)
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,7 +40,7 @@ export default function LoginPage() {
       await login(username, password)
       router.replace("/")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败")
+      setError(err instanceof Error ? err.message : t("login.error"))
     } finally {
       setLoading(false)
     }
@@ -42,36 +56,53 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-3 mb-1">
-            <div className="relative aspect-square size-10 overflow-hidden rounded-lg shrink-0">
-              <Image src="/icon.png" alt="Oops" fill className="object-cover" />
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-3">
+              <div className="relative aspect-square size-10 overflow-hidden rounded-lg shrink-0">
+                <Image src="/icon.png" alt="Oops" fill className="object-cover" />
+              </div>
+              <CardTitle className="text-2xl font-bold">OOPS</CardTitle>
             </div>
-            <CardTitle className="text-2xl font-bold">OOPS</CardTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                  <Languages className="h-4 w-4" />
+                  {localeLabels[locale]}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(Object.keys(localeLabels) as Locale[]).map((l) => (
+                  <DropdownMenuItem key={l} onClick={() => setLocale(l)} className={locale === l ? "font-medium" : ""}>
+                    {localeLabels[l]}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <p className="text-sm text-muted-foreground"><span className="font-semibold text-primary">Kubernetes</span> Is All You Need</p>
+          <p className="text-sm text-muted-foreground text-left"><span className="font-semibold text-primary">Kubernetes</span> Is All You Need</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">用户名或邮箱</Label>
+              <Label htmlFor="username">{t("login.username")}</Label>
               <Input
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="请输入用户名或邮箱"
+                placeholder={t("login.usernamePlaceholder")}
                 required
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
+              <Label htmlFor="password">{t("login.password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="请输入密码"
+                  placeholder={t("login.passwordPlaceholder")}
                   required
                   className="pr-9"
                 />
@@ -89,24 +120,28 @@ export default function LoginPage() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "登录中..." : "登录"}
+              {loading ? t("login.loading") : t("login.submit")}
             </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">或</span>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleFeishuLogin}
-            >
-              使用飞书登录
-            </Button>
+            {enabledProviders.includes("feishu") && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">{t("login.or")}</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleFeishuLogin}
+                >
+                  {t("login.feishu")}
+                </Button>
+              </>
+            )}
           </form>
         </CardContent>
       </Card>

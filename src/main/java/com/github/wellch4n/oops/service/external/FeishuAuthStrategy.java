@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.service;
+package com.github.wellch4n.oops.service.external;
 
 import com.github.wellch4n.oops.config.FeishuConfig;
 import com.github.wellch4n.oops.data.ExternalAccount;
@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.data.ExternalAccountRepository;
 import com.github.wellch4n.oops.data.User;
 import com.github.wellch4n.oops.enums.ExternalAccountProvider;
 import com.github.wellch4n.oops.enums.UserRole;
+import com.github.wellch4n.oops.service.UserService;
 import com.github.wellch4n.oops.utils.JwtUtils;
 import com.lark.oapi.Client;
 import com.lark.oapi.core.request.RequestOptions;
@@ -13,20 +14,15 @@ import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReq;
 import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReqBody;
 import com.lark.oapi.service.authen.v1.model.CreateAccessTokenResp;
 import com.lark.oapi.service.authen.v1.model.GetUserInfoResp;
-import com.lark.oapi.service.contact.v3.model.GetUserResp;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
-@Service
-public class FeishuService {
-
-    private static final Logger log = LoggerFactory.getLogger(FeishuService.class);
+@Component
+public class FeishuAuthStrategy implements ExternalAuthStrategy {
 
     private final ExternalAccountRepository externalAccountRepository;
     private final UserService userService;
@@ -34,10 +30,10 @@ public class FeishuService {
     private final Client client;
     private final FeishuConfig feishuConfig;
 
-    public FeishuService(ExternalAccountRepository externalAccountRepository,
-                         UserService userService,
-                         JwtUtils jwtUtils,
-                         FeishuConfig feishuConfig) {
+    public FeishuAuthStrategy(ExternalAccountRepository externalAccountRepository,
+                               UserService userService,
+                               JwtUtils jwtUtils,
+                               FeishuConfig feishuConfig) {
         this.externalAccountRepository = externalAccountRepository;
         this.userService = userService;
         this.jwtUtils = jwtUtils;
@@ -45,6 +41,17 @@ public class FeishuService {
         this.client = Client.newBuilder(feishuConfig.getAppId(), feishuConfig.getAppSecret()).build();
     }
 
+    @Override
+    public ExternalAccountProvider getProvider() {
+        return ExternalAccountProvider.FEISHU;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return feishuConfig.isEnabled();
+    }
+
+    @Override
     public String getLoginUrl() {
         return "https://open.feishu.cn/open-apis/authen/v1/authorize"
                 + "?app_id=" + feishuConfig.getAppId()
@@ -52,6 +59,7 @@ public class FeishuService {
                 + "&state=feishu";
     }
 
+    @Override
     public String authenticate(String code) throws IOException {
         CreateAccessTokenResp tokenResp;
         try {
@@ -86,10 +94,8 @@ public class FeishuService {
         String providerUserId = userInfoResp.getData().getUserId();
         String userEmail = userInfoResp.getData().getEmail();
         String enterpriseEmail = userInfoResp.getData().getEnterpriseEmail();
-
         String email = enterpriseEmail != null ? enterpriseEmail : userEmail;
 
-        // 查找或创建用户
         Optional<ExternalAccount> existingAccount = externalAccountRepository
                 .findByProviderAndProviderUserId(ExternalAccountProvider.FEISHU, providerUserId);
 

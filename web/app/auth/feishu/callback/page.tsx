@@ -17,7 +17,7 @@ export default function FeishuCallbackPage() {
       return
     }
 
-    fetch(`${API_BASE_URL}/api/auth/feishu/callback?code=${code}`, {
+    fetch(`${API_BASE_URL}/api/auth/external/feishu/callback?code=${code}`, {
       method: "POST",
     })
       .then((res) => res.json())

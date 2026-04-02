@@ -31,10 +31,10 @@ export function AppLayout({
 
   if (isLoginPage) {
     return (
-      <>
+      <LanguageProvider initialLocale={initialLocale}>
         {children}
         <Toaster position="top-center" />
-      </>
+      </LanguageProvider>
     )
   }
 

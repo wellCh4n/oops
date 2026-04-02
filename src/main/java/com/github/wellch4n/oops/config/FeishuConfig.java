@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties(prefix = "oops.feishu")
 public class FeishuConfig {
+    private boolean enabled = false;
     private String appId;
     private String appSecret;
     private String redirectUri;
