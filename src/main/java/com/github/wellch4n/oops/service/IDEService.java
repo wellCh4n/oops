@@ -138,13 +138,14 @@ public class IDEService {
         String ideSettings = (request.getSettings() != null && !request.getSettings().isBlank())
                 ? request.getSettings().replaceAll("\\s+", " ").trim()
                 : getDefaultIDEConfig(env).getSettings();
-        List<EnvVar> envVars = request.getEnv() != null ? request.getEnv().lines()
+        List<EnvVar> envVars = new java.util.ArrayList<>(request.getEnv() != null ? request.getEnv().lines()
                 .map(String::trim)
                 .filter(line -> !line.isBlank() && !line.startsWith("#") && line.contains("="))
                 .map(line -> {
                     int idx = line.indexOf('=');
                     return new EnvVarBuilder().withName(line.substring(0, idx).trim()).withValue(line.substring(idx + 1).trim()).build();
-                }).toList() : List.of();
+                }).toList() : List.of());
+        envVars.add(new EnvVarBuilder().withName("EXTENSIONS_GALLERY").withValue("{\"serviceUrl\":\"https://marketplace.visualstudio.com/_apis/public/gallery\",\"itemUrl\":\"https://marketplace.visualstudio.com/items\"}").build());
         List<String> installCmds = request.getExtensions() != null ? request.getExtensions().lines()
                 .map(String::trim)
                 .filter(line -> !line.isBlank())
