@@ -20,3 +20,7 @@ oops.feishu.enabled=false
 oops.feishu.app-id=cli_xxx
 oops.feishu.app-secret=xxx
 oops.feishu.redirect-uri=http://localhost:3000/auth/feishu/callback
+
+oops.ide.enabled=false
+oops.ide.https=false
+oops.ide.domain=ide.k8s.orb.local

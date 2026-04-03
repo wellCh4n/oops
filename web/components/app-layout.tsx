@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { getToken } from "@/lib/auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { Locale } from "@/lib/i18n"
+import { useFeaturesStore } from "@/store/features"
 
 export function AppLayout({
   children,
@@ -22,12 +23,17 @@ export function AppLayout({
   const router = useRouter()
   const isLoginPage = pathname === "/login"
   const isPublicPage = pathname === "/auth/feishu/callback"
+  const loadFeatures = useFeaturesStore((s) => s.load)
 
   useEffect(() => {
     if (!isLoginPage && !isPublicPage && !getToken()) {
       router.replace("/login")
     }
   }, [isLoginPage, isPublicPage, router])
+
+  useEffect(() => {
+    loadFeatures()
+  }, [loadFeatures])
 
   if (isLoginPage) {
     return (

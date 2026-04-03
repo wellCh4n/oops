@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { ApplicationCreateDialog } from "./components/application-create-dialog"
+import { IDEDialog } from "./components/ide-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
+import { useFeaturesStore } from "@/store/features"
 
 export default function ClientApps({
   searchParams,
@@ -39,6 +41,8 @@ export default function ClientApps({
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [ideApp, setIdeApp] = useState<Application | null>(null)
+  const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const { t } = useLanguage()
   const columns = useMemo(() => getColumns(t), [t])
 
@@ -141,6 +145,10 @@ export default function ClientApps({
     router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
   }
 
+  const handleIDE = (app: Application) => {
+    setIdeApp(app)
+  }
+
   return (
     <ContentPage title={t("apps.title")}>
       <TableForm
@@ -196,9 +204,17 @@ export default function ClientApps({
               onPublish: handlePublish,
               onStatus: handleStatus,
               onPipelines: handlePipelines,
+              onIDE: handleIDE,
+              ideEnabled,
             }}
           />
         }
+      />
+
+      <IDEDialog
+        open={!!ideApp}
+        onOpenChange={(o) => { if (!o) setIdeApp(null) }}
+        application={ideApp}
       />
 
       <ApplicationCreateDialog

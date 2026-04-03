@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { Eye, EyeOff, Languages } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { login, getFeishuLoginUrl, getEnabledProviders } from "@/lib/api/auth"
+import { login, getFeishuLoginUrl } from "@/lib/api/auth"
+import { useFeaturesStore } from "@/store/features"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,11 +27,11 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [enabledProviders, setEnabledProviders] = useState<string[]>([])
+  const { features, load } = useFeaturesStore()
 
   useEffect(() => {
-    getEnabledProviders().then(setEnabledProviders)
-  }, [])
+    load()
+  }, [load])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -122,7 +123,7 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t("login.loading") : t("login.submit")}
             </Button>
-            {enabledProviders.includes("feishu") && (
+            {features.feishu && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
