@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
 import { getPipelines, stopPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
-import { fetchNamespaces } from "@/lib/api/namespaces"
 import { Pipeline, Application } from "@/lib/api/types"
 import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
@@ -31,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
+import { useNamespaceStore } from "@/store/namespace"
 
 export default function PipelinesPage() {
   return (
@@ -44,19 +44,22 @@ function PipelinesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  const namespaces = useNamespaceStore((s) => s.namespaces)
+  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
+  const loadNamespaces = useNamespaceStore((s) => s.load)
+
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
   const [hasNext, setHasNext] = useState(false)
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
 
-  const [namespaces, setNamespaces] = useState<{id: string, name: string}[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<string[]>([])
 
   const [initialized, setInitialized] = useState(false)
   const { t } = useLanguage()
 
-  const selectedNamespace = searchParams.get("namespace") ?? ""
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? "all"
   const page = Number(searchParams.get("page") ?? "0")
@@ -71,27 +74,20 @@ function PipelinesContent() {
     router.replace(`/pipelines?${params.toString()}`)
   }, [router, searchParams])
 
-  // Load namespaces once
+  // Load global namespaces once
   useEffect(() => {
     const load = async () => {
-      try {
-        const res = await fetchNamespaces()
-        if (res.data && Array.isArray(res.data)) {
-          const nsList = res.data.map((ns) => ({ id: ns.name, name: ns.name }))
-          setNamespaces(nsList)
-          if (!searchParams.get("namespace") && nsList.length > 0) {
-            updateParams({ namespace: nsList[0].id, page: "0" })
-          }
-        }
-      } catch {
-        toast.error(t("pipelines.fetchNsError"))
-      } finally {
-        setInitialized(true)
-      }
+      await loadNamespaces()
+      setInitialized(true)
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const handleNamespaceChange = (ns: string) => {
+    setSelectedNamespace(ns)
+    updateParams({ app: "", env: "all", page: "0" })
+  }
 
   // Load applications when namespace changes
   useEffect(() => {
@@ -199,7 +195,7 @@ function PipelinesContent() {
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("pipelines.nsLabel")}</span>
-                <Select value={selectedNamespace} onValueChange={(v) => updateParams({ namespace: v, app: "", env: "all", page: "0" })}>
+                <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("pipelines.selectNs")} />
                   </SelectTrigger>

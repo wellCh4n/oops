@@ -37,6 +37,7 @@ import { Namespace } from "@/lib/api/types"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
+import { useNamespaceStore } from "@/store/namespace"
 
 export default function NamespacesPage() {
   const { t } = useLanguage()
@@ -97,6 +98,7 @@ export default function NamespacesPage() {
         setDialogOpen(false)
         form.reset()
         loadNamespaces()
+        useNamespaceStore.getState().reload()
       } else {
         toast.error(res.message)
       }
@@ -125,6 +127,7 @@ export default function NamespacesPage() {
         setEditingNamespace(null)
         editForm.reset()
         loadNamespaces()
+        useNamespaceStore.getState().reload()
       } else {
         toast.error(res.message)
       }
