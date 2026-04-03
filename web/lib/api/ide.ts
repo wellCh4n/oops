@@ -5,6 +5,21 @@ export interface IDEInstance {
   name: string
   host: string
   https: boolean
+  createdAt: string | null
+  ready: boolean
+}
+
+export interface IDEDefaultConfig {
+  settings: string
+  env: string
+  extensions: string
+}
+
+export interface IDECreatePayload {
+  branch?: string
+  settings: string
+  env: string
+  extensions: string
 }
 
 export const listIDEs = async (namespace: string, application: string, env: string): Promise<ApiResponse<IDEInstance[]>> => {
@@ -15,9 +30,19 @@ export const listIDEs = async (namespace: string, application: string, env: stri
   return response.json()
 }
 
-export const createIDE = async (namespace: string, application: string, env: string): Promise<ApiResponse<string>> => {
+export const getDefaultIDEConfig = async (namespace: string, application: string, env: string): Promise<ApiResponse<IDEDefaultConfig>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide/config/default?env=${env}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch default IDE config")
+  }
+  return response.json()
+}
+
+export const createIDE = async (namespace: string, application: string, env: string, payload: IDECreatePayload): Promise<ApiResponse<string>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide?env=${env}`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error("Failed to create IDE")

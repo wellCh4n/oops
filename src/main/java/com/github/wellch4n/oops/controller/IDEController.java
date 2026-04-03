@@ -1,5 +1,7 @@
 package com.github.wellch4n.oops.controller;
 
+import com.github.wellch4n.oops.objects.IDEConfigResponse;
+import com.github.wellch4n.oops.objects.IDECreateRequest;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.IDEService;
 import com.github.wellch4n.oops.objects.IDEResponse;
@@ -30,9 +32,14 @@ public class IDEController {
         return Result.success(null);
     }
 
+    @GetMapping("/config/default")
+    public Result<IDEConfigResponse> getDefaultIDEConfig(@RequestParam String env) {
+        return Result.success(ideService.getDefaultIDEConfig(env));
+    }
+
     @PostMapping
     public Result<String> createIDE(@PathVariable String namespace, @PathVariable String application,
-                                    @RequestParam String env) {
-        return Result.success(ideService.create(namespace, application, env));
+                                    @RequestParam String env, @RequestBody IDECreateRequest request) {
+        return Result.success(ideService.create(namespace, application, env, request));
     }
 }

@@ -10,4 +10,6 @@ public class IDEResponse {
     private String name;
     private String host;
     private boolean https;
+    private String createdAt;
+    private boolean ready;
 }

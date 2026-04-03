@@ -1,6 +1,10 @@
 package com.github.wellch4n.oops.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.IDEConfig;
+import com.github.wellch4n.oops.objects.IDEConfigResponse;
+import com.github.wellch4n.oops.objects.IDECreateRequest;
 import com.github.wellch4n.oops.objects.IDEResponse;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.config.PipelineImageConfig;
@@ -21,8 +25,12 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -46,7 +54,63 @@ public class IDEService {
         this.ingressConfig = ingressConfig;
     }
 
-    public String create(String namespace, String applicationName, String env) {
+
+    public IDEConfigResponse getDefaultIDEConfig(String env) {
+        IDEConfigResponse fileDefaults = loadFileDefaults();
+
+        Environment environment = environmentService.getEnvironment(env);
+        if (environment == null) {
+            return fileDefaults;
+        }
+
+        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            io.fabric8.kubernetes.api.model.ConfigMap configMap = client.configMaps()
+                    .inNamespace(environment.getWorkNamespace())
+                    .withName("ide-config")
+                    .get();
+
+            if (configMap != null && configMap.getData() != null
+                    && configMap.getData().containsKey("settings.json")
+                    && configMap.getData().containsKey(".env")
+                    && configMap.getData().containsKey("extensions")) {
+                return new IDEConfigResponse(
+                        configMap.getData().get("settings.json"),
+                        configMap.getData().get(".env"),
+                        configMap.getData().get("extensions"));
+            }
+
+            Map<String, String> data = new java.util.HashMap<>();
+            if (configMap != null && configMap.getData() != null) {
+                data.putAll(configMap.getData());
+            }
+            data.put("settings.json", fileDefaults.getSettings());
+            data.put(".env", fileDefaults.getEnv());
+            data.put("extensions", fileDefaults.getExtensions());
+
+            io.fabric8.kubernetes.api.model.ConfigMap newConfigMap = new io.fabric8.kubernetes.api.model.ConfigMapBuilder()
+                    .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
+                    .withData(data)
+                    .build();
+            client.configMaps().inNamespace(environment.getWorkNamespace()).resource(newConfigMap).serverSideApply();
+
+            return fileDefaults;
+        }
+    }
+
+    private IDEConfigResponse loadFileDefaults() {
+        try {
+            String raw = StreamUtils.copyToString(
+                    new ClassPathResource("ide-default-config.json").getInputStream(),
+                    StandardCharsets.UTF_8);
+            JsonNode root = new ObjectMapper().readTree(raw);
+            return new IDEConfigResponse(root.path("settings").toString(), root.path("env").asText(""), root.path("extensions").asText(""));
+        } catch (IOException e) {
+            log.warn("Failed to load ide-default-config.json, using empty defaults", e);
+            return new IDEConfigResponse("{}", "", "");
+        }
+    }
+
+    public String create(String namespace, String applicationName, String env, IDECreateRequest request) {
         Environment environment = environmentService.getEnvironment(env);
         if (environment == null) {
             return null;
@@ -66,38 +130,71 @@ public class IDEService {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
 
-        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), "main");
+        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), request.getBranch());
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
 
         String name = applicationName + "-ide-" + ideId;
 
-        StatefulSet statefulSet = new StatefulSetBuilder()
-                .withNewMetadata().withName(name).withLabels(labels).endMetadata()
-                .withNewSpec()
-                    .withServiceName(name)
-                    .withReplicas(1)
-                    .withNewSelector()
-                        .addToMatchLabels(labels)
-                    .endSelector()
-                    .withNewTemplate()
-                        .withNewMetadata().withLabels(labels).endMetadata()
-                        .withNewSpec()
-                            .addToInitContainers(clone)
-                            .addNewContainer()
-                                .withName(application.getName())
-                                .withImage("codercom/code-server:4.112.0-39")
-                                .withVolumeMounts(workspaceVolume.getVolumeMounts())
-                                .addNewPort().withContainerPort(8080).endPort()
-                                .addToArgs("--auth", "none")
-                            .endContainer()
-                            .addAllToVolumes(workspaceVolume.getVolumes())
-                            .addAllToVolumes(secretVolume.getVolumes())
-                        .endSpec()
-                    .endTemplate()
-                .endSpec()
-                .build();
+        String ideSettings = (request.getSettings() != null && !request.getSettings().isBlank())
+                ? request.getSettings().replaceAll("\\s+", " ").trim()
+                : getDefaultIDEConfig(env).getSettings();
+        List<EnvVar> envVars = request.getEnv() != null ? request.getEnv().lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank() && !line.startsWith("#") && line.contains("="))
+                .map(line -> {
+                    int idx = line.indexOf('=');
+                    return new EnvVarBuilder().withName(line.substring(0, idx).trim()).withValue(line.substring(idx + 1).trim()).build();
+                }).toList() : List.of();
+        List<String> installCmds = request.getExtensions() != null ? request.getExtensions().lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .map(ext -> "code-server --install-extension " + ext)
+                .toList() : List.of();
+
+        List<String> startupCmds = new java.util.ArrayList<>();
+        startupCmds.add("cp -r /workspace /home/coder/" + applicationName);
+        startupCmds.add("mkdir -p /home/coder/.local/share/code-server/User");
+        startupCmds.add("echo '" + ideSettings + "' > /home/coder/.local/share/code-server/User/settings.json");
+        startupCmds.addAll(installCmds);
+        startupCmds.add("code-server --bind-addr 0.0.0.0:8080 --auth none --disable-workspace-trust /home/coder/" + applicationName);
 
         try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            StatefulSet statefulSet = new StatefulSetBuilder()
+                    .withNewMetadata().withName(name).withLabels(labels).endMetadata()
+                    .withNewSpec()
+                        .withServiceName(name)
+                        .withReplicas(1)
+                        .withNewSelector()
+                            .addToMatchLabels(labels)
+                        .endSelector()
+                        .withNewTemplate()
+                            .withNewMetadata().withLabels(labels).endMetadata()
+                            .withNewSpec()
+                                .addToInitContainers(clone)
+                                .addNewContainer()
+                                    .withName(application.getName())
+                                    .withImage("vscode:1.0.2")
+                                    .withVolumeMounts(workspaceVolume.getVolumeMounts())
+                                    .withEnv(envVars)
+                                    .addNewPort().withContainerPort(8080).endPort()
+                                    .withCommand("sh", "-c", String.join(" && ", startupCmds))
+                                    .withNewReadinessProbe()
+                                        .withNewHttpGet()
+                                            .withPath("/")
+                                            .withNewPort(8080)
+                                        .endHttpGet()
+                                        .withInitialDelaySeconds(5)
+                                        .withPeriodSeconds(5)
+                                        .withFailureThreshold(60)
+                                    .endReadinessProbe()
+                                .endContainer()
+                                .addAllToVolumes(workspaceVolume.getVolumes())
+                                .addAllToVolumes(secretVolume.getVolumes())
+                            .endSpec()
+                        .endTemplate()
+                    .endSpec()
+                    .build();
+
             // 1. 创建 StatefulSet，获取 UID 用于 ownerReference
             StatefulSet created = client.apps().statefulSets()
                     .inNamespace(environment.getWorkNamespace())
@@ -184,10 +281,22 @@ public class IDEService {
                     .list()
                     .getItems()
                     .stream()
+                    .sorted((a, b) -> {
+                        String ta = a.getMetadata().getCreationTimestamp();
+                        String tb = b.getMetadata().getCreationTimestamp();
+                        if (ta == null && tb == null) return 0;
+                        if (ta == null) return 1;
+                        if (tb == null) return -1;
+                        return tb.compareTo(ta); // 倒序，最新在前
+                    })
                     .map(ss -> {
                         String name = ss.getMetadata().getName();
                         String host = name + "." + ideConfig.getDomain();
-                        return new IDEResponse(name, host, ideConfig.isHttps());
+                        String createdAt = ss.getMetadata().getCreationTimestamp();
+                        boolean ready = ss.getStatus() != null
+                                && ss.getStatus().getReadyReplicas() != null
+                                && ss.getStatus().getReadyReplicas() > 0;
+                        return new IDEResponse(name, host, ideConfig.isHttps(), createdAt, ready);
                     })
                     .toList();
         }
@@ -232,4 +341,6 @@ public class IDEService {
                 .resource(ingressRoute)
                 .serverSideApply();
     }
+
+
 }

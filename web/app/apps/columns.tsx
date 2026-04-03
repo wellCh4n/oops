@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity, GitBranch, TerminalSquare } from "lucide-react"
+import { Pencil, Rocket, Activity, GitBranch, SquareCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Application } from "@/lib/api/types"
@@ -81,7 +81,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
               onClick={() => meta?.onIDE(application)}
               title={t("apps.col.ide")}
             >
-              <TerminalSquare className="h-4 w-4" />
+              <SquareCode className="h-4 w-4" />
               {t("apps.col.ide")}
             </Button>
           )}
