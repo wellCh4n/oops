@@ -13,4 +13,5 @@ public class IDEConfig {
     private boolean enabled = false;
     private String domain;
     private boolean https = false;
+    private String image;
 }

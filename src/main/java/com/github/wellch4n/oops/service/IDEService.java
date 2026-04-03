@@ -173,7 +173,7 @@ public class IDEService {
                                 .addToInitContainers(clone)
                                 .addNewContainer()
                                     .withName(application.getName())
-                                    .withImage("vscode:1.0.2")
+                                    .withImage(ideConfig.getImage())
                                     .withVolumeMounts(workspaceVolume.getVolumeMounts())
                                     .withEnv(envVars)
                                     .addNewPort().withContainerPort(8080).endPort()

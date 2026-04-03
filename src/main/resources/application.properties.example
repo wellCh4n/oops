@@ -24,3 +24,4 @@ oops.feishu.redirect-uri=http://localhost:3000/auth/feishu/callback
 oops.ide.enabled=false
 oops.ide.https=false
 oops.ide.domain=ide.k8s.orb.local
+oops.ide.image=codercom/code-server:4.112.0-39
