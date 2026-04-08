@@ -1,4 +1,4 @@
-import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, type LucideIcon } from "lucide-react"
+import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   title: string
@@ -30,6 +30,11 @@ export const navConfig: NavGroup[] = [
         title: "nav.apps",
         url: "/apps",
         icon: LayoutGrid,
+      },
+      {
+        title: "nav.ide",
+        url: "/ide",
+        icon: SquareCode,
       },
       {
         title: "nav.pipelines",

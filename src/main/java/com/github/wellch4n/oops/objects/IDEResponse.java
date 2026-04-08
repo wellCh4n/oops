@@ -7,6 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class IDEResponse {
 
+    private String id;
     private String name;
     private String host;
     private boolean https;

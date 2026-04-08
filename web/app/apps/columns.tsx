@@ -13,7 +13,6 @@ interface TableMeta {
   onStatus: (application: Application) => void
   onPipelines: (application: Application) => void
   onIDE: (application: Application) => void
-  ideEnabled: boolean
 }
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
@@ -74,17 +73,15 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             <GitBranch className="h-4 w-4" />
             {t("apps.col.pipelines")}
           </Button>
-          {meta?.ideEnabled && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => meta?.onIDE(application)}
-              title={t("apps.col.ide")}
-            >
-              <SquareCode className="h-4 w-4" />
-              {t("apps.col.ide")}
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => meta?.onIDE(application)}
+            title={t("apps.col.ide")}
+          >
+            <SquareCode className="h-4 w-4" />
+            {t("apps.col.ide")}
+          </Button>
         </div>
       )
     },

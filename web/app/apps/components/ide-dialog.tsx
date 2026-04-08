@@ -46,6 +46,7 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
 
   // create dialog state
   const [createOpen, setCreateOpen] = useState(false)
+  const [name, setName] = useState("")
   const [branch, setBranch] = useState("")
   const [settings, setSettings] = useState("")
   const [envVars, setEnvVars] = useState("")
@@ -125,6 +126,7 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
     setCreating(true)
     try {
       await createIDE(application.namespace, application.name, env, {
+        name: name.trim() || undefined,
         branch: branch.trim() || undefined,
         settings,
         env: envVars,
@@ -144,7 +146,7 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
     if (!application || !env || !deleteTarget) return
     setDeleting(true)
     try {
-      await deleteIDE(application.namespace, application.name, deleteTarget.name, env)
+      await deleteIDE(application.namespace, application.name, deleteTarget.id, env)
       toast.success(t("ide.deleteSuccess"))
       setDeleteTarget(null)
       setDeleteConfirmText("")
@@ -204,7 +206,7 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
                   <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                     {ides.map((ide) => (
                       <div
-                        key={ide.name}
+                        key={ide.id}
                         className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                       >
                         <div className="flex items-center gap-2 min-w-0">
@@ -222,11 +224,9 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
                               {ide.name}
                               <ExternalLink className="h-3 w-3 shrink-0" />
                             </a>
-                            {ide.createdAt && (
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(ide.createdAt).toLocaleString()}
-                              </span>
-                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && new Date(ide.createdAt).toLocaleString()}
+                            </span>
                           </div>
                         </div>
                         <Button
@@ -248,13 +248,18 @@ export function IDEDialog({ open, onOpenChange, application }: IDEDialogProps) {
       </Dialog>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) setBranch("") }}>
+      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) { setBranch(""); setName("") } }}>
         <DialogContent className="w-[80vw] grid-cols-1">
           <DialogHeader>
             <DialogTitle>{t("ide.create")}</DialogTitle>
             <DialogDescription>{application?.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3 min-w-0">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("ide.namePlaceholder")}
+            />
             <Input
               value={branch}
               onChange={(e) => setBranch(e.target.value)}

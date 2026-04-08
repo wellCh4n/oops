@@ -128,6 +128,11 @@ public class IDEService {
                 "oops.ide.id", ideId
         );
 
+        Map<String, String> annotations = new java.util.HashMap<>();
+        if (request.getName() != null && !request.getName().isBlank()) {
+            annotations.put("oops.ide.name", request.getName());
+        }
+
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
 
@@ -162,7 +167,7 @@ public class IDEService {
 
         try (var client = environment.getKubernetesApiServer().fabric8Client()) {
             StatefulSet statefulSet = new StatefulSetBuilder()
-                    .withNewMetadata().withName(name).withLabels(labels).endMetadata()
+                    .withNewMetadata().withName(name).withLabels(labels).withAnnotations(annotations).endMetadata()
                     .withNewSpec()
                         .withServiceName(name)
                         .withReplicas(1)
@@ -292,13 +297,16 @@ public class IDEService {
                         return tb.compareTo(ta); // 倒序，最新在前
                     })
                     .map(ss -> {
-                        String name = ss.getMetadata().getName();
-                        String host = name + "." + ideConfig.getDomain();
+                        String id = ss.getMetadata().getName();
+                        String annotationName = ss.getMetadata().getAnnotations() != null
+                                ? ss.getMetadata().getAnnotations().get("oops.ide.name") : null;
+                        String name = (annotationName != null && !annotationName.isBlank()) ? annotationName : id;
+                        String host = id + "." + ideConfig.getDomain();
                         String createdAt = ss.getMetadata().getCreationTimestamp();
                         boolean ready = ss.getStatus() != null
                                 && ss.getStatus().getReadyReplicas() != null
                                 && ss.getStatus().getReadyReplicas() > 0;
-                        return new IDEResponse(name, host, ideConfig.isHttps(), createdAt, ready);
+                        return new IDEResponse(id, name, host, ideConfig.isHttps(), createdAt, ready);
                     })
                     .toList();
         }

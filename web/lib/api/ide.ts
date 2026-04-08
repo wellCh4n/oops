@@ -2,6 +2,7 @@ import { apiFetch } from "./client"
 import { ApiResponse } from "./types"
 
 export interface IDEInstance {
+  id: string
   name: string
   host: string
   https: boolean
@@ -16,6 +17,7 @@ export interface IDEDefaultConfig {
 }
 
 export interface IDECreatePayload {
+  name?: string
   branch?: string
   settings: string
   env: string
