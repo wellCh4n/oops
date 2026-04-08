@@ -57,21 +57,21 @@ export const getStatusColumns = (
     cell: ({ row }) => {
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button 
-            variant={row.original.status === "Running" ? "warning" : "outline"} 
-            size="sm" 
+          <Button
+            variant={row.original.status === "Running" ? "warning" : "outline"}
+            size="sm"
             onClick={() => onRestart(row.original.name)}
           >
             <RotateCw className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">{t("apps.status.col.restart")}</span>
+            <span className="hidden lg:inline">{t("apps.status.col.restart")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onViewLogs(row.original.name)}>
             <FileText className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">{t("apps.status.col.logs")}</span>
+            <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
             <Terminal className="h-4 w-4" />
-            <span className="ml-2 hidden lg:inline">{t("apps.status.col.terminal")}</span>
+            <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
           </Button>
         </div>
       )
