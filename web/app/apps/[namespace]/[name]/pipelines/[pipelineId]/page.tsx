@@ -377,7 +377,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                         </Link>
                     )}
                 </div>
-                {(clusterDomain?.internalDomain || clusterDomain?.externalDomain) && (
+                {(clusterDomain?.internalDomain || (clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0)) && (
                   <div className="flex flex-col gap-1 text-sm">
                       {clusterDomain?.internalDomain && (
                           <div className="flex items-center gap-2">
@@ -385,13 +385,17 @@ export default function PipelineDetailPage({ params }: PageProps) {
                               <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
                           </div>
                       )}
-                      {clusterDomain?.externalDomain && (
-                          <div className="flex items-center gap-2">
-                              <span className="font-medium">{t("apps.pipeline.externalDomain")}</span>
-                              <Copyable value={clusterDomain.externalDomain} maxLength={Infinity} />
-                              <a href={clusterDomain.externalDomain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                                  <ExternalLink className="h-4 w-4" />
-                              </a>
+                      {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
+                          <div className="flex flex-col gap-1">
+                              {clusterDomain.externalDomains.map((domain, index) => (
+                                  <div key={index} className="flex items-center gap-2">
+                                      <span className="font-medium w-16 shrink-0">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
+                                      <Copyable value={domain} maxLength={Infinity} />
+                                      <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                                          <ExternalLink className="h-4 w-4" />
+                                      </a>
+                                  </div>
+                              ))}
                           </div>
                       )}
                   </div>

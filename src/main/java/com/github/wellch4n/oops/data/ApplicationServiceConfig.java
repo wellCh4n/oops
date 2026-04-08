@@ -31,14 +31,13 @@ public class ApplicationServiceConfig extends BaseDataObject {
     private List<EnvironmentConfig> environmentConfigs;
 
     @JsonIgnore
-    public EnvironmentConfig getEnvironmentConfig(String environmentName) {
+    public List<EnvironmentConfig> getEnvironmentConfigs(String environmentName) {
         if (environmentConfigs == null) {
-            return null;
+            return List.of();
         }
         return environmentConfigs.stream()
                 .filter(config -> environmentName.equals(config.getEnvironmentName()))
-                .findFirst()
-                .orElse(null);
+                .toList();
     }
 
     @Data

@@ -1,6 +1,6 @@
 export interface ClusterDomainInfo {
   internalDomain: string | null
-  externalDomain: string | null
+  externalDomains: string[] | null
 }
 
 export interface ApiResponse<T> {

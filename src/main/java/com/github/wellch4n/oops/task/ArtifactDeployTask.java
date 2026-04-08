@@ -157,8 +157,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         String namespace = application.getNamespace();
         String applicationName = application.getName();
 
-        ApplicationServiceConfig.EnvironmentConfig envServiceConfig = applicationServiceConfig.getEnvironmentConfig(environment.getName());
-        if (envServiceConfig == null || StringUtils.isEmpty(envServiceConfig.getHost())) {
+        List<ApplicationServiceConfig.EnvironmentConfig> envServiceConfigs = applicationServiceConfig.getEnvironmentConfigs(environment.getName());
+        if (envServiceConfigs.isEmpty()) {
             log.info("No host configured for application: {}/{} in environment: {}, skipping ingress route creation", application.getNamespace(), application.getName(), environment.getName());
             return;
         }
@@ -179,38 +179,36 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             return;
         }
 
+        boolean hasHttps = envServiceConfigs.stream().anyMatch(config -> Boolean.TRUE.equals(config.getHttps()));
+
+        List<IngressRouteSpec.Route> routes = envServiceConfigs.stream()
+                .filter(config -> StringUtils.isNotEmpty(config.getHost()))
+                .map(config -> IngressRouteSpec.Route.builder()
+                        .match("Host(`" + config.getHost() + "`)")
+                        .kind("Rule")
+                        .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
+                        .build())
+                .toList();
+
+        if (routes.isEmpty()) {
+            log.info("No valid host configured for application: {}/{} in environment: {}, skipping ingress route creation", application.getNamespace(), application.getName(), environment.getName());
+            return;
+        }
+
         IngressRouteSpec spec;
-        if (envServiceConfig.getHttps() != null && envServiceConfig.getHttps()) {
+        if (hasHttps) {
             spec = IngressRouteSpec
                     .builder()
                     .entryPoints(List.of("websecure"))
-                    .routes(
-                            List.of(
-                                    IngressRouteSpec.Route.builder()
-                                            .match("Host(`" + envServiceConfig.getHost() + "`)")
-                                            .kind("Rule")
-                                            .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
-                                            .build()
-                            )
-                    )
+                    .routes(routes)
                     .tls(IngressRouteSpec.Tls.builder().certResolver(ingressConfig.getCertResolver()).build())
                     .build();
-
         } else {
             spec = IngressRouteSpec
                     .builder()
                     .entryPoints(List.of("web"))
-                    .routes(
-                            List.of(
-                                    IngressRouteSpec.Route.builder()
-                                            .match("Host(`" + envServiceConfig.getHost() + "`)")
-                                            .kind("Rule")
-                                            .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(servicePort).build()))
-                                            .build()
-                            )
-                    )
+                    .routes(routes)
                     .build();
-
         }
         ingressRoute.setSpec(spec);
 
