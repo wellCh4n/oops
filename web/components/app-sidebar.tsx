@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { navConfig } from "@/lib/nav-config"
+import { useFeaturesStore } from "@/store/features"
 import { usePathname } from "next/navigation"
 import React, { useState, useEffect } from "react"
 import { clearAuth } from "@/lib/auth"
@@ -54,9 +55,12 @@ export function AppSidebar() {
   const [logoutOpen, setLogoutOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { locale, setLocale, t } = useLanguage()
+  const ideEnabled = useFeaturesStore((s) => s.features.ide)
+  const loadFeatures = useFeaturesStore((s) => s.load)
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
+    loadFeatures()
   }, [])
 
   function handleLogout() {
@@ -105,17 +109,23 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {navConfig.map((group) => (
+        {navConfig.map((group) => {
+          const filteredGroups = group.items.filter((item) => {
+            if (item.url === "/ide" && !ideEnabled) return false
+            return true
+          })
+          if (filteredGroups.length === 0) return null
+          return (
           <React.Fragment key={group.title}>
             <SidebarGroup>
               {open && <SidebarGroupLabel>{t(group.title)}</SidebarGroupLabel>}
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {group.items.map((item) => (
+                  {filteredGroups.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
-                        isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                        isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                         tooltip={t(item.title)}
                       >
                         <Link href={item.url}>
@@ -129,7 +139,8 @@ export function AppSidebar() {
               </SidebarGroupContent>
             </SidebarGroup>
           </React.Fragment>
-        ))}
+          )
+        })}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

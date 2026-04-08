@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity, GitBranch } from "lucide-react"
+import { Pencil, Rocket, Activity, GitBranch, SquareCode } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Application } from "@/lib/api/types"
@@ -12,6 +12,7 @@ interface TableMeta {
   onPublish: (application: Application) => void
   onStatus: (application: Application) => void
   onPipelines: (application: Application) => void
+  onIDE: (application: Application) => void
 }
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
@@ -71,6 +72,15 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
           >
             <GitBranch className="h-4 w-4" />
             {t("apps.col.pipelines")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => meta?.onIDE(application)}
+            title={t("apps.col.ide")}
+          >
+            <SquareCode className="h-4 w-4" />
+            {t("apps.col.ide")}
           </Button>
         </div>
       )

@@ -1,9 +1,10 @@
-import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, type LucideIcon } from "lucide-react"
+import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   title: string
   url: string
   icon: LucideIcon
+  match?: (pathname: string) => boolean
 }
 
 export interface NavGroup {
@@ -30,11 +31,18 @@ export const navConfig: NavGroup[] = [
         title: "nav.apps",
         url: "/apps",
         icon: LayoutGrid,
+        match: (pathname) => pathname === "/apps" || (pathname.startsWith("/apps/") && !pathname.includes("/pipelines/")),
+      },
+      {
+        title: "nav.ide",
+        url: "/ide",
+        icon: SquareCode,
       },
       {
         title: "nav.pipelines",
         url: "/pipelines",
         icon: GitBranch,
+        match: (pathname) => pathname === "/pipelines" || pathname.startsWith("/pipelines/") || pathname.includes("/pipelines/"),
       },
     ],
   },

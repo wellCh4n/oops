@@ -31,6 +31,15 @@ public class IngressRouteSpec {
         private String match;
         private String kind;
         private List<Service> services;
+        private List<Middleware> middlewares;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Middleware {
+        private String name;
     }
 
     @Data

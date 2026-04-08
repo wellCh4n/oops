@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Plus, Search, Layers, LayoutGrid } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -8,8 +8,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getColumns } from "./columns"
 import { Application } from "@/lib/api/types"
 import { getApplications, getApplication } from "@/lib/api/applications"
-import { fetchNamespaces } from "@/lib/api/namespaces"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
   Select,
   SelectContent,
@@ -22,19 +21,16 @@ import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
+import { useNamespaceStore } from "@/store/namespace"
 
-export default function ClientApps({
-  searchParams,
-}: {
-  searchParams: Promise<{ namespace?: string }>
-}) {
+export default function ClientApps() {
   const router = useRouter()
-  const pathname = usePathname()
-  const params = use(searchParams)
-  const namespaceParam = params.namespace
 
-  const [namespaces, setNamespaces] = useState<{id: string, name: string}[]>([])
-  const [selectedNamespace, setSelectedNamespace] = useState<string>("")
+  const namespaces = useNamespaceStore((s) => s.namespaces)
+  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
+  const loadNamespaces = useNamespaceStore((s) => s.load)
+
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
@@ -43,44 +39,8 @@ export default function ClientApps({
   const columns = useMemo(() => getColumns(t), [t])
 
   useEffect(() => {
-    const loadNamespaces = async () => {
-      try {
-        const res = await fetchNamespaces()
-        if (res.data && Array.isArray(res.data)) {
-          const nsList = res.data.map((ns) => ({ id: ns.name, name: ns.name }))
-          setNamespaces(nsList)
-
-          let initialNamespace = ""
-          if (namespaceParam && nsList.some(ns => ns.id === namespaceParam)) {
-            initialNamespace = namespaceParam
-          } else if (nsList.length > 0) {
-            initialNamespace = nsList[0].id
-          }
-
-          if (initialNamespace) {
-            setSelectedNamespace(initialNamespace)
-            if (initialNamespace !== namespaceParam) {
-              const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")
-              params.set("namespace", initialNamespace)
-              router.replace(`${pathname}?${params.toString()}`)
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch namespaces:", error)
-        toast.error(t("apps.fetchNsError"))
-      }
-    }
     loadNamespaces()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const handleNamespaceChange = (value: string) => {
-    setSelectedNamespace(value)
-    const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")
-    params.set("namespace", value)
-    router.replace(`${pathname}?${params.toString()}`)
-  }
+  }, [loadNamespaces])
 
   useEffect(() => {
     if (selectedNamespace) {
@@ -138,7 +98,11 @@ export default function ClientApps({
   }
 
   const handlePipelines = (app: Application) => {
-    router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+    router.push(`/pipelines?app=${app.name}`)
+  }
+
+  const handleIDE = (app: Application) => {
+    router.push(`/ide?app=${app.name}`)
   }
 
   return (
@@ -149,7 +113,7 @@ export default function ClientApps({
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
-                <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
+                <Select value={selectedNamespace} onValueChange={setSelectedNamespace}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder={t("common.selectNamespace")} />
                   </SelectTrigger>
@@ -196,6 +160,7 @@ export default function ClientApps({
               onPublish: handlePublish,
               onStatus: handleStatus,
               onPipelines: handlePipelines,
+              onIDE: handleIDE,
             }}
           />
         }
