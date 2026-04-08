@@ -23,7 +23,7 @@ public class FeaturesController {
     @GetMapping
     public Result<FeaturesResponse> getFeatures() {
         return Result.success(new FeaturesResponse(
-                feishuConfig != null,
+                feishuConfig != null && feishuConfig.isEnabled(),
                 ideConfig != null
         ));
     }
