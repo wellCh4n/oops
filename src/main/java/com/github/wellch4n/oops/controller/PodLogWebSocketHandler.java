@@ -60,8 +60,8 @@ public class PodLogWebSocketHandler extends AbstractWebSocketHandler {
             return;
         }
 
-        // Start watching logs
-        LogWatch logWatch = podResource.watchLog();
+        // Start watching logs, only tail last 2000 lines
+        LogWatch logWatch = podResource.tailingLines(2000).watchLog();
         InputStream logStream = logWatch.getOutput();
 
         // Store session-specific data
