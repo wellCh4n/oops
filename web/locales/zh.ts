@@ -172,6 +172,8 @@ const zh = {
   "apps.service.copied": "已复制",
   "apps.service.copyError": "复制失败",
   "apps.service.domainPlaceholder": "例如 app.example.com",
+  "apps.service.hosts": "域名配置",
+  "apps.service.addHost": "添加域名",
   "apps.envSelector.label": "环境",
   "apps.envSelector.noEnv": "暂无环境配置，请先在基本信息中配置部署环境",
   "apps.envSelector.fetchError": "获取环境失败",

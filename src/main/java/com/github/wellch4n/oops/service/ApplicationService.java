@@ -293,17 +293,20 @@ public class ApplicationService {
                 }
             }
 
-            String externalDomain = null;
+            List<String> externalDomains = null;
             var serviceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
             if (serviceConfig.isPresent()) {
-                var envConfig = serviceConfig.get().getEnvironmentConfig(environmentName);
-                if (envConfig != null && envConfig.getHost() != null && !envConfig.getHost().isBlank()) {
-                    String scheme = Boolean.TRUE.equals(envConfig.getHttps()) ? "https" : "http";
-                    externalDomain = scheme + "://" + envConfig.getHost();
-                }
+                var envConfigs = serviceConfig.get().getEnvironmentConfigs(environmentName);
+                externalDomains = envConfigs.stream()
+                        .filter(config -> config.getHost() != null && !config.getHost().isBlank())
+                        .map(config -> {
+                            String scheme = Boolean.TRUE.equals(config.getHttps()) ? "https" : "http";
+                            return scheme + "://" + config.getHost();
+                        })
+                        .toList();
             }
 
-            return new ClusterDomainResponse(internalDomain, externalDomain);
+            return new ClusterDomainResponse(internalDomain, externalDomains);
         } catch (Exception e) {
             log.error("Failed to get cluster domain: {}", e.getMessage(), e);
         }

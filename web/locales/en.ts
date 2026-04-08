@@ -172,6 +172,8 @@ const en = {
   "apps.service.copied": "Copied",
   "apps.service.copyError": "Copy failed",
   "apps.service.domainPlaceholder": "e.g. app.example.com",
+  "apps.service.hosts": "Hosts",
+  "apps.service.addHost": "Add Host",
   "apps.envSelector.label": "Environment",
   "apps.envSelector.noEnv": "No environments. Please configure in basic info.",
   "apps.envSelector.fetchError": "Failed to fetch environments",

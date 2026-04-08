@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
-import { Copy, Plug, Globe } from "lucide-react"
+import { Copy, Plug, Globe, Plus, Trash2 } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -19,10 +19,15 @@ interface Props {
   namespace?: string
 }
 
+interface EnvConfigGroup {
+  environmentName: string
+  hosts: { host: string; https: boolean }[]
+}
+
 export function ApplicationServiceInfo({ initialServiceConfig, applicationName, namespace }: Props) {
   const [port, setPort] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
-  const [environmentConfigs, setEnvironmentConfigs] = useState<ApplicationServiceEnvironmentConfig[]>([])
+  const [envConfigGroups, setEnvConfigGroups] = useState<EnvConfigGroup[]>([])
   const [saving, setSaving] = useState(false)
   const { t } = useLanguage()
 
@@ -33,24 +38,31 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       setPort(String(initialServiceConfig.port))
     }
     if (initialServiceConfig?.environmentConfigs) {
-      setEnvironmentConfigs(
-        initialServiceConfig.environmentConfigs.map((c) => ({
-          ...c,
-          host: c.host ? normalizeHost(c.host) : c.host,
+      // Group configs by environmentName
+      const grouped = new Map<string, { host: string; https: boolean }[]>()
+      initialServiceConfig.environmentConfigs.forEach((c) => {
+        const hosts = grouped.get(c.environmentName) || []
+        hosts.push({
+          host: c.host ? normalizeHost(c.host) : "",
           https: c.https ?? true,
+        })
+        grouped.set(c.environmentName, hosts)
+      })
+      setEnvConfigGroups(
+        Array.from(grouped.entries()).map(([environmentName, hosts]) => ({
+          environmentName,
+          hosts: hosts.length > 0 ? hosts : [{ host: "", https: true }],
         }))
       )
     }
   }, [initialServiceConfig])
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
-    setEnvironmentConfigs((prev) => {
+    setEnvConfigGroups((prev) => {
       const current = prev || []
       const next = envs.map((env) => {
         const existing = current.find((c) => c.environmentName === env.environmentName)
-        return existing
-          ? { ...existing, https: existing.https ?? true }
-          : { environmentName: env.environmentName, host: "", https: true }
+        return existing || { environmentName: env.environmentName, hosts: [{ host: "", https: true }] }
       })
       if (next.length > 0 && !activeTab) {
         setActiveTab(next[0].environmentName)
@@ -60,10 +72,45 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   }
 
   useEffect(() => {
-    if (environmentConfigs.length > 0 && !activeTab) {
-      setActiveTab(environmentConfigs[0].environmentName)
+    if (envConfigGroups.length > 0 && !activeTab) {
+      setActiveTab(envConfigGroups[0].environmentName)
     }
-  }, [environmentConfigs, activeTab])
+  }, [envConfigGroups, activeTab])
+
+  const addHost = (envName: string) => {
+    setEnvConfigGroups((prev) =>
+      prev.map((group) =>
+        group.environmentName === envName
+          ? { ...group, hosts: [...group.hosts, { host: "", https: true }] }
+          : group
+      )
+    )
+  }
+
+  const removeHost = (envName: string, index: number) => {
+    setEnvConfigGroups((prev) =>
+      prev.map((group) =>
+        group.environmentName === envName
+          ? { ...group, hosts: group.hosts.filter((_, i) => i !== index) }
+          : group
+      )
+    )
+  }
+
+  const updateHost = (envName: string, index: number, field: "host" | "https", value: string | boolean) => {
+    setEnvConfigGroups((prev) =>
+      prev.map((group) =>
+        group.environmentName === envName
+          ? {
+              ...group,
+              hosts: group.hosts.map((h, i) =>
+                i === index ? { ...h, [field]: field === "host" ? normalizeHost(value as string) : value } : h
+              ),
+            }
+          : group
+      )
+    )
+  }
 
   const onSave = async () => {
     if (!namespace || !applicationName) return
@@ -72,6 +119,21 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       toast.error(t("apps.service.portError"))
       return
     }
+
+    // Flatten groups to environmentConfigs
+    const environmentConfigs: ApplicationServiceEnvironmentConfig[] = []
+    envConfigGroups.forEach((group) => {
+      group.hosts.forEach((h) => {
+        if (h.host.trim()) {
+          environmentConfigs.push({
+            environmentName: group.environmentName,
+            host: h.host.trim(),
+            https: h.https,
+          })
+        }
+      })
+    })
+
     setSaving(true)
     try {
       const res = await updateApplicationService(namespace, applicationName, {
@@ -93,7 +155,10 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-2 max-w-xs">
-        <Label htmlFor="service-port" className="flex items-center gap-1"><Plug className="h-3.5 w-3.5" />{t("apps.service.port")}</Label>
+        <Label htmlFor="service-port" className="flex items-center gap-1">
+          <Plug className="h-3.5 w-3.5" />
+          {t("apps.service.port")}
+        </Label>
         <Input
           id="service-port"
           type="number"
@@ -114,68 +179,73 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
           onEnvironmentsLoaded={handleEnvironmentsLoaded}
           className="w-full"
         >
-          {environmentConfigs.map((config, index) => (
-            <TabsContent key={config.environmentName} value={config.environmentName}>
-              <div className="grid gap-2 max-w-xl">
-                <Label htmlFor={`service-host-${config.environmentName}`} className="flex items-center gap-1"><Globe className="h-3.5 w-3.5" />Host</Label>
-                <div className="flex w-full items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`service-https-${config.environmentName}`}
-                      checked={config.https ?? true}
-                      onCheckedChange={(checked) => {
-                        const https = checked === true
-                        setEnvironmentConfigs((prev) => {
-                          const next = [...prev]
-                          next[index] = { ...next[index], https }
-                          return next
-                        })
-                      }}
-                    />
-                    <Label htmlFor={`service-https-${config.environmentName}`}>HTTPS</Label>
-                  </div>
+          {envConfigGroups.map((group) => (
+            <TabsContent key={group.environmentName} value={group.environmentName}>
+              <div className="grid gap-4 max-w-xl">
+                <Label className="flex items-center gap-1">
+                  <Globe className="h-3.5 w-3.5" />
+                  {t("apps.service.hosts")}
+                </Label>
+                {group.hosts.map((hostConfig, index) => (
+                  <div key={index} className="flex w-full items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`service-https-${group.environmentName}-${index}`}
+                        checked={hostConfig.https}
+                        onCheckedChange={(checked) =>
+                          updateHost(group.environmentName, index, "https", checked === true)
+                        }
+                      />
+                      <Label htmlFor={`service-https-${group.environmentName}-${index}`}>HTTPS</Label>
+                    </div>
 
-                  <div className="relative flex-1">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      {config.https ?? true ? "https://" : "http://"}
-                    </span>
-                    <Input
-                      id={`service-host-${config.environmentName}`}
-                      className="pl-[4.5rem]"
-                      value={config.host ?? ""}
-                      onChange={(e) => {
-                        const host = normalizeHost(e.target.value)
-                        setEnvironmentConfigs((prev) => {
-                          const next = [...prev]
-                          next[index] = { ...next[index], host }
-                          return next
-                        })
-                      }}
-                      placeholder={t("apps.service.domainPlaceholder")}
-                    />
-                  </div>
+                    <div className="relative flex-1">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        {hostConfig.https ? "https://" : "http://"}
+                      </span>
+                      <Input
+                        id={`service-host-${group.environmentName}-${index}`}
+                        className="pl-[4.5rem]"
+                        value={hostConfig.host}
+                        onChange={(e) => updateHost(group.environmentName, index, "host", e.target.value)}
+                        placeholder={t("apps.service.domainPlaceholder")}
+                      />
+                    </div>
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    aria-label={t("apps.service.copyAddress")}
-                    disabled={!((config.host ?? "").trim())}
-                    onClick={async () => {
-                      const scheme = (config.https ?? true) ? "https://" : "http://"
-                      const host = (config.host ?? "").trim()
-                      const url = `${scheme}${host}`
-                      try {
-                        await navigator.clipboard.writeText(url)
-                        toast.success(t("apps.service.copied"))
-                      } catch {
-                        toast.error(t("apps.service.copyError"))
-                      }
-                    }}
-                  >
-                    <Copy />
-                  </Button>
-                </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      aria-label={t("apps.service.copyAddress")}
+                      disabled={!hostConfig.host.trim()}
+                      onClick={async () => {
+                        const scheme = hostConfig.https ? "https://" : "http://"
+                        const url = `${scheme}${hostConfig.host.trim()}`
+                        try {
+                          await navigator.clipboard.writeText(url)
+                          toast.success(t("apps.service.copied"))
+                        } catch {
+                          toast.error(t("apps.service.copyError"))
+                        }
+                      }}
+                    >
+                      <Copy />
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => removeHost(group.environmentName, index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button type="button" variant="outline" className="w-full" onClick={() => addHost(group.environmentName)}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t("apps.service.addHost")}
+                </Button>
               </div>
             </TabsContent>
           ))}
