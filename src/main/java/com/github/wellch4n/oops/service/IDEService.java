@@ -31,6 +31,7 @@ import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -315,6 +316,15 @@ public class IDEService {
 
         String host = name + "." + ideConfig.getDomain();
 
+        List<IngressRouteSpec.Middleware> middlewares = List.of();
+        if (ideConfig.getMiddleware() != null && !ideConfig.getMiddleware().isBlank()) {
+            middlewares = Arrays.stream(ideConfig.getMiddleware().split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .map(s -> IngressRouteSpec.Middleware.builder().name(s).build())
+                    .toList();
+        }
+
         IngressRouteSpec.IngressRouteSpecBuilder specBuilder = IngressRouteSpec.builder()
                 .entryPoints(List.of(ideConfig.isHttps() ? "websecure" : "web"))
                 .routes(List.of(
@@ -322,6 +332,7 @@ public class IDEService {
                                 .match("Host(`" + host + "`)")
                                 .kind("Rule")
                                 .services(List.of(IngressRouteSpec.Service.builder().name(name).port(80).build()))
+                                .middlewares(middlewares)
                                 .build()
                 ));
         if (ideConfig.isHttps()) {

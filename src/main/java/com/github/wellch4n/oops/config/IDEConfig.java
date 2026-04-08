@@ -14,4 +14,5 @@ public class IDEConfig {
     private String domain;
     private boolean https = false;
     private String image;
+    private String middleware;
 }
