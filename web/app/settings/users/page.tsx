@@ -10,12 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
 import { toast } from "sonner"
-import { apiFetch } from "@/lib/api/client"
 import { isAdmin } from "@/lib/auth"
-import { getColumns, User } from "./columns"
+import { getColumns } from "./columns"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
+import { fetchUsers, createUser, updateUser, deleteUser, User } from "@/lib/api/users"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
@@ -51,9 +51,8 @@ export default function UsersPage() {
   const loadUsers = useCallback(async () => {
     setTableLoading(true)
     try {
-      const res = await apiFetch("/api/users")
-      const data = await res.json()
-      if (data.success) setUsers(data.data)
+      const users = await fetchUsers()
+      setUsers(users)
     } catch {
       toast.error(t("users.fetchError"))
     } finally {
@@ -73,25 +72,16 @@ export default function UsersPage() {
     }
     setLoading(true)
     try {
-      const res = await apiFetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(t("users.createSuccess"))
-        setOpen(false)
-        setUsername("")
-        setEmail("")
-        setPassword("")
-        setConfirmPassword("")
-        loadUsers()
-      } else {
-        toast.error(data.message || t("users.createError"))
-      }
-    } catch {
-      toast.error(t("users.createError"))
+      await createUser({ username, email, password })
+      toast.success(t("users.createSuccess"))
+      setOpen(false)
+      setUsername("")
+      setEmail("")
+      setPassword("")
+      setConfirmPassword("")
+      loadUsers()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("users.createError"))
     } finally {
       setLoading(false)
     }
@@ -107,21 +97,12 @@ export default function UsersPage() {
     if (!editTarget) return
     setEditLoading(true)
     try {
-      const res = await apiFetch(`/api/users/${editTarget.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: editRole, email: editEmail || null }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(t("users.updateSuccess"))
-        setEditTarget(null)
-        loadUsers()
-      } else {
-        toast.error(data.message || t("users.updateError"))
-      }
-    } catch {
-      toast.error(t("users.updateError"))
+      await updateUser(editTarget.id, { role: editRole, email: editEmail || null })
+      toast.success(t("users.updateSuccess"))
+      setEditTarget(null)
+      loadUsers()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("users.updateError"))
     } finally {
       setEditLoading(false)
     }
@@ -143,20 +124,11 @@ export default function UsersPage() {
     if (!pwdTarget) return
     setPwdLoading(true)
     try {
-      const res = await apiFetch(`/api/users/${pwdTarget.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role: pwdTarget.role, email: pwdTarget.email || null, password: pwdNew }),
-      })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(t("users.pwdChanged"))
-        setPwdTarget(null)
-      } else {
-        toast.error(data.message || t("users.changePwdError"))
-      }
-    } catch {
-      toast.error(t("users.changePwdError"))
+      await updateUser(pwdTarget.id, { role: pwdTarget.role, email: pwdTarget.email || null, password: pwdNew })
+      toast.success(t("users.pwdChanged"))
+      setPwdTarget(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("users.changePwdError"))
     } finally {
       setPwdLoading(false)
     }
@@ -169,16 +141,11 @@ export default function UsersPage() {
   async function confirmDelete() {
     if (!deleteTarget) return
     try {
-      const res = await apiFetch(`/api/users/${deleteTarget.id}`, { method: "DELETE" })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(t("users.deleteSuccess"))
-        loadUsers()
-      } else {
-        toast.error(data.message || t("users.deleteError"))
-      }
-    } catch {
-      toast.error(t("users.deleteError"))
+      await deleteUser(deleteTarget.id)
+      toast.success(t("users.deleteSuccess"))
+      loadUsers()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("users.deleteError"))
     } finally {
       setDeleteTarget(null)
     }

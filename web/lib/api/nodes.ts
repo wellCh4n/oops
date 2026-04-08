@@ -9,6 +9,6 @@ export async function fetchNodes(env: string): Promise<ApiResponse<NodeStatus[]>
   if (!res.ok) {
     throw new Error("Failed to fetch nodes")
   }
-  return res.json()
+  return res.json() as Promise<ApiResponse<NodeStatus[]>>
 }
 

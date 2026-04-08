@@ -61,7 +61,7 @@ export function AppSidebar() {
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
     loadFeatures()
-  }, [])
+  }, [loadFeatures])
 
   function handleLogout() {
     clearAuth()

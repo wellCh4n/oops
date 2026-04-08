@@ -6,7 +6,7 @@ export async function fetchNamespaces(): Promise<ApiResponse<Namespace[]>> {
   if (!res.ok) {
     throw new Error("Failed to fetch namespaces")
   }
-  return res.json()
+  return res.json() as Promise<ApiResponse<Namespace[]>>
 }
 
 export async function createNamespace(name: string, description?: string): Promise<ApiResponse<boolean>> {
@@ -20,7 +20,7 @@ export async function createNamespace(name: string, description?: string): Promi
   if (!res.ok) {
     throw new Error("Failed to create namespace")
   }
-  return res.json()
+  return res.json() as Promise<ApiResponse<boolean>>
 }
 
 export async function updateNamespace(name: string, description: string): Promise<ApiResponse<boolean>> {
@@ -34,5 +34,5 @@ export async function updateNamespace(name: string, description: string): Promis
   if (!res.ok) {
     throw new Error("Failed to update namespace")
   }
-  return res.json()
+  return res.json() as Promise<ApiResponse<boolean>>
 }

@@ -6,7 +6,7 @@ export const getApplications = async (namespace: string): Promise<ApiResponse<Ap
   if (!response.ok) {
     throw new Error("Failed to fetch applications")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Application[]>>
 }
 
 export const getApplicationService = async (namespace: string, name: string): Promise<ApiResponse<ApplicationServiceConfig>> => {
@@ -14,7 +14,7 @@ export const getApplicationService = async (namespace: string, name: string): Pr
   if (!response.ok) {
     throw new Error("Failed to fetch application service config")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationServiceConfig>>
 }
 
 export const updateApplicationService = async (
@@ -30,7 +30,7 @@ export const updateApplicationService = async (
   if (!response.ok) {
     throw new Error("Failed to update application service config")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const getApplication = async (namespace: string, name: string): Promise<ApiResponse<Application>> => {
@@ -38,7 +38,7 @@ export const getApplication = async (namespace: string, name: string): Promise<A
   if (!response.ok) {
     throw new Error("Failed to fetch application")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Application>>
 }
 
 export const createApplication = async (application: Partial<Application>): Promise<ApiResponse<string>> => {
@@ -50,7 +50,7 @@ export const createApplication = async (application: Partial<Application>): Prom
   if (!response.ok) {
     throw new Error("Failed to create application")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<string>>
 }
 
 export const updateApplication = async (application: Partial<Application>): Promise<ApiResponse<boolean>> => {
@@ -62,7 +62,7 @@ export const updateApplication = async (application: Partial<Application>): Prom
   if (!response.ok) {
     throw new Error("Failed to update application")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const deleteApplication = async (namespace: string, id: string): Promise<void> => {
@@ -79,7 +79,7 @@ export const getApplicationBuildConfig = async (namespace: string, name: string)
   if (!response.ok) {
     throw new Error("Failed to fetch application build config")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationBuildConfig>>
 }
 
 export const updateApplicationBuildConfig = async (namespace: string, name: string, config: ApplicationBuildConfig): Promise<ApiResponse<boolean>> => {
@@ -91,7 +91,7 @@ export const updateApplicationBuildConfig = async (namespace: string, name: stri
   if (!response.ok) {
     throw new Error("Failed to update application build config")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const getApplicationBuildEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>> => {
@@ -99,7 +99,7 @@ export const getApplicationBuildEnvConfigs = async (namespace: string, name: str
   if (!response.ok) {
     throw new Error("Failed to fetch application build environment configs")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>>
 }
 
 export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>> => {
@@ -107,7 +107,7 @@ export const getApplicationPerformanceEnvConfigs = async (namespace: string, nam
   if (!response.ok) {
     throw new Error("Failed to fetch application performance environment configs")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>>
 }
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
@@ -115,7 +115,7 @@ export const getApplicationEnvironments = async (namespace: string, name: string
   if (!response.ok) {
     throw new Error("Failed to fetch application environments")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationEnvironment[]>>
 }
 
 export const getApplicationConfigMaps = async (namespace: string, name: string, environment: string): Promise<ApiResponse<ConfigMap[]>> => {
@@ -123,7 +123,7 @@ export const getApplicationConfigMaps = async (namespace: string, name: string, 
   if (!response.ok) {
     throw new Error("Failed to fetch application config maps")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ConfigMap[]>>
 }
 
 export const updateApplicationConfigMaps = async (namespace: string, name: string, environment: string, configMaps: ConfigMap[]): Promise<ApiResponse<boolean>> => {
@@ -135,7 +135,7 @@ export const updateApplicationConfigMaps = async (namespace: string, name: strin
   if (!response.ok) {
     throw new Error("Failed to update application config maps")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const updateApplicationBuildEnvConfigs = async (
@@ -151,7 +151,7 @@ export const updateApplicationBuildEnvConfigs = async (
   if (!response.ok) {
     throw new Error("Failed to save application build environment configs")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const updateApplicationPerformanceEnvConfigs = async (
@@ -167,7 +167,7 @@ export const updateApplicationPerformanceEnvConfigs = async (
   if (!response.ok) {
     throw new Error("Failed to save application performance environment configs")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const updateApplicationEnvironments = async (
@@ -183,7 +183,7 @@ export const updateApplicationEnvironments = async (
   if (!response.ok) {
     throw new Error("Failed to save application environments")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const deployApplication = async (
@@ -201,7 +201,7 @@ export const deployApplication = async (
   if (!response.ok) {
     throw new Error("Failed to deploy application")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<string>>
 }
 
 export const getApplicationStatus = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationPodStatus[]>> => {
@@ -209,7 +209,7 @@ export const getApplicationStatus = async (namespace: string, name: string, env:
   if (!response.ok) {
     throw new Error("Failed to fetch application status")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ApplicationPodStatus[]>>
 }
 
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {
@@ -219,7 +219,7 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
   if (!response.ok) {
     throw new Error("Failed to restart application pod")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<ClusterDomainInfo>> => {
@@ -227,7 +227,7 @@ export const getClusterDomain = async (namespace: string, name: string, env: str
   if (!response.ok) {
     throw new Error("Failed to fetch cluster domain")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<ClusterDomainInfo>>
 }
 
 export const getLastSuccessfulBranch = async (namespace: string, name: string): Promise<ApiResponse<string>> => {
@@ -235,5 +235,5 @@ export const getLastSuccessfulBranch = async (namespace: string, name: string): 
   if (!response.ok) {
     throw new Error("Failed to fetch last successful branch")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<string>>
 }

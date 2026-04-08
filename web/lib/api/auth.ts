@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "./config"
 import { setAuth, getToken } from "@/lib/auth"
 import { apiFetch } from "./client"
+import { ApiResponse } from "./types"
 
 export interface LoginResult {
   token: string
@@ -17,7 +18,7 @@ export interface CurrentUser {
 
 export async function getEnabledProviders(): Promise<string[]> {
   const res = await apiFetch("/api/auth/external/providers")
-  const data = await res.json()
+  const data = await res.json() as ApiResponse<string[]>
   if (!data.success) {
     return []
   }
@@ -26,7 +27,7 @@ export async function getEnabledProviders(): Promise<string[]> {
 
 export async function getFeishuLoginUrl(): Promise<string> {
   const res = await apiFetch("/api/auth/external/feishu/redirect")
-  const data = await res.json()
+  const data = await res.json() as ApiResponse<string>
   if (!data.success || !data.data) {
     throw new Error(data.message || "获取飞书登录地址失败")
   }
@@ -40,7 +41,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     const res = await fetch(`${API_BASE_URL}/api/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    const data = await res.json()
+    const data = await res.json() as ApiResponse<CurrentUser>
     return data.success ? data.data : null
   } catch {
     return null
@@ -53,10 +54,21 @@ export async function login(username: string, password: string): Promise<LoginRe
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   })
-  const data = await res.json()
+  const data = await res.json() as ApiResponse<LoginResult>
   if (!data.success) {
     throw new Error(data.message || "登录失败")
   }
   setAuth(data.data.token, data.data.username, data.data.role)
+  return data.data
+}
+
+export async function feishuCallback(code: string): Promise<string> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/external/feishu/callback?code=${code}`, {
+    method: "POST",
+  })
+  const data = await res.json() as ApiResponse<string>
+  if (!data.success || !data.data) {
+    throw new Error(data.message || "登录失败")
+  }
   return data.data
 }

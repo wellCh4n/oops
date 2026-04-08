@@ -146,7 +146,7 @@ function IDEPageContent() {
     } else {
       setIdes([])
     }
-  }, [selectedEnv, fetchIDEs]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedEnv, fetchIDEs])
 
   useEffect(() => {
     stopPolling()

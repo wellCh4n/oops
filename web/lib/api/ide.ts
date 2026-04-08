@@ -29,7 +29,7 @@ export const listIDEs = async (namespace: string, application: string, env: stri
   if (!response.ok) {
     throw new Error("Failed to fetch IDEs")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<IDEInstance[]>>
 }
 
 export const getDefaultIDEConfig = async (namespace: string, application: string, env: string): Promise<ApiResponse<IDEDefaultConfig>> => {
@@ -37,7 +37,7 @@ export const getDefaultIDEConfig = async (namespace: string, application: string
   if (!response.ok) {
     throw new Error("Failed to fetch default IDE config")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<IDEDefaultConfig>>
 }
 
 export const createIDE = async (namespace: string, application: string, env: string, payload: IDECreatePayload): Promise<ApiResponse<string>> => {
@@ -49,7 +49,7 @@ export const createIDE = async (namespace: string, application: string, env: str
   if (!response.ok) {
     throw new Error("Failed to create IDE")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<string>>
 }
 
 export const deleteIDE = async (namespace: string, application: string, name: string, env: string): Promise<void> => {

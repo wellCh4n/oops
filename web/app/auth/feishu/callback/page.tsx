@@ -3,8 +3,7 @@
 import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { setAuth } from "@/lib/auth"
-import { getCurrentUser } from "@/lib/api/auth"
-import { API_BASE_URL } from "@/lib/api/config"
+import { getCurrentUser, feishuCallback } from "@/lib/api/auth"
 
 export default function FeishuCallbackPage() {
   const searchParams = useSearchParams()
@@ -17,18 +16,10 @@ export default function FeishuCallbackPage() {
       return
     }
 
-    fetch(`${API_BASE_URL}/api/auth/external/feishu/callback?code=${code}`, {
-      method: "POST",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data) {
-          const token = data.data
-          document.cookie = `auth_token=${token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`
-          return getCurrentUser().then((user) => ({ token, user }))
-        } else {
-          throw new Error(data.message || "登录失败")
-        }
+    feishuCallback(code)
+      .then((token) => {
+        document.cookie = `auth_token=${token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`
+        return getCurrentUser().then((user) => ({ token, user }))
       })
       .then(({ token, user }) => {
         if (user) {
@@ -36,7 +27,7 @@ export default function FeishuCallbackPage() {
         }
         window.location.href = "/"
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         alert("登录失败: " + err.message)
         window.location.href = "/login"
       })

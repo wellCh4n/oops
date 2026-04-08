@@ -157,7 +157,7 @@ export function ApplicationConfigInfo({
     toReplace: { old: { key: string; value: string }; new: { key: string; value: string } }[]
   }) => {
     const currentConfigs = form.getValues("configMaps")
-    let newConfigs = [...currentConfigs]
+    const newConfigs = [...currentConfigs]
 
     // 添加新配置
     for (const item of result.toAdd) {

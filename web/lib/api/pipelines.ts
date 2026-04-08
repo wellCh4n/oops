@@ -19,7 +19,7 @@ export const getPipelines = async (
   if (!response.ok) {
     throw new Error("Failed to fetch pipelines")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Pipeline[]>>
 }
 
 export const getPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<Pipeline>> => {
@@ -27,7 +27,7 @@ export const getPipeline = async (namespace: string, name: string, id: string): 
   if (!response.ok) {
     throw new Error("Failed to fetch pipeline")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Pipeline>>
 }
 
 export const stopPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<boolean>> => {
@@ -37,7 +37,7 @@ export const stopPipeline = async (namespace: string, name: string, id: string):
   if (!response.ok) {
     throw new Error("Failed to stop pipeline")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const deployPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<boolean>> => {
@@ -47,5 +47,5 @@ export const deployPipeline = async (namespace: string, name: string, id: string
   if (!response.ok) {
     throw new Error("Failed to deploy pipeline")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }

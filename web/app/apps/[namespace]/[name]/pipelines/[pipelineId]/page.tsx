@@ -29,6 +29,44 @@ import { ExternalLink, Check, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 
+// WebSocket message types
+interface StepsMessage {
+  type: "steps"
+  data: string[]
+}
+
+interface StepLogMessage {
+  type: "step"
+  data: string
+  container: string
+}
+
+interface ErrorMessage {
+  type: "error"
+  data: unknown
+}
+
+interface UnknownMessage {
+  type: string
+  data?: unknown
+  container?: string
+}
+
+type PipelineMessage = StepsMessage | StepLogMessage | ErrorMessage | UnknownMessage
+
+// Type guard functions
+function isStepsMessage(msg: PipelineMessage): msg is StepsMessage {
+  return msg.type === "steps" && Array.isArray(msg.data)
+}
+
+function isStepLogMessage(msg: PipelineMessage): msg is StepLogMessage {
+  return msg.type === "step" && typeof msg.data === "string" && typeof msg.container === "string"
+}
+
+function isErrorMessage(msg: PipelineMessage): msg is ErrorMessage {
+  return msg.type === "error"
+}
+
 const statusLabel: Record<string, string> = {
   BUILD_SUCCEEDED: "apps.pipeline.status.BUILD_SUCCEEDED",
   INITIALIZED: "apps.pipeline.status.INITIALIZED",
@@ -147,22 +185,22 @@ export default function PipelineDetailPage({ params }: PageProps) {
       }
 
       ws.onmessage = (event) => {
-        const message = event.data
+        const message = event.data as string
         if (message === "pong") return
 
         try {
           // Try to parse as JSON
-          const jsonData = JSON.parse(message)
+          const jsonData = JSON.parse(message) as PipelineMessage
 
           // Handle different message types based on type field
-          if (jsonData.type === "steps") {
+          if (isStepsMessage(jsonData)) {
             // Handle steps list
-            setSteps(jsonData.data as string[])
-          } else if (jsonData.type === "step") {
+            setSteps(jsonData.data)
+          } else if (isStepLogMessage(jsonData)) {
             // Handle step log
-            setLogs(prev => [...prev, jsonData.data as string])
-            setActiveStep(jsonData.container as string)
-          } else if (jsonData.type === "error") {
+            setLogs(prev => [...prev, jsonData.data])
+            setActiveStep(jsonData.container)
+          } else if (isErrorMessage(jsonData)) {
             // Handle error messages
             console.error("Pipeline error:", jsonData.data)
           } else {
@@ -185,7 +223,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
             const [stepName, ...logParts] = message.split(":")
             const logLine = logParts.join(":")
             setLogs(prev => [...prev, logLine])
-            setActiveStep(stepName)
+            setActiveStep(stepName ?? "")
           } else {
             // Fallback for plain log messages
             setLogs(prev => [...prev, message])

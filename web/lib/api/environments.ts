@@ -7,7 +7,7 @@ export async function fetchEnvironments(): Promise<ApiResponse<Environment[]>> {
   if (!response.ok) {
     throw new Error("Failed to fetch environments")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Environment[]>>
 }
 
 export async function fetchEnvironment(id: string): Promise<ApiResponse<Environment>> {
@@ -15,7 +15,7 @@ export async function fetchEnvironment(id: string): Promise<ApiResponse<Environm
   if (!response.ok) {
     throw new Error("Failed to fetch environment")
   }
-  return response.json()
+  return response.json() as Promise<ApiResponse<Environment>>
 }
 
 export async function createEnvironment(data: EnvironmentFormValues): Promise<ApiResponse<Environment>> {
@@ -31,7 +31,7 @@ export async function createEnvironment(data: EnvironmentFormValues): Promise<Ap
     throw new Error("Failed to create environment")
   }
 
-  return response.json()
+  return response.json() as Promise<ApiResponse<Environment>>
 }
 
 export interface KubernetesValidationResult {
@@ -47,7 +47,7 @@ export async function validateKubernetes(data: { kubernetesApiServer: { url?: st
     body: JSON.stringify(data),
   })
   if (!response.ok) throw new Error("Failed to validate kubernetes")
-  return response.json()
+  return response.json() as Promise<ApiResponse<KubernetesValidationResult>>
 }
 
 export async function createNamespace(data: { kubernetesApiServer: { url?: string; token?: string }, workNamespace: string }): Promise<ApiResponse<boolean>> {
@@ -57,7 +57,7 @@ export async function createNamespace(data: { kubernetesApiServer: { url?: strin
     body: JSON.stringify(data),
   })
   if (!response.ok) throw new Error("Failed to create namespace")
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export async function validateImageRepository(data: { url?: string; username?: string; password?: string }): Promise<ApiResponse<boolean>> {
@@ -67,7 +67,7 @@ export async function validateImageRepository(data: { url?: string; username?: s
     body: JSON.stringify(data),
   })
   if (!response.ok) throw new Error("Failed to validate image repository")
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export async function updateEnvironment(id: string, data: EnvironmentFormValues): Promise<ApiResponse<boolean>> {
@@ -83,7 +83,7 @@ export async function updateEnvironment(id: string, data: EnvironmentFormValues)
     throw new Error("Failed to update environment")
   }
 
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export async function deleteEnvironment(id: string): Promise<ApiResponse<boolean>> {
@@ -95,5 +95,5 @@ export async function deleteEnvironment(id: string): Promise<ApiResponse<boolean
     throw new Error("Failed to delete environment")
   }
 
-  return response.json()
+  return response.json() as Promise<ApiResponse<boolean>>
 }

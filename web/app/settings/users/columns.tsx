@@ -4,14 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { KeyRound, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
-
-export interface User {
-  id: string
-  username: string
-  email: string | null
-  role: string
-  createdTime: string
-}
+import { User } from "@/lib/api/users"
 
 interface TableMeta {
   onEdit: (user: User) => void

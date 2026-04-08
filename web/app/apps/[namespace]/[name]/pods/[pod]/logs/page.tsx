@@ -52,7 +52,7 @@ export default function ApplicationPodLogsPage() {
         }, 10000)
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent<string>) => {
         if (event.data === "pong") return
         const logLine = event.data
         setLogs((prev) => [...prev, logLine])
