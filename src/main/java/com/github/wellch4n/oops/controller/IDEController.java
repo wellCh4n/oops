@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @ConditionalOnBean(IDEConfig.class)
-@RequestMapping("/api/namespaces/{namespace}/applications/{application}/ide")
+@RequestMapping("/api/namespaces/{namespace}/applications/{application}/ides")
 public class IDEController {
 
     private final IDEService ideService;

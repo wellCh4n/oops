@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Fragment } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
 import { getApplicationStatus, restartApplicationPod, getClusterDomain } from "@/lib/api/applications"
 import { fetchEnvironments } from "@/lib/api/environments"
@@ -172,15 +172,15 @@ export default function ApplicationStatusPage() {
               </div>
             )}
             {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
-              <div className="flex flex-col gap-1">
+              <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1 items-center w-fit text-sm text-muted-foreground">
                 {clusterDomain.externalDomains.map((domain, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground min-w-16 shrink-0 whitespace-nowrap">{index === 0 ? t("apps.status.externalDomain") : ""}</span>
+                  <Fragment key={index}>
+                    <span className="font-medium text-foreground whitespace-nowrap">{index === 0 ? t("apps.status.externalDomain") : ""}</span>
                     <Copyable value={domain} maxLength={Infinity} />
                     <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                       <ExternalLink className="h-4 w-4" />
                     </a>
-                  </div>
+                  </Fragment>
                 ))}
               </div>
             )}

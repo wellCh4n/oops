@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { use, useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
 import { getPipeline, deployPipeline } from "@/lib/api/pipelines"
 import { getApplicationStatus, getClusterDomain } from "@/lib/api/applications"
 import { Pipeline, ApplicationPodStatus, ClusterDomainInfo } from "@/lib/api/types"
@@ -386,15 +386,15 @@ export default function PipelineDetailPage({ params }: PageProps) {
                           </div>
                       )}
                       {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
-                          <div className="flex flex-col gap-1">
+                          <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1 items-center w-fit">
                               {clusterDomain.externalDomains.map((domain, index) => (
-                                  <div key={index} className="flex items-center gap-2">
-                                      <span className="font-medium min-w-16 shrink-0 whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
+                                  <Fragment key={index}>
+                                      <span className="font-medium whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
                                       <Copyable value={domain} maxLength={Infinity} />
                                       <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                           <ExternalLink className="h-4 w-4" />
                                       </a>
-                                  </div>
+                                  </Fragment>
                               ))}
                           </div>
                       )}

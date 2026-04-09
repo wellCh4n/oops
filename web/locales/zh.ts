@@ -411,7 +411,7 @@ const zh = {
   "cmd.searchAppPlaceholder": "搜索应用名称...",
   "cmd.statusDesc": "查看应用运行状态",
   "cmd.deployDesc": "发布应用到环境",
-  "cmd.appDesc": "打开应用列表",
+  "cmd.appDesc": "打开应用编辑页",
   "cmd.ideDesc": "查看 IDE 实例",
   "cmd.pipelineDesc": "查看应用构建与发布历史",
   "cmd.availableCommands": "可用命令",

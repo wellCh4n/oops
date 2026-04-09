@@ -113,7 +113,7 @@ export function AppSidebar() {
       <SidebarContent>
         {navConfig.map((group) => {
           const filteredGroups = group.items.filter((item) => {
-            if (item.url === "/ide" && !ideEnabled) return false
+            if (item.url === "/ides" && !ideEnabled) return false
             return true
           })
           if (filteredGroups.length === 0) return null
@@ -130,7 +130,7 @@ export function AppSidebar() {
                         isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                         tooltip={t(item.title)}
                       >
-                        <Link href={selectedNamespace && (item.url === "/ide" || item.url === "/pipelines") ? `${item.url}?namespace=${selectedNamespace}` : item.url}>
+                        <Link href={selectedNamespace && (item.url === "/ides" || item.url === "/pipelines") ? `${item.url}?namespace=${selectedNamespace}` : item.url}>
                           <item.icon />
                           <span>{t(item.title)}</span>
                         </Link>

@@ -76,7 +76,7 @@ function IDEPageContent() {
       if (v) params.set(k, v)
       else params.delete(k)
     })
-    router.replace(`/ide?${params.toString()}`)
+    router.replace(`/ides?${params.toString()}`)
   }, [router, searchParams])
 
   const stopPolling = () => {

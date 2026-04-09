@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
 import { searchAllApplications } from "@/lib/api/applications"
-import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch } from "lucide-react"
+import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
 
-type CommandType = "status" | "deploy" | "ide" | "pipeline" | null
+type CommandType = "status" | "deploy" | "ide" | "pipeline" | "app" | null
 
 interface CommandOption {
   id: string
@@ -38,6 +38,7 @@ export function CommandPalette() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [commandValue, setCommandValue] = useState("")
   const router = useRouter()
   const { t } = useLanguage()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -58,7 +59,7 @@ export function CommandPalette() {
     },
     {
       id: "ide",
-      name: "IDE",
+      name: "IDEs",
       description: t("cmd.ideDesc"),
       icon: <Terminal className="w-4 h-4" />,
     },
@@ -67,6 +68,12 @@ export function CommandPalette() {
       name: "Pipeline",
       description: t("cmd.pipelineDesc"),
       icon: <GitBranch className="w-4 h-4" />,
+    },
+    {
+      id: "app",
+      name: "App",
+      description: t("cmd.appDesc"),
+      icon: <LayoutGrid className="w-4 h-4" />,
     },
   ]
 
@@ -111,8 +118,25 @@ export function CommandPalette() {
       setSelectedCommand(null)
       setApplications([])
       setSearchQuery("")
+      setCommandValue("")
     }
   }, [open])
+
+  // Auto-select the first app when the list loads or updates
+  useEffect(() => {
+    if (!selectedCommand) return
+    const filtered = recentApp
+      ? applications.filter(
+          (app) => !(app.namespace === recentApp.namespace && app.name === recentApp.name)
+        )
+      : applications
+    const firstValue = recentApp
+      ? `${recentApp.namespace}/${recentApp.name}`
+      : filtered.length > 0
+      ? `${filtered[0].namespace}/${filtered[0].name}`
+      : ""
+    setCommandValue(firstValue)
+  }, [selectedCommand, recentApp, applications])
 
   const performSearch = useCallback(async (keyword: string) => {
     setLoading(true)
@@ -184,10 +208,13 @@ export function CommandPalette() {
         router.push(`/apps/${app.namespace}/${app.name}/publish`)
         break
       case "ide":
-        router.push(`/ide?namespace=${app.namespace}&app=${app.name}`)
+        router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
         break
       case "pipeline":
         router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+        break
+      case "app":
+        router.push(`/apps/${app.namespace}/${app.name}`)
         break
     }
   }
@@ -197,6 +224,7 @@ export function CommandPalette() {
     setInputValue("")
     setApplications([])
     setSearchQuery("")
+    setCommandValue("")
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -224,14 +252,12 @@ export function CommandPalette() {
           <DialogTitle className="sr-only">{t("cmd.title")}</DialogTitle>
           <Command
             className="rounded-lg border shadow-md"
+            value={commandValue}
+            onValueChange={setCommandValue}
             filter={(value, search) => {
-              // Case-insensitive matching for commands and apps
               const normalizedValue = value.toLowerCase()
               const normalizedSearch = search.toLowerCase()
-              if (normalizedValue.includes(normalizedSearch)) {
-                return 1
-              }
-              return 0
+              return normalizedValue.startsWith(normalizedSearch) ? 1 : 0
             }}
           >
             <div className="flex items-center border-b px-3">

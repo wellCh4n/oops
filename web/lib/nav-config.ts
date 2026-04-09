@@ -35,7 +35,7 @@ export const navConfig: NavGroup[] = [
       },
       {
         title: "nav.ide",
-        url: "/ide",
+        url: "/ides",
         icon: SquareCode,
       },
       {

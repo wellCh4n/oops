@@ -25,7 +25,7 @@ export interface IDECreatePayload {
 }
 
 export const listIDEs = async (namespace: string, application: string, env: string): Promise<ApiResponse<IDEInstance[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide?env=${env}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ides?env=${env}`)
   if (!response.ok) {
     throw new Error("Failed to fetch IDEs")
   }
@@ -33,7 +33,7 @@ export const listIDEs = async (namespace: string, application: string, env: stri
 }
 
 export const getDefaultIDEConfig = async (namespace: string, application: string, env: string): Promise<ApiResponse<IDEDefaultConfig>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide/config/default?env=${env}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ides/config/default?env=${env}`)
   if (!response.ok) {
     throw new Error("Failed to fetch default IDE config")
   }
@@ -41,7 +41,7 @@ export const getDefaultIDEConfig = async (namespace: string, application: string
 }
 
 export const createIDE = async (namespace: string, application: string, env: string, payload: IDECreatePayload): Promise<ApiResponse<string>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide?env=${env}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ides?env=${env}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -53,7 +53,7 @@ export const createIDE = async (namespace: string, application: string, env: str
 }
 
 export const deleteIDE = async (namespace: string, application: string, name: string, env: string): Promise<void> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ide/${name}?env=${env}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/ides/${name}?env=${env}`, {
     method: "DELETE",
   })
   if (!response.ok) {
