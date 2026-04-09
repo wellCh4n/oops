@@ -1,17 +1,12 @@
 package com.github.wellch4n.oops.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.service.PipelineService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-import org.springframework.web.socket.handler.AbstractWebSocketHandler;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,6 +21,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 

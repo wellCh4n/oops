@@ -1,9 +1,8 @@
 package com.github.wellch4n.oops.enums;
 
-import lombok.Getter;
-
 import java.util.Arrays;
 import java.util.List;
+import lombok.Getter;
 
 /**
  * @author wellCh4n

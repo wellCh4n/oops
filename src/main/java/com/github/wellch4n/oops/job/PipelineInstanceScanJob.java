@@ -7,10 +7,9 @@ import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import java.util.List;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * @author wellCh4n

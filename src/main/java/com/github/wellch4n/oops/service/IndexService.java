@@ -8,10 +8,9 @@ import com.github.wellch4n.oops.objects.ApplicationQueryRequest;
 import com.github.wellch4n.oops.objects.PipelineQueryRequest;
 import io.micrometer.common.util.StringUtils;
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * @author wellCh4n

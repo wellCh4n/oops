@@ -6,17 +6,16 @@ import com.github.wellch4n.oops.utils.WebSocketOutputStream;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
+import java.io.*;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Map;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.io.*;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
 

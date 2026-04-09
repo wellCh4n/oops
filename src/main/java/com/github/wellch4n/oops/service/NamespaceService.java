@@ -2,9 +2,8 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.Namespace;
 import com.github.wellch4n.oops.data.NamespaceRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
+import org.springframework.stereotype.Service;
 
 /**
  * @author wellCh4n

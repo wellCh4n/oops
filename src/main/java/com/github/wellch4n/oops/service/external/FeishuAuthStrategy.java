@@ -14,12 +14,11 @@ import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReq;
 import com.lark.oapi.service.authen.v1.model.CreateAccessTokenReqBody;
 import com.lark.oapi.service.authen.v1.model.CreateAccessTokenResp;
 import com.lark.oapi.service.authen.v1.model.GetUserInfoResp;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import org.springframework.stereotype.Component;
 
 @Component
 public class FeishuAuthStrategy implements ExternalAuthStrategy {

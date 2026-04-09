@@ -1,17 +1,15 @@
 package com.github.wellch4n.oops.pod;
 
-import com.github.wellch4n.oops.container.BaseContainer;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author wellCh4n

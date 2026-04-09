@@ -8,9 +8,8 @@ import com.github.wellch4n.oops.objects.ApplicationQueryRequest;
 import com.github.wellch4n.oops.objects.PipelineQueryRequest;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.IndexService;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author  wellCh4n

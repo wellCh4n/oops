@@ -6,12 +6,11 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import jakarta.persistence.*;
+import java.time.Duration;
 import lombok.*;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import org.apache.commons.lang3.StringUtils;
-
-import java.time.Duration;
 
 /**
  * @author wellCh4n

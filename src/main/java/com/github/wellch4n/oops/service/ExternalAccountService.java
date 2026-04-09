@@ -1,12 +1,11 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.service.external.ExternalAuthStrategy;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Service;
 
 @Service
 public class ExternalAccountService {

@@ -1,9 +1,8 @@
 package com.github.wellch4n.oops.objects;
 
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.util.List;
 
 @Data
 @AllArgsConstructor

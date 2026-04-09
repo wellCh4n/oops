@@ -3,11 +3,10 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.User;
 import com.github.wellch4n.oops.data.UserRepository;
 import com.github.wellch4n.oops.enums.UserRole;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {

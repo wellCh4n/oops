@@ -6,12 +6,11 @@ import com.github.wellch4n.oops.objects.LoginResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.UserService;
 import com.github.wellch4n.oops.utils.JwtUtils;
+import java.util.Optional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")

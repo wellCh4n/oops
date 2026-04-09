@@ -2,10 +2,9 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ExternalAccountService;
-import org.springframework.web.bind.annotation.*;
-
 import java.io.IOException;
 import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth/external")

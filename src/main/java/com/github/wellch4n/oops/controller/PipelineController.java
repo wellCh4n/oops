@@ -3,11 +3,8 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.PipelineService;
-import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
 import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author wellCh4n

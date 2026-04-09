@@ -1,10 +1,9 @@
 package com.github.wellch4n.oops.utils;
 
-import org.springframework.web.socket.BinaryMessage;
-import org.springframework.web.socket.WebSocketSession;
-
 import java.io.IOException;
 import java.io.OutputStream;
+import org.springframework.web.socket.BinaryMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 /**
  * @author wellCh4n

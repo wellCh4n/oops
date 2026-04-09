@@ -4,9 +4,8 @@ import com.github.wellch4n.oops.utils.NanoIdUtils;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.PrePersist;
-import lombok.Data;
-
 import java.time.LocalDateTime;
+import lombok.Data;
 
 /**
  * @author wellCh4n

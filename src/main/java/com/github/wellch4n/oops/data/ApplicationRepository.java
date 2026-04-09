@@ -1,10 +1,9 @@
 package com.github.wellch4n.oops.data;
 
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 /**
  * @author wellCh4n

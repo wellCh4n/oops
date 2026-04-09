@@ -1,13 +1,7 @@
 package com.github.wellch4n.oops.data;
 
 import com.github.wellch4n.oops.enums.UserRole;
-import com.github.wellch4n.oops.utils.NanoIdUtils;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

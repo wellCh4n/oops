@@ -1,8 +1,7 @@
 package com.github.wellch4n.oops.objects;
 
-import lombok.Data;
-
 import java.util.List;
+import lombok.Data;
 
 /**
  * @author wellCh4n

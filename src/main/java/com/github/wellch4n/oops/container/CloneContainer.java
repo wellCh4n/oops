@@ -4,9 +4,6 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
-import io.fabric8.kubernetes.api.model.EnvVarBuilder;
-
-import java.util.List;
 
 /**
  * @author wellCh4n
