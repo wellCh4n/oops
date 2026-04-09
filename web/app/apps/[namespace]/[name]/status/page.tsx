@@ -175,7 +175,7 @@ export default function ApplicationStatusPage() {
               <div className="flex flex-col gap-1">
                 {clusterDomain.externalDomains.map((domain, index) => (
                   <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground w-16 shrink-0">{index === 0 ? t("apps.status.externalDomain") : ""}</span>
+                    <span className="font-medium text-foreground min-w-16 shrink-0 whitespace-nowrap">{index === 0 ? t("apps.status.externalDomain") : ""}</span>
                     <Copyable value={domain} maxLength={Infinity} />
                     <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                       <ExternalLink className="h-4 w-4" />

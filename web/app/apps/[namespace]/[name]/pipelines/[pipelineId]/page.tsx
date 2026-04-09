@@ -389,7 +389,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                           <div className="flex flex-col gap-1">
                               {clusterDomain.externalDomains.map((domain, index) => (
                                   <div key={index} className="flex items-center gap-2">
-                                      <span className="font-medium w-16 shrink-0">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
+                                      <span className="font-medium min-w-16 shrink-0 whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
                                       <Copyable value={domain} maxLength={Infinity} />
                                       <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
                                           <ExternalLink className="h-4 w-4" />
