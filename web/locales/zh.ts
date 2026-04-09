@@ -398,6 +398,22 @@ const zh = {
   "env.deleteDescPrefix": "此操作不可撤销。请输入环境名称 ",
   "env.deleteDescSuffix": " 以确认删除。",
   "env.deleteConfirmBtn": "确认删除",
+  // Command Palette
+  "cmd.title": "快捷命令",
+  "cmd.placeholder": "输入命令 (status, deploy)...",
+  "cmd.searchAppPlaceholder": "搜索应用名称...",
+  "cmd.statusDesc": "查看应用运行状态",
+  "cmd.deployDesc": "发布应用到环境",
+  "cmd.availableCommands": "可用命令",
+  "cmd.noCommands": "没有找到命令",
+  "cmd.noApps": "没有找到应用",
+  "cmd.searchResults": "搜索结果",
+  "cmd.recent": "最近使用",
+  "cmd.hint": "快捷命令",
+  "cmd.toggle": "打开命令面板",
+  "cmd.back": "返回",
+  "cmd.close": "关闭",
+  "cmd.select": "选择",
 }
 
 export default zh

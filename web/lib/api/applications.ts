@@ -240,3 +240,12 @@ export const getLastSuccessfulBranch = async (namespace: string, name: string): 
   }
   return response.json() as Promise<ApiResponse<string>>
 }
+
+export const searchAllApplications = async (keyword: string = ""): Promise<ApiResponse<Application[]>> => {
+  const url = `/api/search/applications?keyword=${encodeURIComponent(keyword)}`
+  const response = await apiFetch(url)
+  if (!response.ok) {
+    throw new Error("Failed to search applications")
+  }
+  return response.json() as Promise<ApiResponse<Application[]>>
+}
