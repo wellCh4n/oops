@@ -164,7 +164,6 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
-                    <jvmArguments>--sun-misc-unsafe-memory-access=allow</jvmArguments>
                 </configuration>
             </plugin>
         </plugins>
