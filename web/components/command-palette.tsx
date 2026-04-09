@@ -18,11 +18,11 @@ import {
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
 import { searchAllApplications } from "@/lib/api/applications"
-import { Activity, Rocket, Loader2, Keyboard } from "lucide-react"
+import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
 
-type CommandType = "status" | "deploy" | null
+type CommandType = "status" | "deploy" | "ide" | "pipeline" | null
 
 interface CommandOption {
   id: string
@@ -55,6 +55,18 @@ export function CommandPalette() {
       name: "Deploy",
       description: t("cmd.deployDesc"),
       icon: <Rocket className="w-4 h-4" />,
+    },
+    {
+      id: "ide",
+      name: "IDE",
+      description: t("cmd.ideDesc"),
+      icon: <Terminal className="w-4 h-4" />,
+    },
+    {
+      id: "pipeline",
+      name: "Pipeline",
+      description: t("cmd.pipelineDesc"),
+      icon: <GitBranch className="w-4 h-4" />,
     },
   ]
 
@@ -164,10 +176,19 @@ export function CommandPalette() {
 
     setOpen(false)
 
-    if (selectedCommand === "status") {
-      router.push(`/apps/${app.namespace}/${app.name}/status`)
-    } else if (selectedCommand === "deploy") {
-      router.push(`/apps/${app.namespace}/${app.name}/publish`)
+    switch (selectedCommand) {
+      case "status":
+        router.push(`/apps/${app.namespace}/${app.name}/status`)
+        break
+      case "deploy":
+        router.push(`/apps/${app.namespace}/${app.name}/publish`)
+        break
+      case "ide":
+        router.push(`/ide?namespace=${app.namespace}&app=${app.name}`)
+        break
+      case "pipeline":
+        router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+        break
     }
   }
 
@@ -216,14 +237,17 @@ export function CommandPalette() {
             <div className="flex items-center border-b px-3">
               {selectedCommand && (
                 <div className="flex items-center gap-1 mr-2">
-                  {selectedCommand === "status" ? (
-                    <Activity className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <Rocket className="w-4 h-4 text-muted-foreground" />
-                  )}
-                  <span className="text-muted-foreground text-xs font-semibold">
-                    {selectedCommand.charAt(0).toUpperCase() + selectedCommand.slice(1)}
-                  </span>
+                  {(() => {
+                    const cmd = commands.find(c => c.id === selectedCommand)
+                    return cmd ? (
+                      <>
+                        <span className="text-muted-foreground">{cmd.icon}</span>
+                        <span className="text-muted-foreground text-xs font-semibold">
+                          {cmd.name}
+                        </span>
+                      </>
+                    ) : null
+                  })()}
                 </div>
               )}
               <CommandInput
