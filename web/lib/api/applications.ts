@@ -1,15 +1,23 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode, Page } from "./types"
 
-export const getApplications = async (namespace: string, keyword?: string): Promise<ApiResponse<Application[]>> => {
-  const url = keyword
-    ? `/api/namespaces/${namespace}/applications?keyword=${encodeURIComponent(keyword)}`
-    : `/api/namespaces/${namespace}/applications`
+export const getApplications = async (
+  namespace: string,
+  keyword?: string,
+  page?: number,
+  size?: number
+): Promise<ApiResponse<Page<Application>>> => {
+  const params = new URLSearchParams()
+  if (keyword) params.set("keyword", keyword)
+  if (page !== undefined) params.set("page", String(page))
+  if (size !== undefined) params.set("size", String(size))
+  const queryString = params.toString()
+  const url = `/api/namespaces/${namespace}/applications${queryString ? `?${queryString}` : ""}`
   const response = await apiFetch(url)
   if (!response.ok) {
     throw new Error("Failed to fetch applications")
   }
-  return response.json() as Promise<ApiResponse<Application[]>>
+  return response.json() as Promise<ApiResponse<Page<Application>>>
 }
 
 export const getApplicationService = async (namespace: string, name: string): Promise<ApiResponse<ApplicationServiceConfig>> => {

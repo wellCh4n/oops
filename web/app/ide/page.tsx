@@ -97,7 +97,7 @@ function IDEPageContent() {
     }
     getApplications(selectedNamespace)
       .then((res) => {
-        const apps = res.data ?? []
+        const apps = res.data?.data ?? []
         setApplications(apps)
         if (!selectedApp && apps.length > 0) {
           updateParams({ app: apps[0].name, env: "" })

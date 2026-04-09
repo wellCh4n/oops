@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
+import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
@@ -36,9 +37,11 @@ public class ApplicationController {
     }
 
     @GetMapping
-    public Result<List<Application>> getApplications(@PathVariable String namespace,
-                                                     @RequestParam(required = false) String keyword) {
-        return Result.success(applicationService.getApplications(namespace, keyword));
+    public Result<Page<Application>> getApplications(@PathVariable String namespace,
+                                                     @RequestParam(required = false) String keyword,
+                                                     @RequestParam(defaultValue = "1") int page,
+                                                     @RequestParam(defaultValue = "10") int size) {
+        return Result.success(applicationService.getApplications(namespace, keyword, page, size));
     }
 
     @PostMapping

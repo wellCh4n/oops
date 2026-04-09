@@ -25,7 +25,7 @@ public class SearchController {
     }
 
     @GetMapping("/applications")
-    public Result<List<Application>> searchApplications(@RequestParam(required = false) String keyword) {
-        return Result.success(applicationService.searchApplications(keyword));
+    public Result<List<Application>> searchApplications(@RequestParam(required = false) String keyword, @RequestParam(defaultValue = "5") int size) {
+        return Result.success(applicationService.searchApplications(keyword, size));
     }
 }

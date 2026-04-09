@@ -9,6 +9,13 @@ export interface ApiResponse<T> {
   data: T
 }
 
+export interface Page<T> {
+  total: number
+  data: T[]
+  size: number
+  totalPages: number
+}
+
 export interface Environment {
   id: string
   name: string

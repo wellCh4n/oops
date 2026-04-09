@@ -211,7 +211,7 @@ export function CommandPalette() {
       {/* Hint button */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-30 hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-30 hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
       >
         <Keyboard className="w-3.5 h-3.5" />
         <span>{t("cmd.hint")}</span>

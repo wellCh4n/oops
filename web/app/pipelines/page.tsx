@@ -11,6 +11,13 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronLeft, ChevronRight, Layers, LayoutGrid, Server } from "lucide-react"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import {
@@ -44,7 +51,7 @@ function PipelinesContent() {
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
-  const [hasNext, setHasNext] = useState(false)
+  const [totalPages, setTotalPages] = useState(0)
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
 
   const [applications, setApplications] = useState<Application[]>([])
@@ -55,8 +62,8 @@ function PipelinesContent() {
 
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? "all"
-  const page = Number(searchParams.get("page") ?? "0")
-  const size = 20
+  const page = Number(searchParams.get("page") ?? "1")
+  const size = Number(searchParams.get("size") ?? "10")
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -78,7 +85,7 @@ function PipelinesContent() {
   }, [])
 
   const handleNamespaceChange = (ns: string) => {
-    updateParams({ namespace: ns, app: "", env: "all", page: "0" })
+    updateParams({ namespace: ns, app: "", env: "all" })
   }
 
   // Load applications when namespace changes
@@ -91,9 +98,9 @@ function PipelinesContent() {
       try {
         const res = await getApplications(selectedNamespace)
         if (res.data) {
-          setApplications(res.data)
-          if (!searchParams.get("app") && res.data.length > 0) {
-            updateParams({ app: res.data[0].name, page: "0" })
+          setApplications(res.data.data)
+          if (!searchParams.get("app") && res.data.data.length > 0) {
+            updateParams({ app: res.data.data[0].name })
           }
         }
       } catch {
@@ -134,8 +141,8 @@ function PipelinesContent() {
     try {
       const res = await getPipelines(selectedNamespace, selectedApp, selectedEnv, page, size)
       if (res.data) {
-        setPipelines(res.data)
-        setHasNext(res.data.length === size)
+        setPipelines(res.data.data)
+        setTotalPages(res.data.totalPages)
       }
     } catch {
       toast.error(t("pipelines.fetchError"))
@@ -201,7 +208,7 @@ function PipelinesContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("pipelines.appLabel")}</span>
                 <SelectWithSearch
                   value={selectedApp}
-                  onValueChange={(v: string) => updateParams({ app: v, env: "all", page: "0" })}
+                  onValueChange={(v: string) => updateParams({ app: v, env: "all", page: "1" })}
                   options={applications.map(app => ({ value: app.name, label: app.name }))}
                   placeholder={t("pipelines.selectApp")}
                   searchPlaceholder={t("common.search")}
@@ -214,7 +221,7 @@ function PipelinesContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("pipelines.envLabel")}</span>
                 <SelectWithSearch
                   value={selectedEnv}
-                  onValueChange={(v: string) => updateParams({ env: v, page: "0" })}
+                  onValueChange={(v: string) => updateParams({ env: v, page: "1" })}
                   options={[{ value: "all", label: t("pipelines.allEnv") }, ...environments.map(env => ({ value: env, label: env }))]}
                   placeholder={t("pipelines.selectEnv")}
                   searchPlaceholder={t("common.search")}
@@ -234,26 +241,48 @@ function PipelinesContent() {
           <>
             <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
             {selectedApp && (
-              <div className="flex items-center justify-end gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0 || loading}
-                  onClick={() => updateParams({ page: String(page - 1) })}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  {t("pipelines.prevPage")}
-                </Button>
-                <span className="text-sm text-muted-foreground">{t("pipelines.pagePrefix")}{page + 1}{t("pipelines.pageSuffix")}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!hasNext || loading}
-                  onClick={() => updateParams({ page: String(page + 1) })}
-                >
-                  {t("pipelines.nextPage")}
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+              <div className="flex items-center justify-end gap-4 mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
+                  <Select
+                    value={String(size)}
+                    onValueChange={(v) => updateParams({ size: v, page: "1" })}
+                    disabled={loading}
+                  >
+                    <SelectTrigger className="w-[70px] h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground">{t("common.pageSizeSuffix")}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 1 || loading}
+                    onClick={() => updateParams({ page: String(page - 1) })}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    {t("pipelines.prevPage")}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {t("pipelines.pagePrefix")}{page}{t("pipelines.pageSuffix")} / {t("common.totalPages").replace("${total}", String(totalPages))}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= totalPages || loading}
+                    onClick={() => updateParams({ page: String(page + 1) })}
+                  >
+                    {t("pipelines.nextPage")}
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </>

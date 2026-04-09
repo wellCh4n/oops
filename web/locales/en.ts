@@ -53,6 +53,13 @@ const en = {
   "common.empty": "empty",
   "common.refresh": "Refresh",
   "common.status": "Status",
+  "common.prevPage": "Previous",
+  "common.nextPage": "Next",
+  "common.pagePrefix": "Page ",
+  "common.pageSuffix": "",
+  "common.totalPages": "of ${total}",
+  "common.pageSize": "Show",
+  "common.pageSizeSuffix": "per page",
   // Apps
   "apps.title": "Apps",
   "apps.fetchNsError": "Failed to fetch namespaces",

@@ -53,6 +53,13 @@ const zh = {
   "common.empty": "空",
   "common.refresh": "刷新页面",
   "common.status": "状态",
+  "common.prevPage": "上一页",
+  "common.nextPage": "下一页",
+  "common.pagePrefix": "第 ",
+  "common.pageSuffix": " 页",
+  "common.totalPages": "共 ${total} 页",
+  "common.pageSize": "每页",
+  "common.pageSizeSuffix": "条",
   // Apps
   "apps.title": "应用",
   "apps.fetchNsError": "获取命名空间失败",

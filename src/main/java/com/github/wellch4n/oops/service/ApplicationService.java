@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
+import com.github.wellch4n.oops.objects.Page;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
@@ -12,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,18 +54,16 @@ public class ApplicationService {
         return applicationRepository.findByNamespaceAndName(namespace, name);
     }
 
-    public List<Application> getApplications(String namespace, String keyword) {
-        if (StringUtils.isNotBlank(keyword)) {
-            return applicationRepository.findByNamespaceAndNameContainingIgnoreCase(namespace, keyword);
-        }
-        return applicationRepository.findByNamespace(namespace);
+    public Page<Application> getApplications(String namespace, String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
+        return Page.of(applicationRepository.findByNamespaceAndNameContainingIgnoreCase(
+                namespace, StringUtils.defaultIfBlank(keyword, ""), pageable));
     }
 
-    public List<Application> searchApplications(String keyword) {
-        if (StringUtils.isNotBlank(keyword)) {
-            return applicationRepository.findByNameContainingIgnoreCase(keyword);
-        }
-        return applicationRepository.findByNameContainingIgnoreCase("");
+    public List<Application> searchApplications(String keyword, int size) {
+        List<Application> applications = applicationRepository.findByNameContainingIgnoreCase(
+                StringUtils.defaultIfBlank(keyword, ""));
+        return applications.stream().limit(size).toList();
     }
 
     @Transactional

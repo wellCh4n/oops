@@ -1,7 +1,7 @@
 FROM node:20-alpine AS web-deps
 WORKDIR /build/web
 COPY web/package.json web/pnpm-lock.yaml ./
-RUN corepack enable && corepack prepare pnpm@8.15.9 --activate && pnpm install --frozen-lockfile
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate && pnpm install --frozen-lockfile
 COPY web/ ./
 RUN pnpm build
 

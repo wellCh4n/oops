@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
-import { Plus, Search, Layers, LayoutGrid } from "lucide-react"
+import { Plus, Search, Layers, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
@@ -10,6 +10,13 @@ import { Application } from "@/lib/api/types"
 import { getApplications } from "@/lib/api/applications"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
@@ -36,9 +43,13 @@ function AppsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
+  const [totalPages, setTotalPages] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const { t } = useLanguage()
   const columns = useMemo(() => getColumns(t), [t])
+
+  const page = Number(searchParams.get("page") ?? "1")
+  const size = Number(searchParams.get("size") ?? "10")
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -59,13 +70,14 @@ function AppsContent() {
       fetchData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace])
+  }, [selectedNamespace, page, size])
 
   const handleNamespaceChange = (ns: string) => {
-    updateParams({ namespace: ns })
+    updateParams({ namespace: ns, page: "1" })
   }
 
   const handleSearch = () => {
+    updateParams({ page: "1" })
     fetchData()
   }
 
@@ -77,8 +89,11 @@ function AppsContent() {
 
     setLoading(true)
     try {
-      const res = await getApplications(selectedNamespace, searchQuery || undefined)
-      setApplications(res.data)
+      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size)
+      if (res.data) {
+        setApplications(res.data.data)
+        setTotalPages(res.data.totalPages)
+      }
     } catch (error) {
       console.error("Failed to fetch applications:", error)
       toast.error(t("apps.fetchError"))
@@ -153,18 +168,63 @@ function AppsContent() {
           </div>
         }
         table={
-          <DataTable
-            columns={columns}
-            data={applications}
-            loading={loading}
-            meta={{
-              onEdit: handleEdit,
-              onPublish: handlePublish,
-              onStatus: handleStatus,
-              onPipelines: handlePipelines,
-              onIDE: handleIDE,
-            }}
-          />
+          <>
+            <DataTable
+              columns={columns}
+              data={applications}
+              loading={loading}
+              meta={{
+                onEdit: handleEdit,
+                onPublish: handlePublish,
+                onStatus: handleStatus,
+                onPipelines: handlePipelines,
+                onIDE: handleIDE,
+              }}
+            />
+            <div className="flex items-center justify-end gap-4 mt-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
+                <Select
+                  value={String(size)}
+                  onValueChange={(v) => updateParams({ size: v, page: "1" })}
+                  disabled={loading}
+                >
+                  <SelectTrigger className="w-[70px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">{t("common.pageSizeSuffix")}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 1 || loading}
+                  onClick={() => updateParams({ page: String(page - 1) })}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {t("common.prevPage")}
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {t("common.pagePrefix")}{page}{t("common.pageSuffix")} / {t("common.totalPages").replace("${total}", String(totalPages))}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => updateParams({ page: String(page + 1) })}
+                >
+                  {t("common.nextPage")}
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </>
         }
       />
 

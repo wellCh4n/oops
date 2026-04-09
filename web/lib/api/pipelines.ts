@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { ApiResponse, Pipeline } from "./types"
+import { ApiResponse, Pipeline, Page } from "./types"
 
 export const getPipelines = async (
   namespace: string,
@@ -7,7 +7,7 @@ export const getPipelines = async (
   environment?: string,
   page?: number,
   size?: number
-): Promise<ApiResponse<Pipeline[]>> => {
+): Promise<ApiResponse<Page<Pipeline>>> => {
   const params = new URLSearchParams()
   if (environment && environment !== "all") params.set("environment", environment)
   if (page !== undefined) params.set("page", String(page))
@@ -19,7 +19,7 @@ export const getPipelines = async (
   if (!response.ok) {
     throw new Error("Failed to fetch pipelines")
   }
-  return response.json() as Promise<ApiResponse<Pipeline[]>>
+  return response.json() as Promise<ApiResponse<Page<Pipeline>>>
 }
 
 export const getPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<Pipeline>> => {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -53,14 +54,14 @@ public class PipelineService {
         this.ingressConfig = ingressConfig;
     }
 
-    public List<Pipeline> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
-        int p = page == null ? 0 : page;
+    public Page<Pipeline> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
+        int p = page == null ? 1 : page;
         int s = size == null ? 20 : size;
-        PageRequest pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "createdTime"));
+        PageRequest pageable = PageRequest.of(Math.max(p - 1, 0), s, Sort.by(Sort.Direction.DESC, "createdTime"));
         if (environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment)) {
-            return pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable).getContent();
+            return Page.of(pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable));
         }
-        return pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable).getContent();
+        return Page.of(pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable));
     }
 
     public Pipeline getPipeline(String namespace, String applicationName, String id) {
