@@ -417,6 +417,7 @@ const en = {
   "cmd.availableCommands": "Available Commands",
   "cmd.noCommands": "No commands found",
   "cmd.noApps": "No applications found",
+  "cmd.searching": "Searching...",
   "cmd.searchResults": "Search Results",
   "cmd.recent": "Recent",
   "cmd.hint": "Quick command",

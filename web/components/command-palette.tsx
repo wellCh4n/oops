@@ -125,15 +125,10 @@ export function CommandPalette() {
   // Auto-select the first app when the list loads or updates
   useEffect(() => {
     if (!selectedCommand) return
-    const filtered = recentApp
-      ? applications.filter(
-          (app) => !(app.namespace === recentApp.namespace && app.name === recentApp.name)
-        )
-      : applications
     const firstValue = recentApp
       ? `${recentApp.namespace}/${recentApp.name}`
-      : filtered.length > 0
-      ? `${filtered[0].namespace}/${filtered[0].name}`
+      : applications.length > 0
+      ? `${applications[0].namespace}/${applications[0].name}`
       : ""
     setCommandValue(firstValue)
   }, [selectedCommand, recentApp, applications])
@@ -181,12 +176,6 @@ export function CommandPalette() {
   }
 
   // 过滤搜索结果，排除最近使用中的应用
-  const filteredApplications = recentApp
-    ? applications.filter(
-        (app) =>
-          !(app.namespace === recentApp.namespace && app.name === recentApp.name)
-      )
-    : applications
 
   const handleAppSelect = (app: Application) => {
     if (!selectedCommand) return
@@ -257,6 +246,8 @@ export function CommandPalette() {
             filter={(value, search) => {
               const normalizedValue = value.toLowerCase()
               const normalizedSearch = search.toLowerCase()
+              // App items are namespace/name format — already filtered server-side
+              if (normalizedValue.includes("/")) return 1
               return normalizedValue.startsWith(normalizedSearch) ? 1 : 0
             }}
           >
@@ -315,8 +306,8 @@ export function CommandPalette() {
                 </>
               ) : (
                 <>
-                  {/* Recent app section - always show if exists, not affected by loading */}
-                  {recentApp && (
+                  {/* Recent app section - only show when input is empty */}
+                  {recentApp && !inputValue && (
                     <CommandGroup heading={t("cmd.recent")}>
                       <CommandItem
                         key={`${recentApp.namespace}/${recentApp.name}`}
@@ -349,15 +340,17 @@ export function CommandPalette() {
                     </CommandGroup>
                   )}
                   {/* Separator between recent and search results */}
-                  {recentApp && filteredApplications.length > 0 && (
+                  {recentApp && !inputValue && applications.length > 0 && (
                     <CommandSeparator />
                   )}
-                  {/* Search results section - keep showing old results while loading */}
-                  {filteredApplications.length > 0 && (
+                  {/* Search results section - only show when input matches completed search */}
+                  {applications.length > 0 && inputValue.trim() === searchQuery && (
                     <CommandGroup
-                      heading={`${t("cmd.searchResults")} (${filteredApplications.length})`}
+                      heading={t("cmd.searchResults")}
                     >
-                      {filteredApplications.map((app) => (
+                      {applications.filter((app) =>
+                        inputValue || !recentApp || !(app.namespace === recentApp.namespace && app.name === recentApp.name)
+                      ).map((app) => (
                         <CommandItem
                           key={`${app.namespace}/${app.name}`}
                           value={`${app.namespace}/${app.name}`}
@@ -381,8 +374,15 @@ export function CommandPalette() {
                       ))}
                     </CommandGroup>
                   )}
+                  {/* Searching state */}
+                  {inputValue.trim() !== searchQuery && (
+                    <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t("cmd.searching")}
+                    </div>
+                  )}
                   {/* Empty state - only show when not loading and no results */}
-                  {!loading && applications.length === 0 && !recentApp && (
+                  {inputValue.trim() === searchQuery && !loading && applications.length === 0 && (!recentApp || !!inputValue) && (
                     <CommandEmpty>{t("cmd.noApps")}</CommandEmpty>
                   )}
                 </>

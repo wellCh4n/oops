@@ -417,6 +417,7 @@ const zh = {
   "cmd.availableCommands": "可用命令",
   "cmd.noCommands": "没有找到命令",
   "cmd.noApps": "没有找到应用",
+  "cmd.searching": "搜索中...",
   "cmd.searchResults": "搜索结果",
   "cmd.recent": "最近使用",
   "cmd.hint": "快捷命令",
