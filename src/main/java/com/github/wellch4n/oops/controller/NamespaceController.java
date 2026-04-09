@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.Namespace;
-import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.NamespaceService;
 import java.util.List;
@@ -23,8 +22,7 @@ public class NamespaceController {
 
     private final NamespaceService namespaceService;
 
-    public NamespaceController(NamespaceService namespaceService,
-                               PipelineRepository pipelineRepository) {
+    public NamespaceController(NamespaceService namespaceService) {
         this.namespaceService = namespaceService;
     }
 

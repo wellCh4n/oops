@@ -58,6 +58,13 @@ public class ApplicationService {
         return applicationRepository.findByNamespace(namespace);
     }
 
+    public List<Application> searchApplications(String keyword) {
+        if (StringUtils.isNotBlank(keyword)) {
+            return applicationRepository.findByNameContainingIgnoreCase(keyword);
+        }
+        return applicationRepository.findByNameContainingIgnoreCase("");
+    }
+
     @Transactional
     public String createApplication(String namespace, Application application) {
         application.setNamespace(namespace);

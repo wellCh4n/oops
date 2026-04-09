@@ -9,6 +9,7 @@ import { getToken } from "@/lib/auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { Locale } from "@/lib/i18n"
 import { useFeaturesStore } from "@/store/features"
+import { CommandPalette } from "@/components/command-palette"
 
 export function AppLayout({
   children,
@@ -63,6 +64,7 @@ export function AppLayout({
           </div>
         </SidebarInset>
         <Toaster position="top-center" />
+        <CommandPalette />
       </SidebarProvider>
     </LanguageProvider>
   )
