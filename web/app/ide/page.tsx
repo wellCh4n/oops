@@ -12,9 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog"
@@ -25,7 +23,7 @@ import {
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
-import { useNamespaceStore } from "@/store/namespace"
+import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 import { getApplications, getApplicationEnvironments } from "@/lib/api/applications"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment } from "@/lib/api/types"
@@ -33,7 +31,9 @@ import { Application, ApplicationEnvironment } from "@/lib/api/types"
 export default function IDEPage() {
   return (
     <Suspense>
-      <IDEPageContent />
+      <NamespaceParamProvider>
+        <IDEPageContent />
+      </NamespaceParamProvider>
     </Suspense>
   )
 }
@@ -43,10 +43,7 @@ function IDEPageContent() {
   const searchParams = useSearchParams()
   const { t } = useLanguage()
 
-  const namespaces = useNamespaceStore((s) => s.namespaces)
-  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
-  const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
-  const loadNamespaces = useNamespaceStore((s) => s.load)
+  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
 
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
@@ -222,38 +219,30 @@ function IDEPageContent() {
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
                 <Layers className="w-4 h-4" />{t("apps.namespaceFilter")}
               </span>
-              <Select
+              <SelectWithSearch
                 value={selectedNamespace}
-                onValueChange={(v) => { setSelectedNamespace(v); updateParams({ app: "", env: "" }) }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder={t("common.selectNamespace")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {namespaces.map((ns) => (
-                    <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onValueChange={(v: string) => { updateParams({ namespace: v, app: "", env: "" }) }}
+                options={namespaces.map((ns) => ({ value: ns.id, label: ns.name }))}
+                placeholder={t("common.selectNamespace")}
+                searchPlaceholder={t("common.search")}
+                emptyText={t("common.noResults")}
+                className="w-[200px]"
+              />
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
                 <LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}
               </span>
-              <Select
+              <SelectWithSearch
                 value={selectedApp}
-                onValueChange={(v) => updateParams({ app: v, env: "" })}
+                onValueChange={(v: string) => updateParams({ app: v, env: "" })}
+                options={applications.map((app) => ({ value: app.name, label: app.name }))}
+                placeholder={t("ide.page.selectApp")}
+                searchPlaceholder={t("common.search")}
+                emptyText={t("common.noResults")}
+                className="w-[200px]"
                 disabled={!selectedNamespace}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder={t("ide.page.selectApp")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {applications.map((app) => (
-                    <SelectItem key={app.name} value={app.name}>{app.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
         }

@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
+import { useNamespaceStore } from "@/store/namespace"
 import { usePathname } from "next/navigation"
 import React, { useState, useEffect } from "react"
 import { clearAuth } from "@/lib/auth"
@@ -57,6 +58,7 @@ export function AppSidebar() {
   const { locale, setLocale, t } = useLanguage()
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const loadFeatures = useFeaturesStore((s) => s.load)
+  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
@@ -128,7 +130,7 @@ export function AppSidebar() {
                         isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                         tooltip={t(item.title)}
                       >
-                        <Link href={item.url}>
+                        <Link href={selectedNamespace && (item.url === "/ide" || item.url === "/pipelines") ? `${item.url}?namespace=${selectedNamespace}` : item.url}>
                           <item.icon />
                           <span>{t(item.title)}</span>
                         </Link>

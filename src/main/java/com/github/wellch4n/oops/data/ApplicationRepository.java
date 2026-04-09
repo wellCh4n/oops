@@ -17,4 +17,6 @@ public interface ApplicationRepository extends CrudRepository<Application, Strin
     Application findByNamespaceAndName(String namespace, String name);
 
     List<Application> findByNamespace(String namespace);
+
+    List<Application> findByNamespaceAndNameContainingIgnoreCase(String namespace, String keyword);
 }

@@ -52,7 +52,10 @@ public class ApplicationService {
         return applicationRepository.findByNamespaceAndName(namespace, name);
     }
 
-    public List<Application> getApplications(String namespace) {
+    public List<Application> getApplications(String namespace, String keyword) {
+        if (StringUtils.isNotBlank(keyword)) {
+            return applicationRepository.findByNamespaceAndNameContainingIgnoreCase(namespace, keyword);
+        }
         return applicationRepository.findByNamespace(namespace);
     }
 

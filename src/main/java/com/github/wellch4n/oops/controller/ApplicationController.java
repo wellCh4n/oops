@@ -37,8 +37,9 @@ public class ApplicationController {
     }
 
     @GetMapping
-    public Result<List<Application>> getApplications(@PathVariable String namespace) {
-        return Result.success(applicationService.getApplications(namespace));
+    public Result<List<Application>> getApplications(@PathVariable String namespace,
+                                                     @RequestParam(required = false) String keyword) {
+        return Result.success(applicationService.getApplications(namespace, keyword));
     }
 
     @PostMapping

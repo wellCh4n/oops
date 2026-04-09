@@ -1,5 +1,179 @@
-import PageClient from "./page-client"
+"use client"
+
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
+import { Plus, Search, Layers, LayoutGrid } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
+import { DataTable } from "@/components/ui/data-table"
+import { getColumns } from "./columns"
+import { Application } from "@/lib/api/types"
+import { getApplications } from "@/lib/api/applications"
+import { useRouter, useSearchParams } from "next/navigation"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
+import { Input } from "@/components/ui/input"
+import { ApplicationCreateDialog } from "./components/application-create-dialog"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
+import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 
 export default function AppsPage() {
-  return <PageClient />
+  return (
+    <Suspense>
+      <NamespaceParamProvider>
+        <AppsContent />
+      </NamespaceParamProvider>
+    </Suspense>
+  )
+}
+
+function AppsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
+
+  const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [applications, setApplications] = useState<Application[]>([])
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const { t } = useLanguage()
+  const columns = useMemo(() => getColumns(t), [t])
+
+  const updateParams = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v) params.set(k, v)
+      else params.delete(k)
+    })
+    router.replace(`/apps?${params.toString()}`)
+  }, [router, searchParams])
+
+  // Load namespaces once
+  useEffect(() => {
+    loadNamespaces()
+  }, [loadNamespaces])
+
+  useEffect(() => {
+    if (selectedNamespace) {
+      fetchData()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNamespace])
+
+  const handleNamespaceChange = (ns: string) => {
+    updateParams({ namespace: ns })
+  }
+
+  const handleSearch = () => {
+    fetchData()
+  }
+
+  const fetchData = async () => {
+    if (!selectedNamespace) {
+      setApplications([])
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await getApplications(selectedNamespace, searchQuery || undefined)
+      setApplications(res.data)
+    } catch (error) {
+      console.error("Failed to fetch applications:", error)
+      toast.error(t("apps.fetchError"))
+      setApplications([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEdit = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}`)
+  }
+
+  const handlePublish = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}/publish`)
+  }
+
+  const handleStatus = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}/status`)
+  }
+
+  const handlePipelines = (app: Application) => {
+    router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+  }
+
+  const handleIDE = (app: Application) => {
+    router.push(`/ide?namespace=${app.namespace}&app=${app.name}`)
+  }
+
+  return (
+    <ContentPage title={t("apps.title")}>
+      <TableForm
+        options={
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
+                <SelectWithSearch
+                  value={selectedNamespace}
+                  onValueChange={handleNamespaceChange}
+                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
+                  placeholder={t("common.selectNamespace")}
+                  searchPlaceholder={t("common.search")}
+                  emptyText={t("common.noResults")}
+                  className="w-[200px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
+                <div className="flex w-full max-w-sm items-center space-x-2">
+                  <Input
+                    placeholder={t("apps.searchPlaceholder")}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleSearch()
+                      }
+                    }}
+                  />
+                  <Button variant="outline" onClick={handleSearch}>
+                    <Search className="h-4 w-4" />
+                    {t("apps.searchBtn")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t("apps.createBtn")}
+            </Button>
+          </div>
+        }
+        table={
+          <DataTable
+            columns={columns}
+            data={applications}
+            loading={loading}
+            meta={{
+              onEdit: handleEdit,
+              onPublish: handlePublish,
+              onStatus: handleStatus,
+              onPipelines: handlePipelines,
+              onIDE: handleIDE,
+            }}
+          />
+        }
+      />
+
+      <ApplicationCreateDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        namespaces={namespaces}
+        defaultNamespace={selectedNamespace}
+      />
+    </ContentPage>
+  )
 }

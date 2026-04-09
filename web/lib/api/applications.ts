@@ -1,8 +1,11 @@
 import { apiFetch } from "./client"
 import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode } from "./types"
 
-export const getApplications = async (namespace: string): Promise<ApiResponse<Application[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications`)
+export const getApplications = async (namespace: string, keyword?: string): Promise<ApiResponse<Application[]>> => {
+  const url = keyword
+    ? `/api/namespaces/${namespace}/applications?keyword=${encodeURIComponent(keyword)}`
+    : `/api/namespaces/${namespace}/applications`
+  const response = await apiFetch(url)
   if (!response.ok) {
     throw new Error("Failed to fetch applications")
   }

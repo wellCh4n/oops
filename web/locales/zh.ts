@@ -242,6 +242,7 @@ const zh = {
   "apps.pipeline.modeImmediate": "立即发布",
   "apps.pipeline.modeManual": "手动发布",
   "common.search": "搜索",
+  "common.noResults": "暂无结果",
   "common.edit": "编辑",
   "common.name": "名称",
   // Users

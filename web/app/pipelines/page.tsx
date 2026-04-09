@@ -10,13 +10,7 @@ import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronLeft, ChevronRight, Layers, LayoutGrid, Server } from "lucide-react"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import {
@@ -30,12 +24,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
-import { useNamespaceStore } from "@/store/namespace"
+import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 
 export default function PipelinesPage() {
   return (
     <Suspense>
-      <PipelinesContent />
+      <NamespaceParamProvider>
+        <PipelinesContent />
+      </NamespaceParamProvider>
     </Suspense>
   )
 }
@@ -44,10 +40,7 @@ function PipelinesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const namespaces = useNamespaceStore((s) => s.namespaces)
-  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
-  const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
-  const loadNamespaces = useNamespaceStore((s) => s.load)
+  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
@@ -85,8 +78,7 @@ function PipelinesContent() {
   }, [])
 
   const handleNamespaceChange = (ns: string) => {
-    setSelectedNamespace(ns)
-    updateParams({ app: "", env: "all", page: "0" })
+    updateParams({ namespace: ns, app: "", env: "all", page: "0" })
   }
 
   // Load applications when namespace changes
@@ -195,43 +187,41 @@ function PipelinesContent() {
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("pipelines.nsLabel")}</span>
-                <Select value={selectedNamespace} onValueChange={handleNamespaceChange}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t("pipelines.selectNs")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {namespaces.map(ns => (
-                      <SelectItem key={ns.id} value={ns.id}>{ns.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={selectedNamespace}
+                  onValueChange={handleNamespaceChange}
+                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
+                  placeholder={t("pipelines.selectNs")}
+                  searchPlaceholder={t("common.search")}
+                  emptyText={t("common.noResults")}
+                  className="w-[200px]"
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("pipelines.appLabel")}</span>
-                <Select value={selectedApp} onValueChange={(v) => updateParams({ app: v, env: "all", page: "0" })} disabled={!selectedNamespace}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t("pipelines.selectApp")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {applications.map(app => (
-                      <SelectItem key={app.name} value={app.name}>{app.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={selectedApp}
+                  onValueChange={(v: string) => updateParams({ app: v, env: "all", page: "0" })}
+                  options={applications.map(app => ({ value: app.name, label: app.name }))}
+                  placeholder={t("pipelines.selectApp")}
+                  searchPlaceholder={t("common.search")}
+                  emptyText={t("common.noResults")}
+                  className="w-[200px]"
+                  disabled={!selectedNamespace}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("pipelines.envLabel")}</span>
-                <Select value={selectedEnv} onValueChange={(v) => updateParams({ env: v, page: "0" })} disabled={!selectedNamespace || !selectedApp}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder={t("pipelines.selectEnv")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t("pipelines.allEnv")}</SelectItem>
-                    {environments.map(env => (
-                      <SelectItem key={env} value={env}>{env}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectWithSearch
+                  value={selectedEnv}
+                  onValueChange={(v: string) => updateParams({ env: v, page: "0" })}
+                  options={[{ value: "all", label: t("pipelines.allEnv") }, ...environments.map(env => ({ value: env, label: env }))]}
+                  placeholder={t("pipelines.selectEnv")}
+                  searchPlaceholder={t("common.search")}
+                  emptyText={t("common.noResults")}
+                  className="w-[200px]"
+                  disabled={!selectedNamespace || !selectedApp}
+                />
               </div>
             </div>
             <Button variant="outline" onClick={fetchPipelines} disabled={loading || !selectedApp}>

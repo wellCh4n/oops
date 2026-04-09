@@ -242,6 +242,7 @@ const en = {
   "apps.pipeline.modeImmediate": "Immediate",
   "apps.pipeline.modeManual": "Manual",
   "common.search": "Search",
+  "common.noResults": "No results found",
   "common.edit": "Edit",
   "common.name": "Name",
   // Users

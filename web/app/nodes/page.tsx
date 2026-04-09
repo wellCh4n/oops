@@ -7,13 +7,7 @@ import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchNodes } from "@/lib/api/nodes"
 import { Environment, NodeStatus } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
   Table,
   TableBody,
@@ -70,18 +64,15 @@ export default function NodesPage() {
         options={
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("common.environment")}</span>
-            <Select value={selectedEnv} onValueChange={setSelectedEnv}>
-              <SelectTrigger className="w-[220px]">
-                <SelectValue placeholder={t("common.selectEnvironment")} />
-              </SelectTrigger>
-              <SelectContent>
-                {environments.map((env) => (
-                  <SelectItem key={env.id} value={env.name}>
-                    {env.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SelectWithSearch
+              value={selectedEnv}
+              onValueChange={setSelectedEnv}
+              options={environments.map((env) => ({ value: env.name, label: env.name }))}
+              placeholder={t("common.selectEnvironment")}
+              searchPlaceholder={t("common.search")}
+              emptyText={t("common.noResults")}
+              className="w-[220px]"
+            />
           </div>
         }
         table={
