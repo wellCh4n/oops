@@ -121,7 +121,8 @@ public class ApplicationService {
                 .collect(java.util.stream.Collectors.toSet());
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
         return applications.stream()
-                .map(application -> ApplicationResponse.from(application, ownerNameMap.get(application.getOwner())))
+                .map(application -> ApplicationResponse.from(application,
+                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null))
                 .toList();
     }
 
