@@ -27,6 +27,7 @@ public class IngressRouteSpec {
     @AllArgsConstructor
     public static class Route {
         private String match;
+        private String syntax;
         private String kind;
         private List<Service> services;
         private List<Middleware> middlewares;

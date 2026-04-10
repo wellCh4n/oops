@@ -177,7 +177,7 @@ public class IDEService {
         String proxyDomainArg = proxyDomainTemplate != null
                 ? " --proxy-domain '" + proxyDomainTemplate + "'"
                 : "";
-        startupCmds.add("code-server --bind-addr 0.0.0.0:8080 --auth none --disable-workspace-trust"
+        startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
                 + proxyDomainArg + " /home/coder/" + applicationName);
 
         try (var client = environment.getKubernetesApiServer().fabric8Client()) {
@@ -198,12 +198,12 @@ public class IDEService {
                                     .withImage(ideConfig.getImage())
                                     .withVolumeMounts(workspaceVolume.getVolumeMounts())
                                     .withEnv(envVars)
-                                    .addNewPort().withContainerPort(8080).endPort()
+                                    .addNewPort().withContainerPort(1114).endPort()
                                     .withCommand("sh", "-c", String.join(" && ", startupCmds))
                                     .withNewReadinessProbe()
                                         .withNewHttpGet()
                                             .withPath("/")
-                                            .withNewPort(8080)
+                                            .withNewPort(1114)
                                         .endHttpGet()
                                         .withInitialDelaySeconds(5)
                                         .withPeriodSeconds(5)
@@ -242,7 +242,7 @@ public class IDEService {
                     .withNewSpec()
                         .addNewPort()
                             .withPort(80)
-                            .withTargetPort(new io.fabric8.kubernetes.api.model.IntOrString(8080))
+                            .withTargetPort(new io.fabric8.kubernetes.api.model.IntOrString(1114))
                         .endPort()
                         .withSelector(labels)
                     .endSpec()
@@ -355,6 +355,7 @@ public class IDEService {
                 .routes(List.of(
                         IngressRouteSpec.Route.builder()
                                 .match(matchRule)
+                                .syntax("v3")
                                 .kind("Rule")
                                 .services(List.of(IngressRouteSpec.Service.builder().name(name).port(80).build()))
                                 .middlewares(middlewares)
