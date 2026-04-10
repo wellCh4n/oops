@@ -15,4 +15,5 @@ public class IDEConfig {
     private boolean https = false;
     private String image;
     private String middleware;
+    private String proxyDomain = "{{port}}-{{host}}";
 }

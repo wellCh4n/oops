@@ -15,6 +15,7 @@ import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.IDEConfigResponse;
 import com.github.wellch4n.oops.objects.IDECreateRequest;
 import com.github.wellch4n.oops.objects.IDEResponse;
+import com.github.wellch4n.oops.utils.IDEProxyDomainUtils;
 import com.github.wellch4n.oops.utils.NanoIdUtils;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
@@ -54,6 +55,15 @@ public class IDEService {
         this.ingressConfig = ingressConfig;
     }
 
+    private String getProxyDomainTemplate() {
+        return IDEProxyDomainUtils.normalizeTemplate(ideConfig.getProxyDomain())
+                .orElseGet(() -> {
+                    if (ideConfig.getProxyDomain() != null && !ideConfig.getProxyDomain().isBlank()) {
+                        log.warn("Ignoring invalid oops.ide.proxy-domain '{}': it must include both {{port}} and {{host}}", ideConfig.getProxyDomain());
+                    }
+                    return null;
+                });
+    }
 
     public IDEConfigResponse getDefaultIDEConfig(String env) {
         IDEConfigResponse fileDefaults = loadFileDefaults();
@@ -157,12 +167,18 @@ public class IDEService {
                 .map(ext -> "code-server --install-extension " + ext)
                 .toList() : List.of();
 
+        String proxyDomainTemplate = getProxyDomainTemplate();
+
         List<String> startupCmds = new java.util.ArrayList<>();
         startupCmds.add("cp -r /workspace /home/coder/" + applicationName);
         startupCmds.add("mkdir -p /home/coder/.local/share/code-server/User");
         startupCmds.add("echo '" + ideSettings + "' > /home/coder/.local/share/code-server/User/settings.json");
         startupCmds.addAll(installCmds);
-        startupCmds.add("code-server --bind-addr 0.0.0.0:8080 --auth none --disable-workspace-trust /home/coder/" + applicationName);
+        String proxyDomainArg = proxyDomainTemplate != null
+                ? " --proxy-domain '" + proxyDomainTemplate + "'"
+                : "";
+        startupCmds.add("code-server --bind-addr 0.0.0.0:8080 --auth none --disable-workspace-trust"
+                + proxyDomainArg + " /home/coder/" + applicationName);
 
         try (var client = environment.getKubernetesApiServer().fabric8Client()) {
             StatefulSet statefulSet = new StatefulSetBuilder()
@@ -245,7 +261,7 @@ public class IDEService {
 
             // 3. 创建 IngressRoute，失败则回滚 StatefulSet（Service 通过 ownerReference 级联删除）
             try {
-                createIngressRoute(client, environment.getWorkNamespace(), name, ownerRef);
+                createIngressRoute(client, environment.getWorkNamespace(), name, ownerRef, proxyDomainTemplate);
             } catch (Exception e) {
                 log.error("Failed to create IDE IngressRoute, rolling back StatefulSet: {}", name, e);
                 client.apps().statefulSets().inNamespace(environment.getWorkNamespace()).withName(name).delete();
@@ -311,7 +327,8 @@ public class IDEService {
         }
     }
 
-    private void createIngressRoute(KubernetesClient client, String namespace, String name, OwnerReference ownerRef) {
+    private void createIngressRoute(KubernetesClient client, String namespace, String name,
+                                    OwnerReference ownerRef, String proxyDomainTemplate) {
         var ingressRouteCrd = client.apiextensions().v1().customResourceDefinitions()
                 .withName(CustomResourceDefinitionContext.fromCustomResourceType(IngressRoute.class).getName())
                 .get();
@@ -322,6 +339,7 @@ public class IDEService {
         }
 
         String host = name + "." + ideConfig.getDomain();
+        String matchRule = IDEProxyDomainUtils.buildIngressMatch(host, proxyDomainTemplate);
 
         List<IngressRouteSpec.Middleware> middlewares = List.of();
         if (ideConfig.getMiddleware() != null && !ideConfig.getMiddleware().isBlank()) {
@@ -336,7 +354,7 @@ public class IDEService {
                 .entryPoints(List.of(ideConfig.isHttps() ? "websecure" : "web"))
                 .routes(List.of(
                         IngressRouteSpec.Route.builder()
-                                .match("Host(`" + host + "`)")
+                                .match(matchRule)
                                 .kind("Rule")
                                 .services(List.of(IngressRouteSpec.Service.builder().name(name).port(80).build()))
                                 .middlewares(middlewares)

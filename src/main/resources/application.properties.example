@@ -26,3 +26,4 @@ oops.ide.https=false
 oops.ide.domain=ide.k8s.orb.local
 oops.ide.image=codercom/code-server:4.112.0-39
 oops.ide.middleware=code-server-csp-fix,code-server-oss-redirect
+oops.ide.proxy-domain={{port}}-{{host}}
