@@ -6,7 +6,6 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.service.PipelineService;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -55,8 +54,6 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
         String environmentName = pipeline.getEnvironment();
         Environment environment = environmentService.getEnvironment(environmentName);
 
-        KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
-
         // Store session
         String sessionKey = namespace + "/" + name + "/" + pipelineId;
         sessions.put(sessionKey, session);
@@ -66,7 +63,6 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
         session.getAttributes().put("name", name);
         session.getAttributes().put("pipelineId", pipelineId);
         session.getAttributes().put("environment", environment);
-        session.getAttributes().put("kubernetesClient", client);
 
         // Send initial steps
         try {
@@ -103,6 +99,21 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 
         // Start watching pipeline logs
         startPipelineLogWatch(session, namespace, name, pipelineId);
+
+        // Start heartbeat thread (virtual thread)
+        Thread heartbeatThread = Thread.ofVirtual().start(() -> {
+            while (session.isOpen()) {
+                try {
+                    Thread.sleep(10000);
+                    session.sendMessage(new TextMessage("ping"));
+                } catch (InterruptedException e) {
+                    break;
+                } catch (IOException e) {
+                    break;
+                }
+            }
+        });
+        session.getAttributes().put("heartbeatThread", heartbeatThread);
     }
 
     private void startPipelineLogWatch(WebSocketSession session, String namespace, String name, String pipelineId) {
@@ -213,9 +224,9 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
             sessions.remove(sessionKey);
         }
 
-        KubernetesClient client = (KubernetesClient) session.getAttributes().get("kubernetesClient");
-        if (client != null) {
-            client.close();
+        Thread heartbeatThread = (Thread) session.getAttributes().get("heartbeatThread");
+        if (heartbeatThread != null) {
+            heartbeatThread.interrupt();
         }
     }
 }

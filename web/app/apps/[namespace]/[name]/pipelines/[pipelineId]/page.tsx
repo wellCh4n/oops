@@ -188,6 +188,14 @@ export default function PipelineDetailPage({ params }: PageProps) {
         const message = event.data as string
         if (message === "pong") return
 
+        // Handle server heartbeat (plain text)
+        if (message === "ping") {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send("pong")
+          }
+          return
+        }
+
         try {
           // Try to parse as JSON
           const jsonData = JSON.parse(message) as PipelineMessage
