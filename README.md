@@ -32,12 +32,14 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 ### IDE Integration (Optional)
 - Browser-based code-server IDE instances as StatefulSets
 - Persistent workspace volumes per developer
+- Proxy domain support for IDE ingress routing
 - Toggle via `oops.ide.enabled=true`
 
-### Authentication
+### Authentication & Authorization
 - Built-in username/password authentication with JWT
 - Optional Feishu (Lark) OAuth integration
 - Namespace-based resource isolation
+- Application ownership — users are assigned as owners of their applications
 
 ### Ingress
 - Traefik IngressRoute CRD support for automatic HTTPS routing

@@ -133,6 +133,23 @@ Applications deploy as **StatefulSets** (not Deployments) with fixed internal se
 ### IDE Integration
 Optional code-server integration (`oops.ide.enabled=true`) creates IDE instances as StatefulSets in the work namespace. `IDEConfig` and `IDEService` are both `@ConditionalOnProperty(prefix="oops.ide", name="enabled", havingValue="true")` — fully absent when disabled.
 
+IDE-specific `oops.ide.*` properties:
+- `domain`: base domain for IDE hostnames — IDE URL = `{statefulset-name}.{domain}`
+- `https`: boolean, controls `websecure` vs `web` Traefik entrypoint
+- `image`: code-server image
+- `middleware`: comma-separated Traefik middleware names applied to IDE IngressRoute
+- `proxy-domain`: template for code-server port proxy (default `{{port}}-{{host}}`); must contain both placeholders or is ignored
+
+IDE StatefulSet name: `{applicationName}-ide-{ideId}`. On delete, only the StatefulSet is deleted — Service and IngressRoute are cascade-deleted by K8s via `ownerReference`. IDE IngressRoutes set `syntax: "v3"` (application IngressRoutes do not).
+
+Default IDE config (extensions, settings) is stored at `src/main/resources/ide-default-config.json`. An environment-scoped `ide-config` ConfigMap in the work namespace overrides it and is auto-created on first `getDefaultIDEConfig()` call.
+
+### Application Ownership
+`Application` has an `owner` field (User NanoId). `createApplication` stamps the caller's `userId` automatically. `ApplicationResponse` includes both `owner` (ID) and `ownerName` (resolved via `UserService.getUsernameMapByIds()`).
+
+### Pipeline Deploy Modes
+`Pipeline.deployMode` is either `IMMEDIATE` (default) or `MANUAL`. With `MANUAL`, `PipelineInstanceScanJob` transitions the pipeline to `BUILD_SUCCEEDED` after the K8s Job completes but does **not** automatically deploy — a separate `deployPipeline()` call is required. With `IMMEDIATE`, it continues to `DEPLOYING → SUCCEEDED` inline.
+
 ## API Patterns
 
 ### Response Envelope
@@ -141,8 +158,22 @@ All REST endpoints return `Result<T>` — a record with `boolean success`, `Stri
 ### URL Convention
 All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. Applications are keyed by `name` in URLs (not numeric id).
 
+**Exceptions to namespacing:**
+- `GET /api/health` — health check, no auth required (explicitly permitted in `SecurityConfig`)
+- `GET /api/search/applications?keyword=&size=5` — cross-namespace application search for command palette (defaults to 5 results)
+- `GET /api/nodes?env={envName}` — node list for a given environment
+- `GET|POST /api/users`, `PUT|DELETE /api/users/{id}` — user management (ADMIN-only writes)
+- `GET /api/users/me` — current user from JWT principal
+- `/api/auth/external/**` — OAuth provider/callback endpoints
+
 ### Entity Identity
 All entities extend `BaseDataObject` which auto-generates a 24-char NanoId via `@PrePersist` (using the `jnanoid` library). Complex collection fields (e.g. `List<EnvironmentConfig>`) are stored as JSON blobs via a custom `@AttributeConverter` — follow this pattern for new nested object collections.
+
+### Pagination
+`Page<T>` is a record `(long total, List<T> data, int size, int totalPages)`. `GET /api/namespaces/{namespace}/applications` returns `Page<ApplicationResponse>` with query params `keyword`, `page` (1-based), `size`. The frontend `Page<T>` type mirrors this exactly.
+
+### JWT Claims
+Token claims: `sub` = username, `userId` (custom), `role` (`ADMIN` or `USER`). `JwtAuthFilter` falls back to DB lookup by username if `userId` claim is absent (backward compat). `AuthUserPrincipal` is a record `(String userId, String username)` implementing `Principal`; Spring method security uses `ROLE_ADMIN` / `ROLE_USER`.
 
 ### Kubernetes Client
 A new `KubernetesClient` is created per WebSocket connection / service call via `environment.getKubernetesApiServer().fabric8Client()`. There is no shared client pool. Clients are closed in `afterConnectionClosed`.
@@ -172,7 +203,9 @@ All three handlers respond to text `"ping"` with `"pong"`. JWT is accepted as `?
 ## Frontend Patterns
 
 ### Auth & Routing
-JWT stored in cookie `auth_token` (SameSite=Lax, 7 days). `web/middleware.ts` (Next.js middleware) reads the cookie and redirects unauthenticated requests to `/login`. `apiFetch` reads the cookie to attach `Authorization: Bearer`.
+JWT stored in cookie `auth_token` (SameSite=Lax, 7 days). The Next.js middleware is `web/proxy.ts` (not `middleware.ts`) — it reads the cookie and redirects unauthenticated requests to `/login`. Paths `/auth/feishu/callback` and `/api/auth/external` are exempt. `apiFetch` reads the cookie to attach `Authorization: Bearer` and hard-redirects to `/login` on HTTP 401.
+
+Frontend also stores `userId`, `username`, and `role` in `localStorage` (keys `auth_user_id`, `auth_username`, `auth_role`). `isAdmin()` reads `auth_role` from localStorage. Login accepts username **or** email.
 
 ### Namespace State
 `useNamespaceStore` (Zustand, persisted to `localStorage` key `oops-namespace`) stores the selected namespace. `NamespaceParamProvider` syncs this store bidirectionally with a `?namespace=` URL query parameter — URL takes priority, making namespace bookmarkable.
@@ -181,7 +214,15 @@ JWT stored in cookie `auth_token` (SameSite=Lax, 7 days). `web/middleware.ts` (N
 `useFeaturesStore` (not persisted) loads feature flags once on mount and exposes `{ feishu, ide }` booleans. Check this store before rendering IDE or Feishu-dependent UI.
 
 ### Localization
-Two locales: `zh` (default) and `en`. Stored in cookie `locale`. Use `web/locales/` for all user-facing strings.
+Two locales: `zh` (default) and `en`. Stored in cookie `locale` (max-age 1 year) and `localStorage`. Use `web/locales/` for all user-facing strings. `t()` falls back to the key itself if a translation is missing.
+
+### Command Palette
+Triggered by pressing `/` (outside input/textarea). Two-stage: select command (Status, Deploy, IDEs, Pipeline, App), then search for an application via `/api/search/applications` with 150ms debounce. Most-recently-used app stored in Zustand persisted to `localStorage` key `oops:recent-app`. Backspace with empty input returns to command selection.
+
+### Other Frontend State
+- Sidebar open/closed persisted in cookie `sidebar_state` (`"true"`/`"false"`), read server-side in root layout.
+- Theme via `next-themes` with `defaultTheme="system"`.
+- `API_BASE_URL` is empty string in production (same-origin), `http://localhost:8080` in dev — set via `NEXT_PUBLIC_API_URL`.
 
 ## Configuration Notes
 
@@ -190,6 +231,12 @@ Default admin credentials: `admin` / password from env `ADMIN_PASSWORD` (default
 MySQL template available at `docker/application-mysql.properties`. Switch by setting `SPRING_CONFIG_LOCATION`.
 
 In production container, Nginx (port 80) reverse-proxies `/api/` to Spring Boot (port 8080) and `/` to Next.js (port 3000). Custom `application.properties` can be injected at `/app/config/application.properties`.
+
+**Docker runtime image**: `node:20-slim` (not a JVM base image) — the JDK is copied from the Maven builder stage. `TZ=Asia/Shanghai` is set. The entrypoint monitors all three PIDs (Java, Node, Nginx); if any process dies it kills the others and exits non-zero.
+
+**Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.properties` → `/app/application.properties` → built-in defaults.
+
+**Nginx**: `client_max_body_size 50m`. `proxy_read_timeout 1h` and `add_header X-Accel-Buffering no` on `/api/` for streaming/WebSocket.
 
 ## Testing
 
