@@ -120,7 +120,7 @@ function AppsContent() {
   }
 
   const handleIDE = (app: Application) => {
-    router.push(`/ide?namespace=${app.namespace}&app=${app.name}`)
+    router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
   }
 
   return (
