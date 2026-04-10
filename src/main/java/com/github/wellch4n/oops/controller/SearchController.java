@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import java.util.List;
@@ -25,7 +25,7 @@ public class SearchController {
     }
 
     @GetMapping("/applications")
-    public Result<List<Application>> searchApplications(@RequestParam(required = false) String keyword, @RequestParam(defaultValue = "5") int size) {
+    public Result<List<ApplicationResponse>> searchApplications(@RequestParam(required = false) String keyword, @RequestParam(defaultValue = "5") int size) {
         return Result.success(applicationService.searchApplications(keyword, size));
     }
 }

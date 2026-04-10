@@ -185,6 +185,7 @@ export function CommandPalette() {
       namespace: app.namespace,
       name: app.name,
       description: app.description,
+      ownerName: app.ownerName,
     })
 
     setOpen(false)
@@ -319,6 +320,7 @@ export function CommandPalette() {
                             name: recentApp.name,
                             description: recentApp.description,
                             namespace: recentApp.namespace,
+                            ownerName: recentApp.ownerName,
                           })
                         }
                         className="flex flex-col items-start gap-1 py-3 cursor-pointer"
@@ -328,8 +330,13 @@ export function CommandPalette() {
                             {recentApp.name}
                           </span>
                           <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                            {recentApp.namespace}
+                            {t("common.namespace")}: {recentApp.namespace}
                           </span>
+                          {recentApp.ownerName && (
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              {t("common.owner")}: {recentApp.ownerName}
+                            </span>
+                          )}
                         </div>
                         {recentApp.description && (
                           <span className="text-sm text-muted-foreground truncate w-full">
@@ -362,8 +369,13 @@ export function CommandPalette() {
                               {app.name}
                             </span>
                             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {app.namespace}
+                              {t("common.namespace")}: {app.namespace}
                             </span>
+                            {app.ownerName && (
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                {t("common.owner")}: {app.ownerName}
+                              </span>
+                            )}
                           </div>
                           {app.description && (
                             <span className="text-sm text-muted-foreground truncate w-full">

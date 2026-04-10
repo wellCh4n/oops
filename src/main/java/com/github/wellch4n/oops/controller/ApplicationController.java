@@ -2,7 +2,9 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.DeployMode;
+import com.github.wellch4n.oops.objects.AuthUserPrincipal;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.Result;
@@ -10,6 +12,8 @@ import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
 import com.github.wellch4n.oops.service.PipelineService;
 import java.util.List;
+
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -32,22 +36,24 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}")
-    public Result<Application> getApplication(@PathVariable String namespace, @PathVariable String name) {
-        return Result.success(applicationService.getApplication(namespace, name));
+    public Result<ApplicationResponse> getApplication(@PathVariable String namespace, @PathVariable String name) {
+        return Result.success(applicationService.getApplicationResponse(namespace, name));
     }
 
     @GetMapping
-    public Result<Page<Application>> getApplications(@PathVariable String namespace,
-                                                     @RequestParam(required = false) String keyword,
-                                                     @RequestParam(defaultValue = "1") int page,
-                                                     @RequestParam(defaultValue = "10") int size) {
+    public Result<Page<ApplicationResponse>> getApplications(@PathVariable String namespace,
+                                                             @RequestParam(required = false) String keyword,
+                                                             @RequestParam(defaultValue = "1") int page,
+                                                             @RequestParam(defaultValue = "10") int size) {
         return Result.success(applicationService.getApplications(namespace, keyword, page, size));
     }
 
     @PostMapping
     public Result<String> createApplication(@PathVariable String namespace,
-                                            @RequestBody Application application) {
-        return Result.success(applicationService.createApplication(namespace, application));
+                                            @RequestBody Application application,
+                                            Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(applicationService.createApplication(namespace, application, principal.userId()));
     }
 
     @PutMapping("/{name}")

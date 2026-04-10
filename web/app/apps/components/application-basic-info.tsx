@@ -28,6 +28,7 @@ import { Application, Environment, ApplicationEnvironment } from "@/lib/api/type
 import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
+import { fetchUsers, User } from "@/lib/api/users"
 import { AppWindow, Layers, AlignLeft, Server } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -41,6 +42,7 @@ export function ApplicationBasicInfo({
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export function ApplicationBasicInfo({
 
         const envRes = await fetchEnvironments()
         setEnvironments(envRes.data)
+
+        setUsers(await fetchUsers())
 
         if (initialData) {
             const appEnvRes = await getApplicationEnvironments(initialData.namespace, initialData.name)
@@ -70,10 +74,12 @@ export function ApplicationBasicInfo({
       name: initialData.name,
       namespace: initialData.namespace,
       description: initialData.description,
+      owner: initialData.owner ?? "",
     } : {
       name: "",
       namespace: "",
       description: "",
+      owner: "",
     },
     mode: "onChange",
   })
@@ -146,6 +152,36 @@ export function ApplicationBasicInfo({
                   {namespaces.map((ns) => (
                     <SelectItem key={ns} value={ns}>
                       {ns}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="owner"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("common.owner")}</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}
+                defaultValue={field.value || "__none__"}
+                value={field.value || "__none__"}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("common.selectOwner")} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="__none__">{t("common.unassigned")}</SelectItem>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.username} ({user.id})
                     </SelectItem>
                   ))}
                 </SelectContent>

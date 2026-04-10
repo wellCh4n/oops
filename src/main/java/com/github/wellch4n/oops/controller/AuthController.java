@@ -31,7 +31,7 @@ public class AuthController {
             return Result.failure("用户名或密码错误");
         }
         User user = userOpt.get();
-        String token = jwtUtils.generateToken(user.getUsername(), user.getRole().name());
-        return Result.success(new LoginResponse(token, user.getUsername(), user.getRole()));
+        String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
+        return Result.success(new LoginResponse(token, user.getId(), user.getUsername(), user.getRole()));
     }
 }

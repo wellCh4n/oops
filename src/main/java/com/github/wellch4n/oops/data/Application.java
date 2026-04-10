@@ -14,4 +14,6 @@ public class Application extends BaseDataObject {
     private String description;
 
     private String namespace;
+
+    private String owner;
 }

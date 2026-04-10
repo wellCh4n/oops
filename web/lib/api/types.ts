@@ -63,10 +63,12 @@ export interface NodeStatus {
 
 export interface Application {
   id: string
-  workspaceId: string
+  workspaceId?: string
   name: string
   description?: string
   namespace: string
+  owner?: string
+  ownerName?: string
 }
 
 export interface ApplicationBuildConfig {

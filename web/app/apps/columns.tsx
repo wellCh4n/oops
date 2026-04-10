@@ -30,6 +30,16 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
     header: t("apps.col.namespace"),
   },
   {
+    accessorKey: "owner",
+    header: t("apps.col.owner"),
+    cell: ({ row }) => {
+      if (!row.original.owner) {
+        return t("common.unassigned")
+      }
+      return row.original.ownerName || row.original.owner
+    },
+  },
+  {
     id: "actions",
     cell: ({ row, table }) => {
       const application = row.original

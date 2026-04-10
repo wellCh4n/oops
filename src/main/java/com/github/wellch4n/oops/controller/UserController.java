@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.User;
 import com.github.wellch4n.oops.enums.UserRole;
+import com.github.wellch4n.oops.objects.AuthUserPrincipal;
 import com.github.wellch4n.oops.objects.CreateUserRequest;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.objects.UpdateUserRequest;
@@ -36,7 +37,8 @@ public class UserController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public Result<User> me(org.springframework.security.core.Authentication authentication) {
-        return userService.findByUsername(authentication.getName())
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return userService.findById(principal.userId())
                 .map(Result::success)
                 .orElse(Result.failure("用户不存在"));
     }

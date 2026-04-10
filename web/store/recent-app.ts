@@ -5,6 +5,7 @@ interface RecentApp {
   namespace: string
   name: string
   description?: string
+  ownerName?: string
 }
 
 interface RecentAppState {
