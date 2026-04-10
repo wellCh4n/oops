@@ -19,7 +19,6 @@ import {
   ApplicationServiceConfig
 } from "@/lib/api/types"
 import { toast } from "sonner"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 
@@ -80,25 +79,15 @@ export default function EditAppPage() {
     fetchApp()
   }, [namespace, name, router, t])
 
-  if (loading) {
-    return (
-      <ContentPage title={name}>
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-      </ContentPage>
-    )
-  }
-
-  if (!application) {
+  if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
   }
 
   return (
-    <ContentPage title={application.name}>
-      <ApplicationForm 
-        initialData={application}
+    <ContentPage title={application?.name ?? name}>
+      <ApplicationForm
+        loading={loading}
+        initialData={application ?? undefined}
         initialBuildConfig={buildConfig}
         initialBuildEnvConfigs={buildEnvConfigs}
         initialPerformanceEnvConfigs={performanceEnvConfigs}

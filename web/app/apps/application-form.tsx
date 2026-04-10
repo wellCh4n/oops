@@ -8,9 +8,11 @@ import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationPerformanceInfo } from "./components/application-performance-info"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationFormProps {
+  loading?: boolean
   initialData?: Application
   initialBuildConfig?: ApplicationBuildConfig
   initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
@@ -18,7 +20,18 @@ interface ApplicationFormProps {
   initialServiceConfig?: ApplicationServiceConfig
 }
 
+function TabContentSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-6">
+      {Array.from({ length: rows }).map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full" />
+      ))}
+    </div>
+  )
+}
+
 export function ApplicationForm({
+  loading,
   initialData,
   initialBuildConfig,
   initialBuildEnvConfigs,
@@ -54,43 +67,49 @@ export function ApplicationForm({
         </div>
 
         <TabsContent value="app-info" className="rounded-md border bg-background p-4">
-          <ApplicationBasicInfo 
-            initialData={initialData}
-          />
+          {loading ? <TabContentSkeleton rows={4} /> : <ApplicationBasicInfo initialData={initialData} />}
         </TabsContent>
 
         <TabsContent value="service-info" className="rounded-md border bg-background p-4">
-          <ApplicationServiceInfo
-            initialServiceConfig={initialServiceConfig}
-            applicationName={initialData?.name}
-            namespace={initialData?.namespace}
-          />
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationServiceInfo
+              initialServiceConfig={initialServiceConfig}
+              applicationName={initialData?.name}
+              namespace={initialData?.namespace}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="build-config" className="rounded-md border bg-background p-4">
-          <ApplicationBuildInfo 
-            initialBuildConfig={initialBuildConfig}
-            initialEnvConfigs={initialBuildEnvConfigs}
-            applicationId={initialData?.id}
-            applicationName={initialData?.name}
-            namespace={initialData?.namespace}
-          />
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationBuildInfo
+              initialBuildConfig={initialBuildConfig}
+              initialEnvConfigs={initialBuildEnvConfigs}
+              applicationId={initialData?.id}
+              applicationName={initialData?.name}
+              namespace={initialData?.namespace}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="performance-info" className="rounded-md border bg-background p-4">
-          <ApplicationPerformanceInfo 
-            initialEnvConfigs={initialPerformanceEnvConfigs}
-            applicationId={initialData?.id}
-            applicationName={initialData?.name}
-            namespace={initialData?.namespace}
-          />
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationPerformanceInfo
+              initialEnvConfigs={initialPerformanceEnvConfigs}
+              applicationId={initialData?.id}
+              applicationName={initialData?.name}
+              namespace={initialData?.namespace}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="config-info" className="rounded-md border bg-background p-4">
-          <ApplicationConfigInfo 
-            applicationName={initialData?.name}
-            namespace={initialData?.namespace}
-          />
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationConfigInfo
+              applicationName={initialData?.name}
+              namespace={initialData?.namespace}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
