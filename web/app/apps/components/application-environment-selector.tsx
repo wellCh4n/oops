@@ -61,7 +61,7 @@ export function ApplicationEnvironmentSelector({
   }, [namespace, applicationName]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Tabs value={value} onValueChange={onValueChange} className={className}>
+    <Tabs value={value ?? ""} onValueChange={onValueChange} className={className}>
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap"><Server className="h-3.5 w-3.5" />{t("apps.envSelector.label")}</span>
         <TabsList className="justify-start h-auto flex-wrap">
