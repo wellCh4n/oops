@@ -11,6 +11,7 @@ import { Copy, Plug, Globe, Plus, Trash2 } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 
 interface Props {
@@ -29,6 +30,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [envConfigGroups, setEnvConfigGroups] = useState<EnvConfigGroup[]>([])
   const [saving, setSaving] = useState(false)
+  const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
 
   const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
@@ -171,12 +173,20 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
         />
       </div>
       <div className="flex flex-col gap-2">
+        {envsLoading && (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        )}
+        <div className={envsLoading ? "hidden" : ""}>
         <ApplicationEnvironmentSelector
           namespace={namespace}
           applicationName={applicationName}
           value={activeTab}
           onValueChange={setActiveTab}
           onEnvironmentsLoaded={handleEnvironmentsLoaded}
+          onLoadingChange={setEnvsLoading}
           className="w-full"
         >
           {envConfigGroups.map((group) => (
@@ -250,6 +260,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
             </TabsContent>
           ))}
         </ApplicationEnvironmentSelector>
+        </div>
       </div>
       <div>
         <Button onClick={onSave} disabled={saving || !namespace || !applicationName}>

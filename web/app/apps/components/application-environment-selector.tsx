@@ -15,6 +15,7 @@ interface ApplicationEnvironmentSelectorProps {
   value?: string
   onValueChange?: (value: string) => void
   onEnvironmentsLoaded?: (envs: ApplicationEnvironment[]) => void
+  onLoadingChange?: (loading: boolean) => void
   children?: React.ReactNode
   className?: string
 }
@@ -25,6 +26,7 @@ export function ApplicationEnvironmentSelector({
   value,
   onValueChange,
   onEnvironmentsLoaded,
+  onLoadingChange,
   children,
   className,
 }: ApplicationEnvironmentSelectorProps) {
@@ -34,9 +36,13 @@ export function ApplicationEnvironmentSelector({
 
   useEffect(() => {
     const loadEnvironments = async () => {
-      if (!namespace || !applicationName) return
+      if (!namespace || !applicationName) {
+        onLoadingChange?.(false)
+        return
+      }
 
       setIsLoading(true)
+      onLoadingChange?.(true)
       try {
         const res = await getApplicationEnvironments(namespace, applicationName)
         if (res.data) {
@@ -48,6 +54,7 @@ export function ApplicationEnvironmentSelector({
         toast.error(t("apps.envSelector.fetchError"))
       } finally {
         setIsLoading(false)
+        onLoadingChange?.(false)
       }
     }
     loadEnvironments()

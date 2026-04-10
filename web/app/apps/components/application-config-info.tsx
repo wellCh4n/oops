@@ -7,6 +7,7 @@ import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
 import { toast } from "sonner"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Form,
   FormControl,
@@ -90,6 +91,7 @@ export function ApplicationConfigInfo({
   const [activeTab, setActiveTab] = useState<string>("")
   const [isLoadingConfig, setIsLoadingConfig] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
 
   // Import dialog state
@@ -212,176 +214,185 @@ export function ApplicationConfigInfo({
 
   return (
     <div className="flex flex-col gap-6">
-      <ApplicationEnvironmentSelector
-        namespace={namespace}
-        applicationName={applicationName}
-        value={activeTab}
-        onValueChange={setActiveTab}
-        onEnvironmentsLoaded={handleEnvironmentsLoaded}
-      >
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[45%]">Key</TableHead>
-                    <TableHead className="w-[45%]">Value</TableHead>
-                    <TableHead className="w-[10%]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell>
-                        <FormField
-                          control={form.control}
-                          name={`configMaps.${index}.key`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input placeholder="key" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <FormField
-                          control={form.control}
-                          name={`configMaps.${index}.value`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <ConfigValueTextarea
-                                  value={(field.value ?? "") as string}
-                                  disabled={field.disabled}
-                                  onChange={field.onChange}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell>
+      {envsLoading && (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      )}
+      <div className={envsLoading ? "hidden" : ""}>
+        <ApplicationEnvironmentSelector
+          namespace={namespace}
+          applicationName={applicationName}
+          value={activeTab}
+          onValueChange={setActiveTab}
+          onEnvironmentsLoaded={handleEnvironmentsLoaded}
+          onLoadingChange={setEnvsLoading}
+        >
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[45%]">Key</TableHead>
+                      <TableHead className="w-[45%]">Value</TableHead>
+                      <TableHead className="w-[10%]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {fields.map((field, index) => (
+                      <TableRow key={field.id}>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name={`configMaps.${index}.key`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input placeholder="key" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name={`configMaps.${index}.value`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <ConfigValueTextarea
+                                    value={(field.value ?? "") as string}
+                                    disabled={field.disabled}
+                                    onChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {fields.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground h-12">
+                          {isLoadingConfig ? t("common.loading") : t("apps.config.noConfig")}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    <TableRow>
+                      <TableCell colSpan={3}>
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => remove(index)}
+                          variant="outline"
+                          className="w-full justify-center"
+                          onClick={() => append({ key: "", value: "" })}
+                          disabled={isLoadingConfig}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Plus className="h-4 w-4" />
+                          {t("apps.config.addItem")}
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {fields.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground h-12">
-                        {isLoadingConfig ? t("common.loading") : t("apps.config.noConfig")}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  <TableRow>
-                    <TableCell colSpan={3}>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full justify-center"
-                        onClick={() => append({ key: "", value: "" })}
-                        disabled={isLoadingConfig}
-                      >
-                        <Plus className="h-4 w-4" />
-                        {t("apps.config.addItem")}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
+                  </TableBody>
+                </Table>
+              </div>
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportAll}
-                disabled={isLoadingConfig}
-              >
-                <Copy className="h-4 w-4" />
-                {t("apps.config.copyAll")}
-              </Button>
-              <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={isLoadingConfig}
-                  >
-                    <Upload className="h-4 w-4" />
-                    {t("apps.config.import")}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
-                    <DialogDescription>
-                      {t("apps.config.importDesc")}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-                    <div className="flex items-center gap-6 mb-4">
-                      <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
-                      <RadioGroup
-                        value={importMode}
-                        onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
-                        className="flex gap-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="key-value" id="key-value" />
-                          <Label htmlFor="key-value" className="cursor-pointer">
-                            {t("apps.config.importKeyValue")}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="key-only" id="key-only" />
-                          <Label htmlFor="key-only" className="cursor-pointer">
-                            {t("apps.config.importKeyOnly")}
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    <Textarea
-                      id="import-content"
-                      placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
-                      value={importContent}
-                      onChange={(e) => setImportContent(e.target.value)}
-                      className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
-                    />
-                  </div>
-                  <DialogFooter>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportAll}
+                  disabled={isLoadingConfig}
+                >
+                  <Copy className="h-4 w-4" />
+                  {t("apps.config.copyAll")}
+                </Button>
+                <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
+                  <DialogTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
-                      onClick={() => setImportInputDialogOpen(false)}
+                      disabled={isLoadingConfig}
                     >
-                      {t("common.cancel")}
+                      <Upload className="h-4 w-4" />
+                      {t("apps.config.import")}
                     </Button>
-                    <Button onClick={handleImportSubmit}>
-                      {t("apps.config.previewImport")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
+                      <DialogDescription>
+                        {t("apps.config.importDesc")}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+                      <div className="flex items-center gap-6 mb-4">
+                        <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
+                        <RadioGroup
+                          value={importMode}
+                          onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
+                          className="flex gap-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="key-value" id="key-value" />
+                            <Label htmlFor="key-value" className="cursor-pointer">
+                              {t("apps.config.importKeyValue")}
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="key-only" id="key-only" />
+                            <Label htmlFor="key-only" className="cursor-pointer">
+                              {t("apps.config.importKeyOnly")}
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                      <Textarea
+                        id="import-content"
+                        placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
+                        value={importContent}
+                        onChange={(e) => setImportContent(e.target.value)}
+                        className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setImportInputDialogOpen(false)}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                      <Button onClick={handleImportSubmit}>
+                        {t("apps.config.previewImport")}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
-              <Button type="submit" disabled={isSaving || isLoadingConfig}>
-                {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t("common.save")}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </ApplicationEnvironmentSelector>
+                <Button type="submit" disabled={isSaving || isLoadingConfig}>
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {t("common.save")}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </ApplicationEnvironmentSelector>
+      </div>
 
       <EnvImportDialog
         open={importConfirmDialogOpen}

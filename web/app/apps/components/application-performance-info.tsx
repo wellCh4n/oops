@@ -20,6 +20,7 @@ import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
 import { Cpu, MemoryStick, Copy } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationPerformanceInfoProps {
@@ -51,6 +52,7 @@ export function ApplicationPerformanceInfo({
 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
+  const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
@@ -105,33 +107,44 @@ export function ApplicationPerformanceInfo({
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSave)} className="flex flex-col gap-6">
-        <div className="w-full">
-          <ApplicationEnvironmentSelector
-            namespace={namespace}
-            applicationName={applicationName}
-            value={activeTab}
-            onValueChange={setActiveTab}
-            onEnvironmentsLoaded={handleEnvironmentsLoaded}
-            className="w-full"
-          >
-            {fields.map((field, index) => (
-              <TabsContent key={field.id} value={field.environmentName}>
-                <SingleEnvironmentConfig
-                  index={index}
-                />
-              </TabsContent>
-            ))}
-          </ApplicationEnvironmentSelector>
+    <>
+      {envsLoading && (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-9 w-64" />
+          <Skeleton className="h-48 w-full" />
         </div>
-        <div className="flex">
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? t("common.saving") : t("common.save")}
-          </Button>
-        </div>
-      </form>
-    </Form>
+      )}
+      <div className={envsLoading ? "hidden" : ""}>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSave)} className="flex flex-col gap-6">
+            <div className="w-full">
+              <ApplicationEnvironmentSelector
+                namespace={namespace}
+                applicationName={applicationName}
+                value={activeTab}
+                onValueChange={setActiveTab}
+                onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                onLoadingChange={setEnvsLoading}
+                className="w-full"
+              >
+                {fields.map((field, index) => (
+                  <TabsContent key={field.id} value={field.environmentName}>
+                    <SingleEnvironmentConfig
+                      index={index}
+                    />
+                  </TabsContent>
+                ))}
+              </ApplicationEnvironmentSelector>
+            </div>
+            <div className="flex">
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? t("common.saving") : t("common.save")}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </div>
+    </>
   )
 }
 

@@ -31,6 +31,7 @@ import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
 import { AppWindow, Layers, AlignLeft, Server } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -43,25 +44,28 @@ export function ApplicationBasicInfo({
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const nsRes = await fetchNamespaces()
-        setNamespaces(nsRes.data.map((ns) => ns.name))
-
-        const envRes = await fetchEnvironments()
-        setEnvironments(envRes.data)
-
-        setUsers(await fetchUsers())
-
+        const requests: Promise<unknown>[] = [
+          fetchNamespaces().then(res => setNamespaces(res.data.map((ns) => ns.name))),
+          fetchEnvironments().then(res => setEnvironments(res.data)),
+          fetchUsers().then(setUsers),
+        ]
         if (initialData) {
-            const appEnvRes = await getApplicationEnvironments(initialData.namespace, initialData.name)
-            setSelectedEnvNames(appEnvRes.data.map(e => e.environmentName))
+          requests.push(
+            getApplicationEnvironments(initialData.namespace, initialData.name)
+              .then(res => setSelectedEnvNames(res.data.map(e => e.environmentName)))
+          )
         }
+        await Promise.all(requests)
       } catch {
         toast.error(t("apps.basic.fetchError"))
+      } finally {
+        setLoading(false)
       }
     }
     loadData()
@@ -117,6 +121,18 @@ export function ApplicationBasicInfo({
       console.error(error)
       toast.error(t("apps.basic.updateError"))
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex max-w-4xl flex-col gap-6">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-24 w-full" />
+        {initialData && <Skeleton className="h-20 w-full" />}
+      </div>
+    )
   }
 
   return (

@@ -22,6 +22,7 @@ import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "
 import { GitBranch, FileCode, Box, Terminal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -59,6 +60,7 @@ export function ApplicationBuildInfo({
 
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [isSaving, setIsSaving] = useState(false)
+  const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
@@ -177,20 +179,29 @@ export function ApplicationBuildInfo({
           <div className="flex flex-col gap-4">
             <h3 className="text-lg font-medium">{t("apps.build.envConfig")}</h3>
             <div className="w-full">
-              <ApplicationEnvironmentSelector
-                namespace={namespace}
-                applicationName={applicationName}
-                value={activeTab}
-                onValueChange={setActiveTab}
-                onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                className="w-full"
-              >
-                {fields.map((field, index) => (
-                  <TabsContent key={field.id} value={field.environmentName}>
-                    <SingleEnvironmentConfig index={index} />
-                  </TabsContent>
-                ))}
-              </ApplicationEnvironmentSelector>
+              {envsLoading && (
+                <div className="flex flex-col gap-3">
+                  <Skeleton className="h-9 w-64" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              )}
+              <div className={envsLoading ? "hidden" : ""}>
+                <ApplicationEnvironmentSelector
+                  namespace={namespace}
+                  applicationName={applicationName}
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                  onLoadingChange={setEnvsLoading}
+                  className="w-full"
+                >
+                  {fields.map((field, index) => (
+                    <TabsContent key={field.id} value={field.environmentName}>
+                      <SingleEnvironmentConfig index={index} />
+                    </TabsContent>
+                  ))}
+                </ApplicationEnvironmentSelector>
+              </div>
             </div>
           </div>
 
