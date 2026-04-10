@@ -61,13 +61,15 @@ export function ApplicationCreateDialog({
   })
 
   useEffect(() => {
-    if (open) {
-      form.reset({
-        name: "",
-        namespace: defaultNamespace || "",
-        description: "",
-      })
+    if (!open) {
+      return
     }
+
+    form.reset({
+      name: "",
+      namespace: defaultNamespace || "",
+      description: "",
+    })
   }, [open, defaultNamespace, form])
 
   const onSubmitCreate = async (data: CreateApplicationFormValues) => {

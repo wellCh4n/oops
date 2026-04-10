@@ -5,6 +5,7 @@ export const applicationBasicSchema = z.object({
   name: z.string().min(1, "Name is required"),
   namespace: z.string().min(1, "Namespace is required"),
   description: z.string().optional(),
+  owner: z.string().optional(),
 })
 
 export const applicationBuildConfigSchema = z.object({

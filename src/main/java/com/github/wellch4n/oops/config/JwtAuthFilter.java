@@ -1,5 +1,8 @@
 package com.github.wellch4n.oops.config;
 
+import com.github.wellch4n.oops.data.User;
+import com.github.wellch4n.oops.data.UserRepository;
+import com.github.wellch4n.oops.objects.AuthUserPrincipal;
 import com.github.wellch4n.oops.utils.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,9 +21,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtUtils jwtUtils) {
+    public JwtAuthFilter(JwtUtils jwtUtils, UserRepository userRepository) {
         this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -40,9 +45,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         if (token != null && jwtUtils.isValid(token)) {
             String username = jwtUtils.getUsername(token);
+            String userId = jwtUtils.getUserId(token);
+            if (userId == null || userId.isBlank()) {
+                userId = userRepository.findByUsername(username).map(User::getId).orElse(null);
+            }
             String role = jwtUtils.getRole(token);
+            AuthUserPrincipal principal = new AuthUserPrincipal(userId, username);
             UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    username, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                    principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
             );
             SecurityContextHolder.getContext().setAuthentication(auth);
         }

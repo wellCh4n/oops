@@ -23,7 +23,7 @@ export default function FeishuCallbackPage() {
       })
       .then(({ token, user }) => {
         if (user) {
-          setAuth(token, user.username, user.role)
+          setAuth(token, user.id, user.username, user.role)
         }
         window.location.href = "/"
       })

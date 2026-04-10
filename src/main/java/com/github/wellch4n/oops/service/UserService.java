@@ -3,8 +3,11 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.User;
 import com.github.wellch4n.oops.data.UserRepository;
 import com.github.wellch4n.oops.enums.UserRole;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +32,14 @@ public class UserService {
 
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    public Map<String, String> getUsernameMapByIds(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername, (left, right) -> left));
     }
 
     public Optional<User> findByUsernameOrEmail(String identifier) {

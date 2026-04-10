@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.Page;
 import io.fabric8.kubernetes.api.model.Container;
@@ -10,7 +11,9 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
@@ -36,39 +39,54 @@ public class ApplicationService {
     private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final EnvironmentRepository environmentRepository;
+    private final UserService userService;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
                               ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                               ApplicationEnvironmentRepository applicationEnvironmentRepository, ApplicationServiceConfigRepository applicationServiceConfigRepository,
-                              EnvironmentRepository environmentRepository) {
+                              EnvironmentRepository environmentRepository,
+                              UserService userService) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationEnvironmentRepository = applicationEnvironmentRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.environmentRepository = environmentRepository;
+        this.userService = userService;
     }
 
     public Application getApplication(String namespace, String name) {
         return applicationRepository.findByNamespaceAndName(namespace, name);
     }
 
-    public Page<Application> getApplications(String namespace, String keyword, int page, int size) {
-        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
-        return Page.of(applicationRepository.findByNamespaceAndNameContainingIgnoreCase(
-                namespace, StringUtils.defaultIfBlank(keyword, ""), pageable));
+    public ApplicationResponse getApplicationResponse(String namespace, String name) {
+        return toApplicationResponse(applicationRepository.findByNamespaceAndName(namespace, name));
     }
 
-    public List<Application> searchApplications(String keyword, int size) {
+    public Page<ApplicationResponse> getApplications(String namespace, String keyword, int page, int size) {
+        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
+        org.springframework.data.domain.Page<Application> applicationPage =
+                applicationRepository.findByNamespaceAndNameContainingIgnoreCase(
+                        namespace, StringUtils.defaultIfBlank(keyword, ""), pageable);
+        return new Page<>(
+                applicationPage.getTotalElements(),
+                toApplicationResponses(applicationPage.getContent()),
+                applicationPage.getSize(),
+                applicationPage.getTotalPages()
+        );
+    }
+
+    public List<ApplicationResponse> searchApplications(String keyword, int size) {
         List<Application> applications = applicationRepository.findByNameContainingIgnoreCase(
                 StringUtils.defaultIfBlank(keyword, ""));
-        return applications.stream().limit(size).toList();
+        return toApplicationResponses(applications.stream().limit(size).toList());
     }
 
     @Transactional
-    public String createApplication(String namespace, Application application) {
+    public String createApplication(String namespace, Application application, String creatorUserId) {
         application.setNamespace(namespace);
+        application.setOwner(normalizeOwner(creatorUserId));
         applicationRepository.save(application);
         return application.getId();
     }
@@ -79,9 +97,45 @@ public class ApplicationService {
         if (exist == null) {
             throw new RuntimeException("Application not found");
         }
-        application.setDescription(application.getDescription());
-        applicationRepository.save(application);
+        exist.setDescription(application.getDescription());
+        exist.setOwner(normalizeOwner(application.getOwner()));
+        applicationRepository.save(exist);
         return true;
+    }
+
+    private String normalizeOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return null;
+        }
+        Optional<User> user = userService.findById(owner);
+        if (user.isEmpty()) {
+            throw new RuntimeException("Owner user not found");
+        }
+        return owner;
+    }
+
+    private List<ApplicationResponse> toApplicationResponses(List<Application> applications) {
+        Set<String> ownerIds = applications.stream()
+                .map(Application::getOwner)
+                .filter(StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
+        return applications.stream()
+                .map(application -> ApplicationResponse.from(application, ownerNameMap.get(application.getOwner())))
+                .toList();
+    }
+
+    private ApplicationResponse toApplicationResponse(Application application) {
+        if (application == null) {
+            return null;
+        }
+        String ownerName = null;
+        if (StringUtils.isNotBlank(application.getOwner())) {
+            ownerName = userService.findById(application.getOwner())
+                    .map(User::getUsername)
+                    .orElse(null);
+        }
+        return ApplicationResponse.from(application, ownerName);
     }
 
     @Transactional

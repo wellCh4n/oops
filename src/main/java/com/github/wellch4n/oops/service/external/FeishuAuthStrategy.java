@@ -117,7 +117,7 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
             externalAccountRepository.save(account);
         }
 
-        return jwtUtils.generateToken(user.getUsername(), user.getRole().name());
+        return jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
     }
 
     private User findOrCreateUser(String name, String email) {
