@@ -11,6 +11,7 @@ spring.jpa.open-in-view=true
 
 oops.pipeline.image.clone=alpine/git:v2.49.0
 oops.pipeline.image.push=gcr.io/kaniko-project/executor:v1.23.2
+oops.pipeline.image.kaniko-registry-map=index.docker.io=docker.m.daocloud.io
 oops.ingress.cert-resolver=letsencrypt-prod
 
 oops.jwt.secret=oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars

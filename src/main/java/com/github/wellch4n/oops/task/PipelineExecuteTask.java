@@ -89,7 +89,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
             initContainers.add(build);
         }
 
-        PushContainer push = new PushContainer(application, pipeline, repositoryUrl, pipelineImageConfig.getPush());
+        PushContainer push = new PushContainer(application, pipeline, repositoryUrl, pipelineImageConfig.getPush(), pipelineImageConfig.getKanikoRegistryMap());
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(push);
         String artifact = push.getArtifact();

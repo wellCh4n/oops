@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.Pipeline;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import io.micrometer.common.util.StringUtils;
 import lombok.Getter;
 
 /**
@@ -15,22 +16,26 @@ public class PushContainer extends BaseContainer {
     @Getter
     private final String artifact;
 
-    public PushContainer(Application application, Pipeline pipeline, String repositoryUrl, String image) {
+    public PushContainer(Application application, Pipeline pipeline, String repositoryUrl, String image, String kanikoRegistryMap) {
         this.artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
 
-        Container container = new ContainerBuilder()
+        ContainerBuilder builder = new ContainerBuilder()
                 .withName("push")
                 .withImage(image)
                 .withWorkingDir("/workspace")
                 .withArgs(
                         "--destination=" + this.artifact,
                         "--dockerfile=Dockerfile"
-                )
-                .addNewEnv()
-                .withName("KANIKO_REGISTRY_MAP")
-                .withValue("index.docker.io=docker.m.daocloud.io")
-                .endEnv()
-                .build();
+                );
+
+        if (StringUtils.isNotEmpty(kanikoRegistryMap)) {
+            builder.addNewEnv()
+                    .withName("KANIKO_REGISTRY_MAP")
+                    .withValue(kanikoRegistryMap)
+                    .endEnv();
+        }
+
+        Container container = builder.build();
 
         this.setName(container.getName());
         this.setImage(container.getImage());

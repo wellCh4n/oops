@@ -11,5 +11,6 @@ public class PipelineImageConfig {
 
     private String clone;
     private String push;
+    private String kanikoRegistryMap = "index.docker.io=docker.m.daocloud.io";
 
 }
