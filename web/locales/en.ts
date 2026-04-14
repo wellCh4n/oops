@@ -214,6 +214,7 @@ const en = {
   "apps.publish.noEnvSuffix": ".",
   "apps.publish.branch": "Branch",
   "apps.publish.lastBranch": "Last branch: ",
+  "apps.publish.lastDeployMode": "Last deploy mode: ",
   "apps.publish.mode": "Deploy Mode",
   "apps.publish.modeManual": "Build, deploy manually",
   "apps.publish.modeImmediate": "Deploy immediately",

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -68,10 +69,13 @@ public class PipelineService {
         return pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
     }
 
-    public String getLastSuccessfulBranch(String namespace, String applicationName) {
+    public LastSuccessfulPipelineResponse getLastSuccessfulPipeline(String namespace, String applicationName) {
         Pipeline lastSuccessfulPipeline = pipelineRepository.findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(
                 namespace, applicationName, PipelineStatus.SUCCEEDED);
-        return lastSuccessfulPipeline != null ? lastSuccessfulPipeline.getBranch() : null;
+        if (lastSuccessfulPipeline == null) {
+            return null;
+        }
+        return new LastSuccessfulPipelineResponse(lastSuccessfulPipeline.getBranch(), lastSuccessfulPipeline.getDeployMode());
     }
 
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {

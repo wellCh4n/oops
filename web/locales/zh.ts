@@ -214,6 +214,7 @@ const zh = {
   "apps.publish.noEnvSuffix": "添加环境配置。",
   "apps.publish.branch": "发布分支",
   "apps.publish.lastBranch": "上次发布分支：",
+  "apps.publish.lastDeployMode": "上次发布模式：",
   "apps.publish.mode": "发布模式",
   "apps.publish.modeManual": "编译后手动发布",
   "apps.publish.modeImmediate": "立即发布",

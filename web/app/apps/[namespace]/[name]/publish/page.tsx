@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Rocket, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
-import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulBranch } from "@/lib/api/applications"
-import { Application, ApplicationEnvironment, DeployMode } from "@/lib/api/types"
+import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
+import { Application, ApplicationEnvironment, DeployMode, LastSuccessfulPipelineInfo } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -30,7 +30,7 @@ export default function PublishPage({ params }: PageProps) {
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [branch, setBranch] = useState<string>("main")
-  const [lastSuccessfulBranch, setLastSuccessfulBranch] = useState<string | null>(null)
+  const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [loading, setLoading] = useState(false)
   const { t } = useLanguage()
@@ -38,10 +38,10 @@ export default function PublishPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appRes, envRes, lastBranchRes] = await Promise.all([
+        const [appRes, envRes, lastPipelineRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationEnvironments(namespace, name),
-          getLastSuccessfulBranch(namespace, name)
+          getLastSuccessfulPipeline(namespace, name)
         ])
         
         if (appRes.data) {
@@ -56,9 +56,10 @@ export default function PublishPage({ params }: PageProps) {
             }
           }
         }
-        if (lastBranchRes.data) {
-          setLastSuccessfulBranch(lastBranchRes.data)
-          setBranch(lastBranchRes.data)
+        if (lastPipelineRes.data) {
+          setLastSuccessfulPipeline(lastPipelineRes.data)
+          setBranch(lastPipelineRes.data.branch)
+          setDeployMode(lastPipelineRes.data.deployMode)
         }
       } catch {
         toast.error(t("apps.publish.fetchError"))
@@ -138,13 +139,15 @@ export default function PublishPage({ params }: PageProps) {
         <div className="grid gap-2">
           <Label htmlFor="branch">
             {t("apps.publish.branch")}
-            {lastSuccessfulBranch && (
+            {lastSuccessfulPipeline && (
               <button
                 type="button"
-                onClick={() => setBranch(lastSuccessfulBranch)}
+                onClick={() => {
+                  setBranch(lastSuccessfulPipeline.branch)
+                }}
                 className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
               >
-                {t("apps.publish.lastBranch")}{lastSuccessfulBranch}
+                {t("apps.publish.lastBranch")}{lastSuccessfulPipeline.branch}
               </button>
             )}
           </Label>
@@ -155,9 +158,22 @@ export default function PublishPage({ params }: PageProps) {
             placeholder="main"
           />
         </div>
-        
+
         <div className="grid gap-2">
-          <Label>{t("apps.publish.mode")}</Label>
+          <Label>
+            {t("apps.publish.mode")}
+            {lastSuccessfulPipeline && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDeployMode(lastSuccessfulPipeline.deployMode)
+                }}
+                className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
+              >
+                {t("apps.publish.lastDeployMode")}{lastSuccessfulPipeline.deployMode === "MANUAL" ? t("apps.publish.modeManual") : t("apps.publish.modeImmediate")}
+              </button>
+            )}
+          </Label>
           <RadioGroup value={deployMode} onValueChange={(v) => setDeployMode(v as DeployMode)} className="flex flex-row gap-6">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="MANUAL" id="mode-manual" />
@@ -170,7 +186,7 @@ export default function PublishPage({ params }: PageProps) {
           </RadioGroup>
         </div>
 
-        <div className="pt-4">
+        <div className="pt-2">
           <Button onClick={handlePublish} disabled={loading || !selectedEnv}>
             <Rocket className="h-4 w-4" />
             {loading ? t("apps.publish.submitting") : deployMode === "MANUAL" ? t("apps.publish.submitBuild") : t("apps.publish.confirmDeploy")}

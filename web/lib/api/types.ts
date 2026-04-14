@@ -121,6 +121,11 @@ export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DE
 
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 
+export interface LastSuccessfulPipelineInfo {
+  branch: string
+  deployMode: DeployMode
+}
+
 export interface Pipeline {
   id: string
   namespace: string

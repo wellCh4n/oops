@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.objects.AuthUserPrincipal;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
+import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
@@ -108,11 +109,11 @@ public class ApplicationController {
         return Result.success(applicationService.getApplicationEnvironments(namespace, name));
     }
 
-    @GetMapping("/{name}/last-successful-branch")
-    public Result<String> getLastSuccessfulBranch(@PathVariable String namespace,
-                                                    @PathVariable String name) {
-        String lastBranch = pipelineService.getLastSuccessfulBranch(namespace, name);
-        return Result.success(lastBranch);
+    @GetMapping("/{name}/last-successful-pipeline")
+    public Result<LastSuccessfulPipelineResponse> getLastSuccessfulPipeline(@PathVariable String namespace,
+                                                                            @PathVariable String name) {
+        LastSuccessfulPipelineResponse lastPipeline = pipelineService.getLastSuccessfulPipeline(namespace, name);
+        return Result.success(lastPipeline);
     }
 
     @PutMapping("/{name}/environments")

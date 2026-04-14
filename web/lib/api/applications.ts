@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode, Page } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export const getApplications = async (
   namespace: string,
@@ -241,12 +241,12 @@ export const getClusterDomain = async (namespace: string, name: string, env: str
   return response.json() as Promise<ApiResponse<ClusterDomainInfo>>
 }
 
-export const getLastSuccessfulBranch = async (namespace: string, name: string): Promise<ApiResponse<string>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/last-successful-branch`)
+export const getLastSuccessfulPipeline = async (namespace: string, name: string): Promise<ApiResponse<LastSuccessfulPipelineInfo | null>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/last-successful-pipeline`)
   if (!response.ok) {
-    throw new Error("Failed to fetch last successful branch")
+    throw new Error("Failed to fetch last successful pipeline")
   }
-  return response.json() as Promise<ApiResponse<string>>
+  return response.json() as Promise<ApiResponse<LastSuccessfulPipelineInfo | null>>
 }
 
 export const searchAllApplications = async (keyword: string = ""): Promise<ApiResponse<Application[]>> => {
