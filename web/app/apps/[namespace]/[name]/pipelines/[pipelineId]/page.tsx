@@ -28,6 +28,7 @@ import dayjs from "dayjs"
 import { ExternalLink, Check, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 
 // WebSocket message types
 interface StepsMessage {
@@ -275,8 +276,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const activeIndex = steps.indexOf(activeStep)
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-4 relative">
-      {wsDisconnected && (
+    <ContentPage title={t("apps.pipeline.title")}>
+      <div className="flex flex-1 min-h-0 flex-col gap-4 relative">
+        {wsDisconnected && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
           <p className="text-sm text-muted-foreground">{t("common.disconnected")}</p>
           <button
@@ -291,9 +293,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-4">
-            <div>
-              <h2 className="text-xl font-bold">{t("apps.pipeline.title")}</h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {pipeline && <>{t("apps.pipeline.id")} <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></>}
                 {pipeline && <>{t("apps.pipeline.envLabel")} <Badge variant="outline">{pipeline.environment}</Badge></>}
                 {pipeline && <>{t("apps.pipeline.statusLabel")} <Badge variant={getStatusVariant(pipeline.status)}>{t(statusLabel[pipeline.status] ?? pipeline.status)}</Badge></>}
@@ -301,7 +301,6 @@ export default function PipelineDetailPage({ params }: PageProps) {
                 {deployModeLabel && <>{t("apps.pipeline.deployMode")} <Badge variant="outline">{deployModeLabel}</Badge></>}
               </div>
             </div>
-          </div>
           <div>
             {pipeline?.status === "BUILD_SUCCEEDED" && (
               <AlertDialog>
@@ -412,6 +411,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
             </div>
         </div>
 
-    </div>
+      </div>
+    </ContentPage>
   )
 }
