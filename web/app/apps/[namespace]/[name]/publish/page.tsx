@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Rocket } from "lucide-react"
+import { Rocket, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulBranch } from "@/lib/api/applications"
 import { Application, ApplicationEnvironment, DeployMode } from "@/lib/api/types"
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import Link from "next/link"
 
 interface PageProps {
   params: Promise<{
@@ -121,7 +122,15 @@ export default function PublishPage({ params }: PageProps) {
           </RadioGroup>
           {environments.length === 0 && (
             <p className="text-sm text-destructive">
-              {t("apps.publish.noEnv")}
+              {t("apps.publish.noEnvPrefix")}
+              <Link
+                href={`/apps/${namespace}/${name}?tab=app-info`}
+                className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
+              >
+                <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+              {t("apps.publish.noEnvSuffix")}
             </p>
           )}
         </div>
@@ -133,7 +142,7 @@ export default function PublishPage({ params }: PageProps) {
               <button
                 type="button"
                 onClick={() => setBranch(lastSuccessfulBranch)}
-                className="ml-2 text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
               >
                 {t("apps.publish.lastBranch")}{lastSuccessfulBranch}
               </button>

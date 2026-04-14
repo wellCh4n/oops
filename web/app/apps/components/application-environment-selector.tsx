@@ -6,8 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ApplicationEnvironment } from "@/lib/api/types"
 import { getApplicationEnvironments } from "@/lib/api/applications"
 import { toast } from "sonner"
-import { Server } from "lucide-react"
+import { Server, ExternalLink } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import Link from "next/link"
 
 interface ApplicationEnvironmentSelectorProps {
   namespace?: string
@@ -64,28 +65,36 @@ export function ApplicationEnvironmentSelector({
     <Tabs value={value ?? ""} onValueChange={onValueChange} className={className}>
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap"><Server className="h-3.5 w-3.5" />{t("apps.envSelector.label")}</span>
-        <TabsList className="justify-start h-auto flex-wrap">
-          {environments.map((env) => (
-            <TabsTrigger
-              key={env.environmentName}
-              value={env.environmentName}
-              className="px-6 cursor-pointer"
+        {environments.length === 0 && !isLoading ? (
+          <div className="text-sm text-muted-foreground px-3 py-1.5 border rounded-md border-dashed">
+            {t("apps.publish.noEnvPrefix")}
+            <Link
+              href={`/apps/${namespace}/${applicationName}?tab=app-info`}
+              className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
             >
-              {isLoading ? (
-                <Skeleton className="h-4 w-16 bg-muted-foreground/20" />
-              ) : (
-                env.environmentName
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+            {t("apps.publish.noEnvSuffix")}
+          </div>
+        ) : (
+          <TabsList className="justify-start h-auto flex-wrap">
+            {environments.map((env) => (
+              <TabsTrigger
+                key={env.environmentName}
+                value={env.environmentName}
+                className="px-6 cursor-pointer"
+              >
+                {isLoading ? (
+                  <Skeleton className="h-4 w-16 bg-muted-foreground/20" />
+                ) : (
+                  env.environmentName
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
       </div>
-
-      {environments.length === 0 && !isLoading && (
-        <div className="py-8 text-center text-muted-foreground text-sm border rounded-md border-dashed">
-          {t("apps.envSelector.noEnv")}
-        </div>
-      )}
 
       {children}
     </Tabs>

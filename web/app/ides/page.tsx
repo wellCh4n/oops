@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Plus, Power, ExternalLink, RefreshCw, ChevronDown, Layers, LayoutGrid, Server,
+  Plus, Power, ExternalLink, RefreshCw, ChevronDown, Layers, LayoutGrid,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,8 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
-import { getApplications, getApplicationEnvironments } from "@/lib/api/applications"
+import { getApplications } from "@/lib/api/applications"
+import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment } from "@/lib/api/types"
 
@@ -108,21 +109,10 @@ function IDEPageContent() {
   }, [selectedNamespace])
 
   useEffect(() => {
-    if (!selectedNamespace || !selectedApp) {
-      setEnvironments([])
-      return
+    if (selectedApp && !selectedEnv && environments.length > 0) {
+      updateParams({ env: environments[0].environmentName })
     }
-    getApplicationEnvironments(selectedNamespace, selectedApp)
-      .then((res) => {
-        const envs = res.data ?? []
-        setEnvironments(envs)
-        if (!selectedEnv && envs.length > 0) {
-          updateParams({ env: envs[0].environmentName })
-        }
-      })
-      .catch(() => {})
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, selectedApp])
+  }, [selectedApp, selectedEnv, environments, updateParams])
 
   const fetchIDEs = useCallback(async () => {
     if (!selectedNamespace || !selectedApp || !selectedEnv) return
@@ -259,22 +249,13 @@ function IDEPageContent() {
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap">
-                    <Server className="h-3.5 w-3.5" />{t("apps.envSelector.label")}
-                  </span>
-                  <Tabs value={selectedEnv} onValueChange={(v) => updateParams({ env: v })}>
-                    <TabsList className="justify-start h-auto flex-wrap">
-                      {environments.map((env) => (
-                        <TabsTrigger
-                          key={env.environmentName}
-                          value={env.environmentName}
-                          className="px-6 cursor-pointer"
-                        >
-                          {env.environmentName}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
+                  <ApplicationEnvironmentSelector
+                    namespace={selectedNamespace}
+                    applicationName={selectedApp}
+                    value={selectedEnv}
+                    onValueChange={(v) => updateParams({ env: v })}
+                    onEnvironmentsLoaded={setEnvironments}
+                  />
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -298,9 +279,11 @@ function IDEPageContent() {
               </div>
 
               {!selectedEnv ? (
-                <div className="py-8 text-center text-muted-foreground text-sm border rounded-md border-dashed">
-                  {t("apps.envSelector.noEnv")}
-                </div>
+                environments.length === 0 ? null : (
+                  <div className="py-8 text-center text-muted-foreground text-sm border rounded-md border-dashed">
+                    {t("apps.envSelector.noEnv")}
+                  </div>
+                )
               ) : loading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-12 w-full" />
