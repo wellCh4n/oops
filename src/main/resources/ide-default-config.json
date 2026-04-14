@@ -2,7 +2,8 @@
   "settings": {
     "workbench.startupEditor": "none",
     "workbench.colorTheme": "Default Dark Modern",
-    "chat.disableAIFeatures": true
+    "chat.disableAIFeatures": true,
+    "window.autoDetectColorScheme": true
   },
   "env": "",
   "extensions": "anthropic.claude-code"
