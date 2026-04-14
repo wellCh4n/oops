@@ -12,8 +12,8 @@ export async function getFeatures(): Promise<Features> {
   try {
     const res = await apiFetch("/api/features")
     const data = await res.json() as ApiResponse<Features>
-    return data.data ?? { feishu: false, ide: false }
+    return data.data ?? { feishu: false, ide: false, ideHost: null, ideHttps: false }
   } catch {
-    return { feishu: false, ide: false }
+    return { feishu: false, ide: false, ideHost: null, ideHttps: false }
   }
 }
