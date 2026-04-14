@@ -24,7 +24,9 @@ public class FeaturesController {
     public Result<FeaturesResponse> getFeatures() {
         return Result.success(new FeaturesResponse(
                 feishuConfig != null && feishuConfig.isEnabled(),
-                ideConfig != null
+                ideConfig != null,
+                ideConfig != null ? ideConfig.getDomain() : null,
+                ideConfig != null && ideConfig.isHttps()
         ));
     }
 
@@ -33,5 +35,7 @@ public class FeaturesController {
     public static class FeaturesResponse {
         private boolean feishu;
         private boolean ide;
+        private String ideHost;
+        private boolean ideHttps;
     }
 }

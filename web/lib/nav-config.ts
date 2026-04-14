@@ -37,6 +37,7 @@ export const navConfig: NavGroup[] = [
         title: "nav.ide",
         url: "/ides",
         icon: SquareCode,
+        match: (pathname) => pathname === "/ides" || pathname.startsWith("/ides/"),
       },
       {
         title: "nav.pipelines",
