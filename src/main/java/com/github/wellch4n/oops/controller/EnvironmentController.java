@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.EnvironmentService;
+import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,6 +41,7 @@ public class EnvironmentController {
     @PostMapping
     public Result<Environment> createEnvironment(@RequestBody Environment environment) {
         try {
+            ResourceNameChecker.check(environment.getName());
             return Result.success(environmentService.createEnvironment(environment));
         } catch (IllegalArgumentException e) {
             return Result.failure(e.getMessage());

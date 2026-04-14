@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.github.wellch4n.oops.data.Namespace;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.NamespaceService;
+import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,6 +34,7 @@ public class NamespaceController {
 
     @PostMapping
     public Result<Boolean> createNamespace(@RequestBody Namespace namespace) {
+        ResourceNameChecker.check(namespace.getName());
         namespaceService.createNamespace(namespace.getName(), namespace.getDescription());
         return Result.success(true);
     }

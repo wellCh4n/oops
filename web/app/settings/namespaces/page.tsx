@@ -38,12 +38,16 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { useNamespaceStore } from "@/store/namespace"
+import { NAME_MAX_LENGTH, NAME_REGEX } from "@/lib/utils"
 
 export default function NamespacesPage() {
   const { t } = useLanguage()
 
   const formSchema = z.object({
-    name: z.string().min(1, t("ns.nameRequired")),
+    name: z.string()
+      .min(1, t("ns.nameRequired"))
+      .max(NAME_MAX_LENGTH, t("validation.nameMaxLength"))
+      .regex(NAME_REGEX, t("validation.nameInvalid")),
     description: z.string().optional(),
   })
   const [namespaces, setNamespaces] = useState<Namespace[]>([])

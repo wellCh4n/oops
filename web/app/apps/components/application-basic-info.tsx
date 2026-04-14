@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ApplicationBasicFormValues, applicationBasicSchema } from "../schema"
+import { ApplicationBasicFormValues, getApplicationBasicSchema } from "../schema"
 import { Application, Environment, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
@@ -72,7 +72,7 @@ export function ApplicationBasicInfo({
   }, [initialData, t])
 
   const form = useForm<ApplicationBasicFormValues>({
-    resolver: zodResolver(applicationBasicSchema),
+    resolver: zodResolver(getApplicationBasicSchema(t)),
     defaultValues: initialData ? {
       id: initialData.id,
       name: initialData.name,

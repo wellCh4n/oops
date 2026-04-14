@@ -12,6 +12,7 @@ import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.DeploymentService;
 import com.github.wellch4n.oops.service.PipelineService;
+import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import java.util.List;
 
 import org.springframework.security.core.Authentication;
@@ -53,6 +54,7 @@ public class ApplicationController {
     public Result<String> createApplication(@PathVariable String namespace,
                                             @RequestBody Application application,
                                             Authentication authentication) {
+        ResourceNameChecker.check(application.getName());
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return Result.success(applicationService.createApplication(namespace, application, principal.userId()));
     }

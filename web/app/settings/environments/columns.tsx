@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { z } from "zod"
 import { Environment } from "@/lib/api/types"
+import { NAME_MAX_LENGTH, NAME_REGEX } from "@/lib/utils"
 
 // Define Schema and Types here to avoid circular dependencies or multiple files
 export const environmentSchema = z.object({
@@ -27,7 +28,10 @@ export type EnvironmentFormValues = z.infer<typeof environmentSchema>
 
 export const getEnvironmentSchema = (t: (key: string) => string) => z.object({
   id: z.string().optional(),
-  name: z.string().min(1, t("env.nameRequired")),
+  name: z.string()
+    .min(1, t("env.nameRequired"))
+    .max(NAME_MAX_LENGTH, t("validation.nameMaxLength"))
+    .regex(NAME_REGEX, t("validation.nameInvalid")),
   kubernetesApiServer: z.object({
     url: z.string().optional(),
     token: z.string().optional(),
