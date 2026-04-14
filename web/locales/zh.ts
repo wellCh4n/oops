@@ -66,7 +66,7 @@ const zh = {
   // Validation
   "validation.required": "不能为空",
   "validation.nameInvalid": "只能包含小写字母、数字和中划线（-），且必须以字母或数字开头和结尾",
-  "validation.nameMaxLength": "最多 16 个字符",
+  "validation.nameMaxLength": "最多 24 个字符",
   // Apps
   "apps.title": "应用",
   "apps.fetchNsError": "获取命名空间失败",

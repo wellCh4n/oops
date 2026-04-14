@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  */
 public class ResourceNameChecker {
 
-    private static final int MAX_LENGTH = 16;
+    private static final int MAX_LENGTH = 24;
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$");
 
     private ResourceNameChecker() {
