@@ -114,7 +114,7 @@ const en = {
   "ide.invalidUrl": "Invalid IDE URL",
   "ide.publish": "Publish",
   "ide.publishConfirmTitle": "Confirm Navigation",
-  "ide.publishConfirmDesc": "Navigate to the application publish page?",
+  "ide.publishConfirmDesc": "Please make sure all changes are saved and committed to Git.",
   "apps.tab.appInfo": "Info",
   "apps.tab.buildConfig": "Build",
   "apps.tab.performanceConfig": "Performance",
