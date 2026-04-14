@@ -20,9 +20,14 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 
 ### CI/CD Pipelines
 - Git-based build pipelines powered by Kubernetes Jobs
-- Three-stage pipeline: **clone** → **build** → **push** (Kaniko image build)
+- Three-stage pipeline: **clone** (shallow clone support) → **build** → **push** (Kaniko image build)
+- Two deploy modes: **IMMEDIATE** (auto-deploy after build) or **MANUAL** (wait for manual trigger)
 - Real-time log streaming via WebSocket
 - Pipeline history and status tracking
+
+### Command Palette
+- Press `/` to quickly search applications, deploy apps, open IDEs, or jump to pipelines
+- Fast keyboard-driven navigation across namespaces
 
 ### Pod Operations
 - Live pod log streaming
@@ -40,6 +45,10 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 - Optional Feishu (Lark) OAuth integration
 - Namespace-based resource isolation
 - Application ownership — users are assigned as owners of their applications
+
+### Localization
+- Chinese (`zh`) and English (`en`) UI support
+- Language preference persisted across sessions
 
 ### Ingress
 - Traefik IngressRoute CRD support for automatic HTTPS routing
@@ -60,8 +69,15 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 # Run backend
 ./mvnw spring-boot:run
 
-# Run frontend (dev)
+# Run tests
+./mvnw test
+
+# Run frontend (dev) — automatically proxies /api to localhost:8080
 cd web && pnpm install && pnpm dev
+
+# Frontend lint / build
+cd web && pnpm lint
+cd web && pnpm build
 ```
 
 Or build the full Docker image:
