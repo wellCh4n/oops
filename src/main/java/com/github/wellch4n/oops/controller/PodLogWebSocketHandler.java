@@ -37,7 +37,7 @@ public class PodLogWebSocketHandler extends AbstractWebSocketHandler {
         String path = uri.getPath();
         String[] parts = path.split("/");
         String namespace = parts[3];
-        String name = parts[5];
+        // String name = parts[5];
         String pod = parts[7];
 
         Map<String, String> params = UriComponentsBuilder.fromUri(uri)

@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.config.PipelineImageConfig;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
 import com.github.wellch4n.oops.data.*;
-import com.github.wellch4n.oops.objects.BuildStorage;
+// import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
 import com.github.wellch4n.oops.volume.SecretVolume;
@@ -28,7 +28,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final String buildCommand;
 
     private final Environment environment;
-    private final List<BuildStorage> buildStorages = null;
+    // private final List<BuildStorage> buildStorages = null;
 
     private final PipelineImageConfig pipelineImageConfig;
 
