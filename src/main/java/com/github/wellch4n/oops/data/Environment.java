@@ -37,6 +37,7 @@ public class Environment {
         }
     }
 
+    @Column(unique = true)
     private String name;
 
     @Embedded

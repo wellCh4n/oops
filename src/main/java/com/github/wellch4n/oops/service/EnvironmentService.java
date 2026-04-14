@@ -53,6 +53,10 @@ public class EnvironmentService {
     }
 
     public Environment createEnvironment(Environment environment) {
+        Environment existing = environmentRepository.findFirstByName(environment.getName());
+        if (existing != null) {
+            throw new IllegalArgumentException("Environment already exists: " + environment.getName());
+        }
         return environmentRepository.save(environment);
     }
 

@@ -39,7 +39,11 @@ public class EnvironmentController {
 
     @PostMapping
     public Result<Environment> createEnvironment(@RequestBody Environment environment) {
-        return Result.success(environmentService.createEnvironment(environment));
+        try {
+            return Result.success(environmentService.createEnvironment(environment));
+        } catch (IllegalArgumentException e) {
+            return Result.failure(e.getMessage());
+        }
     }
 
     @DeleteMapping("{id}")
