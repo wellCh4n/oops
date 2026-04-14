@@ -22,14 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { ApplicationBasicFormValues, getApplicationBasicSchema } from "../schema"
 import { Application, Environment, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
-import { AppWindow, Layers, AlignLeft, Server } from "lucide-react"
+import { AppWindow, Layers, AlignLeft, Server, Check } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -224,22 +224,39 @@ export function ApplicationBasicInfo({
         {initialData && (
             <FormItem>
                 <FormLabel className="flex items-center gap-1"><Server className="h-3.5 w-3.5" />{t("apps.basic.deployEnv")}</FormLabel>
-                <div className="grid grid-cols-2 gap-4">
-                    {environments.map(env => (
-                        <div key={env.id} className="flex items-center space-x-2">
-                            <Checkbox
-                                id={`env-${env.id}`}
-                                checked={selectedEnvNames.includes(env.name)}
-                                onCheckedChange={() => toggleEnv(env.name)}
-                            />
-                            <label
-                                htmlFor={`env-${env.id}`}
-                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                <div className="flex flex-wrap gap-3">
+                    {environments.map(env => {
+                        const selected = selectedEnvNames.includes(env.name)
+                        return (
+                            <div
+                                key={env.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => toggleEnv(env.name)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault()
+                                        toggleEnv(env.name)
+                                    }
+                                }}
+                                className={cn(
+                                    "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[12rem]",
+                                    selected
+                                        ? "border-primary bg-primary/5 text-primary"
+                                        : "border-border hover:bg-accent/50"
+                                )}
                             >
-                                {env.name}
-                            </label>
-                        </div>
-                    ))}
+                                <span className="text-sm font-medium">{env.name}</span>
+                                {selected ? (
+                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                                        <Check className="h-3 w-3" />
+                                    </div>
+                                ) : (
+                                    <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
             </FormItem>
         )}
