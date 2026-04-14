@@ -185,7 +185,9 @@ export default function EnvironmentsPage() {
               </div>
 
               <DialogFooter>
-                <Button type="submit">{t("env.create")}</Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? t("apps.publish.submitting") : t("env.create")}
+                </Button>
               </DialogFooter>
             </form>
           </Form>
