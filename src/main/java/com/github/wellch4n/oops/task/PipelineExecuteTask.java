@@ -78,7 +78,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         List<Container> initContainers = new ArrayList<>();
 
-        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), branch);
+        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), branch, true);
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
 

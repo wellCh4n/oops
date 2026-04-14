@@ -18,11 +18,5 @@ public class BaseContainer extends Container {
                 this.getVolumeMounts().add(mount);
             }
         }
-//
-//        for (List<V1VolumeMount> mounts : volumeMounts) {
-//            for (V1VolumeMount volumeMount : mounts) {
-//                this.addVolumeMountsItem(volumeMount);
-//            }
-//        }
     }
 }

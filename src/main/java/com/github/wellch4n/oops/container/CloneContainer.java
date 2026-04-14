@@ -5,6 +5,9 @@ import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author wellCh4n
  * @date 2025/7/7
@@ -12,13 +15,26 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 
 public class CloneContainer extends BaseContainer {
 
-    private static final String CLONE_COMMAND_WITH_BRANCH = "git clone -b %s --depth 1 %s /workspace";
-    private static final String CLONE_COMMAND_DEFAULT_BRANCH = "git clone --depth 1 %s /workspace";
+    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String image, String branch, boolean shallow) {
+        List<String> args = new ArrayList<>();
+        args.add("git");
+        args.add("clone");
+        args.add("--progress");
 
-    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String image, String branch) {
-        String command = (branch == null || branch.isBlank())
-                ? String.format(CLONE_COMMAND_DEFAULT_BRANCH, applicationBuildConfig.getRepository())
-                : String.format(CLONE_COMMAND_WITH_BRANCH, branch, applicationBuildConfig.getRepository());
+        if (shallow) {
+            args.add("--depth");
+            args.add("1");
+        }
+
+        if (branch != null && !branch.isBlank()) {
+            args.add("-b");
+            args.add(branch);
+        }
+
+        args.add(applicationBuildConfig.getRepository());
+        args.add("/workspace");
+
+        String command = String.join(" ", args);
 
         Container container = new ContainerBuilder()
                 .withName("clone")
@@ -26,7 +42,7 @@ public class CloneContainer extends BaseContainer {
                 .withCommand("sh", "-c", command)
                 .addNewEnv()
                     .withName("GIT_SSH_COMMAND")
-                    .withValue("ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null")
+                    .withValue("ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR")
                 .endEnv()
                 .build();
 
