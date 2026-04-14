@@ -90,6 +90,8 @@ Default admin credentials: `admin` / `admin123` (override via `ADMIN_PASSWORD` e
 
 ## Snapshots
 
+![applications.png](snapshots/applications.png)
+
 ![app_deploy.png](snapshots/app_deploy.png)
 
 ![pod_status.png](snapshots/pod_status.png)
@@ -97,3 +99,7 @@ Default admin credentials: `admin` / `admin123` (override via `ADMIN_PASSWORD` e
 ![pod_terminal.png](snapshots/pod_terminal.png)
 
 ![env_manager.png](snapshots/env_manager.png)
+
+![quick_command.png](snapshots/quick_command.png)
+
+![web_ide.png](snapshots/web_ide.png)
