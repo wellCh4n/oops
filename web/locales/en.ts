@@ -63,6 +63,10 @@ const en = {
   "common.totalPages": "of ${total}",
   "common.pageSize": "Show",
   "common.pageSizeSuffix": "per page",
+  // Validation
+  "validation.required": "is required",
+  "validation.nameInvalid": "Can only contain lowercase letters, numbers, and hyphens (-), and must start and end with a letter or number",
+  "validation.nameMaxLength": "Must be at most 16 characters",
   // Apps
   "apps.title": "Apps",
   "apps.fetchNsError": "Failed to fetch namespaces",

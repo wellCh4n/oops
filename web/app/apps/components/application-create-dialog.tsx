@@ -32,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { createApplication } from "@/lib/api/applications"
-import { createApplicationSchema, CreateApplicationFormValues } from "../schema"
+import { getCreateApplicationSchema, CreateApplicationFormValues } from "../schema"
 import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationCreateDialogProps {
@@ -52,7 +52,7 @@ export function ApplicationCreateDialog({
   const { t } = useLanguage()
 
   const form = useForm<CreateApplicationFormValues>({
-    resolver: zodResolver(createApplicationSchema),
+    resolver: zodResolver(getCreateApplicationSchema(t)),
     defaultValues: {
       name: "",
       namespace: defaultNamespace || "",

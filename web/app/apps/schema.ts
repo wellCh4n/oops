@@ -1,12 +1,18 @@
 import { z } from "zod"
+import { NAME_MAX_LENGTH, NAME_REGEX } from "@/lib/utils"
 
-export const applicationBasicSchema = z.object({
+export const getApplicationBasicSchema = (t?: (key: string) => string) => z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "Name is required"),
-  namespace: z.string().min(1, "Namespace is required"),
+  name: z.string()
+    .min(1, t?.("validation.required") || "Name is required")
+    .max(NAME_MAX_LENGTH, t?.("validation.nameMaxLength") || `Name must be at most ${NAME_MAX_LENGTH} characters`)
+    .regex(NAME_REGEX, t?.("validation.nameInvalid") || "Name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number"),
+  namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
   owner: z.string().optional(),
 })
+
+export const applicationBasicSchema = getApplicationBasicSchema()
 
 export const applicationBuildConfigSchema = z.object({
   repository: z.string().min(1, "Repository is required"),
@@ -14,11 +20,16 @@ export const applicationBuildConfigSchema = z.object({
   buildImage: z.string().optional(),
 })
 
-export const createApplicationSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  namespace: z.string().min(1, "Namespace is required"),
+export const getCreateApplicationSchema = (t?: (key: string) => string) => z.object({
+  name: z.string()
+    .min(1, t?.("validation.required") || "Name is required")
+    .max(NAME_MAX_LENGTH, t?.("validation.nameMaxLength") || `Name must be at most ${NAME_MAX_LENGTH} characters`)
+    .regex(NAME_REGEX, t?.("validation.nameInvalid") || "Name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number"),
+  namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
 })
+
+export const createApplicationSchema = getCreateApplicationSchema()
 
 export const applicationBuildSchema = z.object({
   repository: z.string().min(1, "Repository is required"),
