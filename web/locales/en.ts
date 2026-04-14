@@ -111,6 +111,7 @@ const en = {
   "ide.page.selectApp": "Select app",
   "ide.page.selectAppHint": "Please select an app first",
   "ide.page.selectNsHint": "Please select a namespace first",
+  "ide.invalidUrl": "Invalid IDE URL",
   "apps.tab.appInfo": "Info",
   "apps.tab.buildConfig": "Build",
   "apps.tab.performanceConfig": "Performance",

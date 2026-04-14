@@ -111,6 +111,7 @@ const zh = {
   "ide.page.selectApp": "选择应用",
   "ide.page.selectAppHint": "请先选择应用",
   "ide.page.selectNsHint": "请先选择命名空间",
+  "ide.invalidUrl": "无效的开发环境地址",
   "apps.tab.appInfo": "应用信息",
   "apps.tab.buildConfig": "构建配置",
   "apps.tab.performanceConfig": "性能配置",

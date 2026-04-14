@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import {
   Plus, Power, ExternalLink, RefreshCw, ChevronDown, Layers, LayoutGrid,
 } from "lucide-react"
@@ -306,15 +307,25 @@ function IDEPageContent() {
                           title={ide.ready ? t("ide.statusReady") : t("ide.statusPending")}
                         />
                         <div className="flex flex-col gap-0.5 min-w-0">
-                          <a
-                            href={ide.ready ? `${ide.https ? "https" : "http"}://${ide.host}` : undefined}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-1 font-mono text-sm truncate ${ide.ready ? "text-primary hover:underline cursor-pointer" : "text-muted-foreground cursor-not-allowed pointer-events-none"}`}
-                          >
-                            {ide.name}
-                            <ExternalLink className="h-3 w-3 shrink-0" />
-                          </a>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Link
+                              href={ide.ready ? `/ides/${ide.id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}` : "#"}
+                              className={`font-mono text-sm truncate ${ide.ready ? "text-primary hover:underline cursor-pointer" : "text-muted-foreground cursor-not-allowed pointer-events-none"}`}
+                            >
+                              {ide.name}
+                            </Link>
+                            {ide.ready && (
+                              <a
+                                href={`${ide.https ? "https" : "http"}://${ide.host}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 text-muted-foreground hover:text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">
                             {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && new Date(ide.createdAt).toLocaleString()}
                           </span>

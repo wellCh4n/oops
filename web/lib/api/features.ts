@@ -4,6 +4,8 @@ import { ApiResponse } from "./types"
 export interface Features {
   feishu: boolean
   ide: boolean
+  ideHost: string | null
+  ideHttps: boolean
 }
 
 export async function getFeatures(): Promise<Features> {
