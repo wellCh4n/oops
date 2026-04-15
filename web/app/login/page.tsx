@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Eye, EyeOff, Languages } from "lucide-react"
+import { Eye, EyeOff, Languages, Sun, Moon, Monitor } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { login, getFeishuLoginUrl } from "@/lib/api/auth"
 import { useFeaturesStore } from "@/store/features"
+import { useTheme } from "next-themes"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 
 export default function LoginPage() {
@@ -28,6 +31,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const { features, load } = useFeaturesStore()
+  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     load()
@@ -64,21 +68,37 @@ export default function LoginPage() {
               </div>
               <CardTitle className="text-2xl font-bold">OOPS</CardTitle>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                  <Languages className="h-4 w-4" />
-                  {localeLabels[locale]}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {(Object.keys(localeLabels) as Locale[]).map((l) => (
-                  <DropdownMenuItem key={l} onClick={() => setLocale(l)} className={locale === l ? "font-medium" : ""}>
-                    {localeLabels[l]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground px-2">
+                    {theme === "dark" ? <Moon className="h-4 w-4" /> : theme === "light" ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                    <DropdownMenuRadioItem value="system"><Monitor className="h-4 w-4" />{t("sidebar.themeSystem")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="light"><Sun className="h-4 w-4" />{t("sidebar.themeLight")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark"><Moon className="h-4 w-4" />{t("sidebar.themeDark")}</DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+                    <Languages className="h-4 w-4" />
+                    {localeLabels[locale]}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {(Object.keys(localeLabels) as Locale[]).map((l) => (
+                    <DropdownMenuItem key={l} onClick={() => setLocale(l)} className={locale === l ? "font-medium" : ""}>
+                      {localeLabels[l]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground text-left"><span className="font-semibold text-primary">Kubernetes</span> Is All You Need</p>
         </CardHeader>
@@ -139,6 +159,11 @@ export default function LoginPage() {
                   className="w-full"
                   onClick={handleFeishuLogin}
                 >
+                  <svg viewBox="0 0 48 48" className="size-5" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 8c0 1 7 3.5 14.745 16.744 0 0 4.184-4.363 6.255-5.744 1.5-1 2.712-1.332 2.712-1.332C33.712 15.156 29.5 8 28 8z" fill="#00d6b9"/>
+                    <path d="M43.5 18.5c-1-.667-3.65-1.771-6.5-1.5a15 15 0 0 0-3.288.668S32.5 18 31 19c-2.07 1.38-6.255 5.744-6.255 5.744-1.428 1.397-3.05 2.732-5.245 3.756 0 0 7 3 11.5 3 5.063 0 7-3.5 7-3.5 1.5-3.305 3.5-7 5.5-9.5" fill="#163c9a"/>
+                    <path d="M4 17.5v17c0 1 6 5.5 15 5.5 10 0 17.05-7.705 19-12 0 0-1.937 3.5-7 3.5-4.5 0-11.5-3-11.5-3-5.117-2.239-10.03-6.577-12.906-9.117C4.974 17.953 4 17.093 4 17.5" fill="#3370ff"/>
+                  </svg>
                   {t("login.feishu")}
                 </Button>
               </>

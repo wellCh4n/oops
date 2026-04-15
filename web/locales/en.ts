@@ -8,7 +8,7 @@ const en = {
   "login.loading": "Signing in...",
   "login.submit": "Sign In",
   "login.or": "or",
-  "login.feishu": "Sign in with Feishu",
+  "login.feishu": "Sign in with Lark",
   // Navigation
   "nav.cluster": "Cluster",
   "nav.nodes": "Nodes",
