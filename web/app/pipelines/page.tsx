@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
+import { useRecentAppStore } from "@/store/recent-app"
 
 export default function PipelinesPage() {
   return (
@@ -59,6 +60,7 @@ function PipelinesContent() {
 
   const [initialized, setInitialized] = useState(false)
   const { t } = useLanguage()
+  const { recentApp, setRecentApp } = useRecentAppStore()
 
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? "all"
@@ -100,7 +102,11 @@ function PipelinesContent() {
         if (res.data) {
           setApplications(res.data.data)
           if (!searchParams.get("app") && res.data.data.length > 0) {
-            updateParams({ app: res.data.data[0].name })
+            const recent = recentApp && recentApp.namespace === selectedNamespace
+              ? res.data.data.find(a => a.name === recentApp.name)
+              : undefined
+            const targetApp = recent ?? res.data.data[0]
+            updateParams({ app: targetApp.name })
           }
         }
       } catch {
@@ -208,7 +214,18 @@ function PipelinesContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("pipelines.appLabel")}</span>
                 <SelectWithSearch
                   value={selectedApp}
-                  onValueChange={(v: string) => updateParams({ app: v, env: "all", page: "1" })}
+                  onValueChange={(v: string) => {
+                    const app = applications.find(a => a.name === v)
+                    if (app) {
+                      setRecentApp({
+                        namespace: app.namespace,
+                        name: app.name,
+                        description: app.description,
+                        ownerName: app.ownerName,
+                      })
+                    }
+                    updateParams({ app: v, env: "all", page: "1" })
+                  }}
                   options={applications.map(app => ({ value: app.name, label: app.name }))}
                   placeholder={t("pipelines.selectApp")}
                   searchPlaceholder={t("common.search")}

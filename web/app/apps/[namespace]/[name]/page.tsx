@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { useRecentAppStore } from "@/store/recent-app"
 
 export default function EditAppPage() {
   const router = useRouter()
@@ -36,6 +37,7 @@ export default function EditAppPage() {
   
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
+  const { setRecentApp } = useRecentAppStore()
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -50,6 +52,12 @@ export default function EditAppPage() {
 
         if (appRes.data) {
           setApplication(appRes.data)
+          setRecentApp({
+            namespace: appRes.data.namespace,
+            name: appRes.data.name,
+            description: appRes.data.description,
+            ownerName: appRes.data.ownerName,
+          })
         }
         
         if (buildConfigRes.data) {
@@ -77,7 +85,7 @@ export default function EditAppPage() {
       }
     }
     fetchApp()
-  }, [namespace, name, router, t])
+  }, [namespace, name, router, t, setRecentApp])
 
   if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
