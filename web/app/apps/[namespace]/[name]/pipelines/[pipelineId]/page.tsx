@@ -299,6 +299,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               {pipeline && <>{t("apps.pipeline.statusLabel")} <Badge variant={getStatusVariant(pipeline.status)}>{t(statusLabel[pipeline.status] ?? pipeline.status)}</Badge></>}
               {pipeline && <>{t("apps.pipeline.createdAt")} <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
               {deployModeLabel && <>{t("apps.pipeline.deployMode")} <Badge variant="outline">{deployModeLabel}</Badge></>}
+              {pipeline?.operatorName && <>{t("apps.pipeline.operator")} <Badge variant="outline">{pipeline.operatorName}</Badge></>}
             </div>
           </div>
           <div>

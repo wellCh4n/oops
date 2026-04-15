@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
+import com.github.wellch4n.oops.objects.PipelineResponse;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -41,32 +42,72 @@ public class PipelineService {
     private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final IngressConfig ingressConfig;
+    private final UserService userService;
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
                            ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                            ApplicationServiceConfigRepository applicationServiceConfigRepository,
-                           IngressConfig ingressConfig) {
+                           IngressConfig ingressConfig, UserService userService) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.ingressConfig = ingressConfig;
+        this.userService = userService;
     }
 
-    public Page<Pipeline> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
+    public Page<PipelineResponse> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
         int p = page == null ? 1 : page;
         int s = size == null ? 20 : size;
         PageRequest pageable = PageRequest.of(Math.max(p - 1, 0), s, Sort.by(Sort.Direction.DESC, "createdTime"));
+        org.springframework.data.domain.Page<Pipeline> pipelinePage;
         if (environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment)) {
-            return Page.of(pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable));
+            pipelinePage = pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable);
+        } else {
+            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable);
         }
-        return Page.of(pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable));
+        return new Page<>(
+                pipelinePage.getTotalElements(),
+                toPipelineResponses(pipelinePage.getContent()),
+                pipelinePage.getSize(),
+                pipelinePage.getTotalPages()
+        );
     }
 
     public Pipeline getPipeline(String namespace, String applicationName, String id) {
         return pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
+    }
+
+    public PipelineResponse getPipelineDetail(String namespace, String applicationName, String id) {
+        Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
+        return toPipelineResponse(pipeline);
+    }
+
+    private List<PipelineResponse> toPipelineResponses(List<Pipeline> pipelines) {
+        Set<String> operatorIds = pipelines.stream()
+                .map(Pipeline::getOperatorId)
+                .filter(org.apache.commons.lang3.StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, String> operatorNameMap = userService.getUsernameMapByIds(operatorIds);
+        return pipelines.stream()
+                .map(pipeline -> PipelineResponse.from(pipeline,
+                        org.apache.commons.lang3.StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null))
+                .toList();
+    }
+
+    private PipelineResponse toPipelineResponse(Pipeline pipeline) {
+        if (pipeline == null) {
+            return null;
+        }
+        String operatorName = null;
+        if (org.apache.commons.lang3.StringUtils.isNotBlank(pipeline.getOperatorId())) {
+            operatorName = userService.findById(pipeline.getOperatorId())
+                    .map(User::getUsername)
+                    .orElse(null);
+        }
+        return PipelineResponse.from(pipeline, operatorName);
     }
 
     public LastSuccessfulPipelineResponse getLastSuccessfulPipeline(String namespace, String applicationName) {

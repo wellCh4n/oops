@@ -26,7 +26,7 @@ public class DeploymentService {
         this.environmentService = environmentService;
     }
 
-    public String deployApplication(String namespace, String applicationName, String environmentName, String branch, DeployMode deployMode) {
+    public String deployApplication(String namespace, String applicationName, String environmentName, String branch, DeployMode deployMode, String operatorUserId) {
         try {
             Environment environment = environmentService.getEnvironment(environmentName);
 
@@ -39,6 +39,7 @@ public class DeploymentService {
             pipeline.setEnvironment(environment.getName());
             pipeline.setBranch(branch);
             pipeline.setDeployMode(deployMode != null ? deployMode : DeployMode.IMMEDIATE);
+            pipeline.setOperatorId(operatorUserId);
             pipelineRepository.save(pipeline);
 
             PipelineExecuteTask pipelineExecuteTask = new PipelineExecuteTask(pipeline, environment);

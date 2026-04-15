@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.controller;
 
-import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.objects.Page;
+import com.github.wellch4n.oops.objects.PipelineResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.PipelineService;
 import org.springframework.web.bind.annotation.*;
@@ -22,19 +22,19 @@ public class PipelineController {
     }
 
     @GetMapping
-    public Result<Page<Pipeline>> getPipelines(@PathVariable String namespace,
-                                               @PathVariable String name,
-                                               @RequestParam(required = false) String environment,
-                                               @RequestParam(defaultValue = "1") int page,
-                                               @RequestParam(defaultValue = "10") int size) {
+    public Result<Page<PipelineResponse>> getPipelines(@PathVariable String namespace,
+                                                       @PathVariable String name,
+                                                       @RequestParam(required = false) String environment,
+                                                       @RequestParam(defaultValue = "1") int page,
+                                                       @RequestParam(defaultValue = "10") int size) {
         return Result.success(pipelineService.getPipelines(namespace, name, environment, page, size));
     }
 
     @GetMapping("/{id}")
-    public Result<Pipeline> getPipeline(@PathVariable String namespace,
-                                        @PathVariable String name,
-                                        @PathVariable String id) {
-        return Result.success(pipelineService.getPipeline(namespace, name, id));
+    public Result<PipelineResponse> getPipeline(@PathVariable String namespace,
+                                                @PathVariable String name,
+                                                @PathVariable String id) {
+        return Result.success(pipelineService.getPipelineDetail(namespace, name, id));
     }
 
 //    @GetMapping(value = "/{id}/watch", produces = MediaType.TEXT_EVENT_STREAM_VALUE)

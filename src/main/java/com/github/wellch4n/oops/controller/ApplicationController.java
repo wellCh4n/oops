@@ -169,7 +169,9 @@ public class ApplicationController {
                                             @PathVariable String name,
                                             @RequestParam("environment") String environment,
                                             @RequestParam(value = "branch", defaultValue = "main") String branch,
-                                            @RequestParam(value = "deployMode", defaultValue = "IMMEDIATE") DeployMode deployMode) {
-        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch, deployMode));
+                                            @RequestParam(value = "deployMode", defaultValue = "IMMEDIATE") DeployMode deployMode,
+                                            Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch, deployMode, principal.userId()));
     }
 }
