@@ -49,6 +49,13 @@ export const applicationPerformanceEnvSchema = z.object({
     cpuLimit: z.string().optional(),
     memoryRequest: z.string().optional(),
     memoryLimit: z.string().optional(),
+    autoscaling: z.object({
+      enabled: z.boolean().optional(),
+      minReplicas: z.number().int().min(1).optional(),
+      maxReplicas: z.number().int().min(1).optional(),
+      targetCpuUtilization: z.number().int().min(1).max(100).optional(),
+      targetMemoryUtilization: z.number().int().min(1).max(100).optional(),
+    }).optional(),
   })),
 })
 

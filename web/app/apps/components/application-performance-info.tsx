@@ -11,13 +11,14 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ApplicationPerformanceEnvFormValues, applicationPerformanceEnvSchema } from "../schema"
 import { TabsContent } from "@/components/ui/tabs"
 import { ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationPerformanceEnvConfigs } from "@/lib/api/applications"
-import { Cpu, MemoryStick, Copy } from "lucide-react"
+import { Cpu, MemoryStick, Copy, Gauge } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -197,24 +198,27 @@ function ReplicasInput({ value, onChange }: { value: number | undefined, onChang
 }
 
 function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
-  const { control } = useFormContext<ApplicationPerformanceEnvFormValues>()
+  const { control, watch } = useFormContext<ApplicationPerformanceEnvFormValues>()
   const { t } = useLanguage()
+  const autoscalingEnabled = watch(`environmentConfigs.${index}.autoscaling.enabled`) === true
 
   return (
     <div className="flex flex-col gap-4">
-      <FormField
-        control={control}
-        name={`environmentConfigs.${index}.replicas`}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.perf.replicas")}</FormLabel>
-            <FormControl>
-              <ReplicasInput value={field.value} onChange={field.onChange} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {!autoscalingEnabled && (
+        <FormField
+          control={control}
+          name={`environmentConfigs.${index}.replicas`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.perf.replicas")}</FormLabel>
+              <FormControl>
+                <ReplicasInput value={field.value} onChange={field.onChange} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
       <div className="grid grid-cols-2 gap-x-4 gap-y-4 w-fit">
         <FormField
           control={control}
@@ -280,6 +284,117 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
             </FormItem>
           )}
         />
+      </div>
+      <div className="border-t pt-4 flex flex-col gap-3">
+        <FormField
+          control={control}
+          name={`environmentConfigs.${index}.autoscaling.enabled`}
+          render={({ field }) => (
+            <FormItem className="flex items-center gap-2 space-y-0">
+              <FormControl>
+                <Checkbox checked={field.value === true} onCheckedChange={(v) => field.onChange(v === true)} />
+              </FormControl>
+              <FormLabel className="flex items-center gap-1 !mt-0 cursor-pointer">
+                <Gauge className="h-3.5 w-3.5" />{t("apps.perf.autoscaling")}
+              </FormLabel>
+            </FormItem>
+          )}
+        />
+        {autoscalingEnabled && (
+          <>
+            <p className="text-xs text-muted-foreground">{t("apps.perf.autoscalingHint")}</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 w-fit">
+              <FormField
+                control={control}
+                name={`environmentConfigs.${index}.autoscaling.minReplicas`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.perf.minReplicas")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="1"
+                        className="w-24"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`environmentConfigs.${index}.autoscaling.maxReplicas`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.perf.maxReplicas")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="10"
+                        className="w-24"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`environmentConfigs.${index}.autoscaling.targetCpuUtilization`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.perf.targetCpu")}</FormLabel>
+                    <FormControl>
+                      <div className="relative w-24">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="70"
+                          className="pr-8"
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={control}
+                name={`environmentConfigs.${index}.autoscaling.targetMemoryUtilization`}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.perf.targetMemory")}</FormLabel>
+                    <FormControl>
+                      <div className="relative w-24">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          placeholder="—"
+                          className="pr-8"
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+                        />
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
