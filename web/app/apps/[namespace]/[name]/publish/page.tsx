@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
+import { useRecentAppStore } from "@/store/recent-app"
 
 interface PageProps {
   params: Promise<{
@@ -34,6 +35,7 @@ export default function PublishPage({ params }: PageProps) {
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [loading, setLoading] = useState(false)
   const { t } = useLanguage()
+  const { setRecentApp } = useRecentAppStore()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,6 +48,12 @@ export default function PublishPage({ params }: PageProps) {
         
         if (appRes.data) {
           setApplication(appRes.data)
+          setRecentApp({
+            namespace: appRes.data.namespace,
+            name: appRes.data.name,
+            description: appRes.data.description,
+            ownerName: appRes.data.ownerName,
+          })
         }
         if (envRes.data) {
           setEnvironments(envRes.data)
@@ -66,7 +74,7 @@ export default function PublishPage({ params }: PageProps) {
       }
     }
     fetchData()
-  }, [namespace, name, t])
+  }, [namespace, name, t, setRecentApp])
 
   const handlePublish = async () => {
     if (!selectedEnv) {

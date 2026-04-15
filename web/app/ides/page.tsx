@@ -26,6 +26,7 @@ import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 import { getApplications } from "@/lib/api/applications"
+import { useRecentAppStore } from "@/store/recent-app"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment } from "@/lib/api/types"
@@ -46,6 +47,7 @@ function IDEPageContent() {
   const { t } = useLanguage()
 
   const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
+  const { recentApp, setRecentApp } = useRecentAppStore()
 
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
@@ -102,7 +104,11 @@ function IDEPageContent() {
         const apps = res.data?.data ?? []
         setApplications(apps)
         if (!selectedApp && apps.length > 0) {
-          updateParams({ app: apps[0].name, env: "" })
+          const recent = recentApp && recentApp.namespace === selectedNamespace
+            ? apps.find(a => a.name === recentApp.name)
+            : undefined
+          const targetApp = recent ?? apps[0]
+          updateParams({ app: targetApp.name, env: "" })
         }
       })
       .catch(() => toast.error(t("apps.fetchError")))
@@ -226,7 +232,18 @@ function IDEPageContent() {
               </span>
               <SelectWithSearch
                 value={selectedApp}
-                onValueChange={(v: string) => updateParams({ app: v, env: "" })}
+                onValueChange={(v: string) => {
+                  const app = applications.find(a => a.name === v)
+                  if (app) {
+                    setRecentApp({
+                      namespace: app.namespace,
+                      name: app.name,
+                      description: app.description,
+                      ownerName: app.ownerName,
+                    })
+                  }
+                  updateParams({ app: v, env: "" })
+                }}
                 options={applications.map((app) => ({ value: app.name, label: app.name }))}
                 placeholder={t("ide.page.selectApp")}
                 searchPlaceholder={t("common.search")}

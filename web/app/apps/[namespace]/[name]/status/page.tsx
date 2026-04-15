@@ -24,6 +24,7 @@ import {
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
+import { useRecentAppStore } from "@/store/recent-app"
 
 export default function ApplicationStatusPage() {
   const params = useParams()
@@ -43,6 +44,11 @@ export default function ApplicationStatusPage() {
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
+  const { setRecentApp } = useRecentAppStore()
+
+  useEffect(() => {
+    setRecentApp({ namespace, name })
+  }, [namespace, name, setRecentApp])
 
   // Fetch environments on mount
   useEffect(() => {
