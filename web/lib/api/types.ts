@@ -135,6 +135,8 @@ export interface Pipeline {
   environment: string
   createdTime: string
   deployMode?: DeployMode
+  operatorId?: string
+  operatorName?: string
 }
 
 export interface ConfigMap {

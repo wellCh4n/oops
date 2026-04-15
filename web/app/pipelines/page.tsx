@@ -256,7 +256,9 @@ function PipelinesContent() {
         }
         table={
           <>
-            <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
+            <div className="overflow-x-auto">
+              <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
+            </div>
             {selectedApp && (
               <div className="flex items-center justify-end gap-4 mt-2">
                 <div className="flex items-center gap-2">

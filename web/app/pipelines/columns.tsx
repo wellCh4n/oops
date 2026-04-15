@@ -16,7 +16,7 @@ export const getPipelineColumns = (
   {
     accessorKey: "id",
     header: "ID",
-    size: 300,
+    size: 260,
     cell: ({ row }) => (
       <div className="whitespace-nowrap">
         <Copyable value={row.original.id} maxLength={Infinity} />
@@ -26,10 +26,12 @@ export const getPipelineColumns = (
   {
     accessorKey: "environment",
     header: t("pipelines.col.environment"),
+    size: 80,
   },
   {
     accessorKey: "deployMode",
     header: t("pipelines.col.deployMode"),
+    size: 100,
     cell: ({ row }) => {
       const deployMode = row.original.deployMode
       if (!deployMode) return <span className="text-muted-foreground">-</span>
@@ -39,6 +41,7 @@ export const getPipelineColumns = (
   {
     accessorKey: "status",
     header: t("pipelines.col.status"),
+    size: 90,
     cell: ({ row }) => {
       const status = row.original.status
       let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
@@ -60,30 +63,41 @@ export const getPipelineColumns = (
     }
   },
   {
+    accessorKey: "operatorName",
+    header: t("pipelines.col.operator"),
+    size: 90,
+    cell: ({ row }) => {
+      return row.original.operatorName || <span className="text-muted-foreground">-</span>
+    }
+  },
+  {
     accessorKey: "createdTime",
     header: t("pipelines.col.createdTime"),
+    size: 150,
     cell: ({ row }) => {
         if (!row.original.createdTime) return "-"
-        return new Date(row.original.createdTime).toLocaleString()
+        const d = new Date(row.original.createdTime)
+        return d.toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     }
   },
   {
     id: "actions",
+    size: 220,
     cell: ({ row }) => {
       return (
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" onClick={() => onView(row.original)}>
+        <div className="flex items-center justify-end gap-1.5">
+          <Button variant="outline" size="sm" className="h-8 px-2 gap-1" onClick={() => onView(row.original)}>
             <Eye className="h-4 w-4" />
             {t("pipelines.col.view")}
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
-            <Button variant="default" size="sm" onClick={() => onDeploy(row.original)}>
+            <Button variant="default" size="sm" className="h-8 px-2 gap-1" onClick={() => onDeploy(row.original)}>
               <Rocket className="h-4 w-4" />
               {t("pipelines.col.deployBtn")}
             </Button>
           )}
           {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
-            <Button variant="destructive" size="sm" onClick={() => onStop(row.original)}>
+            <Button variant="destructive" size="sm" className="h-8 px-2 gap-1" onClick={() => onStop(row.original)}>
               <Ban className="h-4 w-4" />
               {t("pipelines.col.stop")}
             </Button>
