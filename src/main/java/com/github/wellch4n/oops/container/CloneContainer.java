@@ -31,6 +31,10 @@ public class CloneContainer extends BaseContainer {
             args.add(branch);
         }
 
+        if (applicationBuildConfig.getRepository() == null || applicationBuildConfig.getRepository().isBlank()) {
+            throw new IllegalArgumentException("Repository URL must not be empty for application: " + application.getName());
+        }
+
         args.add(applicationBuildConfig.getRepository());
         args.add("/workspace");
 
