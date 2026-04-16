@@ -98,7 +98,7 @@ const en = {
   "ide.deleteSuccess": "IDE deleted",
   "ide.deleteError": "Failed to delete IDE",
   "ide.deleteConfirmTitle": "Confirm Destroy",
-  "ide.deleteConfirmDesc": "Make sure all changes are committed — any uncommitted code will be permanently lost. This action cannot be undone.",
+  "ide.deleteConfirmDesc": "Make sure all changes are committed — any uncommitted code will be permanently lost. This action cannot be undone. Type OK to confirm.",
   "ide.deleteConfirmBtn": "Destroy",
   "ide.deleteConfirmPlaceholder": "Type \"OK\" to confirm",
   "ide.deleting": "Destroying...",

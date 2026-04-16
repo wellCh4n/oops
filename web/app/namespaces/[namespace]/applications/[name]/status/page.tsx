@@ -25,6 +25,8 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
+import { applicationPodLogsPath, applicationPodTerminalPath } from "@/lib/routes"
+import { useNamespaceStore } from "@/store/namespace"
 
 export default function ApplicationStatusPage() {
   const params = useParams()
@@ -45,10 +47,12 @@ export default function ApplicationStatusPage() {
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
+  const setSelectedNamespace = useNamespaceStore((state) => state.setSelectedNamespace)
 
   useEffect(() => {
     setRecentApp({ namespace, name })
-  }, [namespace, name, setRecentApp])
+    setSelectedNamespace(namespace)
+  }, [namespace, name, setRecentApp, setSelectedNamespace])
 
   // Fetch environments on mount
   useEffect(() => {
@@ -146,11 +150,11 @@ export default function ApplicationStatusPage() {
   }
 
   const handleViewLogs = (podName: string) => {
-    window.open(`/apps/${namespace}/${name}/pods/${podName}/logs?env=${selectedEnv}`, '_blank')
+    window.open(`${applicationPodLogsPath(namespace, name, podName)}?env=${selectedEnv}`, "_blank")
   }
 
   const handleTerminal = (podName: string) => {
-    window.open(`/apps/${namespace}/${name}/pods/${podName}/terminal?env=${selectedEnv}`, '_blank')
+    window.open(`${applicationPodTerminalPath(namespace, name, podName)}?env=${selectedEnv}`, "_blank")
   }
 
   const columns = getStatusColumns(t, handleRestartClick, handleViewLogs, handleTerminal)

@@ -21,6 +21,13 @@ import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
+import {
+  applicationIdesPath,
+  applicationPath,
+  applicationPipelinesPath,
+  applicationPublishPath,
+  applicationStatusPath,
+} from "@/lib/routes"
 
 type CommandType = "status" | "deploy" | "ide" | "pipeline" | "app" | null
 
@@ -192,19 +199,19 @@ export function CommandPalette() {
 
     switch (selectedCommand) {
       case "status":
-        router.push(`/apps/${app.namespace}/${app.name}/status`)
+        router.push(applicationStatusPath(app.namespace, app.name))
         break
       case "deploy":
-        router.push(`/apps/${app.namespace}/${app.name}/publish`)
+        router.push(applicationPublishPath(app.namespace, app.name))
         break
       case "ide":
-        router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
+        router.push(applicationIdesPath(app.namespace, app.name))
         break
       case "pipeline":
-        router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+        router.push(applicationPipelinesPath(app.namespace, app.name))
         break
       case "app":
-        router.push(`/apps/${app.namespace}/${app.name}`)
+        router.push(applicationPath(app.namespace, app.name))
         break
     }
   }

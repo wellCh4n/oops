@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ApplicationForm } from "../../application-form"
+import { ApplicationForm } from "@/app/apps/application-form"
 import { 
   getApplication, 
   getApplicationBuildConfig, 
@@ -22,6 +22,8 @@ import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { useRecentAppStore } from "@/store/recent-app"
+import { applicationsPath } from "@/lib/routes"
+import { useNamespaceStore } from "@/store/namespace"
 
 export default function EditAppPage() {
   const router = useRouter()
@@ -38,8 +40,10 @@ export default function EditAppPage() {
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
+  const setSelectedNamespace = useNamespaceStore((state) => state.setSelectedNamespace)
 
   useEffect(() => {
+    setSelectedNamespace(namespace)
     const fetchApp = async () => {
       try {
         const [appRes, buildConfigRes, buildEnvRes, perfEnvRes, serviceRes] = await Promise.all([
@@ -79,13 +83,13 @@ export default function EditAppPage() {
       } catch (error) {
         console.error("Failed to fetch application:", error)
         toast.error(t("apps.detail.fetchError"))
-        router.push("/apps")
+        router.push(applicationsPath(namespace))
       } finally {
         setLoading(false)
       }
     }
     fetchApp()
-  }, [namespace, name, router, t, setRecentApp])
+  }, [namespace, name, router, t, setRecentApp, setSelectedNamespace])
 
   if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
