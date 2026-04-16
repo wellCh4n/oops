@@ -29,6 +29,8 @@ import { ExternalLink, Check, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { applicationStatusPath } from "@/lib/routes"
+import { useNamespaceStore } from "@/store/namespace"
 
 // WebSocket message types
 interface StepsMessage {
@@ -106,6 +108,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [statusLoading, setStatusLoading] = useState(false)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
+  const setSelectedNamespace = useNamespaceStore((state) => state.setSelectedNamespace)
 
 
   const fetchPipeline = useCallback(async () => {
@@ -130,13 +133,14 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }
 
   useEffect(() => {
+    setSelectedNamespace(namespace)
     const interval = setInterval(fetchPipeline, 5000)
     const initialTimeout = setTimeout(fetchPipeline, 0)
     return () => {
       clearInterval(interval)
       clearTimeout(initialTimeout)
     }
-  }, [fetchPipeline])
+  }, [fetchPipeline, namespace, setSelectedNamespace])
 
   // Poll application status when pipeline environment is known
   useEffect(() => {
@@ -377,7 +381,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <h3 className="font-semibold">{t("apps.pipeline.runningStatus")}</h3>
               {pipeline?.environment && (
                 <Link
-                  href={`/apps/${namespace}/${name}/status?env=${pipeline.environment}`}
+                  href={`${applicationStatusPath(namespace, name)}?env=${pipeline.environment}`}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {t("apps.pipeline.viewDetails")}

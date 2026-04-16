@@ -14,6 +14,8 @@ import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
 import { useRecentAppStore } from "@/store/recent-app"
+import { applicationPath, applicationPipelinePath, applicationsPath } from "@/lib/routes"
+import { useNamespaceStore } from "@/store/namespace"
 
 interface PageProps {
   params: Promise<{
@@ -36,8 +38,10 @@ export default function PublishPage({ params }: PageProps) {
   const [loading, setLoading] = useState(false)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
+  const setSelectedNamespace = useNamespaceStore((state) => state.setSelectedNamespace)
 
   useEffect(() => {
+    setSelectedNamespace(namespace)
     const fetchData = async () => {
       try {
         const [appRes, envRes, lastPipelineRes] = await Promise.all([
@@ -74,7 +78,7 @@ export default function PublishPage({ params }: PageProps) {
       }
     }
     fetchData()
-  }, [namespace, name, t, setRecentApp])
+  }, [namespace, name, t, setRecentApp, setSelectedNamespace])
 
   const handlePublish = async () => {
     if (!selectedEnv) {
@@ -89,9 +93,9 @@ export default function PublishPage({ params }: PageProps) {
         toast.success(t("apps.publish.submitSuccessPrefix") + selectedEnv)
         // Assuming the backend returns the pipeline ID in res.data
         if (res.data) {
-             router.push(`/apps/${namespace}/${name}/pipelines/${res.data}`)
+             router.push(applicationPipelinePath(namespace, name, res.data))
         } else {
-             router.push("/apps")
+             router.push(applicationsPath(namespace))
         }
       } else {
         toast.error(res.message || t("apps.publish.submitError"))
@@ -133,7 +137,7 @@ export default function PublishPage({ params }: PageProps) {
             <p className="text-sm text-destructive">
               {t("apps.publish.noEnvPrefix")}
               <Link
-                href={`/apps/${namespace}/${name}?tab=app-info`}
+                href={`${applicationPath(namespace, name)}?tab=app-info`}
                 className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
               >
                 <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>

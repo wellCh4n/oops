@@ -47,6 +47,8 @@ import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { Locale } from "@/lib/i18n"
+import { useRecentAppStore } from "@/store/recent-app"
+import { applicationIdesPath, applicationPipelinesPath, applicationsPath } from "@/lib/routes"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -59,6 +61,7 @@ export function AppSidebar() {
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const loadFeatures = useFeaturesStore((s) => s.load)
   const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const recentApp = useRecentAppStore((state) => state.recentApp)
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
@@ -73,6 +76,21 @@ export function AppSidebar() {
   function confirmLogout() {
     setLogoutOpen(false)
     handleLogout()
+  }
+
+  function getNavHref(url: string) {
+    if (url === "/namespaces") {
+      return selectedNamespace ? applicationsPath(selectedNamespace) : url
+    }
+    if (url === "/ides") {
+      if (recentApp) return applicationIdesPath(recentApp.namespace, recentApp.name)
+      return selectedNamespace ? applicationsPath(selectedNamespace) : "/namespaces"
+    }
+    if (url === "/pipelines") {
+      if (recentApp) return applicationPipelinesPath(recentApp.namespace, recentApp.name)
+      return selectedNamespace ? applicationsPath(selectedNamespace) : "/namespaces"
+    }
+    return url
   }
 
   return (
@@ -130,7 +148,7 @@ export function AppSidebar() {
                         isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                         tooltip={t(item.title)}
                       >
-                        <Link href={selectedNamespace && (item.url === "/ides" || item.url === "/pipelines") ? `${item.url}?namespace=${selectedNamespace}` : item.url}>
+                        <Link href={getNavHref(item.url)}>
                           <item.icon />
                           <span>{t(item.title)}</span>
                         </Link>

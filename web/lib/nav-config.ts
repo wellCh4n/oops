@@ -29,21 +29,21 @@ export const navConfig: NavGroup[] = [
     items: [
       {
         title: "nav.apps",
-        url: "/apps",
+        url: "/namespaces",
         icon: LayoutGrid,
-        match: (pathname) => pathname === "/apps" || (pathname.startsWith("/apps/") && !pathname.includes("/pipelines/")),
+        match: (pathname) => pathname === "/namespaces" || (pathname.startsWith("/namespaces/") && pathname.includes("/applications") && !pathname.includes("/pipelines") && !pathname.includes("/ides")),
       },
       {
         title: "nav.ide",
         url: "/ides",
         icon: SquareCode,
-        match: (pathname) => pathname === "/ides" || pathname.startsWith("/ides/"),
+        match: (pathname) => pathname.startsWith("/namespaces/") && pathname.includes("/ides"),
       },
       {
         title: "nav.pipelines",
         url: "/pipelines",
         icon: GitBranch,
-        match: (pathname) => pathname === "/pipelines" || pathname.startsWith("/pipelines/") || pathname.includes("/pipelines/"),
+        match: (pathname) => pathname.startsWith("/namespaces/") && pathname.includes("/pipelines"),
       },
     ],
   },

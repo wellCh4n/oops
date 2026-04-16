@@ -27,7 +27,7 @@ export function HeaderTitle() {
       if (group.url === pathname) {
         return group.title
       }
-      const item = group.items.find((item) => item.url === pathname || pathname.startsWith(item.url + "/"))
+      const item = group.items.find((item) => item.match ? item.match(pathname) : item.url === pathname || pathname.startsWith(item.url + "/"))
       if (item) {
         return item.title
       }

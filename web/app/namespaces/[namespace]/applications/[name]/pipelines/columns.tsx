@@ -8,6 +8,7 @@ import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Check, X } from "lucide-react"
 import Link from "next/link"
+import { applicationPipelinePath } from "@/lib/routes"
 
 interface DeployStatusCellProps {
   images: string[]
@@ -22,7 +23,7 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
   const icon = !tag ? null : versionMached ? (
     <Check className="h-4 w-4 text-green-500" />
   ) : (
-    <Link href={`/apps/${namespace}/${appName}/pipelines/${tag}`}>
+    <Link href={applicationPipelinePath(namespace, appName, tag)}>
       <X className="h-4 w-4 text-red-500 cursor-pointer" />
     </Link>
   )

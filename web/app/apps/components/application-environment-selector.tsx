@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { Server, ExternalLink } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import Link from "next/link"
+import { applicationPath } from "@/lib/routes"
 
 interface ApplicationEnvironmentSelectorProps {
   namespace?: string
@@ -69,7 +70,7 @@ export function ApplicationEnvironmentSelector({
           <div className="text-sm text-muted-foreground px-3 py-1.5 border rounded-md border-dashed">
             {t("apps.publish.noEnvPrefix")}
             <Link
-              href={`/apps/${namespace}/${applicationName}?tab=app-info`}
+              href={`${applicationPath(namespace ?? "", applicationName ?? "")}?tab=app-info`}
               className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
             >
               <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>
