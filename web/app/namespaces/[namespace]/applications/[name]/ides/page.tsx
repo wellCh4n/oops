@@ -67,6 +67,7 @@ export default function IDEPage() {
   const [deleteTarget, setDeleteTarget] = useState<IDEInstance | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [deleting, setDeleting] = useState(false)
+  const isDeleteConfirmed = deleteConfirmText.trim().toUpperCase() === "OK"
 
   const buildRoute = useCallback((targetNamespace: string, targetName: string, updates?: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -454,13 +455,13 @@ export default function IDEPage() {
           <Input
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
-            placeholder={deleteTarget?.name ?? ""}
+            placeholder="OK"
           />
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting || deleteConfirmText !== deleteTarget?.name}
+              disabled={deleting || !isDeleteConfirmed}
             >
               {t("common.confirm")}
             </AlertDialogAction>

@@ -98,7 +98,7 @@ const zh = {
   "ide.deleteSuccess": "开发环境已销毁",
   "ide.deleteError": "开发环境销毁失败",
   "ide.deleteConfirmTitle": "确认销毁",
-  "ide.deleteConfirmDesc": "请确保所有改动已提交，否则未提交的代码将永久丢失。此操作不可恢复。",
+  "ide.deleteConfirmDesc": "请确保所有改动已提交，否则未提交的代码将永久丢失。此操作不可恢复。输入 OK 确认。",
   "ide.deleteConfirmBtn": "销毁",
   "ide.deleteConfirmPlaceholder": "输入 \"OK\" 确认",
   "ide.deleting": "销毁中...",
