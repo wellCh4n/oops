@@ -1,11 +1,13 @@
 "use client"
 
-import { use, useState } from "react"
+import { use, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Rocket } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { useFeaturesStore } from "@/store/features"
+import { getApplication } from "@/lib/api/applications"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +26,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
   const searchParams = useSearchParams()
   const router = useRouter()
   const [showConfirm, setShowConfirm] = useState(false)
+  const [publishVisible, setPublishVisible] = useState(false)
 
   const url = features.ideHost
     ? `${features.ideHttps ? "https" : "http"}://${id}.${features.ideHost}`
@@ -31,6 +34,24 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
 
   const namespace = searchParams.get("namespace")
   const app = searchParams.get("app")
+
+  useEffect(() => {
+    if (namespace && app) {
+      getApplication(namespace, app)
+        .then((res) => {
+          if (res.data) {
+            setPublishVisible(true)
+          } else {
+            setPublishVisible(false)
+            toast.error(t("ide.publishAppNotFound"))
+          }
+        })
+        .catch(() => {
+          setPublishVisible(false)
+          toast.error(t("ide.publishAppNotFound"))
+        })
+    }
+  }, [namespace, app, t])
 
   const handleConfirmPublish = () => {
     setShowConfirm(false)
@@ -53,7 +74,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {namespace && app && (
+      {publishVisible && (
         <button
           onClick={() => setShowConfirm(true)}
           className="fixed top-0.75 right-3 z-30 flex items-center gap-2 text-xs text-primary-foreground bg-primary px-3 py-1.5 rounded-full border border-primary-foreground/20 shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"

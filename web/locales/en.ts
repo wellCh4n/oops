@@ -115,6 +115,7 @@ const en = {
   "ide.publish": "Publish",
   "ide.publishConfirmTitle": "Confirm Navigation",
   "ide.publishConfirmDesc": "Please make sure all changes are saved and committed to Git.",
+  "ide.publishAppNotFound": "Linked app not found, publish button hidden",
   "apps.tab.appInfo": "Info",
   "apps.tab.buildConfig": "Build",
   "apps.tab.performanceConfig": "Performance",

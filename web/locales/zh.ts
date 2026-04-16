@@ -115,6 +115,7 @@ const zh = {
   "ide.publish": "发布",
   "ide.publishConfirmTitle": "确认跳转",
   "ide.publishConfirmDesc": "请确认所有改动都已保存，并提交到 Git。",
+  "ide.publishAppNotFound": "关联应用不存在，发布按钮已隐藏",
   "apps.tab.appInfo": "应用信息",
   "apps.tab.buildConfig": "构建配置",
   "apps.tab.performanceConfig": "性能配置",
