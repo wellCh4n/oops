@@ -46,8 +46,10 @@ public class ApplicationController {
     public Result<Page<ApplicationResponse>> getApplications(@PathVariable String namespace,
                                                              @RequestParam(required = false) String keyword,
                                                              @RequestParam(defaultValue = "1") int page,
-                                                             @RequestParam(defaultValue = "10") int size) {
-        return Result.success(applicationService.getApplications(namespace, keyword, page, size));
+                                                             @RequestParam(defaultValue = "10") int size,
+                                                             Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(applicationService.getApplications(namespace, keyword, page, size, principal.userId()));
     }
 
     @PostMapping

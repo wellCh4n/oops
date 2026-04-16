@@ -64,11 +64,11 @@ public class ApplicationService {
         return toApplicationResponse(applicationRepository.findByNamespaceAndName(namespace, name));
     }
 
-    public Page<ApplicationResponse> getApplications(String namespace, String keyword, int page, int size) {
+    public Page<ApplicationResponse> getApplications(String namespace, String keyword, int page, int size, String currentUserId) {
         Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
         org.springframework.data.domain.Page<Application> applicationPage =
-                applicationRepository.findByNamespaceAndNameContainingIgnoreCase(
-                        namespace, StringUtils.defaultIfBlank(keyword, ""), pageable);
+                applicationRepository.findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
+                        namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, pageable);
         return new Page<>(
                 applicationPage.getTotalElements(),
                 toApplicationResponses(applicationPage.getContent()),
