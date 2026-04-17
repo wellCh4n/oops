@@ -41,10 +41,15 @@ export function ApplicationForm({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const validTabs = new Set([
+    "app-info",
+    "build-config",
+    "performance-info",
+    "service-info",
+    "config-info",
+  ])
   const rawTab = searchParams.get("tab")
-  const currentTab = (rawTab === "source-info" || rawTab === "build-info")
-    ? "build-config"
-    : (rawTab || "app-info")
+  const currentTab = rawTab && validTabs.has(rawTab) ? rawTab : "app-info"
   const { t } = useLanguage()
 
   const handleTabChange = (value: string) => {
