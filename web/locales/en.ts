@@ -9,6 +9,8 @@ const en = {
   "login.submit": "Sign In",
   "login.or": "or",
   "login.feishu": "Sign in with Lark",
+  "login.callback.processing": "Redirecting...",
+  "login.callback.error": "Login failed: ",
   // Navigation
   "nav.cluster": "Cluster",
   "nav.nodes": "Nodes",

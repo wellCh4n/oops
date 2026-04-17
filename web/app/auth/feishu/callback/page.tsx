@@ -4,9 +4,11 @@ import { useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { setAuth } from "@/lib/auth"
 import { getCurrentUser, feishuCallback } from "@/lib/api/auth"
+import { useLanguage } from "@/contexts/language-context"
 
 export default function FeishuCallbackPage() {
   const searchParams = useSearchParams()
+  const { t } = useLanguage()
 
   useEffect(() => {
     const code = searchParams.get("code")
@@ -28,14 +30,14 @@ export default function FeishuCallbackPage() {
         window.location.href = "/"
       })
       .catch((err: Error) => {
-        alert("登录失败: " + err.message)
+        alert(t("login.callback.error") + err.message)
         window.location.href = "/login"
       })
-  }, [searchParams])
+  }, [searchParams, t])
 
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-      <p>处理中...</p>
+      <p>{t("login.callback.processing")}</p>
     </div>
   )
 }
