@@ -46,7 +46,7 @@ import { clearAuth } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
-import { Locale } from "@/lib/i18n"
+import { localeLabels, Locale } from "@/lib/i18n"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -74,6 +74,8 @@ export function AppSidebar() {
     setLogoutOpen(false)
     handleLogout()
   }
+
+  const locales = Object.keys(localeLabels) as Locale[]
 
   return (
     <>
@@ -172,8 +174,11 @@ export function AppSidebar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top">
                     <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-                      <DropdownMenuRadioItem value="zh">{t("lang.zh")}</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="en">{t("lang.en")}</DropdownMenuRadioItem>
+                      {locales.map((itemLocale) => (
+                        <DropdownMenuRadioItem key={itemLocale} value={itemLocale}>
+                          {localeLabels[itemLocale]}
+                        </DropdownMenuRadioItem>
+                      ))}
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
@@ -207,8 +212,11 @@ export function AppSidebar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" align="end">
                   <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
-                    <DropdownMenuRadioItem value="zh">{t("lang.zh")}</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="en">{t("lang.en")}</DropdownMenuRadioItem>
+                    {locales.map((itemLocale) => (
+                      <DropdownMenuRadioItem key={itemLocale} value={itemLocale}>
+                        {localeLabels[itemLocale]}
+                      </DropdownMenuRadioItem>
+                    ))}
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
