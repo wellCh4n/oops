@@ -30,7 +30,13 @@ export default async function RootLayout({
   const sidebarState = cookieStore.get("sidebar_state")
   const defaultSidebarOpen = sidebarState ? sidebarState.value === "true" : true
   const localeCookie = cookieStore.get("locale")?.value
-  const initialLocale: Locale = localeCookie === "en" || localeCookie === "zh" ? localeCookie : defaultLocale
+  const initialLocale: Locale =
+    localeCookie === "zh-CN" ||
+    localeCookie === "zh-TW" ||
+    localeCookie === "en-US" ||
+    localeCookie === "ja-JP"
+      ? localeCookie
+      : defaultLocale
 
   return (
     <html lang={initialLocale} suppressHydrationWarning>
