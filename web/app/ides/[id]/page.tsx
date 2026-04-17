@@ -61,11 +61,16 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
   }
 
   return (
-    <ContentPage title={id} className="gap-0">
+    <ContentPage
+      title={id}
+      flush
+      className="-m-4 w-[calc(100%+2rem)] gap-0 min-h-0 overflow-hidden self-stretch"
+      bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
+    >
       {url && loaded ? (
         <iframe
           src={url}
-          className="flex-1 min-h-0 -mx-4 -mb-4 w-[calc(100%+2rem)] border-0"
+          className="flex-1 min-h-0 w-full border-0"
           allow="clipboard-read; clipboard-write"
         />
       ) : (
