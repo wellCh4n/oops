@@ -19,7 +19,6 @@ import { useRecentAppStore } from "@/store/recent-app"
 import {
   applicationPipelinePath,
   applicationPipelinesPath,
-  applicationsPath,
 } from "@/lib/routes"
 import {
   AlertDialog,
@@ -135,12 +134,23 @@ export default function PipelinesPage() {
     fetchPipelines()
   }, [fetchPipelines])
 
-  const handleNamespaceChange = (targetNamespace: string) => {
+  const handleNamespaceChange = async (targetNamespace: string) => {
     if (recentApp?.namespace === targetNamespace) {
       router.push(buildRoute(targetNamespace, recentApp.name, { env: "all", page: "1" }))
       return
     }
-    router.push(applicationsPath(targetNamespace))
+    try {
+      const res = await getApplications(targetNamespace, undefined, 1, 1)
+      const first = res.data?.data?.[0]
+      if (first) {
+        setRecentApp({ namespace: first.namespace, name: first.name, description: first.description, ownerName: first.ownerName })
+        router.push(buildRoute(targetNamespace, first.name, { env: "all", page: "1" }))
+      } else {
+        router.push(buildRoute(targetNamespace, name, { env: "all", page: "1" }))
+      }
+    } catch {
+      router.push(buildRoute(targetNamespace, name, { env: "all", page: "1" }))
+    }
   }
 
   const handleApplicationChange = (targetName: string) => {

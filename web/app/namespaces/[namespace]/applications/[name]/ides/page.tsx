@@ -30,7 +30,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useNamespaceStore } from "@/store/namespace"
 import { useRecentAppStore } from "@/store/recent-app"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
-import { applicationIdePath, applicationIdesPath, applicationsPath } from "@/lib/routes"
+import { applicationIdePath, applicationIdesPath } from "@/lib/routes"
 import { ChevronDown, ExternalLink, Layers, LayoutGrid, Plus, Power, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
@@ -204,12 +204,23 @@ export default function IDEPage() {
     }
   }
 
-  const handleNamespaceChange = (targetNamespace: string) => {
+  const handleNamespaceChange = async (targetNamespace: string) => {
     if (recentApp?.namespace === targetNamespace) {
       router.push(buildRoute(targetNamespace, recentApp.name, { env: "" }))
       return
     }
-    router.push(applicationsPath(targetNamespace))
+    try {
+      const res = await getApplications(targetNamespace, undefined, 1, 1)
+      const first = res.data?.data?.[0]
+      if (first) {
+        setRecentApp({ namespace: first.namespace, name: first.name, description: first.description, ownerName: first.ownerName })
+        router.push(buildRoute(targetNamespace, first.name, { env: "" }))
+      } else {
+        router.push(buildRoute(targetNamespace, name, { env: "" }))
+      }
+    } catch {
+      router.push(buildRoute(targetNamespace, name, { env: "" }))
+    }
   }
 
   const handleApplicationChange = (targetName: string) => {
@@ -265,13 +276,15 @@ export default function IDEPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <ApplicationEnvironmentSelector
-                  namespace={namespace}
-                  applicationName={name}
-                  value={selectedEnv}
-                  onValueChange={(value) => updateParams({ env: value })}
-                  onEnvironmentsLoaded={setEnvironments}
-                />
+                {applications.length > 0 && (
+                  <ApplicationEnvironmentSelector
+                    namespace={namespace}
+                    applicationName={name}
+                    value={selectedEnv}
+                    onValueChange={(value) => updateParams({ env: value })}
+                    onEnvironmentsLoaded={setEnvironments}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
