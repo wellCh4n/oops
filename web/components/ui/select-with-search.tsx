@@ -85,7 +85,7 @@ export function SelectWithSearch({
                   key={option.value}
                   value={option.value}
                   onSelect={(currentValue) => {
-                    onValueChange?.(currentValue === value ? "" : currentValue)
+                    onValueChange?.(currentValue)
                     setOpen(false)
                   }}
                   className="flex items-center gap-2 cursor-pointer"
