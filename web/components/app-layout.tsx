@@ -36,22 +36,15 @@ export function AppLayout({
     loadFeatures()
   }, [loadFeatures])
 
-  if (isLoginPage) {
-    return (
-      <LanguageProvider initialLocale={initialLocale}>
-        {children}
-        <Toaster position="top-center" />
-      </LanguageProvider>
-    )
-  }
+  const layout = (
+    <LanguageProvider initialLocale={initialLocale}>
+      {children}
+      <Toaster position="top-center" />
+    </LanguageProvider>
+  )
 
-  if (isPublicPage) {
-    return (
-      <>
-        {children}
-        <Toaster position="top-center" />
-      </>
-    )
+  if (isLoginPage || isPublicPage) {
+    return layout
   }
 
   return (
