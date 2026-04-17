@@ -46,7 +46,7 @@ export function DataTable<TData, TValue>({
     if (loading) {
       return (
         <TableRow>
-          <TableCell colSpan={columns.length} className="py-2 text-center text-muted-foreground">
+          <TableCell colSpan={columns.length} className="px-4 py-2 text-center text-muted-foreground">
             {t("common.loading")}
           </TableCell>
         </TableRow>
@@ -55,7 +55,7 @@ export function DataTable<TData, TValue>({
     if (!table.getRowModel().rows?.length) {
       return (
         <TableRow>
-          <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+          <TableCell colSpan={columns.length} className="h-24 px-4 text-center text-muted-foreground">
             {t("common.noData")}
           </TableCell>
         </TableRow>
@@ -66,6 +66,7 @@ export function DataTable<TData, TValue>({
         {row.getVisibleCells().map((cell) => (
           <TableCell
             key={cell.id}
+            className="px-4 py-2"
             style={cell.column.columnDef.size !== undefined ? { width: cell.column.columnDef.size, minWidth: cell.column.columnDef.size } : undefined}
           >
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -84,6 +85,7 @@ export function DataTable<TData, TValue>({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
+                  className="h-10 px-4"
                   style={header.column.columnDef.size !== undefined ? { width: header.column.columnDef.size, minWidth: header.column.columnDef.size } : undefined}
                 >
                   {header.isPlaceholder

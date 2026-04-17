@@ -52,7 +52,7 @@ export function AppLayout({
       <SidebarProvider defaultOpen={defaultSidebarOpen}>
         <AppSidebar />
         <SidebarInset className="overflow-x-auto">
-          <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-y-auto min-w-[720px]">
+          <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-hidden min-w-[720px]">
             {children}
           </div>
         </SidebarInset>
