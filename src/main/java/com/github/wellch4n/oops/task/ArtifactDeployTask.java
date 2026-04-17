@@ -8,10 +8,13 @@ import com.github.wellch4n.oops.enums.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
+import io.fabric8.kubernetes.api.model.autoscaling.v2.HorizontalPodAutoscaler;
+import io.fabric8.kubernetes.api.model.autoscaling.v2.HorizontalPodAutoscalerBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import io.fabric8.kubernetes.client.dsl.base.PatchType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -70,10 +73,9 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         checkNamespace();
         checkImagePullSecret();
 
-        StatefulSet statefulSet = new StatefulSetBuilder()
+        StatefulSetBuilder ssBuilder = new StatefulSetBuilder()
                 .withNewMetadata().withName(applicationName).withLabels(labels).endMetadata()
                 .withNewSpec()
-                    .withReplicas(perfEnvConfig.getReplicas() == null ? 0 : perfEnvConfig.getReplicas())
                     .withServiceName(applicationName)
                     .withNewSelector().withMatchLabels(labels).endSelector()
                     .withNewTemplate()
@@ -94,15 +96,101 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                             .addNewImagePullSecret("dockerhub")
                         .endSpec()
                     .endTemplate()
-                .endSpec()
-                .build();
+                .endSpec();
 
+        if (!isAutoscalingEnabled()) {
+            ssBuilder.editSpec()
+                    .withReplicas(perfEnvConfig.getReplicas() == null ? 0 : perfEnvConfig.getReplicas())
+                    .endSpec();
+        }
+
+        StatefulSet statefulSet = ssBuilder.build();
         client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).patch(patchContext);
 
+        checkHpa();
         checkService();
         checkIngressRoute();
 
         return true;
+    }
+
+    private boolean isAutoscalingEnabled() {
+        var cfg = perfEnvConfig.getAutoscaling();
+        return cfg != null && Boolean.TRUE.equals(cfg.getEnabled());
+    }
+
+    private void checkHpa() {
+        String namespace = application.getNamespace();
+        String applicationName = application.getName();
+
+        var hpaClient = client.autoscaling().v2()
+                .horizontalPodAutoscalers()
+                .inNamespace(namespace);
+
+        if (!isAutoscalingEnabled()) {
+            try {
+                hpaClient.withName(applicationName).delete();
+            } catch (Exception e) {
+                log.warn("Failed to delete HPA for {}/{}: {}", namespace, applicationName, e.getMessage());
+            }
+            return;
+        }
+
+        var cfg = perfEnvConfig.getAutoscaling();
+        int minReplicas = cfg.getMinReplicas() == null ? 1 : cfg.getMinReplicas();
+        int maxReplicas = cfg.getMaxReplicas() == null ? Math.max(minReplicas, 10) : cfg.getMaxReplicas();
+        if (maxReplicas < minReplicas) {
+            maxReplicas = minReplicas;
+        }
+
+        List<io.fabric8.kubernetes.api.model.autoscaling.v2.MetricSpec> metrics = new ArrayList<>();
+        if (cfg.getTargetCpuUtilization() != null) {
+            metrics.add(buildResourceMetric("cpu", cfg.getTargetCpuUtilization()));
+        }
+        if (cfg.getTargetMemoryUtilization() != null) {
+            metrics.add(buildResourceMetric("memory", cfg.getTargetMemoryUtilization()));
+        }
+        if (metrics.isEmpty()) {
+            metrics.add(buildResourceMetric("cpu", 70));
+        }
+
+        HorizontalPodAutoscaler hpa = new HorizontalPodAutoscalerBuilder()
+                .withNewMetadata()
+                    .withName(applicationName)
+                    .withNamespace(namespace)
+                    .withLabels(labels)
+                .endMetadata()
+                .withNewSpec()
+                    .withMinReplicas(minReplicas)
+                    .withMaxReplicas(maxReplicas)
+                    .withNewScaleTargetRef()
+                        .withApiVersion("apps/v1")
+                        .withKind("StatefulSet")
+                        .withName(applicationName)
+                    .endScaleTargetRef()
+                    .withMetrics(metrics)
+                .endSpec()
+                .build();
+
+        try {
+            hpaClient.resource(hpa).patch(patchContext);
+        } catch (Exception e) {
+            log.error("Failed to apply HPA for {}/{}:", namespace, applicationName, e);
+            throw e;
+        }
+    }
+
+    private io.fabric8.kubernetes.api.model.autoscaling.v2.MetricSpec buildResourceMetric(String name, int utilization) {
+        return new io.fabric8.kubernetes.api.model.autoscaling.v2.MetricSpecBuilder()
+                .withType("Resource")
+                .withNewResource()
+                    .withName(name)
+                    .withNewTarget()
+                        .withType("Utilization")
+                        .withAverageUtilization(utilization)
+                    .endTarget()
+                .endResource()
+                .build();
     }
 
     private void checkNamespace() {

@@ -37,6 +37,17 @@ public class ApplicationPerformanceConfig extends BaseDataObject {
         private String memoryLimit;
 
         private Integer replicas;
+
+        private AutoscalingConfig autoscaling;
+    }
+
+    @Data
+    public static class AutoscalingConfig {
+        private Boolean enabled;
+        private Integer minReplicas;
+        private Integer maxReplicas;
+        private Integer targetCpuUtilization;
+        private Integer targetMemoryUtilization;
     }
 
     @Converter

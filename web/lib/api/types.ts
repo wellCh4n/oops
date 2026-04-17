@@ -107,6 +107,15 @@ export interface ApplicationPerformanceConfigEnvironmentConfig {
   cpuLimit?: string
   memoryRequest?: string
   memoryLimit?: string
+  autoscaling?: AutoscalingConfig
+}
+
+export interface AutoscalingConfig {
+  enabled?: boolean
+  minReplicas?: number
+  maxReplicas?: number
+  targetCpuUtilization?: number
+  targetMemoryUtilization?: number
 }
 
 export interface ApplicationPodStatus {
