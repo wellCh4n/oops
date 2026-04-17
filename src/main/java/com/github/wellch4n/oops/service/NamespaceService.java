@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.Namespace;
 import com.github.wellch4n.oops.data.NamespaceRepository;
+import com.github.wellch4n.oops.exception.BizException;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -34,7 +35,7 @@ public class NamespaceService {
     public void updateNamespace(String name, String description) {
         Namespace namespace = namespaceRepository.findFirstByName(name);
         if (namespace == null) {
-            throw new RuntimeException("Namespace not found");
+            throw new BizException("Namespace not found");
         }
         namespace.setDescription(description);
         namespaceRepository.save(namespace);

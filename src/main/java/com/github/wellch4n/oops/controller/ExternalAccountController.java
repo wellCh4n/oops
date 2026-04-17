@@ -2,7 +2,6 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ExternalAccountService;
-import java.io.IOException;
 import java.util.List;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,13 +27,6 @@ public class ExternalAccountController {
 
     @PostMapping("/{provider}/callback")
     public Result<String> callback(@PathVariable String provider, @RequestParam("code") String code) {
-        try {
-            String token = externalAccountService.authenticate(provider, code);
-            return Result.success(token);
-        } catch (IOException e) {
-            return Result.failure("登录失败: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return Result.failure(e.getMessage());
-        }
+        return Result.success(externalAccountService.authenticate(provider, code));
     }
 }

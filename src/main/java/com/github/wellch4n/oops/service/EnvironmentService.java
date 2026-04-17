@@ -2,6 +2,8 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.EnvironmentRepository;
+import com.github.wellch4n.oops.exception.BizException;
+import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import java.util.List;
 import java.util.Optional;
@@ -39,7 +41,7 @@ public class EnvironmentService {
     public Boolean updateEnvironment(String id, Environment environment) {
         Optional<Environment> environmentOptional = environmentRepository.findById(id);
         if (environmentOptional.isEmpty()) {
-            throw new IllegalArgumentException("Environment with id " + id + " does not exist.");
+            throw new BizException("Environment with id " + id + " does not exist.");
         }
 
         Environment existingEnvironment = environmentOptional.get();
@@ -53,9 +55,14 @@ public class EnvironmentService {
     }
 
     public Environment createEnvironment(Environment environment) {
+        try {
+            ResourceNameChecker.check(environment.getName());
+        } catch (IllegalArgumentException e) {
+            throw new BizException(e.getMessage(), e);
+        }
         Environment existing = environmentRepository.findFirstByName(environment.getName());
         if (existing != null) {
-            throw new IllegalArgumentException("Environment already exists: " + environment.getName());
+            throw new BizException("Environment already exists: " + environment.getName());
         }
         return environmentRepository.save(environment);
     }

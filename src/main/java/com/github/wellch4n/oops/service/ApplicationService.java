@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.OopsTypes;
+import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
@@ -95,7 +96,7 @@ public class ApplicationService {
     public Boolean updateApplication(String namespace, String name, Application application) {
         Application exist = applicationRepository.findByNamespaceAndName(namespace, name);
         if (exist == null) {
-            throw new RuntimeException("Application not found");
+            throw new BizException("Application not found");
         }
         exist.setDescription(application.getDescription());
         exist.setOwner(normalizeOwner(application.getOwner()));
@@ -109,7 +110,7 @@ public class ApplicationService {
         }
         Optional<User> user = userService.findById(owner);
         if (user.isEmpty()) {
-            throw new RuntimeException("Owner user not found");
+            throw new BizException("Owner user not found");
         }
         return owner;
     }

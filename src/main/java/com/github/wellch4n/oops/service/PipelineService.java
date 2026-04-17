@@ -3,9 +3,10 @@ package com.github.wellch4n.oops.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.event.PipelineNotificationType;
-import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.PipelineResponse;
@@ -218,15 +219,15 @@ public class PipelineService {
     public Boolean deployPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
-            throw new RuntimeException("Pipeline not found");
+            throw new BizException("Pipeline not found");
         }
         if (!PipelineStatus.BUILD_SUCCEEDED.equals(pipeline.getStatus())) {
-            throw new RuntimeException("Pipeline is not in BUILD_SUCCEEDED state");
+            throw new BizException("Pipeline is not in BUILD_SUCCEEDED state");
         }
 
         int claimed = pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
         if (claimed == 0) {
-            throw new RuntimeException("Pipeline state changed concurrently, please retry");
+            throw new BizException("Pipeline state changed concurrently, please retry");
         }
         pipeline.setStatus(PipelineStatus.DEPLOYING);
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
@@ -277,7 +278,7 @@ public class PipelineService {
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
-            throw new RuntimeException("Pipeline not found");
+            throw new BizException("Pipeline not found");
         }
 
         String environmentName = pipeline.getEnvironment();

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.service.external.ExternalAuthStrategy;
 import java.io.IOException;
 import java.util.List;
@@ -31,17 +32,21 @@ public class ExternalAccountService {
         return getEnabledStrategy(provider).getLoginUrl();
     }
 
-    public String authenticate(String provider, String code) throws IOException {
-        return getEnabledStrategy(provider).authenticate(code);
+    public String authenticate(String provider, String code) {
+        try {
+            return getEnabledStrategy(provider).authenticate(code);
+        } catch (IOException e) {
+            throw new BizException("登录失败", e);
+        }
     }
 
     private ExternalAuthStrategy getEnabledStrategy(String provider) {
         ExternalAuthStrategy strategy = strategies.get(provider.toLowerCase());
         if (strategy == null) {
-            throw new IllegalArgumentException("Unsupported external login provider: " + provider);
+            throw new BizException("Unsupported external login provider: " + provider);
         }
         if (!strategy.isEnabled()) {
-            throw new IllegalArgumentException("External login provider is disabled: " + provider);
+            throw new BizException("External login provider is disabled: " + provider);
         }
         return strategy;
     }
