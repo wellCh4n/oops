@@ -245,6 +245,10 @@ function IDEPageContent() {
                   updateParams({ app: v, env: "" })
                 }}
                 options={applications.map((app) => ({ value: app.name, label: app.name }))}
+                onSearch={selectedNamespace ? async (query) => {
+                  const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
+                  return (res.data?.data ?? []).map(app => ({ value: app.name, label: app.name }))
+                } : undefined}
                 placeholder={t("ide.page.selectApp")}
                 searchPlaceholder={t("common.search")}
                 emptyText={t("common.noResults")}

@@ -227,6 +227,10 @@ function PipelinesContent() {
                     updateParams({ app: v, env: "all", page: "1" })
                   }}
                   options={applications.map(app => ({ value: app.name, label: app.name }))}
+                  onSearch={selectedNamespace ? async (query) => {
+                    const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
+                    return (res.data?.data ?? []).map(app => ({ value: app.name, label: app.name }))
+                  } : undefined}
                   placeholder={t("pipelines.selectApp")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}

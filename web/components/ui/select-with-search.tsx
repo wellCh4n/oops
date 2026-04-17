@@ -32,23 +32,66 @@ interface SelectWithSearchProps {
   emptyText?: string
   className?: string
   disabled?: boolean
+  onSearch?: (query: string) => Promise<Option[]>
 }
 
 export function SelectWithSearch({
   value,
   onValueChange,
-  options,
+  options: initialOptions,
   placeholder = "Select...",
   searchPlaceholder = "Search...",
   emptyText = "No results found.",
   className,
   disabled = false,
+  onSearch,
 }: SelectWithSearchProps) {
   const [open, setOpen] = React.useState(false)
-  const selectedOption = options.find((option) => option.value === value)
+  const [query, setQuery] = React.useState("")
+  const [options, setOptions] = React.useState<Option[]>(initialOptions)
+  const searchIdRef = React.useRef(0)
+
+  const selectedOption =
+    options.find((o) => o.value === value) ??
+    initialOptions.find((o) => o.value === value)
+
+  React.useEffect(() => {
+    setOptions(initialOptions)
+  }, [initialOptions])
+
+  const doSearch = React.useCallback(
+    async (q: string) => {
+      if (!onSearch) return
+      const currentId = ++searchIdRef.current
+      try {
+        const results = await onSearch(q)
+        if (searchIdRef.current === currentId) {
+          setOptions(results)
+        }
+      } catch {
+        if (searchIdRef.current === currentId) {
+          setOptions([])
+        }
+      }
+    },
+    [onSearch]
+  )
+
+
+  React.useEffect(() => {
+    if (!onSearch || !open) return
+    const timer = setTimeout(() => doSearch(query), 300)
+    return () => clearTimeout(timer)
+  }, [query, onSearch, open, doSearch])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (!o) setQuery("")
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -60,46 +103,54 @@ export function SelectWithSearch({
             className
           )}
         >
-          <span className={cn("truncate", !value && "text-muted-foreground")}>
-            {selectedOption?.label || placeholder}
+          <span
+            className={cn("truncate", !value && "text-muted-foreground")}
+          >
+            {selectedOption?.label || value || placeholder}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0" align="start">
-        <Command>
+        <Command filter={onSearch ? () => 1 : undefined}>
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <CommandInput
               placeholder={searchPlaceholder}
+              value={query}
+              onValueChange={setQuery}
               className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus:ring-0"
             />
           </div>
           <CommandList>
-            <CommandEmpty className="py-6 text-center text-sm">
-              {emptyText}
-            </CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange?.(currentValue)
-                    setOpen(false)
-                  }}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  <span className="flex-1 truncate">{option.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {options.length === 0 ? (
+              <CommandEmpty>{emptyText}</CommandEmpty>
+            ) : (
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={(currentValue) => {
+                      onValueChange?.(currentValue)
+                      setOpen(false)
+                      setQuery("")
+                    }}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <Check
+                      className={cn(
+                        "h-4 w-4 shrink-0",
+                        value === option.value
+                          ? "opacity-100"
+                          : "opacity-0"
+                      )}
+                    />
+                    <span className="flex-1 truncate">{option.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
