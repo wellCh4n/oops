@@ -2,12 +2,15 @@ package com.github.wellch4n.oops.job;
 
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.event.PipelineNotificationEvent;
+import com.github.wellch4n.oops.event.PipelineNotificationType;
 import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.task.ArtifactDeployTask;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -25,18 +28,21 @@ public class PipelineInstanceScanJob {
     private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final IngressConfig ingressConfig;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
                                    ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                                    IngressConfig ingressConfig,
-                                   ApplicationServiceConfigRepository applicationServiceConfigRepository) {
+                                   ApplicationServiceConfigRepository applicationServiceConfigRepository,
+                                   ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.ingressConfig = ingressConfig;
+        this.eventPublisher = eventPublisher;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -56,9 +62,15 @@ public class PipelineInstanceScanJob {
                     Job job = client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).withName(pipeline.getName()).get();
                     if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
                         if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
-                            pipelineRepository.updateStatusIfMatch(
+                            int updated = pipelineRepository.updateStatusIfMatch(
                                     pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
                             );
+                            if (updated > 0) {
+                                pipeline.setStatus(PipelineStatus.BUILD_SUCCEEDED);
+                                eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                        pipeline, PipelineNotificationType.BUILD_SUCCEEDED, "镜像构建完成，等待手动发布。"
+                                ));
+                            }
                             continue;
                         }
 
@@ -68,6 +80,10 @@ public class PipelineInstanceScanJob {
                         if (claimed == 0) {
                             continue;
                         }
+                        pipeline.setStatus(PipelineStatus.DEPLOYING);
+                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
+                        ));
 
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
                         ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
@@ -85,21 +101,37 @@ public class PipelineInstanceScanJob {
                         pipelineRepository.updateStatusIfMatch(
                                 pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED
                         );
+                        pipeline.setStatus(PipelineStatus.SUCCEEDED);
+                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
+                        ));
                     } else if (job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0) {
                         System.err.println("Error processing succeeded pipeline " + pipeline.getId());
-                        pipelineRepository.updateStatusIfMatch(
+                        int updated = pipelineRepository.updateStatusIfMatch(
                                 pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
                         );
+                        if (updated > 0) {
+                            pipeline.setStatus(PipelineStatus.ERROR);
+                            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                    pipeline, PipelineNotificationType.FAILED, "镜像构建失败，请查看流水线日志。"
+                            ));
+                        }
                     }
                 }
             } catch (Exception e) {
                 System.out.println("Error scanning pipeline instance: " + e.getMessage());
-                pipelineRepository.updateStatusIfMatch(
+                int deployingUpdated = pipelineRepository.updateStatusIfMatch(
                         pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR
                 );
-                pipelineRepository.updateStatusIfMatch(
+                int runningUpdated = pipelineRepository.updateStatusIfMatch(
                         pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
                 );
+                if (deployingUpdated > 0 || runningUpdated > 0) {
+                    pipeline.setStatus(PipelineStatus.ERROR);
+                    eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                            pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
+                    ));
+                }
             }
         }
     }

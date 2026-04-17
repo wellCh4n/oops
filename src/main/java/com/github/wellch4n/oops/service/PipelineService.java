@@ -3,6 +3,8 @@ package com.github.wellch4n.oops.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.event.PipelineNotificationEvent;
+import com.github.wellch4n.oops.event.PipelineNotificationType;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
@@ -21,6 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -43,12 +46,15 @@ public class PipelineService {
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final IngressConfig ingressConfig;
     private final UserService userService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
                            ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
                            ApplicationServiceConfigRepository applicationServiceConfigRepository,
-                           IngressConfig ingressConfig, UserService userService) {
+                           IngressConfig ingressConfig,
+                           UserService userService,
+                           ApplicationEventPublisher eventPublisher) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
@@ -56,6 +62,7 @@ public class PipelineService {
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.ingressConfig = ingressConfig;
         this.userService = userService;
+        this.eventPublisher = eventPublisher;
     }
 
     public Page<PipelineResponse> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
@@ -221,6 +228,10 @@ public class PipelineService {
         if (claimed == 0) {
             throw new RuntimeException("Pipeline state changed concurrently, please retry");
         }
+        pipeline.setStatus(PipelineStatus.DEPLOYING);
+        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
+        ));
 
         try {
             Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
@@ -248,8 +259,16 @@ public class PipelineService {
             artifactDeployTask.call();
 
             pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+            pipeline.setStatus(PipelineStatus.SUCCEEDED);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
+            ));
         } catch (Exception e) {
             pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
+            pipeline.setStatus(PipelineStatus.ERROR);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
+            ));
             throw new RuntimeException("Deploy failed: " + e.getMessage(), e);
         }
         return true;
@@ -275,6 +294,9 @@ public class PipelineService {
                             .build());
             pipeline.setStatus(PipelineStatus.STOPPED);
             pipelineRepository.save(pipeline);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
+            ));
             return true;
         }
     }
