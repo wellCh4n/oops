@@ -51,7 +51,7 @@ export function AppLayout({
     <LanguageProvider initialLocale={initialLocale}>
       <SidebarProvider defaultOpen={defaultSidebarOpen}>
         <AppSidebar />
-        <SidebarInset className="overflow-x-auto overflow-y-auto">
+        <SidebarInset className="overflow-x-auto overflow-y-auto overscroll-none">
           <div className="flex min-h-full flex-col gap-4 p-4 min-w-[720px]">
             {children}
           </div>
