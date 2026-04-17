@@ -1,14 +1,13 @@
 "use client"
 
 import { use, useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Rocket } from "lucide-react"
-import { toast } from "sonner"
-import { ContentPage } from "@/components/content-page"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 import { useFeaturesStore } from "@/store/features"
 import { getApplication } from "@/lib/api/applications"
-import { applicationPublishPath } from "@/lib/routes"
+import { toast } from "sonner"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,15 +19,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export default function IDEInstancePage({
-  params,
-}: {
-  params: Promise<{ namespace: string; name: string; id: string }>
-}) {
-  const { namespace, name, id } = use(params)
-  const router = useRouter()
+export default function IDEInstancePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
   const { t } = useLanguage()
   const { features, loaded } = useFeaturesStore()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [showConfirm, setShowConfirm] = useState(false)
   const [publishVisible, setPublishVisible] = useState(false)
 
@@ -36,21 +32,33 @@ export default function IDEInstancePage({
     ? `${features.ideHttps ? "https" : "http"}://${id}.${features.ideHost}`
     : ""
 
+  const namespace = searchParams.get("namespace")
+  const app = searchParams.get("app")
+
   useEffect(() => {
-    getApplication(namespace, name)
-      .then((res) => {
-        if (res.data) {
-          setPublishVisible(true)
-        } else {
+    if (namespace && app) {
+      getApplication(namespace, app)
+        .then((res) => {
+          if (res.data) {
+            setPublishVisible(true)
+          } else {
+            setPublishVisible(false)
+            toast.error(t("ide.publishAppNotFound"))
+          }
+        })
+        .catch(() => {
           setPublishVisible(false)
           toast.error(t("ide.publishAppNotFound"))
-        }
-      })
-      .catch(() => {
-        setPublishVisible(false)
-        toast.error(t("ide.publishAppNotFound"))
-      })
-  }, [name, namespace, t])
+        })
+    }
+  }, [namespace, app, t])
+
+  const handleConfirmPublish = () => {
+    setShowConfirm(false)
+    if (namespace && app) {
+      router.push(`/apps/${namespace}/${app}/publish`)
+    }
+  }
 
   return (
     <ContentPage title={id} className="gap-0">
@@ -88,12 +96,7 @@ export default function IDEInstancePage({
             <AlertDialogCancel onClick={() => setShowConfirm(false)}>
               {t("common.cancel")}
             </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setShowConfirm(false)
-                router.push(applicationPublishPath(namespace, name))
-              }}
-            >
+            <AlertDialogAction onClick={handleConfirmPublish}>
               {t("common.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>

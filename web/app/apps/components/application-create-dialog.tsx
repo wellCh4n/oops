@@ -34,7 +34,6 @@ import {
 import { createApplication } from "@/lib/api/applications"
 import { getCreateApplicationSchema, CreateApplicationFormValues } from "../schema"
 import { useLanguage } from "@/contexts/language-context"
-import { applicationPath } from "@/lib/routes"
 
 interface ApplicationCreateDialogProps {
   open: boolean
@@ -88,7 +87,7 @@ export function ApplicationCreateDialog({
       onOpenChange(false)
 
       // Redirect to the edit page (detail page)
-      router.push(applicationPath(data.namespace, data.name))
+      router.push(`/apps/${data.namespace}/${data.name}`)
     } catch (error) {
       console.error(error)
       toast.error(t("apps.create.error"))

@@ -1,29 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { ChevronLeft, ChevronRight, Layers, LayoutGrid, Plus, Search } from "lucide-react"
-import { toast } from "sonner"
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
+import { Plus, Search, Layers, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { SelectWithSearch } from "@/components/ui/select-with-search"
+import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
-import { TableForm } from "@/components/ui/table-form"
-import { ContentPage } from "@/components/content-page"
-import { ApplicationCreateDialog } from "@/app/apps/components/application-create-dialog"
-import { getColumns } from "@/app/apps/columns"
-import { getApplications } from "@/lib/api/applications"
+import { getColumns } from "./columns"
 import { Application } from "@/lib/api/types"
-import { useLanguage } from "@/contexts/language-context"
-import { useNamespaceStore } from "@/store/namespace"
-import {
-  applicationIdesPath,
-  applicationPath,
-  applicationPipelinesPath,
-  applicationPublishPath,
-  applicationStatusPath,
-  applicationsPath,
-} from "@/lib/routes"
+import { getApplications } from "@/lib/api/applications"
+import { useRouter, useSearchParams } from "next/navigation"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
   Select,
   SelectContent,
@@ -31,15 +17,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { ApplicationCreateDialog } from "./components/application-create-dialog"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
+import { useLanguage } from "@/contexts/language-context"
+import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 
-export default function ApplicationsPage() {
-  const params = useParams()
+export default function AppsPage() {
+  return (
+    <Suspense>
+      <NamespaceParamProvider>
+        <AppsContent />
+      </NamespaceParamProvider>
+    </Suspense>
+  )
+}
+
+function AppsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const namespace = params.namespace as string
-  const namespaces = useNamespaceStore((state) => state.namespaces)
-  const loadNamespaces = useNamespaceStore((state) => state.load)
-  const setSelectedNamespace = useNamespaceStore((state) => state.setSelectedNamespace)
+
+  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -52,30 +51,45 @@ export default function ApplicationsPage() {
   const page = Number(searchParams.get("page") ?? "1")
   const size = Number(searchParams.get("size") ?? "10")
 
-  const buildNamespaceUrl = useCallback((targetNamespace: string, updates?: Record<string, string>) => {
-    const params = new URLSearchParams(searchParams.toString())
-    Object.entries(updates ?? {}).forEach(([key, value]) => {
-      if (value) params.set(key, value)
-      else params.delete(key)
-    })
-    const query = params.toString()
-    const pathname = applicationsPath(targetNamespace)
-    return query ? `${pathname}?${query}` : pathname
-  }, [searchParams])
-
   const updateParams = useCallback((updates: Record<string, string>) => {
-    router.replace(buildNamespaceUrl(namespace, updates))
-  }, [buildNamespaceUrl, namespace, router])
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v) params.set(k, v)
+      else params.delete(k)
+    })
+    router.replace(`/apps?${params.toString()}`)
+  }, [router, searchParams])
 
+  // Load namespaces once
   useEffect(() => {
     loadNamespaces()
-    setSelectedNamespace(namespace)
-  }, [loadNamespaces, namespace, setSelectedNamespace])
+  }, [loadNamespaces])
 
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
+    if (selectedNamespace) {
+      fetchData()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNamespace, page, size])
+
+  const handleNamespaceChange = (ns: string) => {
+    updateParams({ namespace: ns, page: "1" })
+  }
+
+  const handleSearch = () => {
+    updateParams({ page: "1" })
+    fetchData()
+  }
+
+  const fetchData = async () => {
+    if (!selectedNamespace) {
+      setApplications([])
+      return
+    }
+
     setLoading(true)
     try {
-      const res = await getApplications(namespace, searchQuery || undefined, page, size)
+      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size)
       if (res.data) {
         setApplications(res.data.data)
         setTotalPages(res.data.totalPages)
@@ -87,19 +101,26 @@ export default function ApplicationsPage() {
     } finally {
       setLoading(false)
     }
-  }, [namespace, page, searchQuery, size, t])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  const handleNamespaceChange = (targetNamespace: string) => {
-    router.push(buildNamespaceUrl(targetNamespace, { page: "1" }))
   }
 
-  const handleSearch = () => {
-    updateParams({ page: "1" })
-    fetchData()
+  const handleEdit = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}`)
+  }
+
+  const handlePublish = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}/publish`)
+  }
+
+  const handleStatus = (app: Application) => {
+    router.push(`/apps/${app.namespace}/${app.name}/status`)
+  }
+
+  const handlePipelines = (app: Application) => {
+    router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+  }
+
+  const handleIDE = (app: Application) => {
+    router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
   }
 
   return (
@@ -111,9 +132,9 @@ export default function ApplicationsPage() {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
                 <SelectWithSearch
-                  value={namespace}
+                  value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
-                  options={namespaces.map((ns) => ({ value: ns.id, label: ns.name }))}
+                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
                   placeholder={t("common.selectNamespace")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -153,11 +174,11 @@ export default function ApplicationsPage() {
               data={applications}
               loading={loading}
               meta={{
-                onEdit: (app: Application) => router.push(applicationPath(app.namespace, app.name)),
-                onPublish: (app: Application) => router.push(applicationPublishPath(app.namespace, app.name)),
-                onStatus: (app: Application) => router.push(applicationStatusPath(app.namespace, app.name)),
-                onPipelines: (app: Application) => router.push(applicationPipelinesPath(app.namespace, app.name)),
-                onIDE: (app: Application) => router.push(applicationIdesPath(app.namespace, app.name)),
+                onEdit: handleEdit,
+                onPublish: handlePublish,
+                onStatus: handleStatus,
+                onPipelines: handlePipelines,
+                onIDE: handleIDE,
               }}
             />
             <div className="flex items-center justify-end gap-4 mt-2">
@@ -165,7 +186,7 @@ export default function ApplicationsPage() {
                 <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
                 <Select
                   value={String(size)}
-                  onValueChange={(value) => updateParams({ size: value, page: "1" })}
+                  onValueChange={(v) => updateParams({ size: v, page: "1" })}
                   disabled={loading}
                 >
                   <SelectTrigger className="w-[70px] h-8">
@@ -199,7 +220,7 @@ export default function ApplicationsPage() {
                   onClick={() => updateParams({ page: String(page + 1) })}
                 >
                   {t("common.nextPage")}
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -211,7 +232,7 @@ export default function ApplicationsPage() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         namespaces={namespaces}
-        defaultNamespace={namespace}
+        defaultNamespace={selectedNamespace}
       />
     </ContentPage>
   )
