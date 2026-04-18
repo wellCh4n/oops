@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
-import { getApplicationBuildConfig, searchAllApplications } from "@/lib/api/applications"
+import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
@@ -178,7 +178,7 @@ export function CommandPalette() {
 
   // 过滤搜索结果，排除最近使用中的应用
 
-  const handleAppSelect = async (app: Application) => {
+  const handleAppSelect = (app: Application) => {
     if (!selectedCommand) return
 
     // Save to store
@@ -199,16 +199,11 @@ export function CommandPalette() {
         router.push(`/apps/${app.namespace}/${app.name}/publish`)
         break
       case "ide":
-        try {
-          const res = await getApplicationBuildConfig(app.namespace, app.name)
-          if (res.data?.sourceType === "ZIP") {
-            toast.error(t("ide.zipUnsupported"))
-            return
-          }
-          router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
-        } catch {
-          toast.error(t("ide.fetchError"))
+        if (app.sourceType === "ZIP") {
+          toast.error(t("ide.zipUnsupported"))
+          return
         }
+        router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
         break
       case "pipeline":
         router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)

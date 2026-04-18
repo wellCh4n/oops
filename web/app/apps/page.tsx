@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
 import { getColumns } from "./columns"
 import { Application } from "@/lib/api/types"
-import { getApplicationBuildConfig, getApplications } from "@/lib/api/applications"
+import { getApplications } from "@/lib/api/applications"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
@@ -119,17 +119,12 @@ function AppsContent() {
     router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
   }
 
-  const handleIDE = async (app: Application) => {
-    try {
-      const res = await getApplicationBuildConfig(app.namespace, app.name)
-      if (res.data?.sourceType === "ZIP") {
-        toast.error(t("ide.zipUnsupported"))
-        return
-      }
-      router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
-    } catch {
-      toast.error(t("ide.fetchError"))
+  const handleIDE = (app: Application) => {
+    if (app.sourceType === "ZIP") {
+      toast.error(t("ide.zipUnsupported"))
+      return
     }
+    router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
   }
 
   return (
