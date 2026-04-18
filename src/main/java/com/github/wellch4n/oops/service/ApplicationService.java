@@ -142,7 +142,7 @@ public class ApplicationService {
                 }
             } catch (Exception e) {
                 log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), e.getMessage());
-                throw new RuntimeException("Failed to delete application resources: " + e.getMessage(), e);
+                throw new BizException("Application deletion failed");
             }
         }
 
