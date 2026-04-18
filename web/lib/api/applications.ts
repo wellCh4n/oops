@@ -1,5 +1,18 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployMode, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+
+export interface BuildSourceUploadRequest {
+  fileName: string
+  fileSize: number
+  contentType?: string
+}
+
+export interface BuildSourceUploadResponse {
+  objectKey: string
+  objectUrl: string
+  uploadUrl: string
+  headers: Record<string, string>
+}
 
 export const getApplications = async (
   namespace: string,
@@ -105,6 +118,22 @@ export const updateApplicationBuildConfig = async (namespace: string, name: stri
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
+export const createApplicationBuildSourceUpload = async (
+  namespace: string,
+  name: string,
+  payload: BuildSourceUploadRequest
+): Promise<ApiResponse<BuildSourceUploadResponse>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/deployments/source-upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+  if (!response.ok) {
+    throw new Error("Failed to create build source upload")
+  }
+  return response.json() as Promise<ApiResponse<BuildSourceUploadResponse>>
+}
+
 export const getApplicationBuildEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/build/configs`)
   if (!response.ok) {
@@ -200,14 +229,12 @@ export const updateApplicationEnvironments = async (
 export const deployApplication = async (
   namespace: string,
   name: string,
-  environment: string,
-  branch: string = "main",
-  deployMode: DeployMode = "IMMEDIATE"
+  payload: DeployRequest
 ): Promise<ApiResponse<string>> => {
-  const params = new URLSearchParams({ environment, branch: branch || "main", deployMode })
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/deployments?${params.toString()}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/deployments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   })
   if (!response.ok) {
     throw new Error("Failed to deploy application")

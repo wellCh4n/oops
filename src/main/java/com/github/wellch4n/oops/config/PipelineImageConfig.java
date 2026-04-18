@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class PipelineImageConfig {
 
     private String clone;
+    private String zip;
     private String push;
     private String kanikoRegistryMap = "index.docker.io=docker.m.daocloud.io";
 

@@ -8,7 +8,7 @@ interface FeaturesState {
 }
 
 export const useFeaturesStore = create<FeaturesState>((set, get) => ({
-  features: { feishu: false, ide: false, ideHost: null, ideHttps: false },
+  features: { feishu: false, ide: false, ideHost: null, ideHttps: false, objectStorage: false },
   loaded: false,
   load: async () => {
     if (get().loaded) return

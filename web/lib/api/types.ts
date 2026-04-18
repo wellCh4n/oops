@@ -69,16 +69,38 @@ export interface Application {
   namespace: string
   owner?: string
   ownerName?: string
+  sourceType?: ApplicationSourceType
 }
 
 export interface ApplicationBuildConfig {
   id?: string
   namespace: string
   applicationName: string
+  sourceType?: ApplicationSourceType
   repository?: string
   dockerFile?: string
   buildImage?: string
   environmentConfigs?: ApplicationBuildEnvironmentConfig[]
+}
+
+export type ApplicationSourceType = 'GIT' | 'ZIP'
+
+export interface GitDeployStrategyParam {
+  type: 'GIT'
+  branch?: string
+}
+
+export interface ZipDeployStrategyParam {
+  type: 'ZIP'
+  repository: string
+}
+
+export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam
+
+export interface DeployRequest {
+  environment: string
+  deployMode?: DeployMode
+  strategy: DeployStrategyParam
 }
 
 export interface ApplicationBuildEnvironmentConfig {
@@ -122,8 +144,10 @@ export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DE
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 
 export interface LastSuccessfulPipelineInfo {
-  branch: string
+  branch?: string | null
   deployMode: DeployMode
+  publishType?: ApplicationSourceType | null
+  publishRepository?: string | null
 }
 
 export interface Pipeline {

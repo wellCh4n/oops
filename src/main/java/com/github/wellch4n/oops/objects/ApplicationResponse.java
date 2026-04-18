@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.objects;
 
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
 import java.time.LocalDateTime;
 
 public record ApplicationResponse(
@@ -10,9 +11,10 @@ public record ApplicationResponse(
         String description,
         String namespace,
         String owner,
-        String ownerName
+        String ownerName,
+        ApplicationSourceType sourceType
 ) {
-    public static ApplicationResponse from(Application application, String ownerName) {
+    public static ApplicationResponse from(Application application, String ownerName, ApplicationSourceType sourceType) {
         return new ApplicationResponse(
                 application.getId(),
                 application.getCreatedTime(),
@@ -20,7 +22,8 @@ public record ApplicationResponse(
                 application.getDescription(),
                 application.getNamespace(),
                 application.getOwner(),
-                ownerName
+                ownerName,
+                sourceType
         );
     }
 }

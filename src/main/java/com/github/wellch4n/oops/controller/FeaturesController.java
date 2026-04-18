@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.config.FeishuConfig;
 import com.github.wellch4n.oops.config.IDEConfig;
+import com.github.wellch4n.oops.config.BuildSourceObjectStorageConfig;
 import com.github.wellch4n.oops.objects.Result;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,13 +21,17 @@ public class FeaturesController {
     @Autowired(required = false)
     private IDEConfig ideConfig;
 
+    @Autowired(required = false)
+    private BuildSourceObjectStorageConfig objectStorageConfig;
+
     @GetMapping
     public Result<FeaturesResponse> getFeatures() {
         return Result.success(new FeaturesResponse(
                 feishuConfig != null && feishuConfig.isEnabled(),
                 ideConfig != null,
                 ideConfig != null ? ideConfig.getDomain() : null,
-                ideConfig != null && ideConfig.isHttps()
+                ideConfig != null && ideConfig.isHttps(),
+                objectStorageConfig != null && objectStorageConfig.isEnabled()
         ));
     }
 
@@ -37,5 +42,6 @@ public class FeaturesController {
         private boolean ide;
         private String ideHost;
         private boolean ideHttps;
+        private boolean objectStorage;
     }
 }

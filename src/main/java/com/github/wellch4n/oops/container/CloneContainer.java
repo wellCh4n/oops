@@ -1,11 +1,12 @@
 package com.github.wellch4n.oops.container;
 
+import com.github.wellch4n.oops.container.clone.CloneStrategy;
+import com.github.wellch4n.oops.container.clone.CloneStrategyParam;
+import com.github.wellch4n.oops.container.clone.GitCloneStrategy;
+import com.github.wellch4n.oops.container.clone.ZipCloneStrategy;
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
-
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -15,34 +16,17 @@ import java.util.List;
 
 public class CloneContainer extends BaseContainer {
 
-    public CloneContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String image, String branch, boolean shallow) {
-        List<String> args = new ArrayList<>();
-        args.add("git");
-        args.add("clone");
-        args.add("--progress");
+    private static final List<CloneStrategy<? extends CloneStrategyParam>> STRATEGIES = List.of(
+            new GitCloneStrategy(),
+            new ZipCloneStrategy()
+    );
 
-        if (shallow) {
-            args.add("--depth");
-            args.add("1");
-        }
-
-        if (branch != null && !branch.isBlank()) {
-            args.add("-b");
-            args.add(branch);
-        }
-
-        if (applicationBuildConfig.getRepository() == null || applicationBuildConfig.getRepository().isBlank()) {
-            throw new IllegalArgumentException("Repository URL must not be empty for application: " + application.getName());
-        }
-
-        args.add(applicationBuildConfig.getRepository());
-        args.add("/workspace");
-
-        String command = String.join(" ", args);
+    public CloneContainer(Application application, CloneStrategyParam strategyParam) {
+        String command = buildCommand(application, strategyParam);
 
         Container container = new ContainerBuilder()
                 .withName("clone")
-                .withImage(image)
+                .withImage(strategyParam.image())
                 .withCommand("sh", "-c", command)
                 .addNewEnv()
                     .withName("GIT_SSH_COMMAND")
@@ -54,5 +38,14 @@ public class CloneContainer extends BaseContainer {
         this.setImage(container.getImage());
         this.setCommand(container.getCommand());
         this.setEnv(container.getEnv());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String buildCommand(Application application, CloneStrategyParam strategyParam) {
+        return STRATEGIES.stream()
+                .filter(strategy -> strategy.supports(strategyParam))
+                .findFirst()
+                .map(strategy -> ((CloneStrategy<CloneStrategyParam>) strategy).buildCommand(application, strategyParam))
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported clone strategy param: " + strategyParam.getClass().getName()));
     }
 }

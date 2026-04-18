@@ -15,9 +15,14 @@ export const getApplicationBasicSchema = (t?: (key: string) => string) => z.obje
 export const applicationBasicSchema = getApplicationBasicSchema()
 
 export const applicationBuildConfigSchema = z.object({
-  repository: z.string().min(1, "Repository is required"),
+  sourceType: z.enum(["GIT", "ZIP"]),
+  repository: z.string().optional(),
   dockerFile: z.string().optional(),
   buildImage: z.string().optional(),
+}).superRefine((value, ctx) => {
+  if (value.sourceType === "GIT" && !value.repository?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
+  }
 })
 
 export const getCreateApplicationSchema = (t?: (key: string) => string) => z.object({
@@ -32,13 +37,18 @@ export const getCreateApplicationSchema = (t?: (key: string) => string) => z.obj
 export const createApplicationSchema = getCreateApplicationSchema()
 
 export const applicationBuildSchema = z.object({
-  repository: z.string().min(1, "Repository is required"),
+  sourceType: z.enum(["GIT", "ZIP"]),
+  repository: z.string().optional(),
   dockerFile: z.string().optional(),
   buildImage: z.string().optional(),
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
     buildCommand: z.string().optional(),
   })),
+}).superRefine((value, ctx) => {
+  if (value.sourceType === "GIT" && !value.repository?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
+  }
 })
 
 export const applicationPerformanceEnvSchema = z.object({

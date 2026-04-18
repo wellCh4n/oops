@@ -83,15 +83,17 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             <GitBranch className="h-4 w-4" />
             {t("apps.col.pipelines")}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onIDE(application)}
-            title={t("apps.col.ide")}
-          >
-            <SquareCode className="h-4 w-4" />
-            {t("apps.col.ide")}
-          </Button>
+          {application.sourceType !== "ZIP" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => meta?.onIDE(application)}
+              title={t("apps.col.ide")}
+            >
+              <SquareCode className="h-4 w-4" />
+              {t("apps.col.ide")}
+            </Button>
+          )}
         </div>
       )
     },

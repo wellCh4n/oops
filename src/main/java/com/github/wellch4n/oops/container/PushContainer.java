@@ -1,11 +1,12 @@
 package com.github.wellch4n.oops.container;
 
 import com.github.wellch4n.oops.data.Application;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import com.github.wellch4n.oops.data.Pipeline;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
-import io.micrometer.common.util.StringUtils;
 import lombok.Getter;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author wellCh4n
@@ -16,8 +17,16 @@ public class PushContainer extends BaseContainer {
     @Getter
     private final String artifact;
 
-    public PushContainer(Application application, Pipeline pipeline, String repositoryUrl, String image, String kanikoRegistryMap) {
+    public PushContainer(Application application,
+                         ApplicationBuildConfig applicationBuildConfig,
+                         Pipeline pipeline,
+                         String repositoryUrl,
+                         String image,
+                         String kanikoRegistryMap) {
         this.artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
+        String dockerFile = applicationBuildConfig != null
+                ? StringUtils.defaultIfBlank(applicationBuildConfig.getDockerFile(), "Dockerfile")
+                : "Dockerfile";
 
         ContainerBuilder builder = new ContainerBuilder()
                 .withName("push")
@@ -25,7 +34,7 @@ public class PushContainer extends BaseContainer {
                 .withWorkingDir("/workspace")
                 .withArgs(
                         "--destination=" + this.artifact,
-                        "--dockerfile=Dockerfile"
+                        "--dockerfile=" + dockerFile
                 );
 
         if (StringUtils.isNotEmpty(kanikoRegistryMap)) {

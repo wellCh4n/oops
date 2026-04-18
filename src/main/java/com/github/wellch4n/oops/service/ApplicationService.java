@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
@@ -72,7 +73,7 @@ public class ApplicationService {
                         namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, pageable);
         return new Page<>(
                 applicationPage.getTotalElements(),
-                toApplicationResponses(applicationPage.getContent()),
+                toApplicationResponses(namespace, applicationPage.getContent()),
                 applicationPage.getSize(),
                 applicationPage.getTotalPages()
         );
@@ -81,7 +82,18 @@ public class ApplicationService {
     public List<ApplicationResponse> searchApplications(String keyword, int size) {
         List<Application> applications = applicationRepository.findByNameContainingIgnoreCase(
                 StringUtils.defaultIfBlank(keyword, ""));
-        return toApplicationResponses(applications.stream().limit(size).toList());
+        List<Application> limitedApplications = applications.stream().limit(size).toList();
+        Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(limitedApplications);
+        Set<String> ownerIds = limitedApplications.stream()
+                .map(Application::getOwner)
+                .filter(StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
+        return limitedApplications.stream()
+                .map(application -> ApplicationResponse.from(application,
+                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
+                .toList();
     }
 
     @Transactional
@@ -115,15 +127,17 @@ public class ApplicationService {
         return owner;
     }
 
-    private List<ApplicationResponse> toApplicationResponses(List<Application> applications) {
+    private List<ApplicationResponse> toApplicationResponses(String namespace, List<Application> applications) {
         Set<String> ownerIds = applications.stream()
                 .map(Application::getOwner)
                 .filter(StringUtils::isNotBlank)
                 .collect(java.util.stream.Collectors.toSet());
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
+        Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(namespace, applications);
         return applications.stream()
                 .map(application -> ApplicationResponse.from(application,
-                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null))
+                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
                 .toList();
     }
 
@@ -137,7 +151,49 @@ public class ApplicationService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        return ApplicationResponse.from(application, ownerName);
+        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository
+                .findByNamespaceAndApplicationName(application.getNamespace(), application.getName())
+                .orElse(null);
+        ApplicationSourceType sourceType = buildConfig != null && buildConfig.getSourceType() != null
+                ? buildConfig.getSourceType()
+                : ApplicationSourceType.GIT;
+        return ApplicationResponse.from(application, ownerName, sourceType);
+    }
+
+    private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(String namespace, List<Application> applications) {
+        if (StringUtils.isBlank(namespace) || applications == null || applications.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> applicationNames = applications.stream()
+                .map(Application::getName)
+                .filter(StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        return applicationBuildConfigRepository.findByNamespaceAndApplicationNameIn(namespace, applicationNames).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        config -> config.getNamespace() + "/" + config.getApplicationName(),
+                        config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
+                        (left, right) -> right
+                ));
+    }
+
+    private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(List<Application> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> namespaces = applications.stream()
+                .map(Application::getNamespace)
+                .filter(StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        Set<String> applicationNames = applications.stream()
+                .map(Application::getName)
+                .filter(StringUtils::isNotBlank)
+                .collect(java.util.stream.Collectors.toSet());
+        return applicationBuildConfigRepository.findByNamespaceInAndApplicationNameIn(namespaces, applicationNames).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        config -> config.getNamespace() + "/" + config.getApplicationName(),
+                        config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
+                        (left, right) -> right
+                ));
     }
 
     @Transactional
@@ -149,8 +205,17 @@ public class ApplicationService {
                     config.setApplicationName(name);
                     return config;
                 });
-        
-        buildConfig.setRepository(request.getRepository());
+
+        ApplicationSourceType sourceType = request.getSourceType() != null ? request.getSourceType() : ApplicationSourceType.GIT;
+        buildConfig.setSourceType(sourceType);
+        if (sourceType == ApplicationSourceType.GIT) {
+            if (StringUtils.isBlank(request.getRepository())) {
+                throw new BizException("Repository is required when source type is GIT");
+            }
+            buildConfig.setRepository(request.getRepository());
+        } else {
+            buildConfig.setRepository(null);
+        }
         buildConfig.setDockerFile(request.getDockerFile());
         buildConfig.setBuildImage(request.getBuildImage());
         buildConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
@@ -159,7 +224,11 @@ public class ApplicationService {
     }
 
     public ApplicationBuildConfig getApplicationBuildConfig(String namespace, String name) {
-        return applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        if (buildConfig != null && buildConfig.getSourceType() == null) {
+            buildConfig.setSourceType(ApplicationSourceType.GIT);
+        }
+        return buildConfig;
     }
 
     public List<ApplicationBuildConfig.EnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {

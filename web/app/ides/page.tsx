@@ -25,11 +25,11 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
-import { getApplications } from "@/lib/api/applications"
+import { getApplicationBuildConfig, getApplications } from "@/lib/api/applications"
 import { useRecentAppStore } from "@/store/recent-app"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
-import { Application, ApplicationEnvironment } from "@/lib/api/types"
+import { Application, ApplicationEnvironment, ApplicationSourceType } from "@/lib/api/types"
 
 export default function IDEPage() {
   return (
@@ -53,6 +53,7 @@ function IDEPageContent() {
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [ides, setIdes] = useState<IDEInstance[]>([])
   const [loading, setLoading] = useState(false)
+  const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
 
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? ""
@@ -121,6 +122,20 @@ function IDEPageContent() {
     }
   }, [selectedApp, selectedEnv, environments, updateParams])
 
+  useEffect(() => {
+    if (!selectedNamespace || !selectedApp) {
+      setSourceType("GIT")
+      return
+    }
+    getApplicationBuildConfig(selectedNamespace, selectedApp)
+      .then((res) => {
+        setSourceType(res.data?.sourceType || "GIT")
+      })
+      .catch(() => {
+        setSourceType("GIT")
+      })
+  }, [selectedNamespace, selectedApp])
+
   const fetchIDEs = useCallback(async () => {
     if (!selectedNamespace || !selectedApp || !selectedEnv) return
     setLoading(true)
@@ -153,6 +168,10 @@ function IDEPageContent() {
 
   const openCreateDialog = async () => {
     if (!selectedNamespace || !selectedApp || !selectedEnv) return
+    if (sourceType === "ZIP") {
+      toast.error(t("ide.zipUnsupported"))
+      return
+    }
     setCreateOpen(true)
     setConfigLoading(true)
     try {
@@ -170,6 +189,10 @@ function IDEPageContent() {
 
   const handleCreate = async () => {
     if (!selectedNamespace || !selectedApp || !selectedEnv) return
+    if (sourceType === "ZIP") {
+      toast.error(t("ide.zipUnsupported"))
+      return
+    }
     setCreating(true)
     try {
       await createIDE(selectedNamespace, selectedApp, selectedEnv, {
@@ -292,13 +315,19 @@ function IDEPageContent() {
                   <Button
                     size="sm"
                     onClick={openCreateDialog}
-                    disabled={!selectedNamespace || !selectedApp || !selectedEnv}
+                    disabled={!selectedNamespace || !selectedApp || !selectedEnv || sourceType === "ZIP"}
                   >
                     <Plus className="h-4 w-4" />
                     {t("ide.create")}
                   </Button>
                 </div>
               </div>
+
+              {sourceType === "ZIP" && (
+                <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                  {t("ide.zipUnsupportedDesc")}
+                </div>
+              )}
 
               {!selectedEnv ? (
                 environments.length === 0 ? null : (

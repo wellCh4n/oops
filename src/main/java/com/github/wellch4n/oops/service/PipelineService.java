@@ -124,7 +124,12 @@ public class PipelineService {
         if (lastSuccessfulPipeline == null) {
             return null;
         }
-        return new LastSuccessfulPipelineResponse(lastSuccessfulPipeline.getBranch(), lastSuccessfulPipeline.getDeployMode());
+        return new LastSuccessfulPipelineResponse(
+                lastSuccessfulPipeline.getBranch(),
+                lastSuccessfulPipeline.getDeployMode(),
+                lastSuccessfulPipeline.getPublishType(),
+                lastSuccessfulPipeline.getPublishRepository()
+        );
     }
 
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {

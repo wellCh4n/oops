@@ -10,9 +10,22 @@ spring.jpa.show-sql=false
 spring.jpa.open-in-view=true
 
 oops.pipeline.image.clone=alpine/git:v2.49.0
+oops.pipeline.image.zip=opsydev/docker-curl-zip:latest
 oops.pipeline.image.push=gcr.io/kaniko-project/executor:v1.23.2
 oops.pipeline.image.kaniko-registry-map=index.docker.io=docker.m.daocloud.io
 oops.ingress.cert-resolver=letsencrypt-prod
+
+oops.object-storage.enabled=false
+oops.object-storage.endpoint=https://s3.oss-cn-hangzhou.aliyuncs.com
+oops.object-storage.region=cn-hangzhou
+oops.object-storage.bucket=oops-build-sources
+oops.object-storage.access-key=
+oops.object-storage.secret-key=
+oops.object-storage.path-style-access=false
+oops.object-storage.key-prefix=build-sources
+oops.object-storage.upload-url-expiration-seconds=900
+oops.object-storage.download-url-expiration-seconds=1800
+oops.object-storage.max-file-size-bytes=524288000
 
 oops.jwt.secret=oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
 oops.jwt.expiration=604800000
