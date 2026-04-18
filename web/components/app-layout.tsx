@@ -39,7 +39,7 @@ export function AppLayout({
   const layout = (
     <LanguageProvider initialLocale={initialLocale}>
       {children}
-      <Toaster position="top-center" />
+      <Toaster position="top-right" />
     </LanguageProvider>
   )
 
@@ -56,7 +56,7 @@ export function AppLayout({
             {children}
           </div>
         </SidebarInset>
-        <Toaster position="top-center" />
+        <Toaster position="top-right" />
         <CommandPalette />
       </SidebarProvider>
     </LanguageProvider>

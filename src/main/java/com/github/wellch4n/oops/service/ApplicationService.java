@@ -116,6 +116,45 @@ public class ApplicationService {
         return true;
     }
 
+    @Transactional
+    public Boolean deleteApplication(String namespace, String name) {
+        Application exist = applicationRepository.findByNamespaceAndName(namespace, name);
+        if (exist == null) {
+            throw new BizException("Application not found");
+        }
+
+        List<ApplicationEnvironment> environments = getApplicationEnvironments(namespace, name);
+        for (ApplicationEnvironment env : environments) {
+            Environment environment = environmentRepository.findFirstByName(env.getEnvironmentName());
+            if (environment == null) {
+                continue;
+            }
+            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                var statefulSet = client.apps().statefulSets()
+                        .inNamespace(namespace)
+                        .withName(name)
+                        .get();
+                if (statefulSet != null) {
+                    client.apps().statefulSets()
+                            .inNamespace(namespace)
+                            .withName(name)
+                            .delete();
+                }
+            } catch (Exception e) {
+                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), e.getMessage());
+                throw new RuntimeException("Failed to delete application resources: " + e.getMessage(), e);
+            }
+        }
+
+        applicationEnvironmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationBuildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationPerformanceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationServiceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationRepository.deleteByNamespaceAndName(namespace, name);
+
+        return true;
+    }
+
     private String normalizeOwner(String owner) {
         if (StringUtils.isBlank(owner)) {
             return null;
@@ -326,7 +365,13 @@ public class ApplicationService {
     }
 
     public List<ApplicationEnvironment> getApplicationEnvironments(String namespace, String name) {
-        return applicationEnvironmentRepository.findByNamespaceAndApplicationName(namespace, name);
+        List<ApplicationEnvironment> all = applicationEnvironmentRepository.findByNamespaceAndApplicationName(namespace, name);
+        Set<String> existingEnvNames = environmentRepository.findAll().stream()
+                .map(Environment::getName)
+                .collect(java.util.stream.Collectors.toSet());
+        return all.stream()
+                .filter(e -> existingEnvNames.contains(e.getEnvironmentName()))
+                .toList();
     }
 
     @Transactional

@@ -13,4 +13,6 @@ public interface ApplicationBuildConfigRepository extends CrudRepository<Applica
     List<ApplicationBuildConfig> findByNamespaceAndApplicationNameIn(String namespace, Collection<String> applicationNames);
 
     List<ApplicationBuildConfig> findByNamespaceInAndApplicationNameIn(Collection<String> namespaces, Collection<String> applicationNames);
+
+    void deleteByNamespaceAndApplicationName(String namespace, String applicationName);
 }

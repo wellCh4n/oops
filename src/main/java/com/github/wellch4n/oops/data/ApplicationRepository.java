@@ -31,4 +31,6 @@ public interface ApplicationRepository extends CrudRepository<Application, Strin
             Pageable pageable);
 
     List<Application> findByNameContainingIgnoreCase(String keyword);
+
+    void deleteByNamespaceAndName(String namespace, String name);
 }

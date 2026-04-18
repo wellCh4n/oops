@@ -8,6 +8,7 @@ import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationPerformanceInfo } from "./components/application-performance-info"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
+import { ApplicationDangerZone } from "./components/application-danger-zone"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -47,6 +48,7 @@ export function ApplicationForm({
     "performance-info",
     "service-info",
     "config-info",
+    "danger-zone",
   ])
   const rawTab = searchParams.get("tab")
   const currentTab = rawTab && validTabs.has(rawTab) ? rawTab : "app-info"
@@ -68,6 +70,7 @@ export function ApplicationForm({
             <TabsTrigger value="performance-info" className="px-6 cursor-pointer">{t("apps.tab.performanceConfig")}</TabsTrigger>
             <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
+            <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white">{t("apps.tab.dangerZone")}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -113,6 +116,15 @@ export function ApplicationForm({
             <ApplicationConfigInfo
               applicationName={initialData?.name}
               namespace={initialData?.namespace}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationDangerZone
+              namespace={initialData?.namespace ?? ""}
+              name={initialData?.name ?? ""}
             />
           )}
         </TabsContent>
