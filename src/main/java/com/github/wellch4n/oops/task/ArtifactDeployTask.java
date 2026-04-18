@@ -95,6 +95,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                     .withNewTemplate()
                         .withNewMetadata().withLabels(labels).endMetadata()
                         .withNewSpec()
+                            .withEnableServiceLinks(false)
                             .addToContainers(containerBuilder.build())
                             .addNewImagePullSecret("dockerhub")
                         .endSpec()
