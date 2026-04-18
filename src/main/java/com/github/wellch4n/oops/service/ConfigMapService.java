@@ -5,8 +5,9 @@ import com.github.wellch4n.oops.objects.ConfigMapItem;
 import com.github.wellch4n.oops.objects.ConfigMapRequest;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
-import io.fabric8.kubernetes.client.dsl.base.PatchContext;
-import io.fabric8.kubernetes.client.dsl.base.PatchType;
+import io.fabric8.kubernetes.api.model.OwnerReference;
+import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,26 +60,37 @@ public class ConfigMapService {
                 map.put(configMapRequest.getKey(), configMapRequest.getValue());
             }
 
-            ConfigMap configMap = new ConfigMapBuilder()
-                    .withApiVersion("v1")
-                    .withKind("ConfigMap")
-                    .withNewMetadata()
-                    .withName(applicationName)
-                    .withNamespace(namespace)
-                    .endMetadata()
-                    .withData(map)
-                    .build();
-
             try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-                PatchContext patchContext = new PatchContext.Builder()
-                        .withPatchType(PatchType.SERVER_SIDE_APPLY)
-                        .withFieldManager("oops")
-                        .withForce(true)
-                        .build();
+                StatefulSet statefulSet = client.apps().statefulSets()
+                        .inNamespace(namespace)
+                        .withName(applicationName)
+                        .get();
+
+                ConfigMapBuilder configMapBuilder = new ConfigMapBuilder()
+                        .withApiVersion("v1")
+                        .withKind("ConfigMap")
+                        .withNewMetadata()
+                        .withName(applicationName)
+                        .withNamespace(namespace)
+                        .endMetadata()
+                        .withData(map);
+
+                if (statefulSet != null) {
+                    OwnerReference ownerRef = new OwnerReferenceBuilder()
+                            .withApiVersion("apps/v1")
+                            .withKind("StatefulSet")
+                            .withName(applicationName)
+                            .withUid(statefulSet.getMetadata().getUid())
+                            .withController(true)
+                            .withBlockOwnerDeletion(true)
+                            .build();
+                    configMapBuilder.editMetadata().withOwnerReferences(ownerRef).endMetadata();
+                }
+
                 client.configMaps()
                         .inNamespace(namespace)
-                        .resource(configMap)
-                        .patch(patchContext);
+                        .resource(configMapBuilder.build())
+                        .serverSideApply();
             }
 
             return true;

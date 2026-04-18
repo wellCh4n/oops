@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public class ResourceNameChecker {
 
     private static final int MAX_LENGTH = 24;
-    private static final Pattern VALID_NAME_PATTERN = Pattern.compile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$");
+    private static final Pattern VALID_NAME_PATTERN = Pattern.compile("^[a-z]([-a-z0-9]*[a-z0-9])?$");
 
     private ResourceNameChecker() {
     }
@@ -27,7 +27,7 @@ public class ResourceNameChecker {
         if (!VALID_NAME_PATTERN.matcher(name).matches()) {
             throw new IllegalArgumentException(
                     "Name must contain only lowercase letters, digits, and hyphens, "
-                            + "and must start and end with a letter or digit");
+                            + "start with a lowercase letter, and end with a letter or digit");
         }
     }
 }

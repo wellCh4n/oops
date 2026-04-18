@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ApplicationServiceConfigRepository extends CrudRepository<ApplicationServiceConfig, String> {
     Optional<ApplicationServiceConfig> findByNamespaceAndApplicationName(String namespace, String applicationName);
+
+    void deleteByNamespaceAndApplicationName(String namespace, String applicationName);
 }

@@ -65,6 +65,11 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplication(namespace, name, application));
     }
 
+    @DeleteMapping("/{name}")
+    public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name) {
+        return Result.success(applicationService.deleteApplication(namespace, name));
+    }
+
     @GetMapping("/{name}/build/config")
     public Result<ApplicationBuildConfig> getApplicationBuildConfig(@PathVariable String namespace,
                                                                     @PathVariable String name) {

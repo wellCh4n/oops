@@ -102,10 +102,22 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 .endSpec()
                 .build();
 
-        client.apps().statefulSets().inNamespace(namespace).resource(statefulSet).patch(patchContext);
+        StatefulSet created = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .resource(statefulSet)
+                .patch(patchContext);
 
-        checkService();
-        checkIngressRoute();
+        OwnerReference ownerRef = new OwnerReferenceBuilder()
+                .withApiVersion("apps/v1")
+                .withKind("StatefulSet")
+                .withName(applicationName)
+                .withUid(created.getMetadata().getUid())
+                .withController(true)
+                .withBlockOwnerDeletion(true)
+                .build();
+
+        checkService(ownerRef);
+        checkIngressRoute(ownerRef);
 
         return true;
     }
@@ -133,14 +145,19 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         }
     }
 
-    private void checkService() {
+    private void checkService(OwnerReference ownerRef) {
         log.info("Checking service for application: {}/{}", application.getNamespace(), application.getName());
         String namespace = application.getNamespace();
         String applicationName = application.getName();
         if (applicationServiceConfig.getPort() != null) {
             client.services().inNamespace(namespace).resource(
                     new ServiceBuilder()
-                            .withNewMetadata().withName(applicationName).withNamespace(namespace).withLabels(labels).endMetadata()
+                            .withNewMetadata()
+                                .withName(applicationName)
+                                .withNamespace(namespace)
+                                .withLabels(labels)
+                                .withOwnerReferences(ownerRef)
+                            .endMetadata()
                             .withNewSpec()
                                 .withType("ClusterIP")
                                 .withSelector(labels)
@@ -152,11 +169,11 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                                 .endPort()
                             .endSpec()
                             .build()
-            ).patch(patchContext);
+            ).serverSideApply();
         }
     }
 
-    private void checkIngressRoute() {
+    private void checkIngressRoute(OwnerReference ownerRef) {
         log.info("Checking ingress route for application: {}/{}", application.getNamespace(), application.getName());
         String namespace = application.getNamespace();
         String applicationName = application.getName();
@@ -171,6 +188,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         ingressRoute.setMetadata(new ObjectMetaBuilder()
                 .withName(applicationName)
                 .withNamespace(namespace)
+                .withOwnerReferences(ownerRef)
                 .build()
         );
 
@@ -220,7 +238,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             client.resources(IngressRoute.class)
                     .inNamespace(namespace)
                     .resource(ingressRoute)
-                    .patch(patchContext);
+                    .serverSideApply();
         } catch (Exception e) {
             log.error("Error applying ingress route for application:e=", e);
             throw e;
