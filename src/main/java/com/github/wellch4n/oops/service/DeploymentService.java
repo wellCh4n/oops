@@ -97,7 +97,8 @@ public class DeploymentService {
             Thread.currentThread().interrupt();
             throw new BizException("Deployment was interrupted", e);
         } catch (ExecutionException e) {
-            throw new BizException("Deployment failed: " + e.getCause().getMessage(), e.getCause());
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            throw new BizException("Deployment failed: " + cause.getMessage(), cause);
         }
     }
 
