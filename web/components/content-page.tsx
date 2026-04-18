@@ -7,33 +7,41 @@ interface ContentPageProps {
   children: ReactNode
   className?: string
   bodyClassName?: string
-  flush?: boolean
-  fillHeight?: boolean
+  disableGutter?: boolean
+  fullHeight?: boolean
 }
 
-export function ContentPage({ title, actions, children, className, bodyClassName, flush = false, fillHeight = false }: ContentPageProps) {
+export function ContentPage({
+  title,
+  actions,
+  children,
+  className,
+  bodyClassName,
+  disableGutter = false,
+  fullHeight = false,
+}: ContentPageProps) {
   return (
     <div
       className={cn(
         "flex w-full flex-col min-h-0",
-        (flush || fillHeight) && "flex-1",
+        (disableGutter || fullHeight) && "flex-1",
         className
       )}
     >
       <div
         className={cn(
           "sticky top-0 z-10 shrink-0 bg-sidebar/95 border-b border-sidebar-border px-4 py-2 flex items-center justify-between backdrop-blur supports-[backdrop-filter]:bg-sidebar/85",
-          flush ? "w-full" : "-mx-4 -mt-4 w-[calc(100%+2rem)]"
+          disableGutter ? "w-full" : "-mx-4 -mt-4 w-[calc(100%+2rem)]"
         )}
       >
         <h2 className="text-sm font-medium text-sidebar-foreground/80 tracking-normal">{title}</h2>
         {actions && <div>{actions}</div>}
       </div>
-      {flush ? (
+      {disableGutter ? (
         <div className={cn("flex-1 min-h-0", bodyClassName)}>
           {children}
         </div>
-      ) : fillHeight ? (
+      ) : fullHeight ? (
         <div className={cn("flex flex-1 min-h-0 flex-col pt-4", bodyClassName)}>
           {children}
         </div>

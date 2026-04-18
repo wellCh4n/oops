@@ -63,7 +63,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
   return (
     <ContentPage
       title={id}
-      flush
+      disableGutter
       className="-m-4 w-[calc(100%+2rem)] gap-0 min-h-0 overflow-hidden self-stretch"
       bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
     >

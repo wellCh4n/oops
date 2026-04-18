@@ -276,7 +276,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const activeIndex = steps.indexOf(activeStep)
 
   return (
-    <ContentPage title={t("apps.pipeline.title")} fillHeight>
+    <ContentPage title={t("apps.pipeline.title")} fullHeight>
       <div className="flex flex-1 min-h-0 flex-col gap-4 relative">
         {wsDisconnected && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
