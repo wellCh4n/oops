@@ -77,8 +77,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                 .withNewResources()
                     .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
                     .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuLimit(), "500m")))
-                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest() + "Mi", "128Mi")))
-                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit() + "Mi", "512Mi")))
+                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest(), "128") + "Mi"))
+                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit(), "512") + "Mi"))
                 .endResources();
 
         Integer appPort = applicationServiceConfig.getPort();
