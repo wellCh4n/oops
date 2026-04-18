@@ -70,6 +70,22 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         checkNamespace();
         checkImagePullSecret();
 
+        ContainerBuilder containerBuilder = new ContainerBuilder()
+                .withName(applicationName)
+                .withImage(pipeline.getArtifact())
+                .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom()
+                .withNewResources()
+                    .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
+                    .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuLimit(), "500m")))
+                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest() + "Mi", "128Mi")))
+                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit() + "Mi", "512Mi")))
+                .endResources();
+
+        Integer appPort = applicationServiceConfig.getPort();
+        if (appPort != null && appPort > 0) {
+            containerBuilder.addNewPort().withName("http").withContainerPort(appPort).endPort();
+        }
+
         StatefulSet statefulSet = new StatefulSetBuilder()
                 .withNewMetadata().withName(applicationName).withLabels(labels).endMetadata()
                 .withNewSpec()
@@ -79,18 +95,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                     .withNewTemplate()
                         .withNewMetadata().withLabels(labels).endMetadata()
                         .withNewSpec()
-                            .addNewContainer()
-                                .withName(applicationName)
-                                .withImage(pipeline.getArtifact())
-                                .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom()
-                                .withNewResources()
-                                    .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
-                                    .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuLimit(), "500m")))
-                                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest() + "Mi", "128Mi")))
-                                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit() + "Mi", "512Mi")))
-                                .endResources()
-                                .withPorts(new ContainerPortBuilder().withName("http").withContainerPort(applicationServiceConfig.getPort()).build())
-                            .endContainer()
+                            .addToContainers(containerBuilder.build())
                             .addNewImagePullSecret("dockerhub")
                         .endSpec()
                     .endTemplate()
