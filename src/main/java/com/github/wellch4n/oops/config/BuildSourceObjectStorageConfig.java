@@ -16,7 +16,7 @@ public class BuildSourceObjectStorageConfig {
     private String accessKey;
     private String secretKey;
     private boolean pathStyleAccess = false;
-    private String keyPrefix = "build-sources";
+    private String keyPrefix = "oops-package";
     private long uploadUrlExpirationSeconds = 900;
     private long downloadUrlExpirationSeconds = 1800;
     private long maxFileSizeBytes = 524288000;

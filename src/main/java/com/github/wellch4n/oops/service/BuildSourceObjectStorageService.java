@@ -128,7 +128,7 @@ public class BuildSourceObjectStorageService {
     }
 
     private String buildObjectKey(String namespace, String applicationName, String fileName) {
-        String prefix = StringUtils.defaultIfBlank(config.getKeyPrefix(), "build-sources")
+        String prefix = StringUtils.defaultIfBlank(config.getKeyPrefix(), "oops-package")
                 .replaceAll("^/+", "")
                 .replaceAll("/+$", "");
         return String.format("%s/%s/%s/%d-%s",
@@ -159,9 +159,7 @@ public class BuildSourceObjectStorageService {
                     null,
                     null
             ).toString();
-        } catch (IllegalArgumentException e) {
-            throw new BizException("Failed to build object url");
-        } catch (URISyntaxException e) {
+        } catch (IllegalArgumentException | URISyntaxException e) {
             throw new BizException("Failed to build object url");
         }
     }
