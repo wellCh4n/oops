@@ -66,13 +66,15 @@ export function ApplicationBuildInfo({
   const { t } = useLanguage()
   const sourceType = form.watch("sourceType")
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
+  const featuresLoaded = useFeaturesStore((s) => s.loaded)
 
-  // If object storage is disabled but current source type is ZIP, fall back to GIT
+  // If object storage is disabled but current source type is ZIP, fall back to GIT.
+  // Gate on featuresLoaded to avoid downgrading ZIP apps before the async features API resolves.
   useEffect(() => {
-    if (!objectStorageEnabled && sourceType === "ZIP") {
+    if (featuresLoaded && !objectStorageEnabled && sourceType === "ZIP") {
       form.setValue("sourceType", "GIT", { shouldValidate: true })
     }
-  }, [objectStorageEnabled, sourceType, form])
+  }, [featuresLoaded, objectStorageEnabled, sourceType, form])
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
