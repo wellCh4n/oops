@@ -119,10 +119,6 @@ function AppsContent() {
     router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
   }
 
-  const handleIDE = (app: Application) => {
-    router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
-  }
-
   return (
     <ContentPage title={t("apps.title")}>
       <TableForm
@@ -178,7 +174,6 @@ function AppsContent() {
                 onPublish: handlePublish,
                 onStatus: handleStatus,
                 onPipelines: handlePipelines,
-                onIDE: handleIDE,
               }}
             />
             <div className="flex items-center justify-end gap-4 mt-2">

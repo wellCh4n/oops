@@ -16,7 +16,7 @@ import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Editor from "@monaco-editor/react"
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
-import { TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
 import { GitBranch, FileCode, Box, Terminal } from "lucide-react"
@@ -25,6 +25,7 @@ import { ApplicationEnvironmentSelector } from "./application-environment-select
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
+import { useFeaturesStore } from "@/store/features"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -44,6 +45,7 @@ export function ApplicationBuildInfo({
   const form = useForm<ApplicationBuildFormValues>({
     resolver: zodResolver(applicationBuildSchema),
     defaultValues: {
+      sourceType: initialBuildConfig?.sourceType || "GIT",
       repository: initialBuildConfig?.repository || "",
       dockerFile: initialBuildConfig?.dockerFile || "Dockerfile",
       buildImage: initialBuildConfig?.buildImage || "",
@@ -62,6 +64,17 @@ export function ApplicationBuildInfo({
   const [isSaving, setIsSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
+  const sourceType = form.watch("sourceType")
+  const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
+  const featuresLoaded = useFeaturesStore((s) => s.loaded)
+
+  // If object storage is disabled but current source type is ZIP, fall back to GIT.
+  // Gate on featuresLoaded to avoid downgrading ZIP apps before the async features API resolves.
+  useEffect(() => {
+    if (featuresLoaded && !objectStorageEnabled && sourceType === "ZIP") {
+      form.setValue("sourceType", "GIT", { shouldValidate: true })
+    }
+  }, [featuresLoaded, objectStorageEnabled, sourceType, form])
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -102,7 +115,8 @@ export function ApplicationBuildInfo({
     try {
       // 1. Save global build config
       const buildConfigPayload: ApplicationBuildConfig = {
-        repository: data.repository,
+        sourceType: data.sourceType,
+        repository: data.sourceType === "GIT" ? data.repository : undefined,
         dockerFile: data.dockerFile,
         buildImage: data.buildImage,
         namespace,
@@ -132,17 +146,45 @@ export function ApplicationBuildInfo({
             <h3 className="text-lg font-medium">{t("apps.build.sourceConfig")}</h3>
             <FormField
               control={form.control}
-              name="repository"
+              name="sourceType"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />{t("apps.build.repository")}</FormLabel>
+                <FormItem className="space-y-3">
                   <FormControl>
-                    <Input placeholder={t("apps.build.repositoryPlaceholder")} {...field} />
+                    <Tabs value={field.value} onValueChange={field.onChange}>
+                      <TabsList className="justify-start h-auto flex-wrap">
+                        <TabsTrigger value="GIT" className="px-6 cursor-pointer">
+                          {t("apps.build.sourceGit")}
+                        </TabsTrigger>
+                        {objectStorageEnabled && (
+                          <TabsTrigger value="ZIP" className="px-6 cursor-pointer">
+                            {t("apps.build.sourceZip")}
+                          </TabsTrigger>
+                        )}
+                      </TabsList>
+                    </Tabs>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {sourceType === "GIT" ? (
+              <FormField
+                control={form.control}
+                name="repository"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />{t("apps.build.repository")}</FormLabel>
+                    <FormControl>
+                      <Input autoComplete="off" placeholder={t("apps.build.repositoryPlaceholder")} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : (
+              <div className="text-sm text-muted-foreground">{t("apps.build.zipConfiguredInPublish")}</div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
@@ -152,7 +194,7 @@ export function ApplicationBuildInfo({
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Dockerfile" {...field} />
+                      <Input autoComplete="off" placeholder="Dockerfile" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -166,7 +208,7 @@ export function ApplicationBuildInfo({
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />{t("apps.build.buildImage")}</FormLabel>
                     <FormControl>
-                      <Input placeholder={t("apps.build.buildImagePlaceholder")} {...field} />
+                      <Input autoComplete="off" placeholder={t("apps.build.buildImagePlaceholder")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

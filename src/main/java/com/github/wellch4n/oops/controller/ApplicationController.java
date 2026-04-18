@@ -1,7 +1,6 @@
 package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.*;
-import com.github.wellch4n.oops.enums.DeployMode;
 import com.github.wellch4n.oops.objects.AuthUserPrincipal;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ApplicationResponse;
@@ -10,7 +9,6 @@ import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.ApplicationService;
-import com.github.wellch4n.oops.service.DeploymentService;
 import com.github.wellch4n.oops.service.PipelineService;
 import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import java.util.List;
@@ -28,12 +26,11 @@ import org.springframework.web.bind.annotation.*;
 public class ApplicationController {
 
     private final ApplicationService applicationService;
-    private final DeploymentService deploymentService;
     private final PipelineService pipelineService;
 
-    public ApplicationController(ApplicationService applicationService, DeploymentService deploymentService, PipelineService pipelineService) {
+    public ApplicationController(ApplicationService applicationService,
+                                 PipelineService pipelineService) {
         this.applicationService = applicationService;
-        this.deploymentService = deploymentService;
         this.pipelineService = pipelineService;
     }
 
@@ -166,14 +163,4 @@ public class ApplicationController {
 //        return applicationService.getApplicationPodLogs(namespace, name, pod, env);
 //    }
 
-    @PostMapping(value = "/{name}/deployments")
-    public Result<String> deployApplication(@PathVariable String namespace,
-                                            @PathVariable String name,
-                                            @RequestParam("environment") String environment,
-                                            @RequestParam(value = "branch", defaultValue = "main") String branch,
-                                            @RequestParam(value = "deployMode", defaultValue = "IMMEDIATE") DeployMode deployMode,
-                                            Authentication authentication) {
-        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
-        return Result.success(deploymentService.deployApplication(namespace, name, environment, branch, deployMode, principal.userId()));
-    }
 }

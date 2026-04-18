@@ -2,11 +2,14 @@ package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Lob;
 import java.util.List;
 import lombok.Data;
@@ -20,6 +23,9 @@ public class ApplicationBuildConfig extends BaseDataObject {
     private String namespace;
 
     private String applicationName;
+
+    @Enumerated(EnumType.STRING)
+    private ApplicationSourceType sourceType;
 
     private String repository;
 

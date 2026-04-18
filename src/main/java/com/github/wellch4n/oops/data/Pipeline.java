@@ -1,8 +1,11 @@
 package com.github.wellch4n.oops.data;
 
 import com.github.wellch4n.oops.enums.DeployMode;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
 import com.github.wellch4n.oops.enums.PipelineStatus;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -27,6 +30,11 @@ public class Pipeline extends BaseDataObject {
     private String environment;
 
     private String branch;
+
+    @Enumerated(EnumType.STRING)
+    private ApplicationSourceType publishType;
+
+    private String publishRepository;
 
     private DeployMode deployMode;
 

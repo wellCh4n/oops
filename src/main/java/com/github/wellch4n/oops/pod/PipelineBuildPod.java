@@ -55,7 +55,8 @@ public class PipelineBuildPod extends Job {
 
         this.setSpec(new io.fabric8.kubernetes.api.model.batch.v1.JobSpecBuilder()
                 .withTemplate(podTemplateSpec)
-                .withTtlSecondsAfterFinished(604800)
+                .withBackoffLimit(0)
+                .withTtlSecondsAfterFinished(3 * 24 * 60 * 60)
                 .build());
 
         this.setApiVersion("batch/v1");

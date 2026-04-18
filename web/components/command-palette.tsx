@@ -21,6 +21,7 @@ import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
+import { toast } from "sonner"
 
 type CommandType = "status" | "deploy" | "ide" | "pipeline" | "app" | null
 
@@ -198,6 +199,10 @@ export function CommandPalette() {
         router.push(`/apps/${app.namespace}/${app.name}/publish`)
         break
       case "ide":
+        if (app.sourceType === "ZIP") {
+          toast.error(t("ide.zipUnsupported"))
+          return
+        }
         router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
         break
       case "pipeline":

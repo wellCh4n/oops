@@ -6,11 +6,15 @@ import com.github.wellch4n.oops.config.IDEConfig;
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.config.PipelineImageConfig;
 import com.github.wellch4n.oops.container.CloneContainer;
+import com.github.wellch4n.oops.container.clone.CloneStrategyParam;
+import com.github.wellch4n.oops.container.clone.GitCloneParam;
 import com.github.wellch4n.oops.crds.IngressRoute;
 import com.github.wellch4n.oops.crds.IngressRouteSpec;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import com.github.wellch4n.oops.data.Environment;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
+import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.objects.IDEConfigResponse;
 import com.github.wellch4n.oops.objects.IDECreateRequest;
@@ -42,14 +46,20 @@ public class IDEService {
 
     private final EnvironmentService environmentService;
     private final ApplicationService applicationService;
+    private final BuildSourceObjectStorageService buildSourceObjectStorageService;
     private final PipelineImageConfig pipelineImageConfig;
     private final IDEConfig ideConfig;
     private final IngressConfig ingressConfig;
 
-    public IDEService(EnvironmentService environmentService, ApplicationService applicationService,
-                      PipelineImageConfig pipelineImageConfig, IDEConfig ideConfig, IngressConfig ingressConfig) {
+    public IDEService(EnvironmentService environmentService,
+                      ApplicationService applicationService,
+                      BuildSourceObjectStorageService buildSourceObjectStorageService,
+                      PipelineImageConfig pipelineImageConfig,
+                      IDEConfig ideConfig,
+                      IngressConfig ingressConfig) {
         this.environmentService = environmentService;
         this.applicationService = applicationService;
+        this.buildSourceObjectStorageService = buildSourceObjectStorageService;
         this.pipelineImageConfig = pipelineImageConfig;
         this.ideConfig = ideConfig;
         this.ingressConfig = ingressConfig;
@@ -128,6 +138,12 @@ public class IDEService {
 
         Application application = applicationService.getApplication(namespace, applicationName);
         ApplicationBuildConfig applicationBuildConfig = applicationService.getApplicationBuildConfig(namespace, applicationName);
+        ApplicationSourceType sourceType = applicationBuildConfig != null && applicationBuildConfig.getSourceType() != null
+                ? applicationBuildConfig.getSourceType()
+                : ApplicationSourceType.GIT;
+        if (sourceType == ApplicationSourceType.ZIP) {
+            throw new BizException("IDE is not supported for ZIP source applications");
+        }
 
         String ideId = NanoIdUtils.generate();
 
@@ -145,7 +161,7 @@ public class IDEService {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
 
-        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), request.getBranch(), false);
+        CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam(applicationBuildConfig, request.getBranch()));
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
 
         String name = applicationName + "-ide-" + ideId;
@@ -270,6 +286,15 @@ public class IDEService {
         }
 
         return ideId;
+    }
+
+    private CloneStrategyParam buildCloneStrategyParam(ApplicationBuildConfig applicationBuildConfig, String branch) {
+        return new GitCloneParam(
+                pipelineImageConfig.getClone(),
+                applicationBuildConfig != null ? applicationBuildConfig.getRepository() : null,
+                branch,
+                false
+        );
     }
 
     /**

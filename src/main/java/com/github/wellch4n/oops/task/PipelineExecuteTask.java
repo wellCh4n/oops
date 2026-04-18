@@ -3,18 +3,23 @@ package com.github.wellch4n.oops.task;
 import com.github.wellch4n.oops.config.PipelineImageConfig;
 import com.github.wellch4n.oops.config.SpringContext;
 import com.github.wellch4n.oops.container.*;
+import com.github.wellch4n.oops.container.clone.CloneStrategyParam;
+import com.github.wellch4n.oops.container.clone.GitCloneParam;
+import com.github.wellch4n.oops.container.clone.ZipCloneParam;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.enums.ApplicationSourceType;
 // import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
+import com.github.wellch4n.oops.service.BuildSourceObjectStorageService;
 import com.github.wellch4n.oops.volume.SecretVolume;
 import com.github.wellch4n.oops.volume.WorkspaceVolume;
 import io.fabric8.kubernetes.api.model.Container;
-import io.micrometer.common.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author wellCh4n
@@ -78,7 +83,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         List<Container> initContainers = new ArrayList<>();
 
-        CloneContainer clone = new CloneContainer(application, applicationBuildConfig, pipelineImageConfig.getClone(), branch, true);
+        CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam());
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
 
@@ -89,7 +94,14 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
             initContainers.add(build);
         }
 
-        PushContainer push = new PushContainer(application, pipeline, repositoryUrl, pipelineImageConfig.getPush(), pipelineImageConfig.getKanikoRegistryMap());
+        PushContainer push = new PushContainer(
+                application,
+                applicationBuildConfig,
+                pipeline,
+                repositoryUrl,
+                pipelineImageConfig.getPush(),
+                pipelineImageConfig.getKanikoRegistryMap()
+        );
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(push);
         String artifact = push.getArtifact();
@@ -109,6 +121,29 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         }
 
         return pipelineBuildPod;
+    }
+
+    private CloneStrategyParam buildCloneStrategyParam() {
+        ApplicationSourceType publishType = pipeline.getPublishType() != null
+                ? pipeline.getPublishType()
+                : applicationBuildConfig != null && applicationBuildConfig.getSourceType() != null
+                        ? applicationBuildConfig.getSourceType()
+                        : ApplicationSourceType.GIT;
+        if (publishType == ApplicationSourceType.ZIP) {
+            BuildSourceObjectStorageService buildSourceObjectStorageService = SpringContext.getBean(BuildSourceObjectStorageService.class);
+            if (StringUtils.isEmpty(pipelineImageConfig.getZip())) {
+                throw new IllegalStateException("ZIP source requires oops.pipeline.image.zip to be configured");
+            }
+            String sourceImage = pipelineImageConfig.getZip();
+            String sourceDownloadUrl = buildSourceObjectStorageService.resolveDownloadUrl(pipeline.getPublishRepository());
+            return new ZipCloneParam(sourceImage, sourceDownloadUrl);
+        }
+        return new GitCloneParam(
+                pipelineImageConfig.getClone(),
+                pipeline.getPublishRepository(),
+                branch,
+                true
+        );
     }
 
     private static Optional<String> resolveBuildCommand(ApplicationBuildConfig buildConfig, String environmentName) {

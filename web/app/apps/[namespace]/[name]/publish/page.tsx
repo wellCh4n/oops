@@ -1,12 +1,12 @@
 "use client"
 
-import { use, useState, useEffect } from "react"
+import { use, useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Rocket, ExternalLink } from "lucide-react"
+import { Rocket, ExternalLink, Upload } from "lucide-react"
 import { toast } from "sonner"
-import { getApplication, getApplicationEnvironments, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
-import { Application, ApplicationEnvironment, DeployMode, LastSuccessfulPipelineInfo } from "@/lib/api/types"
+import { createApplicationBuildSourceUpload, getApplication, getApplicationBuildConfig, getApplicationEnvironments, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
+import { Application, ApplicationEnvironment, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -14,6 +14,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
 import { useRecentAppStore } from "@/store/recent-app"
+import { useFeaturesStore } from "@/store/features"
 
 interface PageProps {
   params: Promise<{
@@ -30,20 +31,28 @@ export default function PublishPage({ params }: PageProps) {
   const [application, setApplication] = useState<Application | null>(null)
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
+  const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
   const [branch, setBranch] = useState<string>("main")
+  const [publishRepository, setPublishRepository] = useState<string>("")
   const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [loading, setLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
+  const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
+
+  const normalizeText = (value: string | null | undefined) => value ?? ""
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appRes, envRes, lastPipelineRes] = await Promise.all([
+        const [appRes, envRes, lastPipelineRes, buildConfigRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationEnvironments(namespace, name),
-          getLastSuccessfulPipeline(namespace, name)
+          getLastSuccessfulPipeline(namespace, name),
+          getApplicationBuildConfig(namespace, name)
         ])
         
         if (appRes.data) {
@@ -66,8 +75,12 @@ export default function PublishPage({ params }: PageProps) {
         }
         if (lastPipelineRes.data) {
           setLastSuccessfulPipeline(lastPipelineRes.data)
-          setBranch(lastPipelineRes.data.branch)
+          setBranch(normalizeText(lastPipelineRes.data.branch) || "main")
           setDeployMode(lastPipelineRes.data.deployMode)
+          setPublishRepository(normalizeText(lastPipelineRes.data.publishRepository))
+        }
+        if (buildConfigRes.data?.sourceType) {
+          setSourceType(buildConfigRes.data.sourceType)
         }
       } catch {
         toast.error(t("apps.publish.fetchError"))
@@ -81,10 +94,25 @@ export default function PublishPage({ params }: PageProps) {
       toast.error(t("apps.publish.noEnvError"))
       return
     }
+    if (sourceType === "ZIP" && !publishRepository.trim()) {
+      toast.error(t("apps.publish.zipRequired"))
+      return
+    }
 
     setLoading(true)
     try {
-      const res = await deployApplication(namespace, name, selectedEnv, branch.trim() || "main", deployMode)
+      const strategy: DeployStrategyParam = sourceType === "ZIP"
+        ? { type: "ZIP", repository: publishRepository.trim() }
+        : { type: "GIT", branch: branch.trim() || "main" }
+      const res = await deployApplication(
+        namespace,
+        name,
+        {
+          environment: selectedEnv,
+          deployMode,
+          strategy,
+        }
+      )
       if (res.success) {
         toast.success(t("apps.publish.submitSuccessPrefix") + selectedEnv)
         // Assuming the backend returns the pipeline ID in res.data
@@ -100,6 +128,58 @@ export default function PublishPage({ params }: PageProps) {
       toast.error(t("apps.publish.submitError"))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleZipUpload = async (file?: File) => {
+    if (!file) return
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      toast.error(t("apps.build.zipOnly"))
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const uploadRes = await createApplicationBuildSourceUpload(namespace, name, {
+        fileName: file.name,
+        fileSize: file.size,
+        contentType: file.type || "application/zip",
+      })
+      if (!uploadRes.success || !uploadRes.data) {
+        toast.error(uploadRes.message || t("apps.build.uploadError"))
+        return
+      }
+
+      const headers = new Headers()
+      Object.entries(uploadRes.data.headers || {}).forEach(([key, value]) => {
+        headers.set(key, value)
+      })
+
+      const putRes = await fetch(uploadRes.data.uploadUrl, {
+        method: "PUT",
+        headers,
+        body: file,
+      })
+      if (!putRes.ok) {
+        throw new Error("Upload failed")
+      }
+
+      const objectUrl = normalizeText(uploadRes.data.objectUrl)
+      if (!objectUrl) {
+        toast.error(t("apps.build.uploadError"))
+        return
+      }
+
+      setPublishRepository(objectUrl)
+      toast.success(t("apps.build.uploadSuccess"))
+    } catch (error) {
+      console.error(error)
+      toast.error(t("apps.build.uploadError"))
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+      setIsUploading(false)
     }
   }
 
@@ -144,28 +224,69 @@ export default function PublishPage({ params }: PageProps) {
           )}
         </div>
 
-        <div className="grid gap-2">
-          <Label htmlFor="branch">
-            {t("apps.publish.branch")}
-            {lastSuccessfulPipeline && (
-              <button
-                type="button"
-                onClick={() => {
-                  setBranch(lastSuccessfulPipeline.branch)
-                }}
-                className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
-              >
-                {t("apps.publish.lastBranch")}{lastSuccessfulPipeline.branch}
-              </button>
-            )}
-          </Label>
-          <Input
-            id="branch"
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            placeholder="main"
-          />
-        </div>
+        {sourceType === "GIT" && (
+          <div className="grid gap-2">
+            <Label htmlFor="branch">
+              {t("apps.publish.branch")}
+              {lastSuccessfulPipeline?.branch && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBranch(lastSuccessfulPipeline.branch || "main")
+                  }}
+                  className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
+                >
+                  {t("apps.publish.lastBranch")}{lastSuccessfulPipeline.branch}
+                </button>
+              )}
+            </Label>
+            <Input
+              id="branch"
+              value={branch}
+              onChange={(e) => setBranch(e.target.value)}
+              placeholder="main"
+            />
+          </div>
+        )}
+
+        {sourceType === "ZIP" && (
+          <div className="grid gap-2">
+            <Label htmlFor="publish-repository">{t("apps.publish.zipUrl")}</Label>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <div className="min-w-0">
+                <Input
+                  id="publish-repository"
+                  autoComplete="off"
+                  className="w-full min-w-0"
+                  value={publishRepository}
+                  onChange={(e) => setPublishRepository(e.target.value)}
+                  placeholder={t("apps.publish.zipUrlPlaceholder")}
+                />
+              </div>
+              {objectStorageEnabled && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".zip,application/zip"
+                    className="hidden"
+                    onChange={(event) => void handleZipUpload(event.target.files?.[0])}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full shrink-0 sm:w-auto"
+                    disabled={isUploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {isUploading ? t("apps.build.uploading") : t("apps.build.uploadZip")}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-2">
           <Label>
