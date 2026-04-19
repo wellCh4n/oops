@@ -36,6 +36,8 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
 
     Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(String namespace, String applicationName, PipelineStatus status);
 
+    boolean existsByNamespaceAndApplicationNameAndStatusIn(String namespace, String applicationName, List<PipelineStatus> statuses);
+
     @Modifying
     @Transactional
     @Query("update Pipeline p set p.status = :target where p.id = :id and p.status = :expected")

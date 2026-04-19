@@ -54,6 +54,11 @@ public class DeploymentService {
         if (request.strategy() == null) {
             throw new BizException("Deploy strategy is required");
         }
+        if (pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
+                namespace, applicationName, java.util.List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+        )) {
+            throw new BizException("Application is being deployed");
+        }
 
         Environment environment = environmentService.getEnvironment(request.environment());
 

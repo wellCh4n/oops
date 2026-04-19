@@ -229,6 +229,11 @@ public class PipelineService {
         if (!PipelineStatus.BUILD_SUCCEEDED.equals(pipeline.getStatus())) {
             throw new BizException("Pipeline is not in BUILD_SUCCEEDED state");
         }
+        if (pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
+                namespace, applicationName, java.util.List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+        )) {
+            throw new BizException("Application is being deployed");
+        }
 
         int claimed = pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
         if (claimed == 0) {
