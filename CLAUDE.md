@@ -104,8 +104,9 @@ Copy `src/main/resources/application.properties.example` to `application.propert
 
 - `spring.datasource.url`: SQLite (default) or MySQL connection
 - `oops.jwt.secret`: JWT signing key (min 32 chars)
-- `oops.pipeline.image.*`: Clone and Kaniko images for builds
+- `oops.pipeline.image.*`: Clone, Kaniko, and ZIP (curl) images for builds
 - `oops.ingress.cert-resolver`: Traefik certificate resolver name
+- `oops.object-storage.*`: S3-compatible object storage for ZIP source uploads (`enabled`, `endpoint`, `region`, `bucket`, `access-key`, `secret-key`, `path-style-access`, `key-prefix`, URL expiration, max file size)
 - `oops.feishu.*`: Feishu (Lark) OAuth configuration (optional)
 - `oops.ide.*`: code-server IDE configuration (optional)
 
@@ -121,14 +122,28 @@ Applications can be deployed to any configured environment.
 
 ### Pipelines
 Build pipelines run as Kubernetes Jobs with init containers:
-1. **clone**: Clones source code from git
+1. **clone**: Clones source code from git (or downloads ZIP via curl for ZIP source type)
 2. **build** (optional): Runs custom build commands
 3. **push**: Builds and pushes Docker image using Kaniko
 
+Two source types exist: `GIT` (default) and `ZIP`. ZIP uploads use presigned S3 URLs via `BuildSourceObjectStorageService` — the frontend gets a presigned PUT URL from `POST .../deployments/source-upload`, uploads the file, then triggers the pipeline. ZIP builds use `oops.pipeline.image.zip` (defaults to `alpine/curl:8.17.0`) to download the archive.
+
 Pipeline logs are streamed via WebSocket (`PipelineLogWebSocketHandler`). A `@Scheduled(fixedRate=5000)` job (`PipelineInstanceScanJob`) polls K8s for job completion and drives pipeline state. Pipeline state transitions use optimistic locking: `PipelineRepository.updateStatusIfMatch()` does a conditional UPDATE and returns row count (0 = lost the race).
 
+**Duplicate deploy guard**: Before starting any pipeline or deployment, `PipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn()` checks for in-flight pipelines (status `RUNNING` or `DEPLOYING`). If one exists, a `BizException("Application is being deployed")` is thrown. This is separate from the optimistic locking — it's a pre-check to prevent duplicate concurrent deployments.
+
+**Pipeline notifications**: A Spring event system sends notifications at each pipeline state transition. `PipelineNotificationEvent` is published and `PipelineNotificationListener` (`@EventListener`) formats messages sent to the operator via `ExternalMessageService` (Feishu). Notification types: `CREATED`, `BUILD_SUCCEEDED`, `DEPLOYING`, `SUCCEEDED`, `FAILED`, `STOPPED`.
+
 ### Application Deployment
-Applications deploy as **StatefulSets** (not Deployments) with fixed internal service port `1114`. Ingress uses **Traefik IngressRoute CRDs** (not standard Kubernetes Ingress) — the code checks for CRD existence and skips gracefully if absent. ConfigMap named after the application is injected via `envFrom: configMapRef`.
+Applications deploy as **StatefulSets** (not Deployments) with `enableServiceLinks(false)` to prevent K8s env var pollution. Ingress uses **Traefik IngressRoute CRDs** (not standard Kubernetes Ingress) — the code checks for CRD existence and skips gracefully if absent. ConfigMap named after the application is injected via `envFrom: configMapRef`.
+
+Deployment triggering logic lives in `DeploymentService` (not `PipelineService`). The `DeploymentController` at `/api/namespaces/{namespace}/applications/{name}/deployments` handles deploy triggers and source uploads.
+
+**Per-application config entities**:
+- `ApplicationServiceConfig`: Stores port and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.
+- `ApplicationPerformanceConfig`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`). Frontend: `application-performance-info.tsx`.
+
+**Application deletion**: The "Danger Zone" tab (`application-danger-zone.tsx`) provides cascade deletion that cleans up Kubernetes resources (StatefulSet, Service, IngressRoute) alongside the database record.
 
 ### IDE Integration
 Optional code-server integration (`oops.ide.enabled=true`) creates IDE instances as StatefulSets in the work namespace. `IDEConfig` and `IDEService` are both `@ConditionalOnProperty(prefix="oops.ide", name="enabled", havingValue="true")` — fully absent when disabled.
@@ -147,6 +162,9 @@ Default IDE config (extensions, settings) is stored at `src/main/resources/ide-d
 ### Application Ownership
 `Application` has an `owner` field (User NanoId). `createApplication` stamps the caller's `userId` automatically. `ApplicationResponse` includes both `owner` (ID) and `ownerName` (resolved via `UserService.getUsernameMapByIds()`).
 
+### External Accounts
+`ExternalAccount` entity stores linked OAuth accounts (`email`, `provider`, `providerUserId`). Used by the notification system to route pipeline status messages to the user's linked provider (e.g., Feishu).
+
 ### Pipeline Deploy Modes
 `Pipeline.deployMode` is either `IMMEDIATE` (default) or `MANUAL`. With `MANUAL`, `PipelineInstanceScanJob` transitions the pipeline to `BUILD_SUCCEEDED` after the K8s Job completes but does **not** automatically deploy — a separate `deployPipeline()` call is required. With `IMMEDIATE`, it continues to `DEPLOYING → SUCCEEDED` inline.
 
@@ -164,7 +182,12 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 - `GET /api/nodes?env={envName}` — node list for a given environment
 - `GET|POST /api/users`, `PUT|DELETE /api/users/{id}` — user management (ADMIN-only writes)
 - `GET /api/users/me` — current user from JWT principal
-- `/api/auth/external/**` — OAuth provider/callback endpoints
+- `/api/auth/external/**` — OAuth provider/callback endpoints and `ExternalAccount` management
+- `GET /api/features` — feature flags (`feishu`, `ide`, `objectStorage`, `ideHost`, `ideHttps`)
+- `POST /api/image-repositories/validations` — validate image registry credentials
+- `POST /api/kubernetes/validations` — validate K8s connectivity
+- `POST /api/kubernetes/namespaces` — create a K8s namespace
+- `POST /api/index/pipelines`, `POST /api/index/applications` — cross-namespace queries
 
 ### Entity Identity
 All entities extend `BaseDataObject` which auto-generates a 24-char NanoId via `@PrePersist` (using the `jnanoid` library). Complex collection fields (e.g. `List<EnvironmentConfig>`) are stored as JSON blobs via a custom `@AttributeConverter` — follow this pattern for new nested object collections.
@@ -211,10 +234,10 @@ Frontend also stores `userId`, `username`, and `role` in `localStorage` (keys `a
 `useNamespaceStore` (Zustand, persisted to `localStorage` key `oops-namespace`) stores the selected namespace. `NamespaceParamProvider` syncs this store bidirectionally with a `?namespace=` URL query parameter — URL takes priority, making namespace bookmarkable.
 
 ### Feature Flags
-`useFeaturesStore` (not persisted) loads feature flags once on mount and exposes `{ feishu, ide }` booleans. Check this store before rendering IDE or Feishu-dependent UI.
+`useFeaturesStore` (not persisted) loads feature flags once on mount and exposes `{ feishu, ide, objectStorage, ideHost, ideHttps }`. Check this store before rendering IDE, Feishu-dependent, or ZIP-upload UI.
 
 ### Localization
-Two locales: `zh` (default) and `en`. Stored in cookie `locale` (max-age 1 year) and `localStorage`. Use `web/locales/` for all user-facing strings. `t()` falls back to the key itself if a translation is missing.
+Four locales: `zh-CN` (default), `en-US`, `zh-TW`, `ja-JP`. Stored in cookie `locale` (max-age 1 year) and `localStorage`. Use `web/locales/` for all user-facing strings. `t()` falls back to the key itself if a translation is missing.
 
 ### Command Palette
 Triggered by pressing `/` (outside input/textarea). Two-stage: select command (Status, Deploy, IDEs, Pipeline, App), then search for an application via `/api/search/applications` with 150ms debounce. Most-recently-used app stored in Zustand persisted to `localStorage` key `oops:recent-app`. Backspace with empty input returns to command selection.
