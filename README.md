@@ -88,6 +88,75 @@ docker build -t oops .
 
 Default admin credentials: `admin` / `admin123` (override via `ADMIN_PASSWORD` env)
 
+## How It Works
+
+### Application Build & Deploy Pipeline
+
+```mermaid
+flowchart TD
+    Start([User Triggers Deploy]) --> SourceType{Source Type?}
+
+    SourceType -->|GIT| GitClone["① Clone\nGit clone source code"]
+    SourceType -->|ZIP| Upload["Upload ZIP to S3\n(presigned URL)"]
+    Upload --> ZipDownload["① Clone\ncurl downloads ZIP from S3"]
+
+    GitClone --> BuildStep{Has build\ncommands?}
+    ZipDownload --> BuildStep
+
+    BuildStep -->|Yes| Build["② Build\nRun custom build commands"]
+    BuildStep -->|No| Push
+
+    Build --> Push["③ Push\nKaniko builds & pushes\nDocker image to registry"]
+
+    Push --> ScanJob["PipelineInstanceScanJob\npolls K8s Job status\nevery 5s"]
+
+    ScanJob --> JobResult{K8s Job\nresult?}
+
+    JobResult -->|Failed| Error([ERROR ❌])
+    JobResult -->|Succeeded| DeployMode{Deploy Mode?}
+
+    DeployMode -->|IMMEDIATE| DeployAuto["Auto deploy"]
+    DeployMode -->|MANUAL| WaitManual([BUILD_SUCCEEDED ⏸️\nWaiting for manual trigger])
+    WaitManual -->|"User calls deployPipeline()"| DeployManual["Manual deploy"]
+
+    DeployAuto --> Deploy
+    DeployManual --> Deploy
+
+    Deploy["Deploy to Kubernetes"] --> CreateSS["Create/Update StatefulSet\n• enableServiceLinks=false\n• envFrom: ConfigMap"]
+    CreateSS --> CreateSvc["Create Service\n(ownerRef → StatefulSet)"]
+    CreateSvc --> HasIngress{Has ingress\nconfig?}
+    HasIngress -->|Yes| CreateIR["Create Traefik IngressRoute\n(ownerRef → StatefulSet)"]
+    HasIngress -->|No| Success
+    CreateIR --> Success([SUCCEEDED ✅])
+
+    style Start fill:#4CAF50,color:#fff
+    style Success fill:#4CAF50,color:#fff
+    style Error fill:#f44336,color:#fff
+    style WaitManual fill:#FF9800,color:#fff
+```
+
+### Pipeline State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> INITIALIZED: Pipeline created
+    INITIALIZED --> RUNNING: K8s Job submitted
+
+    RUNNING --> BUILD_SUCCEEDED: Job succeeded\n(MANUAL mode)
+    RUNNING --> DEPLOYING: Job succeeded\n(IMMEDIATE mode)
+    RUNNING --> ERROR: Job failed
+    RUNNING --> STOPPED: User cancels
+
+    BUILD_SUCCEEDED --> DEPLOYING: User triggers deploy
+
+    DEPLOYING --> SUCCEEDED: Deploy completed
+    DEPLOYING --> ERROR: Deploy failed
+
+    SUCCEEDED --> [*]
+    ERROR --> [*]
+    STOPPED --> [*]
+```
+
 ## Snapshots
 
 ![applications.png](snapshots/applications.png)
