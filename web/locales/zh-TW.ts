@@ -70,6 +70,8 @@ const locale = {
   "apps.appNameFilter": "應用程式名稱:",
   "apps.searchPlaceholder": "搜尋應用程式...",
   "apps.searchBtn": "搜尋",
+  "apps.ownerAll": "所有人",
+  "apps.ownerMine": "我的",
   "apps.createBtn": "創建應用",
   "apps.col.name": "名稱",
   "apps.col.description": "描述",

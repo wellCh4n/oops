@@ -77,6 +77,8 @@ const en = {
   "apps.appNameFilter": "Application:",
   "apps.searchPlaceholder": "Search apps...",
   "apps.searchBtn": "Search",
+  "apps.ownerAll": "All",
+  "apps.ownerMine": "Mine",
   "apps.createBtn": "Create",
   "apps.col.name": "Name",
   "apps.col.description": "Description",

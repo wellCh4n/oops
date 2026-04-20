@@ -23,11 +23,12 @@ public interface ApplicationRepository extends CrudRepository<Application, Strin
 
     Page<Application> findByNamespaceAndNameContainingIgnoreCase(String namespace, String keyword, Pageable pageable);
 
-    @Query("SELECT a FROM Application a WHERE a.namespace = :namespace AND LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) ORDER BY CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC")
+    @Query("SELECT a FROM Application a WHERE a.namespace = :namespace AND LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) AND (:ownerId IS NULL OR a.owner = :ownerId) ORDER BY CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC")
     Page<Application> findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
             @Param("namespace") String namespace,
             @Param("keyword") String keyword,
             @Param("currentUserId") String currentUserId,
+            @Param("ownerId") String ownerId,
             Pageable pageable);
 
     List<Application> findByNameContainingIgnoreCase(String keyword);

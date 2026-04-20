@@ -28,7 +28,7 @@ import { updateApplication, getApplicationEnvironments, updateApplicationEnviron
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
-import { AppWindow, Layers, AlignLeft, Server, Check } from "lucide-react"
+import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -182,7 +182,7 @@ export function ApplicationBasicInfo({
           name="owner"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t("common.owner")}</FormLabel>
+              <FormLabel className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{t("common.owner")}</FormLabel>
               <Select
                 onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}
                 defaultValue={field.value || "__none__"}

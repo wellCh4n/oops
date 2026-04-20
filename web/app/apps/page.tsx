@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
-import { Plus, Search, Layers, LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Search, Layers, LayoutGrid, ChevronLeft, ChevronRight, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
@@ -23,6 +23,7 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
+import { useOwnerFilterStore } from "@/store/owner-filter"
 
 export default function AppsPage() {
   return (
@@ -50,6 +51,26 @@ function AppsContent() {
 
   const page = Number(searchParams.get("page") ?? "1")
   const size = Number(searchParams.get("size") ?? "10")
+  const ownerOnlyUrl = searchParams.get("ownerOnly")
+  const { ownerOnly: ownerOnlyStore, setOwnerOnly } = useOwnerFilterStore()
+
+  // URL has priority; fallback to store on first load
+  const ownerOnly = ownerOnlyUrl !== null ? ownerOnlyUrl !== "false" : ownerOnlyStore
+  const [ownerFilter, setOwnerFilter] = useState(ownerOnly)
+
+  useEffect(() => {
+    setOwnerFilter(ownerOnly)
+  }, [ownerOnly])
+
+  // Sync store value to URL on first load when URL param is absent
+  useEffect(() => {
+    if (ownerOnlyUrl === null && selectedNamespace) {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("ownerOnly", ownerOnlyStore ? "true" : "false")
+      router.replace(`/apps?${params.toString()}`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownerOnlyUrl, selectedNamespace])
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -70,7 +91,7 @@ function AppsContent() {
       fetchData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, page, size])
+  }, [selectedNamespace, page, size, ownerOnly])
 
   const handleNamespaceChange = (ns: string) => {
     updateParams({ namespace: ns, page: "1" })
@@ -89,7 +110,7 @@ function AppsContent() {
 
     setLoading(true)
     try {
-      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size)
+      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
       if (res.data) {
         setApplications(res.data.data)
         setTotalPages(res.data.totalPages)
@@ -124,7 +145,7 @@ function AppsContent() {
       <TableForm
         options={
           <div className="flex items-end justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-end gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
                 <SelectWithSearch
@@ -139,22 +160,59 @@ function AppsContent() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
-                <div className="flex w-full max-w-sm items-center space-x-2">
-                  <Input
-                    placeholder={t("apps.searchPlaceholder")}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSearch()
-                      }
+                <Input
+                  className="w-[200px]"
+                  placeholder={t("apps.searchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch()
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="w-4 h-4" />{t("common.owner")}:</span>
+                <div className="inline-flex rounded-lg border bg-muted p-0.5 h-9">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOwnerFilter(false)
+                      setOwnerOnly(false)
+                      updateParams({ ownerOnly: "false", page: "1" })
                     }}
-                  />
-                  <Button variant="outline" onClick={handleSearch}>
-                    <Search className="h-4 w-4" />
-                    {t("apps.searchBtn")}
-                  </Button>
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                      !ownerFilter
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("apps.ownerAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOwnerFilter(true)
+                      setOwnerOnly(true)
+                      updateParams({ ownerOnly: "true", page: "1" })
+                    }}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                      ownerFilter
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("apps.ownerMine")}
+                  </button>
                 </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">&nbsp;</span>
+                <Button variant="outline" onClick={handleSearch} className="h-9">
+                  <Search className="h-4 w-4" />
+                  {t("apps.searchBtn")}
+                </Button>
               </div>
             </div>
             <Button onClick={() => setIsCreateOpen(true)}>

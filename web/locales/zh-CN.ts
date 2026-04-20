@@ -77,6 +77,8 @@ const zh = {
   "apps.appNameFilter": "应用名称:",
   "apps.searchPlaceholder": "搜索应用...",
   "apps.searchBtn": "搜索",
+  "apps.ownerAll": "所有人",
+  "apps.ownerMine": "我的",
   "apps.createBtn": "创建应用",
   "apps.col.name": "名称",
   "apps.col.description": "描述",

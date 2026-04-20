@@ -70,6 +70,8 @@ const locale = {
   "apps.appNameFilter": "アプリ名:",
   "apps.searchPlaceholder": "アプリを検索...",
   "apps.searchBtn": "検索",
+  "apps.ownerAll": "全員",
+  "apps.ownerMine": "自分",
   "apps.createBtn": "アプリを作成",
   "apps.col.name": "名前",
   "apps.col.description": "説明",

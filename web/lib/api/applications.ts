@@ -18,12 +18,14 @@ export const getApplications = async (
   namespace: string,
   keyword?: string,
   page?: number,
-  size?: number
+  size?: number,
+  ownerOnly?: boolean
 ): Promise<ApiResponse<Page<Application>>> => {
   const params = new URLSearchParams()
   if (keyword) params.set("keyword", keyword)
   if (page !== undefined) params.set("page", String(page))
   if (size !== undefined) params.set("size", String(size))
+  if (ownerOnly !== undefined) params.set("ownerOnly", String(ownerOnly))
   const queryString = params.toString()
   const url = `/api/namespaces/${namespace}/applications${queryString ? `?${queryString}` : ""}`
   const response = await apiFetch(url)
