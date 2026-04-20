@@ -70,7 +70,7 @@ export function ApplicationForm({
             <TabsTrigger value="performance-info" className="px-6 cursor-pointer">{t("apps.tab.performanceConfig")}</TabsTrigger>
             <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
-            <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white">{t("apps.tab.dangerZone")}</TabsTrigger>
+            <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
           </TabsList>
         </div>
 
