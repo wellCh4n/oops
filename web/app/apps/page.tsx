@@ -159,20 +159,6 @@ function AppsContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
-                <Input
-                  className="w-[200px]"
-                  placeholder={t("apps.searchPlaceholder")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      handleSearch()
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="w-4 h-4" />{t("common.owner")}:</span>
                 <div className="inline-flex rounded-lg border bg-muted p-0.5 h-9">
                   <button
@@ -206,6 +192,20 @@ function AppsContent() {
                     {t("apps.ownerMine")}
                   </button>
                 </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
+                <Input
+                  className="w-[200px]"
+                  placeholder={t("apps.searchPlaceholder")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleSearch()
+                    }
+                  }}
+                />
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">&nbsp;</span>
