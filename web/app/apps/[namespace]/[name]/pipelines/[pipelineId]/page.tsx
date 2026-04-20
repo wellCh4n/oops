@@ -361,15 +361,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               </div>
             )}
             {/* Logs Area */}
-            <div
-              className="flex-1 bg-black text-white rounded-md p-4 text-sm overflow-hidden flex flex-col min-h-0"
-              style={{
-                fontFamily:
-                  'var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                fontVariantEastAsian: "normal",
-                tabSize: 4,
-              }}
-            >
+            <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                 {logs.map((log, i) => (
                   <div key={i}>{log}</div>
