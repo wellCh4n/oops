@@ -8,7 +8,7 @@ RUN pnpm config set registry https://registry.npmmirror.com
 
 COPY web/package.json web/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --no-frozen-lockfile
 COPY web/ ./
 RUN pnpm build
 
