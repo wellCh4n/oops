@@ -1,20 +1,23 @@
 package com.github.wellch4n.oops.job;
 
-import com.github.wellch4n.oops.config.IngressConfig;
-import com.github.wellch4n.oops.data.*;
-import com.github.wellch4n.oops.event.PipelineNotificationEvent;
-import com.github.wellch4n.oops.event.PipelineNotificationType;
-import com.github.wellch4n.oops.enums.DeployMode;
+import com.github.wellch4n.oops.data.Environment;
+import com.github.wellch4n.oops.data.Pipeline;
+import com.github.wellch4n.oops.data.PipelineRepository;
 import com.github.wellch4n.oops.enums.PipelineStatus;
+import com.github.wellch4n.oops.informer.KubernetesInformerRegistry;
 import com.github.wellch4n.oops.service.EnvironmentService;
-import com.github.wellch4n.oops.task.ArtifactDeployTask;
+import com.github.wellch4n.oops.service.PipelineStateAdvancer;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import java.util.List;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
+ * Safety-net scheduled scan. In the normal case pipeline state is advanced
+ * in real time by {@link com.github.wellch4n.oops.informer.PipelineJobEventHandler}.
+ * This job catches missed events (e.g. informer disconnected, environment whose
+ * informer failed to register at startup).
+ *
  * @author wellCh4n
  * @date 2025/7/8
  */
@@ -22,128 +25,52 @@ import org.springframework.stereotype.Component;
 @Component
 public class PipelineInstanceScanJob {
 
-    private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
-    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
-    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
-    private final IngressConfig ingressConfig;
-    private final ApplicationEventPublisher eventPublisher;
+    private final KubernetesInformerRegistry informerRegistry;
+    private final PipelineStateAdvancer advancer;
 
-    public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
-                                   PipelineRepository pipelineRepository, EnvironmentService environmentService,
-                                   ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
-                                   IngressConfig ingressConfig,
-                                   ApplicationServiceConfigRepository applicationServiceConfigRepository,
-                                   ApplicationEventPublisher eventPublisher) {
-        this.applicationRepository = applicationRepository;
+    public PipelineInstanceScanJob(PipelineRepository pipelineRepository,
+                                   EnvironmentService environmentService,
+                                   KubernetesInformerRegistry informerRegistry,
+                                   PipelineStateAdvancer advancer) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
-        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
-        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
-        this.ingressConfig = ingressConfig;
-        this.eventPublisher = eventPublisher;
+        this.informerRegistry = informerRegistry;
+        this.advancer = advancer;
     }
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 60_000)
     public void scan() {
         List<Pipeline> runningPipelines = pipelineRepository.findAllByStatus(PipelineStatus.RUNNING);
         for (Pipeline pipeline : runningPipelines) {
             try {
-
-                if (PipelineStatus.SUCCEEDED.equals(pipeline.getStatus()) || PipelineStatus.ERROR.equals(pipeline.getStatus())) {
+                Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+                if (environment == null) {
                     continue;
                 }
 
-                String environmentName = pipeline.getEnvironment();
-                Environment environment = environmentService.getEnvironment(environmentName);
-
-                try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-                    Job job = client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).withName(pipeline.getName()).get();
-                    if (job.getStatus() != null && job.getStatus().getSucceeded() != null && job.getStatus().getSucceeded() == 1) {
-                        if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
-                            int updated = pipelineRepository.updateStatusIfMatch(
-                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
-                            );
-                            if (updated > 0) {
-                                pipeline.setStatus(PipelineStatus.BUILD_SUCCEEDED);
-                                eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                        pipeline, PipelineNotificationType.BUILD_SUCCEEDED, "镜像构建完成，等待手动发布。"
-                                ));
-                            }
-                            continue;
-                        }
-
-                        int claimed = pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.DEPLOYING
-                        );
-                        if (claimed == 0) {
-                            continue;
-                        }
-                        pipeline.setStatus(PipelineStatus.DEPLOYING);
-                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
-                        ));
-
-                        Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                        ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
-                                application.getNamespace(), application.getName(), pipeline.getEnvironment());
-
-                        var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
-                                application.getNamespace(), application.getName()).orElse(new ApplicationServiceConfig());
-
-                        ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
-                                pipeline, application, environment,
-                                applicationPerformanceEnvironmentConfig, applicationServiceConfig, ingressConfig
-                        );
-                        artifactDeployTask.call();
-
-                        pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED
-                        );
-                        pipeline.setStatus(PipelineStatus.SUCCEEDED);
-                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
-                        ));
-                    } else if (job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0) {
-                        System.err.println("Error processing succeeded pipeline " + pipeline.getId());
-                        int updated = pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
-                        );
-                        if (updated > 0) {
-                            pipeline.setStatus(PipelineStatus.ERROR);
-                            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                    pipeline, PipelineNotificationType.FAILED, "镜像构建失败，请查看流水线日志。"
-                            ));
-                        }
-                    }
+                Job job = lookupJob(environment, pipeline);
+                if (job == null) {
+                    continue;
                 }
+                advancer.advance(pipeline, environment, job);
             } catch (Exception e) {
                 System.out.println("Error scanning pipeline instance: " + e.getMessage());
-                int deployingUpdated = pipelineRepository.updateStatusIfMatch(
-                        pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR
-                );
-                int runningUpdated = pipelineRepository.updateStatusIfMatch(
-                        pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
-                );
-                if (deployingUpdated > 0 || runningUpdated > 0) {
-                    pipeline.setStatus(PipelineStatus.ERROR);
-                    eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                            pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
-                    ));
-                }
             }
         }
     }
 
-    private ApplicationPerformanceConfig.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
-        ApplicationPerformanceConfig config = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
-        if (config == null || config.getEnvironmentConfigs() == null) {
-            return new ApplicationPerformanceConfig.EnvironmentConfig();
+    private Job lookupJob(Environment environment, Pipeline pipeline) {
+        Job cached = informerRegistry.getJob(environment.getId(), pipeline.getName());
+        if (cached != null) {
+            return cached;
         }
-        return config.getEnvironmentConfigs().stream()
-                .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
-                .findFirst()
-                .orElseGet(ApplicationPerformanceConfig.EnvironmentConfig::new);
+        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+            return client.batch().v1().jobs()
+                    .inNamespace(environment.getWorkNamespace())
+                    .withName(pipeline.getName())
+                    .get();
+        }
     }
 }

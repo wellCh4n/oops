@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.service;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.EnvironmentRepository;
 import com.github.wellch4n.oops.exception.BizException;
+import com.github.wellch4n.oops.informer.KubernetesInformerRegistry;
 import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import java.util.List;
@@ -21,9 +22,12 @@ import org.springframework.stereotype.Service;
 public class EnvironmentService {
 
     private final EnvironmentRepository environmentRepository;
+    private final KubernetesInformerRegistry informerRegistry;
 
-    public EnvironmentService(EnvironmentRepository environmentRepository) {
+    public EnvironmentService(EnvironmentRepository environmentRepository,
+                              KubernetesInformerRegistry informerRegistry) {
         this.environmentRepository = environmentRepository;
+        this.informerRegistry = informerRegistry;
     }
 
     public List<Environment> getEnvironments() {
@@ -51,6 +55,7 @@ public class EnvironmentService {
         existingEnvironment.setImageRepository(environment.getImageRepository());
 
         environmentRepository.saveAndFlush(existingEnvironment);
+        informerRegistry.refresh(existingEnvironment);
         return true;
     }
 
@@ -64,7 +69,9 @@ public class EnvironmentService {
         if (existing != null) {
             throw new BizException("Environment already exists: " + environment.getName());
         }
-        return environmentRepository.save(environment);
+        Environment saved = environmentRepository.save(environment);
+        informerRegistry.register(saved);
+        return saved;
     }
 
     public KubernetesValidationResult validateKubernetes(KubernetesValidationRequest request) {
@@ -125,6 +132,7 @@ public class EnvironmentService {
     }
 
     public Boolean deleteEnvironment(String id) {
+        informerRegistry.unregister(id);
         environmentRepository.deleteById(id);
 
         return true;
