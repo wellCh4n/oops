@@ -1,4 +1,5 @@
 import { ReactNode } from "react"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
 interface ContentPageProps {
@@ -34,7 +35,10 @@ export function ContentPage({
           disableGutter ? "w-full" : "-mx-4 -mt-4 w-[calc(100%+2rem)]"
         )}
       >
-        <h2 className="text-sm font-medium text-sidebar-foreground/80 tracking-normal">{title}</h2>
+        <div className="flex items-center gap-2">
+          <SidebarTrigger className="md:hidden -ml-1" />
+          <h2 className="text-sm font-medium text-sidebar-foreground/80 tracking-normal">{title}</h2>
+        </div>
         {actions && <div>{actions}</div>}
       </div>
       {disableGutter ? (
