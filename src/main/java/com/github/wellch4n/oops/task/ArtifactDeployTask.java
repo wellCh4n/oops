@@ -239,6 +239,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             client.resources(IngressRoute.class)
                     .inNamespace(namespace)
                     .resource(ingressRoute)
+                    .forceConflicts()
                     .serverSideApply();
         } catch (Exception e) {
             log.error("Error applying ingress route for application:e=", e);
