@@ -164,13 +164,13 @@ export default function PublishPage({ params }: PageProps) {
         throw new Error("Upload failed")
       }
 
-      const objectUrl = normalizeText(uploadRes.data.objectUrl)
-      if (!objectUrl) {
+      const objectKey = normalizeText(uploadRes.data.objectKey)
+      if (!objectKey) {
         toast.error(t("apps.build.uploadError"))
         return
       }
 
-      setPublishRepository(objectUrl)
+      setPublishRepository(objectKey)
       toast.success(t("apps.build.uploadSuccess"))
     } catch (error) {
       console.error(error)
