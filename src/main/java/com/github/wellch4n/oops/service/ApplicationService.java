@@ -12,6 +12,7 @@ import com.github.wellch4n.oops.objects.Page;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -102,7 +103,11 @@ public class ApplicationService {
     public String createApplication(String namespace, Application application, String creatorUserId) {
         application.setNamespace(namespace);
         application.setOwner(normalizeOwner(creatorUserId));
-        applicationRepository.save(application);
+        try {
+            applicationRepository.save(application);
+        } catch (DataIntegrityViolationException e) {
+            throw new BizException("Application name already exists");
+        }
         return application.getId();
     }
 

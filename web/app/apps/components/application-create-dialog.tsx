@@ -82,7 +82,11 @@ export function ApplicationCreateDialog({
         buildImage: "",
       }
       
-      await createApplication(payload)
+      const result = await createApplication(payload)
+      if (!result.success) {
+        toast.error(result.message || t("apps.create.error"))
+        return
+      }
       toast.success(t("apps.create.success"))
       onOpenChange(false)
 
