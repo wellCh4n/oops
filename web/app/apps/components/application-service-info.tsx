@@ -9,7 +9,7 @@ import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copy, Plug, Globe, Plus, Trash2 } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
-import { updateApplicationService } from "@/lib/api/applications"
+import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
@@ -29,6 +29,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [port, setPort] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [envConfigGroups, setEnvConfigGroups] = useState<EnvConfigGroup[]>([])
+  const [hostErrors, setHostErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
@@ -97,6 +98,79 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
           : group
       )
     )
+    setHostErrors((prev) => {
+      const next: Record<string, string> = {}
+      Object.entries(prev).forEach(([k, v]) => {
+        const [e, iStr] = k.split("::")
+        const i = Number(iStr)
+        if (e !== envName) {
+          next[k] = v
+        } else if (i < index) {
+          next[k] = v
+        } else if (i > index) {
+          next[`${e}::${i - 1}`] = v
+        }
+      })
+      return next
+    })
+  }
+
+  const hostErrorKey = (envName: string, index: number) => `${envName}::${index}`
+
+  const validateHost = async (envName: string, index: number, host: string) => {
+    if (!namespace || !applicationName) return
+    const trimmed = host.trim()
+    const key = hostErrorKey(envName, index)
+    if (!trimmed) {
+      setHostErrors((prev) => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+      return
+    }
+    const formatMessage = (name: string, ns: string, env: string) =>
+      t("apps.service.hostDuplicated")
+        .replace("{name}", name)
+        .replace("{namespace}", ns)
+        .replace("{environment}", env)
+
+    // Local duplicate check first (same form)
+    let localDup: { env: string } | undefined
+    for (const group of envConfigGroups) {
+      for (let i = 0; i < group.hosts.length; i++) {
+        if (group.environmentName === envName && i === index) continue
+        if (group.hosts[i].host.trim() === trimmed) {
+          localDup = { env: group.environmentName }
+          break
+        }
+      }
+      if (localDup) break
+    }
+    if (localDup) {
+      setHostErrors((prev) => ({
+        ...prev,
+        [key]: formatMessage(applicationName, namespace, localDup!.env),
+      }))
+      return
+    }
+    try {
+      const res = await checkApplicationServiceHost(namespace, applicationName, trimmed)
+      if (res.success && res.data) {
+        setHostErrors((prev) => ({
+          ...prev,
+          [key]: formatMessage(res.data!.applicationName, res.data!.namespace, res.data!.environmentName),
+        }))
+      } else {
+        setHostErrors((prev) => {
+          const next = { ...prev }
+          delete next[key]
+          return next
+        })
+      }
+    } catch {
+      // ignore transient errors
+    }
   }
 
   const updateHost = (envName: string, index: number, field: "host" | "https", value: string | boolean) => {
@@ -135,6 +209,12 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
         }
       })
     })
+
+    if (Object.keys(hostErrors).length > 0) {
+      const firstError = Object.values(hostErrors)[0]
+      toast.error(firstError)
+      return
+    }
 
     setSaving(true)
     try {
@@ -196,9 +276,12 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                   <Globe className="h-3.5 w-3.5" />
                   {t("apps.service.hosts")}
                 </Label>
-                {group.hosts.map((hostConfig, index) => (
-                  <div key={index} className="flex w-full items-center gap-2">
-                    <div className="flex items-center gap-2">
+                {group.hosts.map((hostConfig, index) => {
+                  const errKey = hostErrorKey(group.environmentName, index)
+                  const err = hostErrors[errKey]
+                  return (
+                  <div key={index} className="flex w-full items-start gap-2">
+                    <div className="flex h-9 items-center gap-2">
                       <Checkbox
                         id={`service-https-${group.environmentName}-${index}`}
                         checked={hostConfig.https}
@@ -209,17 +292,28 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                       <Label htmlFor={`service-https-${group.environmentName}-${index}`}>HTTPS</Label>
                     </div>
 
-                    <div className="relative flex-1">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                        {hostConfig.https ? "https://" : "http://"}
-                      </span>
-                      <Input
-                        id={`service-host-${group.environmentName}-${index}`}
-                        className="pl-[4.5rem]"
-                        value={hostConfig.host}
-                        onChange={(e) => updateHost(group.environmentName, index, "host", e.target.value)}
-                        placeholder={t("apps.service.domainPlaceholder")}
-                      />
+                    <div className="flex flex-1 flex-col gap-1">
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                          {hostConfig.https ? "https://" : "http://"}
+                        </span>
+                        <Input
+                          id={`service-host-${group.environmentName}-${index}`}
+                          className={`pl-[4.5rem] ${err ? "border-destructive" : ""}`}
+                          value={hostConfig.host}
+                          onChange={(e) => {
+                            updateHost(group.environmentName, index, "host", e.target.value)
+                            setHostErrors((prev) => {
+                              const next = { ...prev }
+                              delete next[errKey]
+                              return next
+                            })
+                          }}
+                          onBlur={(e) => validateHost(group.environmentName, index, e.target.value)}
+                          placeholder={t("apps.service.domainPlaceholder")}
+                        />
+                      </div>
+                      {err && <p className="text-xs text-destructive">{err}</p>}
                     </div>
 
                     <Button
@@ -251,7 +345,8 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
-                ))}
+                  )
+                })}
                 <Button type="button" variant="outline" className="w-full" onClick={() => addHost(group.environmentName)}>
                   <Plus className="h-4 w-4 mr-1" />
                   {t("apps.service.addHost")}

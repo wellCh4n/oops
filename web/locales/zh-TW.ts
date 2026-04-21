@@ -222,6 +222,7 @@ const locale = {
   "apps.service.domainPlaceholder": "例如 app.example.com",
   "apps.service.hosts": "網域配置",
   "apps.service.addHost": "新增域名",
+  "apps.service.hostDuplicated": "網域已被環境 {environment} / 命名空間 {namespace} / 應用 {name} 佔用",
   "apps.envSelector.label": "環境",
   "apps.envSelector.noEnv": "暫無環境配置，請先在基本資訊中配置部署環境",
   "apps.envSelector.fetchError": "取得環境失敗",

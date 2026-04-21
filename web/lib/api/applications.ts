@@ -262,6 +262,26 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
+export interface ServiceHostConflict {
+  namespace: string
+  applicationName: string
+  environmentName: string
+}
+
+export const checkApplicationServiceHost = async (
+  namespace: string,
+  name: string,
+  host: string
+): Promise<ApiResponse<ServiceHostConflict | null>> => {
+  const response = await apiFetch(
+    `/api/namespaces/${namespace}/applications/${name}/service/host-check?host=${encodeURIComponent(host)}`
+  )
+  if (!response.ok) {
+    throw new Error("Failed to check service host")
+  }
+  return response.json() as Promise<ApiResponse<ServiceHostConflict | null>>
+}
+
 export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<ClusterDomainInfo>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`)
   if (!response.ok) {

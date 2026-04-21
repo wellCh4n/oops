@@ -229,6 +229,7 @@ const zh = {
   "apps.service.domainPlaceholder": "例如 app.example.com",
   "apps.service.hosts": "域名配置",
   "apps.service.addHost": "添加域名",
+  "apps.service.hostDuplicated": "域名已被环境 {environment} / 命名空间 {namespace} / 应用 {name} 占用",
   "apps.envSelector.label": "环境",
   "apps.envSelector.noEnv": "暂无环境配置，请先在基本信息中配置部署环境",
   "apps.envSelector.fetchError": "获取环境失败",
