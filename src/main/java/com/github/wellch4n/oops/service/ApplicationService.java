@@ -104,7 +104,7 @@ public class ApplicationService {
         application.setNamespace(namespace);
         application.setOwner(normalizeOwner(creatorUserId));
         try {
-            applicationRepository.save(application);
+            applicationRepository.saveAndFlush(application);
         } catch (DataIntegrityViolationException e) {
             throw new BizException("Application name already exists");
         }
