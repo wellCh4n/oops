@@ -154,22 +154,25 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     if (spec.getContainers() != null) spec.getContainers().forEach(c -> containers.add(c.getName()));
 
                     for (String containerName : containers) {
+                        if (!session.isOpen()) break;
+
                         var pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
                                 .waitUntilCondition(Objects::nonNull, 2, TimeUnit.MINUTES);
 
                         if (pod == null) continue;
 
-                        client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
+                        pod = client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
                                 .waitUntilCondition(p -> isContainerReady(p, containerName), 2, TimeUnit.MINUTES);
+
+                        if (pod == null) continue;
 
                         try (var logWatch = client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
                                 .inContainer(containerName)
                                 .watchLog()) {
-                            
+
                             try (var reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8))) {
                                 String line;
                                 while (session.isOpen() && (line = reader.readLine()) != null) {
-                                    // Send log as JSON format
                                     String jsonLog = objectMapper.writeValueAsString(Map.of(
                                         "type", "step",
                                         "data", "[" + containerName + "] " + line,
@@ -179,6 +182,12 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                                 }
                             }
                         }
+                    }
+
+                    // Notify client that log streaming is complete
+                    if (session.isOpen()) {
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of("type", "done"))));
+                        session.close(CloseStatus.NORMAL);
                     }
                 }
             } catch (Exception e) {

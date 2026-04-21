@@ -162,22 +162,27 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }, [namespace, name, pipeline?.environment])
 
   useEffect(() => {
-    // Use WebSocket instead of SSE
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const baseUrl = API_BASE_URL.startsWith('http')
       ? API_BASE_URL.replace(/^http/, 'ws')
       : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
-
     const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log?token=${getToken()}`
+
     let ws: WebSocket | null = null
     let heartbeatInterval: ReturnType<typeof setInterval> | null = null
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
+    let retryCount = 0
+    const maxRetries = 5
+    let unmounted = false
+    // Set to true when server sends {"type":"done"} — no reconnect needed
+    let streamDone = false
 
-    // Use a small timeout to prevent double connection in React Strict Mode
-    const connectTimeout = setTimeout(() => {
+    const connect = () => {
+      if (unmounted) return
       ws = new WebSocket(wsUrl)
 
       ws.onopen = () => {
-        console.log("WebSocket connected for pipeline logs")
+        retryCount = 0
         heartbeatInterval = setInterval(() => {
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send("ping")
@@ -188,33 +193,26 @@ export default function PipelineDetailPage({ params }: PageProps) {
       ws.onmessage = (event) => {
         const message = event.data as string
         if (message === "pong") return
-
-        // Handle server heartbeat (plain text)
         if (message === "ping") {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send("pong")
-          }
+          if (ws && ws.readyState === WebSocket.OPEN) ws.send("pong")
           return
         }
 
         try {
-          // Try to parse as JSON
-          const jsonData = JSON.parse(message) as PipelineMessage
+          const jsonData = JSON.parse(message) as PipelineMessage & { type: string }
 
-          // Handle different message types based on type field
+          if (jsonData.type === "done") {
+            streamDone = true
+            return
+          }
+
           if (isStepsMessage(jsonData)) {
-            // Handle steps list
             setSteps(jsonData.data)
           } else if (isStepLogMessage(jsonData)) {
-            // Handle step log
             setLogs(prev => [...prev, jsonData.data])
             setActiveStep(jsonData.container)
           } else if (isErrorMessage(jsonData)) {
-            // Handle error messages
             console.error("Pipeline error:", jsonData.data)
-          } else {
-            // Fallback for unknown types
-            console.warn("Unknown message type:", jsonData.type)
           }
         } catch {
           // Fallback for non-JSON messages (backward compatibility)
@@ -228,38 +226,41 @@ export default function PipelineDetailPage({ params }: PageProps) {
           } else if (message.startsWith("ERROR:")) {
             console.error("Pipeline error:", message.substring(6))
           } else if (message.includes(":")) {
-            // Legacy format: "stepName:logLine"
             const [stepName, ...logParts] = message.split(":")
-            const logLine = logParts.join(":")
-            setLogs(prev => [...prev, logLine])
+            setLogs(prev => [...prev, logParts.join(":")])
             setActiveStep(stepName ?? "")
           } else {
-            // Fallback for plain log messages
             setLogs(prev => [...prev, message])
           }
         }
       }
 
-      ws.onerror = (e) => {
-        console.error("WebSocket failed", e)
-        if (ws) {
-          ws.close()
-        }
+      ws.onerror = () => {
+        ws?.close()
       }
 
       ws.onclose = () => {
-        console.log("WebSocket connection closed")
         if (heartbeatInterval) clearInterval(heartbeatInterval)
-        setWsDisconnected(true)
+        if (unmounted || streamDone) return
+        if (retryCount < maxRetries) {
+          retryCount++
+          const delay = Math.min(1000 * retryCount, 10000)
+          reconnectTimeout = setTimeout(connect, delay)
+        } else {
+          setWsDisconnected(true)
+        }
       }
-    }, 100)
+    }
+
+    // Small timeout to prevent double connection in React Strict Mode
+    const initialTimeout = setTimeout(connect, 100)
 
     return () => {
-      clearTimeout(connectTimeout)
+      unmounted = true
+      clearTimeout(initialTimeout)
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
       if (heartbeatInterval) clearInterval(heartbeatInterval)
-      if (ws) {
-        ws.close()
-      }
+      if (ws) ws.close()
     }
   }, [namespace, name, pipelineId])
 
