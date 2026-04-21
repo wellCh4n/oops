@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.objects.Page;
 import com.github.wellch4n.oops.objects.Result;
+import com.github.wellch4n.oops.objects.ServiceHostConflictResponse;
 import com.github.wellch4n.oops.service.ApplicationService;
 import com.github.wellch4n.oops.service.PipelineService;
 import com.github.wellch4n.oops.utils.ResourceNameChecker;
@@ -138,6 +139,12 @@ public class ApplicationController {
     @PutMapping("/{name}/service")
     public Result<Boolean> updateService(@PathVariable String namespace, @PathVariable String name, @RequestBody ApplicationServiceConfig config) {
         return Result.success(applicationService.updateApplicationServiceConfig(namespace, name, config));
+    }
+
+    @GetMapping("/{name}/service/host-check")
+    public Result<ServiceHostConflictResponse> checkServiceHost(@PathVariable String namespace, @PathVariable String name,
+                                                                @RequestParam String host) {
+        return Result.success(applicationService.findHostConflictApplication(namespace, name, host));
     }
 
     @GetMapping("/{name}/service/cluster-domain")

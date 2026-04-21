@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
+import com.github.wellch4n.oops.objects.ServiceHostConflictResponse;
 import com.github.wellch4n.oops.objects.Page;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -391,7 +392,44 @@ public class ApplicationService {
         return applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
     }
 
+    public ServiceHostConflictResponse findHostConflictApplication(String namespace, String name, String host) {
+        if (host == null || host.isBlank()) {
+            return null;
+        }
+        List<ApplicationServiceConfig> conflicts = applicationServiceConfigRepository
+                .findByHostLikeExcludingSelf("\"" + host + "\"", namespace, name);
+        for (ApplicationServiceConfig conflict : conflicts) {
+            if (conflict.getEnvironmentConfigs() == null) {
+                continue;
+            }
+            for (ApplicationServiceConfig.EnvironmentConfig c : conflict.getEnvironmentConfigs()) {
+                if (host.equals(c.getHost())) {
+                    return new ServiceHostConflictResponse(
+                            conflict.getNamespace(),
+                            conflict.getApplicationName(),
+                            c.getEnvironmentName());
+                }
+            }
+        }
+        return null;
+    }
+
     public Boolean updateApplicationServiceConfig(String namespace, String name, ApplicationServiceConfig request) {
+        if (request.getEnvironmentConfigs() != null) {
+            for (ApplicationServiceConfig.EnvironmentConfig envConfig : request.getEnvironmentConfigs()) {
+                String host = envConfig.getHost();
+                if (host == null || host.isBlank()) {
+                    continue;
+                }
+                ServiceHostConflictResponse conflict = findHostConflictApplication(namespace, name, host);
+                if (conflict != null) {
+                    throw new BizException("Host " + host + " is already used by environment "
+                            + conflict.environmentName() + " / namespace " + conflict.namespace()
+                            + " / application " + conflict.applicationName());
+                }
+            }
+        }
+
         Optional<ApplicationServiceConfig> exist = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
 
 

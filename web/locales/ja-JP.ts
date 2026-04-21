@@ -222,6 +222,7 @@ const locale = {
   "apps.service.domainPlaceholder": "例: app.example.com",
   "apps.service.hosts": "ドメイン設定",
   "apps.service.addHost": "ドメインを追加",
+  "apps.service.hostDuplicated": "このドメインは環境 {environment} / ネームスペース {namespace} / アプリ {name} によって使用されています",
   "apps.envSelector.label": "環境",
   "apps.envSelector.noEnv": "環境設定がありません。先に基本情報でデプロイ環境を設定してください。",
   "apps.envSelector.fetchError": "環境の取得に失敗しました",

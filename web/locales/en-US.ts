@@ -229,6 +229,7 @@ const en = {
   "apps.service.domainPlaceholder": "e.g. app.example.com",
   "apps.service.hosts": "Hosts",
   "apps.service.addHost": "Add Host",
+  "apps.service.hostDuplicated": "Host already used by environment {environment} / namespace {namespace} / application {name}",
   "apps.envSelector.label": "Environment",
   "apps.envSelector.noEnv": "No environments. Please configure in basic info.",
   "apps.envSelector.fetchError": "Failed to fetch environments",
