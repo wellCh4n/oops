@@ -5,11 +5,14 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
-import { Copy, Plug, Globe, Plus, Trash2 } from "lucide-react"
+import { Copyable } from "@/components/ui/copyable"
+import { Check, ExternalLink, Pencil, Plug, Globe, Plus, Trash2, X } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
+import { Domain, fetchDomains } from "@/lib/api/domains"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
@@ -20,9 +23,39 @@ interface Props {
   namespace?: string
 }
 
+interface HostRow {
+  host: string
+  https: boolean
+  editing: boolean
+  prefix: string
+  suffix: string // Domain.host, e.g. "example.com" or "*.example.com"
+}
+
 interface EnvConfigGroup {
   environmentName: string
-  hosts: { host: string; https: boolean }[]
+  hosts: HostRow[]
+}
+
+function splitHost(fullHost: string, domains: Domain[]): { prefix: string; suffix: string } {
+  const lower = fullHost.trim().toLowerCase()
+  if (!lower) return { prefix: "", suffix: "" }
+  // Prefer the longest domain host whose suffix matches — either exact match or "*.domain"-style tail
+  const hosts: string[] = domains.map((d) => d.host)
+  hosts.sort((a: string, b: string) => b.length - a.length)
+  const matchHost = hosts.find((h: string) => lower === h || lower.endsWith("." + h))
+  if (!matchHost) {
+    return { prefix: lower, suffix: "" }
+  }
+  if (lower === matchHost) {
+    return { prefix: "", suffix: matchHost }
+  }
+  return { prefix: lower.slice(0, -(matchHost.length + 1)), suffix: matchHost }
+}
+
+function combineHost(prefix: string, suffix: string): string {
+  const p = prefix.trim().toLowerCase()
+  if (!suffix) return p
+  return p ? `${p}.${suffix}` : suffix
 }
 
 export function ApplicationServiceInfo({ initialServiceConfig, applicationName, namespace }: Props) {
@@ -32,9 +65,22 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [hostErrors, setHostErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
+  const [domains, setDomains] = useState<Domain[]>([])
   const { t } = useLanguage()
 
   const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
+
+  const makeEmptyRow = (): HostRow => ({
+    host: "",
+    https: true,
+    editing: true,
+    prefix: "",
+    suffix: "",
+  })
+
+  useEffect(() => {
+    fetchDomains().then(setDomains).catch(() => setDomains([]))
+  }, [])
 
   useEffect(() => {
     if (initialServiceConfig?.port != null) {
@@ -42,19 +88,23 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     }
     if (initialServiceConfig?.environmentConfigs) {
       // Group configs by environmentName
-      const grouped = new Map<string, { host: string; https: boolean }[]>()
+      const grouped = new Map<string, HostRow[]>()
       initialServiceConfig.environmentConfigs.forEach((c) => {
         const hosts = grouped.get(c.environmentName) || []
+        const full = c.host ? normalizeHost(c.host) : ""
         hosts.push({
-          host: c.host ? normalizeHost(c.host) : "",
+          host: full,
           https: c.https ?? true,
+          editing: false,
+          prefix: "",
+          suffix: "",
         })
         grouped.set(c.environmentName, hosts)
       })
       setEnvConfigGroups(
         Array.from(grouped.entries()).map(([environmentName, hosts]) => ({
           environmentName,
-          hosts: hosts.length > 0 ? hosts : [{ host: "", https: true }],
+          hosts,
         }))
       )
     }
@@ -65,7 +115,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       const current = prev || []
       const next = envs.map((env) => {
         const existing = current.find((c) => c.environmentName === env.environmentName)
-        return existing || { environmentName: env.environmentName, hosts: [{ host: "", https: true }] }
+        return existing || { environmentName: env.environmentName, hosts: [] }
       })
       if (next.length > 0 && !activeTab) {
         setActiveTab(next[0].environmentName)
@@ -84,10 +134,56 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     setEnvConfigGroups((prev) =>
       prev.map((group) =>
         group.environmentName === envName
-          ? { ...group, hosts: [...group.hosts, { host: "", https: true }] }
+          ? { ...group, hosts: [...group.hosts, makeEmptyRow()] }
           : group
       )
     )
+  }
+
+  const updateRow = (envName: string, index: number, patch: Partial<HostRow>) => {
+    setEnvConfigGroups((prev) =>
+      prev.map((group) =>
+        group.environmentName === envName
+          ? {
+              ...group,
+              hosts: group.hosts.map((h, i) => (i === index ? { ...h, ...patch } : h)),
+            }
+          : group
+      )
+    )
+  }
+
+  const beginEdit = (envName: string, index: number) => {
+    const group = envConfigGroups.find((g) => g.environmentName === envName)
+    if (!group) return
+    const row = group.hosts[index]
+    const { prefix, suffix } = splitHost(row.host, domains)
+    updateRow(envName, index, { editing: true, prefix, suffix })
+  }
+
+  const confirmEdit = (envName: string, index: number) => {
+    const group = envConfigGroups.find((g) => g.environmentName === envName)
+    if (!group) return
+    const row = group.hosts[index]
+    if (!row.suffix) {
+      toast.error(t("apps.service.suffixRequired"))
+      return
+    }
+    const combined = combineHost(row.prefix, row.suffix)
+    updateRow(envName, index, { host: combined, editing: false })
+    void validateHost(envName, index, combined)
+  }
+
+  const cancelEdit = (envName: string, index: number) => {
+    const group = envConfigGroups.find((g) => g.environmentName === envName)
+    if (!group) return
+    const row = group.hosts[index]
+    if (!row.host) {
+      // Never confirmed — remove row
+      removeHost(envName, index)
+      return
+    }
+    updateRow(envName, index, { editing: false, prefix: "", suffix: "" })
   }
 
   const removeHost = (envName: string, index: number) => {
@@ -173,26 +269,24 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     }
   }
 
-  const updateHost = (envName: string, index: number, field: "host" | "https", value: string | boolean) => {
-    setEnvConfigGroups((prev) =>
-      prev.map((group) =>
-        group.environmentName === envName
-          ? {
-              ...group,
-              hosts: group.hosts.map((h, i) =>
-                i === index ? { ...h, [field]: field === "host" ? normalizeHost(value as string) : value } : h
-              ),
-            }
-          : group
-      )
-    )
-  }
 
   const onSave = async () => {
     if (!namespace || !applicationName) return
-    const num = Number(port)
-    if (!Number.isInteger(num) || num <= 0 || num > 65535) {
-      toast.error(t("apps.service.portError"))
+    const trimmedPort = port.trim()
+    let portNum: number | undefined = undefined
+    if (trimmedPort) {
+      const num = Number(trimmedPort)
+      if (!Number.isInteger(num) || num <= 0 || num > 65535) {
+        toast.error(t("apps.service.portError"))
+        return
+      }
+      portNum = num
+    }
+
+    // Block save if any row is still being edited
+    const hasPending = envConfigGroups.some((g) => g.hosts.some((h) => h.editing))
+    if (hasPending) {
+      toast.error(t("apps.service.confirmPending"))
       return
     }
 
@@ -219,7 +313,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     setSaving(true)
     try {
       const res = await updateApplicationService(namespace, applicationName, {
-        port: num,
+        port: portNum,
         environmentConfigs,
       })
       if (res.success) {
@@ -279,71 +373,120 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                 {group.hosts.map((hostConfig, index) => {
                   const errKey = hostErrorKey(group.environmentName, index)
                   const err = hostErrors[errKey]
+                  const envName = group.environmentName
                   return (
                   <div key={index} className="flex w-full items-start gap-2">
-                    <div className="flex h-9 items-center gap-2">
-                      <Checkbox
-                        id={`service-https-${group.environmentName}-${index}`}
-                        checked={hostConfig.https}
-                        onCheckedChange={(checked) =>
-                          updateHost(group.environmentName, index, "https", checked === true)
-                        }
-                      />
-                      <Label htmlFor={`service-https-${group.environmentName}-${index}`}>HTTPS</Label>
-                    </div>
+                    {hostConfig.editing && (
+                      <div className="flex h-9 items-center gap-2">
+                        <Checkbox
+                          id={`service-https-${envName}-${index}`}
+                          checked={hostConfig.https}
+                          onCheckedChange={(checked) =>
+                            updateRow(envName, index, { https: checked === true })
+                          }
+                        />
+                        <Label htmlFor={`service-https-${envName}-${index}`}>HTTPS</Label>
+                      </div>
+                    )}
 
                     <div className="flex flex-1 flex-col gap-1">
-                      <div className="relative">
-                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                          {hostConfig.https ? "https://" : "http://"}
+                      {hostConfig.editing ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            className="flex-1"
+                            value={hostConfig.prefix}
+                            onChange={(e) =>
+                              updateRow(envName, index, { prefix: e.target.value.trim().toLowerCase() })
+                            }
+                            placeholder={t("apps.service.prefixPlaceholder")}
+                          />
+                          <span className="text-muted-foreground">.</span>
+                          <Select
+                            value={hostConfig.suffix}
+                            onValueChange={(v) => updateRow(envName, index, { suffix: v })}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder={t("apps.service.suffixPlaceholder")} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {domains.length === 0 ? (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                  {t("apps.service.noDomains")}
+                                </div>
+                              ) : (
+                                domains.map((d) => (
+                                  <SelectItem key={d.id} value={d.host}>
+                                    {d.host}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : hostConfig.host ? (
+                        <div className="flex h-9 items-center gap-2">
+                          <Copyable
+                            value={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
+                            maxLength={Infinity}
+                          />
+                          <a
+                            href={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </div>
+                      ) : (
+                        <span className="h-9 inline-flex items-center text-sm text-muted-foreground">
+                          {t("apps.service.domainPlaceholder")}
                         </span>
-                        <Input
-                          id={`service-host-${group.environmentName}-${index}`}
-                          className={`pl-[4.5rem] ${err ? "border-destructive" : ""}`}
-                          value={hostConfig.host}
-                          onChange={(e) => {
-                            updateHost(group.environmentName, index, "host", e.target.value)
-                            setHostErrors((prev) => {
-                              const next = { ...prev }
-                              delete next[errKey]
-                              return next
-                            })
-                          }}
-                          onBlur={(e) => validateHost(group.environmentName, index, e.target.value)}
-                          placeholder={t("apps.service.domainPlaceholder")}
-                        />
-                      </div>
+                      )}
                       {err && <p className="text-xs text-destructive">{err}</p>}
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label={t("apps.service.copyAddress")}
-                      disabled={!hostConfig.host.trim()}
-                      onClick={async () => {
-                        const scheme = hostConfig.https ? "https://" : "http://"
-                        const url = `${scheme}${hostConfig.host.trim()}`
-                        try {
-                          await navigator.clipboard.writeText(url)
-                          toast.success(t("apps.service.copied"))
-                        } catch {
-                          toast.error(t("apps.service.copyError"))
-                        }
-                      }}
-                    >
-                      <Copy />
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeHost(group.environmentName, index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {hostConfig.editing ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t("apps.service.confirmHost")}
+                        onClick={() => confirmEdit(envName, index)}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t("apps.service.editHost")}
+                        onClick={() => beginEdit(envName, index)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {hostConfig.editing ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        aria-label={t("apps.service.cancelHost")}
+                        onClick={() => cancelEdit(envName, index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeHost(envName, index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                   )
                 })}

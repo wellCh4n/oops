@@ -25,6 +25,16 @@ export const navConfig: NavGroup[] = [
     ],
   },
   {
+    title: "nav.network",
+    items: [
+      {
+        title: "nav.domains",
+        url: "/network/domains",
+        icon: Globe,
+      },
+    ],
+  },
+  {
     title: "nav.appManagement",
     items: [
       {
@@ -44,16 +54,6 @@ export const navConfig: NavGroup[] = [
         url: "/pipelines",
         icon: GitBranch,
         match: (pathname) => pathname === "/pipelines" || pathname.startsWith("/pipelines/") || pathname.includes("/pipelines/"),
-      },
-    ],
-  },
-  {
-    title: "nav.network",
-    items: [
-      {
-        title: "nav.domains",
-        url: "/network/domains",
-        icon: Globe,
       },
     ],
   },

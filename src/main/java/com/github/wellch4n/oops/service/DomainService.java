@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class DomainService {
 
     private static final Pattern HOST_PATTERN = Pattern.compile(
-            "^(\\*\\.)?([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)(\\.[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)+$");
+            "^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)(\\.[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)+$");
 
     private final DomainRepository domainRepository;
 
@@ -25,6 +25,21 @@ public class DomainService {
 
     public List<Domain> list() {
         return domainRepository.findAll();
+    }
+
+    public Domain findForHost(String fullHost) {
+        if (fullHost == null) return null;
+        String lower = fullHost.trim().toLowerCase();
+        if (lower.isEmpty()) return null;
+        List<Domain> all = domainRepository.findAll();
+        return all.stream()
+                .filter(d -> {
+                    String h = d.getHost();
+                    if (h == null) return false;
+                    return lower.equals(h) || lower.endsWith("." + h);
+                })
+                .max((a, b) -> Integer.compare(a.getHost().length(), b.getHost().length()))
+                .orElse(null);
     }
 
     public Domain get(String id) {
@@ -128,7 +143,11 @@ public class DomainService {
 
     private String normalizeHost(String host) {
         if (host == null) return "";
-        return host.trim().toLowerCase();
+        String trimmed = host.trim().toLowerCase();
+        if (trimmed.startsWith("*.")) {
+            trimmed = trimmed.substring(2);
+        }
+        return trimmed;
     }
 
     private void validateHost(String host) {

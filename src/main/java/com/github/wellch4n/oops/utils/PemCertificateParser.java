@@ -84,16 +84,16 @@ public final class PemCertificateParser {
 
     public static boolean hostMatches(String host, List<String> certDnsNames) {
         if (host == null || certDnsNames == null || certDnsNames.isEmpty()) return false;
-        String normalized = host.trim().toLowerCase();
+        String normalizedHost = stripWildcard(host);
         for (String cn : certDnsNames) {
-            if (cn.equals(normalized)) return true;
-            if (cn.startsWith("*.")) {
-                String suffix = cn.substring(1); // ".example.com"
-                String parentOfHost = normalized.contains(".") ? normalized.substring(normalized.indexOf('.')) : "";
-                if (suffix.equals(parentOfHost) && !normalized.startsWith("*.")) return true;
-            }
+            if (stripWildcard(cn).equals(normalizedHost)) return true;
         }
         return false;
+    }
+
+    private static String stripWildcard(String name) {
+        String s = name == null ? "" : name.trim().toLowerCase();
+        return s.startsWith("*.") ? s.substring(2) : s;
     }
 
     public static void validatePrivateKey(String keyPem) {
