@@ -49,32 +49,31 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     @Override
     public Boolean call() {
-        KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+        try (KubernetesClient client = environment.getKubernetesApiServer().fabric8Client()) {
+            PatchContext patchContext = new PatchContext.Builder()
+                    .withPatchType(PatchType.SERVER_SIDE_APPLY)
+                    .withFieldManager("oops")
+                    .withForce(true)
+                    .build();
 
-        PatchContext patchContext = new PatchContext.Builder()
-                .withPatchType(PatchType.SERVER_SIDE_APPLY)
-                .withFieldManager("oops")
-                .withForce(true)
-                .build();
+            DeployContext ctx = new DeployContext(
+                    pipeline, application, environment, perfEnvConfig,
+                    applicationServiceConfig, ingressConfig, client, patchContext,
+                    SERVICE_PORT, Map.of(
+                            "oops.type", OopsTypes.APPLICATION.name(),
+                            "oops.app.name", application.getName())
+            );
 
-        DeployContext ctx = new DeployContext(
-                pipeline, application, environment, perfEnvConfig,
-                applicationServiceConfig, ingressConfig, client, patchContext,
-                SERVICE_PORT, Map.of(
-                        "oops.type", OopsTypes.APPLICATION.name(),
-                        "oops.app.name", application.getName())
-        );
+            List<DeployProcessor> processors = List.of(
+                    new NamespaceProcessor(),
+                    new ImagePullSecretProcessor(),
+                    new StatefulSetProcessor(),
+                    new ServiceProcessor(),
+                    new IngressRouteProcessor()
+            );
 
-        List<DeployProcessor> processors = List.of(
-                new NamespaceProcessor(),
-                new ImagePullSecretProcessor(),
-                new StatefulSetProcessor(),
-                new ServiceProcessor(),
-                new IngressRouteProcessor()
-        );
-
-        processors.forEach(p -> p.process(ctx));
-
+            processors.forEach(p -> p.process(ctx));
+        }
         return true;
     }
 }
