@@ -274,7 +274,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
   const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : pipeline?.deployMode === "MANUAL" ? t("apps.pipeline.modeManual") : null
 
-  const activeIndex = steps.indexOf(activeStep)
+  const activeIndex = (pipeline?.status === "SUCCEEDED" || pipeline?.status === "BUILD_SUCCEEDED")
+    ? steps.length
+    : steps.indexOf(activeStep)
 
   return (
     <ContentPage title={t("apps.pipeline.title")} fullHeight>

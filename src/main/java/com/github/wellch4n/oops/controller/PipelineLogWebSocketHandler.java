@@ -13,8 +13,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,30 +156,65 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     for (String containerName : containers) {
                         if (!session.isOpen()) break;
 
-                        var pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
-                                .waitUntilCondition(Objects::nonNull, 2, TimeUnit.MINUTES);
+                        // Wait for pod with Watch reconnect on connection drop
+                        io.fabric8.kubernetes.api.model.Pod pod = null;
+                        while (pod == null && session.isOpen()) {
+                            try {
+                                pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
+                                        .waitUntilCondition(Objects::nonNull, 5, TimeUnit.MINUTES);
+                            } catch (Exception e) {
+                                if (!session.isOpen()) break;
+                                Thread.sleep(1000);
+                            }
+                        }
 
                         if (pod == null) continue;
 
-                        pod = client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
-                                .waitUntilCondition(p -> isContainerReady(p, containerName), 2, TimeUnit.MINUTES);
+                        // Wait for container ready with Watch reconnect on connection drop
+                        String podName = pod.getMetadata().getName();
+                        pod = null;
+                        while (pod == null && session.isOpen()) {
+                            try {
+                                pod = client.pods().inNamespace(workNamespace).withName(podName)
+                                        .waitUntilCondition(p -> isContainerReady(p, containerName), 5, TimeUnit.MINUTES);
+                            } catch (Exception e) {
+                                if (!session.isOpen()) break;
+                                Thread.sleep(1000);
+                            }
+                        }
 
                         if (pod == null) continue;
+                        int linesSent = 0;
+                        int retries = 0;
 
-                        try (var logWatch = client.pods().inNamespace(workNamespace).withName(pod.getMetadata().getName())
-                                .inContainer(containerName)
-                                .watchLog()) {
+                        while (session.isOpen() && retries <= 10) {
+                            try (var logWatch = client.pods().inNamespace(workNamespace).withName(podName)
+                                    .inContainer(containerName)
+                                    .watchLog()) {
 
-                            try (var reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8))) {
-                                String line;
-                                while (session.isOpen() && (line = reader.readLine()) != null) {
-                                    String jsonLog = objectMapper.writeValueAsString(Map.of(
-                                        "type", "step",
-                                        "data", "[" + containerName + "] " + line,
-                                        "container", containerName
-                                    ));
-                                    session.sendMessage(new TextMessage(jsonLog));
+                                try (var reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8))) {
+                                    String line;
+                                    int lineCount = 0;
+                                    while (session.isOpen() && (line = reader.readLine()) != null) {
+                                        if (lineCount >= linesSent) {
+                                            String jsonLog = objectMapper.writeValueAsString(Map.of(
+                                                "type", "step",
+                                                "data", "[" + containerName + "] " + line,
+                                                "container", containerName
+                                            ));
+                                            session.sendMessage(new TextMessage(jsonLog));
+                                            linesSent++;
+                                        }
+                                        lineCount++;
+                                    }
                                 }
+                                break; // clean EOF — container done
+                            } catch (Exception e) {
+                                if (!session.isOpen()) break;
+                                retries++;
+                                var refreshedPod = client.pods().inNamespace(workNamespace).withName(podName).get();
+                                if (isContainerTerminated(refreshedPod, containerName)) break;
+                                try { Thread.sleep(Math.min(2000L * retries, 30000L)); } catch (InterruptedException ie) { break; }
                             }
                         }
                     }
@@ -202,6 +237,14 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                 }
             }
         });
+    }
+
+    private boolean isContainerTerminated(Pod pod, String containerName) {
+        if (pod == null || pod.getStatus() == null) return false;
+        return Stream.concat(
+                Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(List.of()).stream(),
+                Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
+        ).anyMatch(s -> s.getName().equals(containerName) && s.getState().getTerminated() != null);
     }
 
     private boolean isContainerReady(Pod pod, String containerName) {
