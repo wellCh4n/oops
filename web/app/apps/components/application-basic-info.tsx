@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -32,20 +32,25 @@ import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon } from "l
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ApplicationTabHandle } from "./application-tab-handle"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
+  onSaved?: (application: Application) => void
 }
 
-export function ApplicationBasicInfo({
+export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, ApplicationBasicInfoProps>(function ApplicationBasicInfo({
   initialData,
-}: ApplicationBasicInfoProps) {
+  onSaved,
+}: ApplicationBasicInfoProps, ref) {
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
+  const baselineRef = useRef("")
+  const baselineInitializedRef = useRef(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -90,6 +95,30 @@ export function ApplicationBasicInfo({
 
   const { isSubmitting } = form.formState
 
+  const buildSnapshot = (
+    values: ApplicationBasicFormValues = form.getValues(),
+    envNames: string[] = selectedEnvNames
+  ) => JSON.stringify({
+    values: {
+      ...values,
+      owner: values.owner ?? "",
+    },
+    selectedEnvNames: [...envNames].sort(),
+  })
+
+  useEffect(() => {
+    if (!loading && !baselineInitializedRef.current) {
+      baselineRef.current = JSON.stringify({
+        values: {
+          ...form.getValues(),
+          owner: form.getValues("owner") ?? "",
+        },
+        selectedEnvNames: [...selectedEnvNames].sort(),
+      })
+      baselineInitializedRef.current = true
+    }
+  }, [form, loading, selectedEnvNames])
+
   const toggleEnv = (envName: string) => {
     setSelectedEnvNames(prev => 
         prev.includes(envName) 
@@ -98,7 +127,7 @@ export function ApplicationBasicInfo({
     )
   }
 
-  const onSubmit = async (data: ApplicationBasicFormValues) => {
+  const submitForm = async (data: ApplicationBasicFormValues) => {
     try {
       const payload = {
         ...data,
@@ -117,11 +146,41 @@ export function ApplicationBasicInfo({
       }
 
       toast.success(t("apps.basic.updateSuccess"))
+      if (initialData) {
+        onSaved?.({
+          ...initialData,
+          ...data,
+        })
+      }
+      form.reset(data)
+      baselineRef.current = buildSnapshot(data, selectedEnvNames)
+      return true
     } catch (error) {
       console.error(error)
       toast.error(t("apps.basic.updateError"))
+      return false
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges() {
+      if (loading || !baselineInitializedRef.current) {
+        return false
+      }
+      return buildSnapshot() !== baselineRef.current
+    },
+    async save() {
+      if (loading) {
+        return true
+      }
+
+      let success = false
+      await form.handleSubmit(async (data) => {
+        success = await submitForm(data)
+      })()
+      return success
+    },
+  }))
 
   if (loading) {
     return (
@@ -137,7 +196,7 @@ export function ApplicationBasicInfo({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-w-4xl flex-col gap-6">
+      <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })} className="flex max-w-4xl flex-col gap-6">
         <FormField
           control={form.control}
           name="name"
@@ -269,4 +328,4 @@ export function ApplicationBasicInfo({
       </form>
     </Form>
   )
-}
+})

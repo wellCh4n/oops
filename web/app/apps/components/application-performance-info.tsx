@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import {
   Form,
   FormControl,
@@ -22,20 +22,25 @@ import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
+import { ApplicationTabHandle } from "./application-tab-handle"
 
 interface ApplicationPerformanceInfoProps {
   initialEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
   applicationId?: string
   applicationName?: string
   namespace?: string
+  onSaved?: (
+    envConfigs: ApplicationPerformanceConfigEnvironmentConfig[]
+  ) => void
 }
 
-export function ApplicationPerformanceInfo({
+export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, ApplicationPerformanceInfoProps>(function ApplicationPerformanceInfo({
   initialEnvConfigs = [],
   applicationId,
   applicationName,
   namespace,
-}: ApplicationPerformanceInfoProps) {
+  onSaved,
+}: ApplicationPerformanceInfoProps, ref) {
   const form = useForm<ApplicationPerformanceEnvFormValues>({
     resolver: zodResolver(applicationPerformanceEnvSchema),
     defaultValues: {
@@ -54,6 +59,18 @@ export function ApplicationPerformanceInfo({
   const [isSaving, setIsSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
+  const baselineRef = useRef("")
+
+  const buildSnapshot = (values: ApplicationPerformanceEnvFormValues = form.getValues()) => JSON.stringify({
+    environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
+      environmentName: config.environmentName,
+      replicas: config.replicas,
+      cpuRequest: config.cpuRequest ?? "",
+      cpuLimit: config.cpuLimit ?? "",
+      memoryRequest: config.memoryRequest ?? "",
+      memoryLimit: config.memoryLimit ?? "",
+    })),
+  })
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -73,7 +90,12 @@ export function ApplicationPerformanceInfo({
         }
       )
     })
+    const nextValues = {
+      environmentConfigs: newConfigs,
+    }
     replace(newConfigs)
+    form.reset(nextValues)
+    baselineRef.current = buildSnapshot(nextValues)
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
@@ -88,23 +110,48 @@ export function ApplicationPerformanceInfo({
     }
   }, [fields, activeTab])
 
-  const handleSave = async (data: ApplicationPerformanceEnvFormValues) => {
+  const submitForm = async (data: ApplicationPerformanceEnvFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
       toast.error(t("apps.perf.noAppInfo"))
-      return
+      return false
     }
 
     setIsSaving(true)
     try {
       await updateApplicationPerformanceEnvConfigs(namespace, applicationName, data.environmentConfigs)
       toast.success(t("apps.perf.saveSuccess"))
+      onSaved?.(data.environmentConfigs)
+      form.reset(data)
+      baselineRef.current = buildSnapshot(data)
+      return true
     } catch (error) {
       console.error(error)
       toast.error(t("apps.perf.saveError"))
+      return false
     } finally {
       setIsSaving(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges() {
+      if (envsLoading) {
+        return false
+      }
+      return buildSnapshot() !== baselineRef.current
+    },
+    async save() {
+      if (envsLoading) {
+        return true
+      }
+
+      let success = false
+      await form.handleSubmit(async (data) => {
+        success = await submitForm(data)
+      })()
+      return success
+    },
+  }))
 
   return (
     <>
@@ -116,7 +163,7 @@ export function ApplicationPerformanceInfo({
       )}
       <div className={envsLoading ? "hidden" : ""}>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSave)} className="flex flex-col gap-6">
+          <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })} className="flex flex-col gap-6">
             <div className="w-full">
               <ApplicationEnvironmentSelector
                 namespace={namespace}
@@ -146,17 +193,16 @@ export function ApplicationPerformanceInfo({
       </div>
     </>
   )
-}
+})
 
 interface SingleEnvironmentConfigProps {
   index: number
 }
 
 function ReplicasInput({ value, onChange }: { value: number | undefined, onChange: (v: number | undefined) => void }) {
-  const [text, setText] = useState(value != null ? String(value) : '')
+  const text = value != null ? String(value) : ''
 
   const update = (raw: string) => {
-    setText(raw)
     onChange(raw === '' ? undefined : parseInt(raw, 10))
   }
 

@@ -2,6 +2,7 @@
 
 import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
@@ -11,6 +12,17 @@ import { ApplicationServiceInfo } from "./components/application-service-info"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { ApplicationTabHandle } from "./components/application-tab-handle"
 
 interface ApplicationFormProps {
   loading?: boolean
@@ -53,11 +65,111 @@ export function ApplicationForm({
   const rawTab = searchParams.get("tab")
   const currentTab = rawTab && validTabs.has(rawTab) ? rawTab : "app-info"
   const { t } = useLanguage()
+  const [pendingTab, setPendingTab] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [savingBeforeLeave, setSavingBeforeLeave] = useState(false)
+  const [applicationData, setApplicationData] = useState<Application | undefined>(initialData)
+  const [buildConfigData, setBuildConfigData] = useState<ApplicationBuildConfig | undefined>(initialBuildConfig)
+  const [buildEnvConfigData, setBuildEnvConfigData] = useState<ApplicationBuildEnvironmentConfig[] | undefined>(initialBuildEnvConfigs)
+  const [performanceEnvConfigData, setPerformanceEnvConfigData] = useState<ApplicationPerformanceConfigEnvironmentConfig[] | undefined>(initialPerformanceEnvConfigs)
+  const [serviceConfigData, setServiceConfigData] = useState<ApplicationServiceConfig | undefined>(initialServiceConfig)
+  const basicInfoRef = useRef<ApplicationTabHandle>(null)
+  const buildInfoRef = useRef<ApplicationTabHandle>(null)
+  const performanceInfoRef = useRef<ApplicationTabHandle>(null)
+  const serviceInfoRef = useRef<ApplicationTabHandle>(null)
+  const configInfoRef = useRef<ApplicationTabHandle>(null)
 
-  const handleTabChange = (value: string) => {
+  useEffect(() => {
+    setApplicationData(initialData)
+  }, [initialData])
+
+  useEffect(() => {
+    setBuildConfigData(initialBuildConfig)
+  }, [initialBuildConfig])
+
+  useEffect(() => {
+    setBuildEnvConfigData(initialBuildEnvConfigs)
+  }, [initialBuildEnvConfigs])
+
+  useEffect(() => {
+    setPerformanceEnvConfigData(initialPerformanceEnvConfigs)
+  }, [initialPerformanceEnvConfigs])
+
+  useEffect(() => {
+    setServiceConfigData(initialServiceConfig)
+  }, [initialServiceConfig])
+
+  const navigateToTab = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", value)
     router.push(`${pathname}?${params.toString()}`)
+  }
+
+  const getCurrentTabHandle = () => {
+    switch (currentTab) {
+      case "app-info":
+        return basicInfoRef.current
+      case "build-config":
+        return buildInfoRef.current
+      case "performance-info":
+        return performanceInfoRef.current
+      case "service-info":
+        return serviceInfoRef.current
+      case "config-info":
+        return configInfoRef.current
+      default:
+        return null
+    }
+  }
+
+  const resetPendingNavigation = () => {
+    setPendingTab(null)
+    setConfirmOpen(false)
+  }
+
+  const handleTabChange = (value: string) => {
+    if (value === currentTab) {
+      return
+    }
+
+    const currentTabHandle = getCurrentTabHandle()
+    if (currentTabHandle?.hasUnsavedChanges()) {
+      setPendingTab(value)
+      setConfirmOpen(true)
+      return
+    }
+
+    navigateToTab(value)
+  }
+
+  const handleDiscardAndLeave = () => {
+    if (!pendingTab) {
+      return
+    }
+
+    const nextTab = pendingTab
+    resetPendingNavigation()
+    navigateToTab(nextTab)
+  }
+
+  const handleSaveAndLeave = async () => {
+    const currentTabHandle = getCurrentTabHandle()
+    if (!currentTabHandle || !pendingTab) {
+      resetPendingNavigation()
+      return
+    }
+
+    setSavingBeforeLeave(true)
+    const saved = await currentTabHandle.save()
+    setSavingBeforeLeave(false)
+
+    if (!saved) {
+      return
+    }
+
+    const nextTab = pendingTab
+    resetPendingNavigation()
+    navigateToTab(nextTab)
   }
 
   return (
@@ -75,15 +187,23 @@ export function ApplicationForm({
         </div>
 
         <TabsContent value="app-info" className="rounded-md border bg-background p-4">
-          {loading ? <TabContentSkeleton rows={4} /> : <ApplicationBasicInfo initialData={initialData} />}
+          {loading ? <TabContentSkeleton rows={4} /> : (
+            <ApplicationBasicInfo
+              ref={basicInfoRef}
+              initialData={applicationData}
+              onSaved={(nextApplication) => setApplicationData(nextApplication)}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="service-info" className="rounded-md border bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationServiceInfo
-              initialServiceConfig={initialServiceConfig}
-              applicationName={initialData?.name}
-              namespace={initialData?.namespace}
+              ref={serviceInfoRef}
+              initialServiceConfig={serviceConfigData}
+              applicationName={applicationData?.name}
+              namespace={applicationData?.namespace}
+              onSaved={(nextServiceConfig) => setServiceConfigData(nextServiceConfig)}
             />
           )}
         </TabsContent>
@@ -91,11 +211,16 @@ export function ApplicationForm({
         <TabsContent value="build-config" className="rounded-md border bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationBuildInfo
-              initialBuildConfig={initialBuildConfig}
-              initialEnvConfigs={initialBuildEnvConfigs}
-              applicationId={initialData?.id}
-              applicationName={initialData?.name}
-              namespace={initialData?.namespace}
+              ref={buildInfoRef}
+              initialBuildConfig={buildConfigData}
+              initialEnvConfigs={buildEnvConfigData}
+              applicationId={applicationData?.id}
+              applicationName={applicationData?.name}
+              namespace={applicationData?.namespace}
+              onSaved={(nextBuildConfig, nextBuildEnvConfigs) => {
+                setBuildConfigData(nextBuildConfig)
+                setBuildEnvConfigData(nextBuildEnvConfigs)
+              }}
             />
           )}
         </TabsContent>
@@ -103,10 +228,12 @@ export function ApplicationForm({
         <TabsContent value="performance-info" className="rounded-md border bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationPerformanceInfo
-              initialEnvConfigs={initialPerformanceEnvConfigs}
-              applicationId={initialData?.id}
-              applicationName={initialData?.name}
-              namespace={initialData?.namespace}
+              ref={performanceInfoRef}
+              initialEnvConfigs={performanceEnvConfigData}
+              applicationId={applicationData?.id}
+              applicationName={applicationData?.name}
+              namespace={applicationData?.namespace}
+              onSaved={(nextPerformanceEnvConfigs) => setPerformanceEnvConfigData(nextPerformanceEnvConfigs)}
             />
           )}
         </TabsContent>
@@ -114,8 +241,9 @@ export function ApplicationForm({
         <TabsContent value="config-info" className="rounded-md border bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationConfigInfo
-              applicationName={initialData?.name}
-              namespace={initialData?.namespace}
+              ref={configInfoRef}
+              applicationName={applicationData?.name}
+              namespace={applicationData?.namespace}
             />
           )}
         </TabsContent>
@@ -123,12 +251,37 @@ export function ApplicationForm({
         <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationDangerZone
-              namespace={initialData?.namespace ?? ""}
-              name={initialData?.name ?? ""}
+              namespace={applicationData?.namespace ?? ""}
+              name={applicationData?.name ?? ""}
             />
           )}
         </TabsContent>
       </Tabs>
+
+      <AlertDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open && !savingBeforeLeave) {
+            resetPendingNavigation()
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("apps.unsaved.title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("apps.unsaved.desc")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={savingBeforeLeave}>{t("common.cancel")}</AlertDialogCancel>
+            <Button type="button" variant="outline" onClick={handleDiscardAndLeave} disabled={savingBeforeLeave}>
+              {t("apps.unsaved.discard")}
+            </Button>
+            <Button type="button" onClick={() => { void handleSaveAndLeave() }} disabled={savingBeforeLeave}>
+              {savingBeforeLeave ? t("common.saving") : t("common.save")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

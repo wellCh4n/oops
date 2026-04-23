@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -18,11 +18,13 @@ import { ApplicationEnvironmentSelector } from "./application-environment-select
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
+import { ApplicationTabHandle } from "./application-tab-handle"
 
 interface Props {
   initialServiceConfig?: ApplicationServiceConfig
   applicationName?: string
   namespace?: string
+  onSaved?: (serviceConfig: ApplicationServiceConfig) => void
 }
 
 interface HostRow {
@@ -60,7 +62,7 @@ function combineHost(prefix: string, suffix: string): string {
   return p ? `${p}.${suffix}` : suffix
 }
 
-export function ApplicationServiceInfo({ initialServiceConfig, applicationName, namespace }: Props) {
+export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(function ApplicationServiceInfo({ initialServiceConfig, applicationName, namespace, onSaved }: Props, ref) {
   const [port, setPort] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [envConfigGroups, setEnvConfigGroups] = useState<EnvConfigGroup[]>([])
@@ -71,8 +73,24 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [pendingApexConfirm, setPendingApexConfirm] = useState<{ envName: string; index: number } | null>(null)
   const { t } = useLanguage()
   const hasInitRef = useRef(false)
+  const baselineRef = useRef("")
+  const baselineInitializedRef = useRef(false)
 
   const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
+
+  const buildSnapshot = (nextPort: string = port, nextGroups: EnvConfigGroup[] = envConfigGroups) => JSON.stringify({
+    port: nextPort,
+    environmentConfigs: nextGroups.map((group) => ({
+      environmentName: group.environmentName,
+      hosts: group.hosts.map((host) => ({
+        host: host.host,
+        https: host.https,
+        editing: host.editing,
+        prefix: host.prefix,
+        suffix: host.suffix,
+      })),
+    })),
+  })
 
   const makeEmptyRow = (): HostRow => ({
     host: "",
@@ -135,6 +153,25 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       setActiveTab(envConfigGroups[0].environmentName)
     }
   }, [envConfigGroups, activeTab])
+
+  useEffect(() => {
+    if (!envsLoading && !baselineInitializedRef.current) {
+      baselineRef.current = JSON.stringify({
+        port,
+        environmentConfigs: envConfigGroups.map((group) => ({
+          environmentName: group.environmentName,
+          hosts: group.hosts.map((host) => ({
+            host: host.host,
+            https: host.https,
+            editing: host.editing,
+            prefix: host.prefix,
+            suffix: host.suffix,
+          })),
+        })),
+      })
+      baselineInitializedRef.current = true
+    }
+  }, [envConfigGroups, envsLoading, port])
 
   const addHost = (envName: string) => {
     setEnvConfigGroups((prev) =>
@@ -296,14 +333,14 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
 
 
   const onSave = async () => {
-    if (!namespace || !applicationName) return
+    if (!namespace || !applicationName) return false
     const trimmedPort = port.trim()
     let portNum: number | undefined = undefined
     if (trimmedPort) {
       const num = Number(trimmedPort)
       if (!Number.isInteger(num) || num <= 0 || num > 65535) {
         toast.error(t("apps.service.portError"))
-        return
+        return false
       }
       portNum = num
     }
@@ -312,7 +349,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     const hasPending = envConfigGroups.some((g) => g.hosts.some((h) => h.editing))
     if (hasPending) {
       toast.error(t("apps.service.confirmPending"))
-      return
+      return false
     }
 
     // Flatten groups to environmentConfigs
@@ -332,7 +369,7 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
     if (Object.keys(hostErrors).length > 0) {
       const firstError = Object.values(hostErrors)[0]
       toast.error(firstError)
-      return
+      return false
     }
 
     setSaving(true)
@@ -343,15 +380,38 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       })
       if (res.success) {
         toast.success(t("apps.service.saveSuccess"))
+        onSaved?.({
+          port: portNum,
+          environmentConfigs,
+        })
+        baselineRef.current = buildSnapshot()
+        return true
       } else {
         toast.error(res.message || t("apps.service.saveError"))
+        return false
       }
     } catch {
       toast.error(t("apps.service.saveError"))
+      return false
     } finally {
       setSaving(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges() {
+      if (envsLoading || !baselineInitializedRef.current) {
+        return false
+      }
+      return buildSnapshot() !== baselineRef.current
+    },
+    async save() {
+      if (envsLoading) {
+        return true
+      }
+      return onSave()
+    },
+  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -570,4 +630,4 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       </AlertDialog>
     </div>
   )
-}
+})

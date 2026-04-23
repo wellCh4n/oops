@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
+import { ApplicationTabHandle } from "./application-tab-handle"
 
 function ConfigValueTextarea({
   value,
@@ -83,10 +84,19 @@ interface ApplicationConfigInfoProps {
   namespace?: string
 }
 
-export function ApplicationConfigInfo({
+function serializeConfigMaps(configs: ApplicationConfigFormValues["configMaps"] = []) {
+  return JSON.stringify(
+    (configs ?? []).map((config) => ({
+      key: config.key ?? "",
+      value: config.value ?? "",
+    }))
+  )
+}
+
+export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, ApplicationConfigInfoProps>(function ApplicationConfigInfo({
   applicationName,
   namespace,
-}: ApplicationConfigInfoProps) {
+}: ApplicationConfigInfoProps, ref) {
   // Removed environments state as it's handled by selector
   const [activeTab, setActiveTab] = useState<string>("")
   const [isLoadingConfig, setIsLoadingConfig] = useState(false)
@@ -99,6 +109,7 @@ export function ApplicationConfigInfo({
   const [importConfirmDialogOpen, setImportConfirmDialogOpen] = useState(false)
   const [importContent, setImportContent] = useState("")
   const [importMode, setImportMode] = useState<"key-only" | "key-value">("key-value")
+  const baselineRef = useRef("")
 
   const form = useForm<ApplicationConfigFormValues>({
     resolver: zodResolver(applicationConfigSchema),
@@ -111,6 +122,8 @@ export function ApplicationConfigInfo({
     control: form.control,
     name: "configMaps",
   })
+
+  const buildSnapshot = (configs = form.getValues("configMaps")) => serializeConfigMaps(configs)
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     if (envs.length > 0 && !activeTab) {
@@ -127,6 +140,10 @@ export function ApplicationConfigInfo({
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
         if (res.data) {
           form.reset({ configMaps: res.data })
+          baselineRef.current = serializeConfigMaps(res.data)
+        } else {
+          form.reset({ configMaps: [] })
+          baselineRef.current = serializeConfigMaps([])
         }
       } catch (error) {
         toast.error(t("apps.config.fetchError"))
@@ -137,18 +154,22 @@ export function ApplicationConfigInfo({
     }
 
     fetchConfigMaps()
-  }, [namespace, applicationName, activeTab, form, t])
+  }, [activeTab, applicationName, form, namespace, t])
 
   const onSubmit = async (data: ApplicationConfigFormValues) => {
-    if (!namespace || !applicationName || !activeTab) return
+    if (!namespace || !applicationName || !activeTab) return false
 
     setIsSaving(true)
     try {
       await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
       toast.success(t("apps.config.updateSuccess"))
+      form.reset(data)
+      baselineRef.current = buildSnapshot(data.configMaps)
+      return true
     } catch (error) {
       toast.error(t("apps.config.updateError"))
       console.error(error)
+      return false
     } finally {
       setIsSaving(false)
     }
@@ -212,6 +233,26 @@ export function ApplicationConfigInfo({
 
   const parsedImportContent = parseEnvContent(importContent)
 
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges() {
+      if (envsLoading || isLoadingConfig) {
+        return false
+      }
+      return buildSnapshot() !== baselineRef.current
+    },
+    async save() {
+      if (envsLoading || isLoadingConfig) {
+        return true
+      }
+
+      let success = false
+      await form.handleSubmit(async (data) => {
+        success = await onSubmit(data)
+      })()
+      return success
+    },
+  }))
+
   return (
     <div className="flex flex-col gap-6">
       {envsLoading && (
@@ -230,7 +271,7 @@ export function ApplicationConfigInfo({
           onLoadingChange={setEnvsLoading}
         >
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <form onSubmit={form.handleSubmit(async (data) => { await onSubmit(data) })} className="flex flex-col gap-4">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -404,4 +445,4 @@ export function ApplicationConfigInfo({
       />
     </div>
   )
-}
+})

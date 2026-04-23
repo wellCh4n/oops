@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
 import {
   Form,
   FormControl,
@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { useFeaturesStore } from "@/store/features"
+import { ApplicationTabHandle } from "./application-tab-handle"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -33,15 +34,20 @@ interface ApplicationBuildInfoProps {
   applicationId?: string
   applicationName?: string
   namespace?: string
+  onSaved?: (
+    buildConfig: ApplicationBuildConfig,
+    envConfigs: ApplicationBuildEnvironmentConfig[]
+  ) => void
 }
 
-export function ApplicationBuildInfo({
+export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, ApplicationBuildInfoProps>(function ApplicationBuildInfo({
   initialBuildConfig,
   initialEnvConfigs = [],
   applicationId,
   applicationName,
   namespace,
-}: ApplicationBuildInfoProps) {
+  onSaved,
+}: ApplicationBuildInfoProps, ref) {
   const form = useForm<ApplicationBuildFormValues>({
     resolver: zodResolver(applicationBuildSchema),
     defaultValues: {
@@ -67,6 +73,18 @@ export function ApplicationBuildInfo({
   const sourceType = form.watch("sourceType")
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
   const featuresLoaded = useFeaturesStore((s) => s.loaded)
+  const baselineRef = useRef("")
+
+  const buildSnapshot = (values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
+    sourceType: values.sourceType,
+    repository: values.repository ?? "",
+    dockerFile: values.dockerFile ?? "",
+    buildImage: values.buildImage ?? "",
+    environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
+      environmentName: config.environmentName,
+      buildCommand: config.buildCommand ?? "",
+    })),
+  })
 
   // If object storage is disabled but current source type is ZIP, fall back to GIT.
   // Gate on featuresLoaded to avoid downgrading ZIP apps before the async features API resolves.
@@ -90,7 +108,13 @@ export function ApplicationBuildInfo({
         }
       )
     })
+    const nextValues = {
+      ...form.getValues(),
+      environmentConfigs: newConfigs,
+    }
     replace(newConfigs)
+    form.reset(nextValues)
+    baselineRef.current = buildSnapshot(nextValues)
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
@@ -105,10 +129,10 @@ export function ApplicationBuildInfo({
     }
   }, [fields, activeTab])
 
-  const handleSave = async (data: ApplicationBuildFormValues) => {
+  const submitForm = async (data: ApplicationBuildFormValues) => {
     if (!applicationId || !applicationName || !namespace) {
       toast.error(t("apps.build.noAppInfo"))
-      return
+      return false
     }
 
     setIsSaving(true)
@@ -129,17 +153,42 @@ export function ApplicationBuildInfo({
       await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
 
       toast.success(t("apps.build.saveSuccess"))
+      onSaved?.(buildConfigPayload, envConfigs)
+      form.reset(data)
+      baselineRef.current = buildSnapshot(data)
+      return true
     } catch (error) {
       console.error(error)
       toast.error(t("apps.build.saveError"))
+      return false
     } finally {
       setIsSaving(false)
     }
   }
 
+  useImperativeHandle(ref, () => ({
+    hasUnsavedChanges() {
+      if (envsLoading) {
+        return false
+      }
+      return buildSnapshot() !== baselineRef.current
+    },
+    async save() {
+      if (envsLoading) {
+        return true
+      }
+
+      let success = false
+      await form.handleSubmit(async (data) => {
+        success = await submitForm(data)
+      })()
+      return success
+    },
+  }))
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSave)}>
+      <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })}>
         <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
           <div className="flex flex-col gap-4">
@@ -256,7 +305,7 @@ export function ApplicationBuildInfo({
       </form>
     </Form>
   )
-}
+})
 
 interface SingleEnvironmentConfigProps {
   index: number
