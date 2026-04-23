@@ -40,7 +40,7 @@ import {
 import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
 import { useNamespaceStore } from "@/store/namespace"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import React, { useState, useEffect } from "react"
 import { clearAuth } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
@@ -50,6 +50,7 @@ import { localeLabels, Locale } from "@/lib/i18n"
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { open, toggleSidebar } = useSidebar()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
@@ -125,20 +126,28 @@ export function AppSidebar() {
               {open && <SidebarGroupLabel>{t(group.title)}</SidebarGroupLabel>}
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {filteredGroups.map((item) => (
+                  {filteredGroups.map((item) => {
+                    const href = pathname === item.url
+                      ? (searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname)
+                      : selectedNamespace && (item.url === "/ides" || item.url === "/pipelines")
+                        ? `${item.url}?namespace=${selectedNamespace}`
+                        : item.url
+
+                    return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         asChild
                         isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                         tooltip={t(item.title)}
                       >
-                        <Link href={selectedNamespace && (item.url === "/ides" || item.url === "/pipelines") ? `${item.url}?namespace=${selectedNamespace}` : item.url}>
+                        <Link href={href}>
                           <item.icon />
                           <span>{t(item.title)}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
-                  ))}
+                    )
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
