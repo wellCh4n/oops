@@ -405,12 +405,12 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     const trimmedPort = values.port.trim()
     let portValue: number | undefined
     if (trimmedPort) {
-      const nextPort = Number(trimmedPort)
-      if (!Number.isInteger(nextPort) || nextPort <= 0 || nextPort > 65535) {
+      const portNumber = Number(trimmedPort)
+      if (!Number.isInteger(portNumber) || portNumber <= 0 || portNumber > 65535) {
         toast.error(t("apps.service.portError"))
         return false
       }
-      portValue = nextPort
+      portValue = portNumber
     }
 
     const hasPending = values.environmentConfigs.some((group) => group.hosts.some((host) => host.editing))
