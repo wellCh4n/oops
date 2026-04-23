@@ -187,7 +187,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
             <FormItem>
               <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
               <FormControl>
-                <Input placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
+                <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -256,7 +256,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
             <FormItem>
               <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
               <FormControl>
-                <Textarea placeholder={t("apps.basic.descPlaceholder")} {...field} />
+                <Textarea autoComplete="off" placeholder={t("apps.basic.descPlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

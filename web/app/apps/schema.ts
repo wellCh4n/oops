@@ -70,7 +70,7 @@ export const applicationConfigSchema = z.object({
 })
 
 export const applicationServiceSchema = z.object({
-  port: z.string().optional(),
+  port: z.string().default(""),
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
     hosts: z.array(z.object({

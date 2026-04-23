@@ -93,6 +93,7 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
           </AlertDialogHeader>
           <div className="space-y-2">
             <Input
+              autoComplete="off"
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
               placeholder={t("apps.danger.deletePlaceholder")}

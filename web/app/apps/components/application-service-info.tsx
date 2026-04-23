@@ -147,6 +147,19 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     return new Map(environmentConfigs.map((group, index) => [group.environmentName, index]))
   }, [environmentConfigs])
 
+  const pendingApexSuffix = useMemo(() => {
+    if (!pendingApexConfirm) {
+      return ""
+    }
+
+    const environmentIndex = environmentIndexByName.get(pendingApexConfirm.environmentName)
+    if (environmentIndex == null) {
+      return ""
+    }
+
+    return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${pendingApexConfirm.hostIndex}.suffix`) || ""
+  }, [environmentIndexByName, form, pendingApexConfirm])
+
   const buildSnapshot = useCallback((values: ApplicationServiceFormValues = form.getValues()) => JSON.stringify({
     port: values.port?.trim() ?? "",
     environmentConfigs: (values.environmentConfigs ?? []).map((group) => ({
@@ -484,6 +497,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                 <FormControl>
                   <Input
                     {...field}
+                    autoComplete="off"
                     id="service-port"
                     type="number"
                     inputMode="numeric"
@@ -563,6 +577,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                   <div className="flex items-center gap-1">
                                     <Input
                                       className="flex-1"
+                                      autoComplete="off"
                                       value={hostConfig.prefix}
                                       onChange={(event) => {
                                         updateHost(group.environmentName, hostIndex, {
@@ -695,15 +710,11 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
         <AlertDialog open={!!pendingApexConfirm} onOpenChange={(open) => { if (!open) setPendingApexConfirm(null) }}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t("apps.service.apexConfirmTitle")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("apps.service.apexConfirmDesc").replace("{host}",
-                  pendingApexConfirm
-                    ? form.getValues(`environmentConfigs.${environmentIndexByName.get(pendingApexConfirm.environmentName) ?? 0}.hosts.${pendingApexConfirm.hostIndex}.suffix`) || ""
-                    : ""
-                )}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+            <AlertDialogTitle>{t("apps.service.apexConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+                {t("apps.service.apexConfirmDesc").replace("{host}", pendingApexSuffix)}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPendingApexConfirm(null)}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction onClick={confirmApexEdit}>{t("common.confirm")}</AlertDialogAction>
