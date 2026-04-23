@@ -56,5 +56,6 @@ public class IngressRouteSpec {
     @AllArgsConstructor
     public static class Tls {
         private String certResolver;
+        private String secretName;
     }
 }
