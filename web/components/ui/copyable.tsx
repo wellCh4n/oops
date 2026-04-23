@@ -24,9 +24,10 @@ export function Copyable({ value, copyValue, maxLength = 10, className, displayC
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={cn(
-        "font-mono text-sm cursor-pointer hover:underline decoration-dashed underline-offset-2",
+        "inline-flex justify-self-start text-left font-mono text-sm cursor-pointer hover:underline decoration-dashed underline-offset-2",
         displayClassName,
         className
       )}
