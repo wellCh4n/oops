@@ -64,7 +64,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-3">
               <div className="relative aspect-square size-10 overflow-hidden rounded-lg shrink-0">
-                <Image src="/icon.png" alt="Oops" fill className="object-cover" />
+                <Image src="/icon.png" alt="Oops" fill className="object-cover dark:[filter:url(#white-stroke)]" />
               </div>
               <CardTitle className="text-2xl font-bold">OOPS</CardTitle>
             </div>

@@ -43,6 +43,19 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <svg className="absolute w-0 h-0" aria-hidden="true">
+          <defs>
+            <filter id="white-stroke" x="-20%" y="-20%" width="140%" height="140%">
+              <feMorphology in="SourceAlpha" result="DILATED" operator="dilate" radius="0.5" />
+              <feFlood floodColor="white" result="WHITE" />
+              <feComposite in="WHITE" in2="DILATED" operator="in" result="STROKE" />
+              <feMerge>
+                <feMergeNode in="STROKE" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+        </svg>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
