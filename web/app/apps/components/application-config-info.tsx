@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
@@ -43,6 +43,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
 import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 function ConfigValueTextarea({
   value,
@@ -109,7 +110,6 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   const [importConfirmDialogOpen, setImportConfirmDialogOpen] = useState(false)
   const [importContent, setImportContent] = useState("")
   const [importMode, setImportMode] = useState<"key-only" | "key-value">("key-value")
-  const baselineRef = useRef("")
 
   const form = useForm<ApplicationConfigFormValues>({
     resolver: zodResolver(applicationConfigSchema),
@@ -123,13 +123,51 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     name: "configMaps",
   })
 
-  const buildSnapshot = (configs = form.getValues("configMaps")) => serializeConfigMaps(configs)
+  const buildSnapshot = useCallback(
+    (configs = form.getValues("configMaps")) => serializeConfigMaps(configs),
+    [form]
+  )
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     if (envs.length > 0 && !activeTab) {
       setActiveTab(envs[0].environmentName)
     }
   }
+
+  async function onSubmit(data: ApplicationConfigFormValues) {
+    if (!namespace || !applicationName || !activeTab) return false
+
+    setIsSaving(true)
+    try {
+      await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
+      toast.success(t("apps.config.updateSuccess"))
+      form.reset(data)
+      return true
+    } catch (error) {
+      toast.error(t("apps.config.updateError"))
+      console.error(error)
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await onSubmit(data)
+    })()
+    return success
+  }
+
+  const { captureBaseline, handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !(envsLoading || isLoadingConfig),
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit,
+  })
 
   useEffect(() => {
     const fetchConfigMaps = async () => {
@@ -140,11 +178,10 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
         if (res.data) {
           form.reset({ configMaps: res.data })
-          baselineRef.current = serializeConfigMaps(res.data)
         } else {
           form.reset({ configMaps: [] })
-          baselineRef.current = serializeConfigMaps([])
         }
+        captureBaseline()
       } catch (error) {
         toast.error(t("apps.config.fetchError"))
         console.error(error)
@@ -154,26 +191,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     }
 
     fetchConfigMaps()
-  }, [activeTab, applicationName, form, namespace, t])
-
-  const onSubmit = async (data: ApplicationConfigFormValues) => {
-    if (!namespace || !applicationName || !activeTab) return false
-
-    setIsSaving(true)
-    try {
-      await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
-      toast.success(t("apps.config.updateSuccess"))
-      form.reset(data)
-      baselineRef.current = buildSnapshot(data.configMaps)
-      return true
-    } catch (error) {
-      toast.error(t("apps.config.updateError"))
-      console.error(error)
-      return false
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  }, [activeTab, applicationName, captureBaseline, form, namespace, t])
 
   const handleImportConfirm = (result: {
     toAdd: { key: string; value: string }[]
@@ -233,26 +251,6 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
   const parsedImportContent = parseEnvContent(importContent)
 
-  useImperativeHandle(ref, () => ({
-    hasUnsavedChanges() {
-      if (envsLoading || isLoadingConfig) {
-        return false
-      }
-      return buildSnapshot() !== baselineRef.current
-    },
-    async save() {
-      if (envsLoading || isLoadingConfig) {
-        return true
-      }
-
-      let success = false
-      await form.handleSubmit(async (data) => {
-        success = await onSubmit(data)
-      })()
-      return success
-    },
-  }))
-
   return (
     <div className="flex flex-col gap-6">
       {envsLoading && (
@@ -271,7 +269,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
           onLoadingChange={setEnvsLoading}
         >
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(async (data) => { await onSubmit(data) })} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>

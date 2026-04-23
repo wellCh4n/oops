@@ -2,7 +2,7 @@
 
 import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { RefObject, useMemo, useRef, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
@@ -33,6 +33,32 @@ interface ApplicationFormProps {
   initialServiceConfig?: ApplicationServiceConfig
 }
 
+type ApplicationTab =
+  | "app-info"
+  | "build-config"
+  | "performance-info"
+  | "service-info"
+  | "config-info"
+  | "danger-zone"
+
+interface ApplicationFormState {
+  application?: Application
+  buildConfig?: ApplicationBuildConfig
+  buildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
+  performanceEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+  serviceConfig?: ApplicationServiceConfig
+}
+
+const DEFAULT_TAB: ApplicationTab = "app-info"
+const VALID_TABS = new Set<ApplicationTab>([
+  "app-info",
+  "build-config",
+  "performance-info",
+  "service-info",
+  "config-info",
+  "danger-zone",
+])
+
 function TabContentSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="flex flex-col gap-6">
@@ -54,72 +80,57 @@ export function ApplicationForm({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const validTabs = new Set([
-    "app-info",
-    "build-config",
-    "performance-info",
-    "service-info",
-    "config-info",
-    "danger-zone",
-  ])
   const rawTab = searchParams.get("tab")
-  const currentTab = rawTab && validTabs.has(rawTab) ? rawTab : "app-info"
+  const currentTab = rawTab && VALID_TABS.has(rawTab as ApplicationTab)
+    ? rawTab as ApplicationTab
+    : DEFAULT_TAB
   const { t } = useLanguage()
-  const [pendingTab, setPendingTab] = useState<string | null>(null)
+  const [pendingTab, setPendingTab] = useState<ApplicationTab | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false)
-  const [applicationData, setApplicationData] = useState<Application | undefined>(initialData)
-  const [buildConfigData, setBuildConfigData] = useState<ApplicationBuildConfig | undefined>(initialBuildConfig)
-  const [buildEnvConfigData, setBuildEnvConfigData] = useState<ApplicationBuildEnvironmentConfig[] | undefined>(initialBuildEnvConfigs)
-  const [performanceEnvConfigData, setPerformanceEnvConfigData] = useState<ApplicationPerformanceConfigEnvironmentConfig[] | undefined>(initialPerformanceEnvConfigs)
-  const [serviceConfigData, setServiceConfigData] = useState<ApplicationServiceConfig | undefined>(initialServiceConfig)
+  const [formStateOverrides, setFormStateOverrides] = useState<Partial<ApplicationFormState>>({})
   const basicInfoRef = useRef<ApplicationTabHandle>(null)
   const buildInfoRef = useRef<ApplicationTabHandle>(null)
   const performanceInfoRef = useRef<ApplicationTabHandle>(null)
   const serviceInfoRef = useRef<ApplicationTabHandle>(null)
   const configInfoRef = useRef<ApplicationTabHandle>(null)
 
-  useEffect(() => {
-    setApplicationData(initialData)
-  }, [initialData])
+  const formState = useMemo<ApplicationFormState>(() => ({
+    application: initialData,
+    buildConfig: initialBuildConfig,
+    buildEnvConfigs: initialBuildEnvConfigs,
+    performanceEnvConfigs: initialPerformanceEnvConfigs,
+    serviceConfig: initialServiceConfig,
+    ...formStateOverrides,
+  }), [
+    formStateOverrides,
+    initialBuildConfig,
+    initialBuildEnvConfigs,
+    initialData,
+    initialPerformanceEnvConfigs,
+    initialServiceConfig,
+  ])
 
-  useEffect(() => {
-    setBuildConfigData(initialBuildConfig)
-  }, [initialBuildConfig])
+  const tabHandles = useMemo<Record<ApplicationTab, RefObject<ApplicationTabHandle | null>>>(() => ({
+    "app-info": basicInfoRef,
+    "build-config": buildInfoRef,
+    "performance-info": performanceInfoRef,
+    "service-info": serviceInfoRef,
+    "config-info": configInfoRef,
+    "danger-zone": { current: null },
+  }), [])
 
-  useEffect(() => {
-    setBuildEnvConfigData(initialBuildEnvConfigs)
-  }, [initialBuildEnvConfigs])
+  const updateFormState = (patch: Partial<ApplicationFormState>) => {
+    setFormStateOverrides((current) => ({
+      ...current,
+      ...patch,
+    }))
+  }
 
-  useEffect(() => {
-    setPerformanceEnvConfigData(initialPerformanceEnvConfigs)
-  }, [initialPerformanceEnvConfigs])
-
-  useEffect(() => {
-    setServiceConfigData(initialServiceConfig)
-  }, [initialServiceConfig])
-
-  const navigateToTab = (value: string) => {
+  const navigateToTab = (value: ApplicationTab) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", value)
     router.push(`${pathname}?${params.toString()}`)
-  }
-
-  const getCurrentTabHandle = () => {
-    switch (currentTab) {
-      case "app-info":
-        return basicInfoRef.current
-      case "build-config":
-        return buildInfoRef.current
-      case "performance-info":
-        return performanceInfoRef.current
-      case "service-info":
-        return serviceInfoRef.current
-      case "config-info":
-        return configInfoRef.current
-      default:
-        return null
-    }
   }
 
   const resetPendingNavigation = () => {
@@ -128,18 +139,23 @@ export function ApplicationForm({
   }
 
   const handleTabChange = (value: string) => {
+    if (!VALID_TABS.has(value as ApplicationTab)) {
+      return
+    }
+
+    const nextTab = value as ApplicationTab
     if (value === currentTab) {
       return
     }
 
-    const currentTabHandle = getCurrentTabHandle()
+    const currentTabHandle = tabHandles[currentTab]?.current
     if (currentTabHandle?.hasUnsavedChanges()) {
-      setPendingTab(value)
+      setPendingTab(nextTab)
       setConfirmOpen(true)
       return
     }
 
-    navigateToTab(value)
+    navigateToTab(nextTab)
   }
 
   const handleDiscardAndLeave = () => {
@@ -153,7 +169,7 @@ export function ApplicationForm({
   }
 
   const handleSaveAndLeave = async () => {
-    const currentTabHandle = getCurrentTabHandle()
+    const currentTabHandle = tabHandles[currentTab]?.current
     if (!currentTabHandle || !pendingTab) {
       resetPendingNavigation()
       return
@@ -190,8 +206,8 @@ export function ApplicationForm({
           {loading ? <TabContentSkeleton rows={4} /> : (
             <ApplicationBasicInfo
               ref={basicInfoRef}
-              initialData={applicationData}
-              onSaved={(nextApplication) => setApplicationData(nextApplication)}
+              initialData={formState.application}
+              onSaved={(nextApplication) => updateFormState({ application: nextApplication })}
             />
           )}
         </TabsContent>
@@ -200,10 +216,10 @@ export function ApplicationForm({
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationServiceInfo
               ref={serviceInfoRef}
-              initialServiceConfig={serviceConfigData}
-              applicationName={applicationData?.name}
-              namespace={applicationData?.namespace}
-              onSaved={(nextServiceConfig) => setServiceConfigData(nextServiceConfig)}
+              initialServiceConfig={formState.serviceConfig}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
+              onSaved={(nextServiceConfig) => updateFormState({ serviceConfig: nextServiceConfig })}
             />
           )}
         </TabsContent>
@@ -212,14 +228,16 @@ export function ApplicationForm({
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationBuildInfo
               ref={buildInfoRef}
-              initialBuildConfig={buildConfigData}
-              initialEnvConfigs={buildEnvConfigData}
-              applicationId={applicationData?.id}
-              applicationName={applicationData?.name}
-              namespace={applicationData?.namespace}
+              initialBuildConfig={formState.buildConfig}
+              initialEnvConfigs={formState.buildEnvConfigs}
+              applicationId={formState.application?.id}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
               onSaved={(nextBuildConfig, nextBuildEnvConfigs) => {
-                setBuildConfigData(nextBuildConfig)
-                setBuildEnvConfigData(nextBuildEnvConfigs)
+                updateFormState({
+                  buildConfig: nextBuildConfig,
+                  buildEnvConfigs: nextBuildEnvConfigs,
+                })
               }}
             />
           )}
@@ -229,11 +247,11 @@ export function ApplicationForm({
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationPerformanceInfo
               ref={performanceInfoRef}
-              initialEnvConfigs={performanceEnvConfigData}
-              applicationId={applicationData?.id}
-              applicationName={applicationData?.name}
-              namespace={applicationData?.namespace}
-              onSaved={(nextPerformanceEnvConfigs) => setPerformanceEnvConfigData(nextPerformanceEnvConfigs)}
+              initialEnvConfigs={formState.performanceEnvConfigs}
+              applicationId={formState.application?.id}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
+              onSaved={(nextPerformanceEnvConfigs) => updateFormState({ performanceEnvConfigs: nextPerformanceEnvConfigs })}
             />
           )}
         </TabsContent>
@@ -242,8 +260,8 @@ export function ApplicationForm({
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationConfigInfo
               ref={configInfoRef}
-              applicationName={applicationData?.name}
-              namespace={applicationData?.namespace}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
             />
           )}
         </TabsContent>
@@ -251,8 +269,8 @@ export function ApplicationForm({
         <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationDangerZone
-              namespace={applicationData?.namespace ?? ""}
-              name={applicationData?.name ?? ""}
+              namespace={formState.application?.namespace ?? ""}
+              name={formState.application?.name ?? ""}
             />
           )}
         </TabsContent>

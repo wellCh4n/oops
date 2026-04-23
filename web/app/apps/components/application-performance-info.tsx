@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useState } from "react"
 import {
   Form,
   FormControl,
@@ -23,6 +23,7 @@ import { ApplicationEnvironmentSelector } from "./application-environment-select
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 interface ApplicationPerformanceInfoProps {
   initialEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
@@ -59,9 +60,8 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
   const [isSaving, setIsSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
-  const baselineRef = useRef("")
 
-  const buildSnapshot = (values: ApplicationPerformanceEnvFormValues = form.getValues()) => JSON.stringify({
+  const buildSnapshot = useCallback((values: ApplicationPerformanceEnvFormValues = form.getValues()) => JSON.stringify({
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
       environmentName: config.environmentName,
       replicas: config.replicas,
@@ -70,7 +70,7 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
       memoryRequest: config.memoryRequest ?? "",
       memoryLimit: config.memoryLimit ?? "",
     })),
-  })
+  }), [form])
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -95,7 +95,7 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
     }
     replace(newConfigs)
     form.reset(nextValues)
-    baselineRef.current = buildSnapshot(nextValues)
+    captureBaseline()
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
@@ -110,7 +110,7 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
     }
   }, [fields, activeTab])
 
-  const submitForm = async (data: ApplicationPerformanceEnvFormValues) => {
+  async function submitForm(data: ApplicationPerformanceEnvFormValues) {
     if (!applicationId || !applicationName || !namespace) {
       toast.error(t("apps.perf.noAppInfo"))
       return false
@@ -122,7 +122,6 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
       toast.success(t("apps.perf.saveSuccess"))
       onSaved?.(data.environmentConfigs)
       form.reset(data)
-      baselineRef.current = buildSnapshot(data)
       return true
     } catch (error) {
       console.error(error)
@@ -133,25 +132,22 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
     }
   }
 
-  useImperativeHandle(ref, () => ({
-    hasUnsavedChanges() {
-      if (envsLoading) {
-        return false
-      }
-      return buildSnapshot() !== baselineRef.current
-    },
-    async save() {
-      if (envsLoading) {
-        return true
-      }
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await submitForm(data)
+    })()
+    return success
+  }
 
-      let success = false
-      await form.handleSubmit(async (data) => {
-        success = await submitForm(data)
-      })()
-      return success
-    },
-  }))
+  const { captureBaseline, handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !envsLoading,
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit: submitForm,
+  })
 
   return (
     <>
@@ -163,7 +159,7 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
       )}
       <div className={envsLoading ? "hidden" : ""}>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })} className="flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div className="w-full">
               <ApplicationEnvironmentSelector
                 namespace={namespace}

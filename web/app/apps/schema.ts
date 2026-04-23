@@ -69,9 +69,24 @@ export const applicationConfigSchema = z.object({
   })),
 })
 
+export const applicationServiceSchema = z.object({
+  port: z.string().optional(),
+  environmentConfigs: z.array(z.object({
+    environmentName: z.string(),
+    hosts: z.array(z.object({
+      host: z.string(),
+      https: z.boolean(),
+      editing: z.boolean(),
+      prefix: z.string(),
+      suffix: z.string(),
+    })),
+  })),
+})
+
 export type ApplicationBasicFormValues = z.infer<typeof applicationBasicSchema>
 export type ApplicationBuildConfigFormValues = z.infer<typeof applicationBuildConfigSchema>
 export type CreateApplicationFormValues = z.infer<typeof createApplicationSchema>
 export type ApplicationBuildFormValues = z.infer<typeof applicationBuildSchema>
 export type ApplicationPerformanceEnvFormValues = z.infer<typeof applicationPerformanceEnvSchema>
 export type ApplicationConfigFormValues = z.infer<typeof applicationConfigSchema>
+export type ApplicationServiceFormValues = z.infer<typeof applicationServiceSchema>

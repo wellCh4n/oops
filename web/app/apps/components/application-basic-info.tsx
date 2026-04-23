@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -49,8 +50,6 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
-  const baselineRef = useRef("")
-  const baselineInitializedRef = useRef(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -95,7 +94,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   const { isSubmitting } = form.formState
 
-  const buildSnapshot = (
+  const buildSnapshot = useCallback((
     values: ApplicationBasicFormValues = form.getValues(),
     envNames: string[] = selectedEnvNames
   ) => JSON.stringify({
@@ -104,20 +103,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
       owner: values.owner ?? "",
     },
     selectedEnvNames: [...envNames].sort(),
-  })
-
-  useEffect(() => {
-    if (!loading && !baselineInitializedRef.current) {
-      baselineRef.current = JSON.stringify({
-        values: {
-          ...form.getValues(),
-          owner: form.getValues("owner") ?? "",
-        },
-        selectedEnvNames: [...selectedEnvNames].sort(),
-      })
-      baselineInitializedRef.current = true
-    }
-  }, [form, loading, selectedEnvNames])
+  }), [form, selectedEnvNames])
 
   const toggleEnv = (envName: string) => {
     setSelectedEnvNames(prev => 
@@ -127,7 +113,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
     )
   }
 
-  const submitForm = async (data: ApplicationBasicFormValues) => {
+  async function submitForm(data: ApplicationBasicFormValues) {
     try {
       const payload = {
         ...data,
@@ -153,7 +139,6 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
         })
       }
       form.reset(data)
-      baselineRef.current = buildSnapshot(data, selectedEnvNames)
       return true
     } catch (error) {
       console.error(error)
@@ -162,25 +147,23 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
     }
   }
 
-  useImperativeHandle(ref, () => ({
-    hasUnsavedChanges() {
-      if (loading || !baselineInitializedRef.current) {
-        return false
-      }
-      return buildSnapshot() !== baselineRef.current
-    },
-    async save() {
-      if (loading) {
-        return true
-      }
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await submitForm(data)
+    })()
+    return success
+  }
 
-      let success = false
-      await form.handleSubmit(async (data) => {
-        success = await submitForm(data)
-      })()
-      return success
-    },
-  }))
+  const { handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !loading,
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit: submitForm,
+    initializeBaselineWhenReady: true,
+  })
 
   if (loading) {
     return (
@@ -196,7 +179,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })} className="flex max-w-4xl flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex max-w-4xl flex-col gap-6">
         <FormField
           control={form.control}
           name="name"

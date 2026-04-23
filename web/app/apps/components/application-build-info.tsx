@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react"
+import { forwardRef, useCallback, useEffect, useState } from "react"
 import {
   Form,
   FormControl,
@@ -27,6 +27,7 @@ import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { useFeaturesStore } from "@/store/features"
 import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -73,9 +74,8 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const sourceType = form.watch("sourceType")
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
   const featuresLoaded = useFeaturesStore((s) => s.loaded)
-  const baselineRef = useRef("")
 
-  const buildSnapshot = (values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
+  const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
     dockerFile: values.dockerFile ?? "",
@@ -84,7 +84,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       environmentName: config.environmentName,
       buildCommand: config.buildCommand ?? "",
     })),
-  })
+  }), [form])
 
   // If object storage is disabled but current source type is ZIP, fall back to GIT.
   // Gate on featuresLoaded to avoid downgrading ZIP apps before the async features API resolves.
@@ -114,7 +114,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     }
     replace(newConfigs)
     form.reset(nextValues)
-    baselineRef.current = buildSnapshot(nextValues)
+    captureBaseline()
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
@@ -129,7 +129,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     }
   }, [fields, activeTab])
 
-  const submitForm = async (data: ApplicationBuildFormValues) => {
+  async function submitForm(data: ApplicationBuildFormValues) {
     if (!applicationId || !applicationName || !namespace) {
       toast.error(t("apps.build.noAppInfo"))
       return false
@@ -155,7 +155,6 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       toast.success(t("apps.build.saveSuccess"))
       onSaved?.(buildConfigPayload, envConfigs)
       form.reset(data)
-      baselineRef.current = buildSnapshot(data)
       return true
     } catch (error) {
       console.error(error)
@@ -166,29 +165,26 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     }
   }
 
-  useImperativeHandle(ref, () => ({
-    hasUnsavedChanges() {
-      if (envsLoading) {
-        return false
-      }
-      return buildSnapshot() !== baselineRef.current
-    },
-    async save() {
-      if (envsLoading) {
-        return true
-      }
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await submitForm(data)
+    })()
+    return success
+  }
 
-      let success = false
-      await form.handleSubmit(async (data) => {
-        success = await submitForm(data)
-      })()
-      return success
-    },
-  }))
+  const { captureBaseline, handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !envsLoading,
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit: submitForm,
+  })
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(async (data) => { await submitForm(data) })}>
+      <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
           <div className="flex flex-col gap-4">
