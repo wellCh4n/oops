@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react"
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
@@ -42,6 +42,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
+import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 function ConfigValueTextarea({
   value,
@@ -66,6 +68,7 @@ function ConfigValueTextarea({
       ref={ref}
       value={value}
       disabled={disabled}
+      autoComplete="off"
       placeholder="value"
       rows={1}
       className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-hidden"
@@ -83,10 +86,19 @@ interface ApplicationConfigInfoProps {
   namespace?: string
 }
 
-export function ApplicationConfigInfo({
+function serializeConfigMaps(configs: ApplicationConfigFormValues["configMaps"] = []) {
+  return JSON.stringify(
+    (configs ?? []).map((config) => ({
+      key: config.key ?? "",
+      value: config.value ?? "",
+    }))
+  )
+}
+
+export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, ApplicationConfigInfoProps>(function ApplicationConfigInfo({
   applicationName,
   namespace,
-}: ApplicationConfigInfoProps) {
+}: ApplicationConfigInfoProps, ref) {
   // Removed environments state as it's handled by selector
   const [activeTab, setActiveTab] = useState<string>("")
   const [isLoadingConfig, setIsLoadingConfig] = useState(false)
@@ -112,11 +124,51 @@ export function ApplicationConfigInfo({
     name: "configMaps",
   })
 
+  const buildSnapshot = useCallback(
+    (configs = form.getValues("configMaps")) => serializeConfigMaps(configs),
+    [form]
+  )
+
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     if (envs.length > 0 && !activeTab) {
       setActiveTab(envs[0].environmentName)
     }
   }
+
+  async function onSubmit(data: ApplicationConfigFormValues) {
+    if (!namespace || !applicationName || !activeTab) return false
+
+    setIsSaving(true)
+    try {
+      await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
+      toast.success(t("apps.config.updateSuccess"))
+      form.reset(data)
+      return true
+    } catch (error) {
+      toast.error(t("apps.config.updateError"))
+      console.error(error)
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await onSubmit(data)
+    })()
+    return success
+  }
+
+  const { captureBaseline, handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !(envsLoading || isLoadingConfig),
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit,
+  })
 
   useEffect(() => {
     const fetchConfigMaps = async () => {
@@ -127,7 +179,10 @@ export function ApplicationConfigInfo({
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
         if (res.data) {
           form.reset({ configMaps: res.data })
+        } else {
+          form.reset({ configMaps: [] })
         }
+        captureBaseline()
       } catch (error) {
         toast.error(t("apps.config.fetchError"))
         console.error(error)
@@ -137,22 +192,7 @@ export function ApplicationConfigInfo({
     }
 
     fetchConfigMaps()
-  }, [namespace, applicationName, activeTab, form, t])
-
-  const onSubmit = async (data: ApplicationConfigFormValues) => {
-    if (!namespace || !applicationName || !activeTab) return
-
-    setIsSaving(true)
-    try {
-      await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
-      toast.success(t("apps.config.updateSuccess"))
-    } catch (error) {
-      toast.error(t("apps.config.updateError"))
-      console.error(error)
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  }, [activeTab, applicationName, captureBaseline, form, namespace, t])
 
   const handleImportConfirm = (result: {
     toAdd: { key: string; value: string }[]
@@ -230,7 +270,7 @@ export function ApplicationConfigInfo({
           onLoadingChange={setEnvsLoading}
         >
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -250,7 +290,7 @@ export function ApplicationConfigInfo({
                             render={({ field }) => (
                               <FormItem>
                                 <FormControl>
-                                  <Input placeholder="key" {...field} />
+                                  <Input autoComplete="off" placeholder="key" {...field} />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -364,6 +404,7 @@ export function ApplicationConfigInfo({
                       </div>
                       <Textarea
                         id="import-content"
+                        autoComplete="off"
                         placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
                         value={importContent}
                         onChange={(e) => setImportContent(e.target.value)}
@@ -404,4 +445,4 @@ export function ApplicationConfigInfo({
       />
     </div>
   )
-}
+})

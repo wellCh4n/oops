@@ -94,6 +94,7 @@ export default function EditAppPage() {
   return (
     <ContentPage title={application?.name ?? name}>
       <ApplicationForm
+        key={`${namespace}/${name}`}
         loading={loading}
         initialData={application ?? undefined}
         initialBuildConfig={buildConfig}

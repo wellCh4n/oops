@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { forwardRef, useCallback, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -32,14 +32,18 @@ import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon } from "l
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ApplicationTabHandle } from "./application-tab-handle"
+import { useApplicationEditorTab } from "./use-application-editor-tab"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
+  onSaved?: (application: Application) => void
 }
 
-export function ApplicationBasicInfo({
+export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, ApplicationBasicInfoProps>(function ApplicationBasicInfo({
   initialData,
-}: ApplicationBasicInfoProps) {
+  onSaved,
+}: ApplicationBasicInfoProps, ref) {
   const [namespaces, setNamespaces] = useState<string[]>([])
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [selectedEnvNames, setSelectedEnvNames] = useState<string[]>([])
@@ -90,6 +94,17 @@ export function ApplicationBasicInfo({
 
   const { isSubmitting } = form.formState
 
+  const buildSnapshot = useCallback((
+    values: ApplicationBasicFormValues = form.getValues(),
+    envNames: string[] = selectedEnvNames
+  ) => JSON.stringify({
+    values: {
+      ...values,
+      owner: values.owner ?? "",
+    },
+    selectedEnvNames: [...envNames].sort(),
+  }), [form, selectedEnvNames])
+
   const toggleEnv = (envName: string) => {
     setSelectedEnvNames(prev => 
         prev.includes(envName) 
@@ -98,7 +113,7 @@ export function ApplicationBasicInfo({
     )
   }
 
-  const onSubmit = async (data: ApplicationBasicFormValues) => {
+  async function submitForm(data: ApplicationBasicFormValues) {
     try {
       const payload = {
         ...data,
@@ -117,11 +132,38 @@ export function ApplicationBasicInfo({
       }
 
       toast.success(t("apps.basic.updateSuccess"))
+      if (initialData) {
+        onSaved?.({
+          ...initialData,
+          ...data,
+        })
+      }
+      form.reset(data)
+      return true
     } catch (error) {
       console.error(error)
       toast.error(t("apps.basic.updateError"))
+      return false
     }
   }
+
+  const saveCurrentTab = async () => {
+    let success = false
+    await form.handleSubmit(async (data) => {
+      success = await submitForm(data)
+    })()
+    return success
+  }
+
+  const { handleSubmit } = useApplicationEditorTab({
+    ref,
+    form,
+    isReady: !loading,
+    getSnapshot: buildSnapshot,
+    onSave: saveCurrentTab,
+    onSubmit: submitForm,
+    initializeBaselineWhenReady: true,
+  })
 
   if (loading) {
     return (
@@ -137,7 +179,7 @@ export function ApplicationBasicInfo({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-w-4xl flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex max-w-4xl flex-col gap-6">
         <FormField
           control={form.control}
           name="name"
@@ -145,7 +187,7 @@ export function ApplicationBasicInfo({
             <FormItem>
               <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
               <FormControl>
-                <Input placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
+                <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -214,7 +256,7 @@ export function ApplicationBasicInfo({
             <FormItem>
               <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
               <FormControl>
-                <Textarea placeholder={t("apps.basic.descPlaceholder")} {...field} />
+                <Textarea autoComplete="off" placeholder={t("apps.basic.descPlaceholder")} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -269,4 +311,4 @@ export function ApplicationBasicInfo({
       </form>
     </Form>
   )
-}
+})
