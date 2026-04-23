@@ -241,10 +241,11 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     try {
       const result = await checkApplicationServiceHost(namespace, applicationName, trimmedHost)
-      if (result.success && result.data) {
+      const duplicatedHost = result.data
+      if (result.success && duplicatedHost) {
         setHostErrors((current) => ({
           ...current,
-          [key]: formatMessage(result.data.applicationName, result.data.namespace, result.data.environmentName),
+          [key]: formatMessage(duplicatedHost.applicationName, duplicatedHost.namespace, duplicatedHost.environmentName),
         }))
       } else {
         clearHostError(environmentName, hostIndex)
