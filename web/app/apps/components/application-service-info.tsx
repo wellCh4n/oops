@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copyable } from "@/components/ui/copyable"
@@ -15,6 +16,7 @@ import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api
 import { Domain, fetchDomains } from "@/lib/api/domains"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
+import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 
 interface Props {
@@ -66,7 +68,9 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
   const [saving, setSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const [domains, setDomains] = useState<Domain[]>([])
+  const [pendingApexConfirm, setPendingApexConfirm] = useState<{ envName: string; index: number } | null>(null)
   const { t } = useLanguage()
+  const hasInitRef = useRef(false)
 
   const normalizeHost = (value: string) => value.replace(/^https?:\/\//i, "")
 
@@ -87,6 +91,8 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       setPort(String(initialServiceConfig.port))
     }
     if (initialServiceConfig?.environmentConfigs) {
+      if (hasInitRef.current) return
+      hasInitRef.current = true
       // Group configs by environmentName
       const grouped = new Map<string, HostRow[]>()
       initialServiceConfig.environmentConfigs.forEach((c) => {
@@ -169,7 +175,26 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
       toast.error(t("apps.service.suffixRequired"))
       return
     }
+    if (!row.prefix.trim()) {
+      setPendingApexConfirm({ envName, index })
+      return
+    }
     const combined = combineHost(row.prefix, row.suffix)
+    updateRow(envName, index, { host: combined, editing: false })
+    void validateHost(envName, index, combined)
+  }
+
+  const confirmApexEdit = () => {
+    if (!pendingApexConfirm) return
+    const { envName, index } = pendingApexConfirm
+    const group = envConfigGroups.find((g) => g.environmentName === envName)
+    if (!group) {
+      setPendingApexConfirm(null)
+      return
+    }
+    const row = group.hosts[index]
+    const combined = combineHost(row.prefix, row.suffix)
+    setPendingApexConfirm(null)
     updateRow(envName, index, { host: combined, editing: false })
     void validateHost(envName, index, combined)
   }
@@ -370,11 +395,21 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                   <Globe className="h-3.5 w-3.5" />
                   {t("apps.service.hosts")}
                 </Label>
-                {group.hosts.map((hostConfig, index) => {
-                  const errKey = hostErrorKey(group.environmentName, index)
-                  const err = hostErrors[errKey]
-                  const envName = group.environmentName
-                  return (
+                {domains.length === 0 ? (
+                  <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed">
+                    {t("apps.service.noDomainPrefix")}
+                    <Link href="/networks/domains" className="inline-flex items-center gap-0.5 text-primary mx-1">
+                      <span className="hover:underline">{t("apps.service.noDomainLink")}</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    {t("apps.service.noDomainSuffix")}
+                  </div>
+                ) : (
+                  group.hosts.map((hostConfig, index) => {
+                    const errKey = hostErrorKey(group.environmentName, index)
+                    const err = hostErrors[errKey]
+                    const envName = group.environmentName
+                    return (
                   <div key={index} className="flex w-full items-start gap-2">
                     {hostConfig.editing && (
                       <div className="flex h-9 items-center gap-2">
@@ -406,7 +441,9 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                             onValueChange={(v) => updateRow(envName, index, { suffix: v })}
                           >
                             <SelectTrigger className="flex-1">
-                              <SelectValue placeholder={t("apps.service.suffixPlaceholder")} />
+                              <SelectValue placeholder={t("apps.service.suffixPlaceholder")}>
+                                {hostConfig.suffix}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {domains.length === 0 ? (
@@ -416,7 +453,12 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                               ) : (
                                 domains.map((d) => (
                                   <SelectItem key={d.id} value={d.host}>
-                                    {d.host}
+                                    <div className="flex flex-col items-start">
+                                      <span>{d.host}</span>
+                                      {d.description && (
+                                        <span className="text-xs text-muted-foreground">{d.description}</span>
+                                      )}
+                                    </div>
                                   </SelectItem>
                                 ))
                               )}
@@ -489,11 +531,14 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
                     )}
                   </div>
                   )
-                })}
-                <Button type="button" variant="outline" className="w-full" onClick={() => addHost(group.environmentName)}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  {t("apps.service.addHost")}
-                </Button>
+                })
+              )}
+                {domains.length > 0 && (
+                  <Button type="button" variant="outline" className="w-full" onClick={() => addHost(group.environmentName)}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    {t("apps.service.addHost")}
+                  </Button>
+                )}
               </div>
             </TabsContent>
           ))}
@@ -505,6 +550,24 @@ export function ApplicationServiceInfo({ initialServiceConfig, applicationName, 
           {saving ? t("common.saving") : t("common.save")}
         </Button>
       </div>
+      <AlertDialog open={!!pendingApexConfirm} onOpenChange={(v) => { if (!v) setPendingApexConfirm(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("apps.service.apexConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("apps.service.apexConfirmDesc").replace("{host}",
+                pendingApexConfirm
+                  ? envConfigGroups.find((g) => g.environmentName === pendingApexConfirm.envName)?.hosts[pendingApexConfirm.index]?.suffix || ""
+                  : ""
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingApexConfirm(null)}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmApexEdit}>{t("common.confirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

@@ -29,7 +29,7 @@ export const navConfig: NavGroup[] = [
     items: [
       {
         title: "nav.domains",
-        url: "/network/domains",
+        url: "/networks/domains",
         icon: Globe,
       },
     ],
