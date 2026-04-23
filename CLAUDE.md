@@ -19,6 +19,7 @@ Key components:
 - **Services** (`src/main/java/.../service/`): Business logic layer
 - **Data/Entities** (`src/main/java/.../data/`): JPA entities and repositories
 - **Pipeline System** (`task/`, `container/`, `pod/`): Kubernetes Job-based build pipeline using Kaniko
+- **Deploy Processors** (`task/processor/`): Chain-of-responsibility deploy orchestration (`ArtifactDeployTask` drives `DeployProcessor`s)
 - **Multi-host support**: Environment entity stores K8s API server credentials, allowing management of multiple clusters
 
 Key technologies:
@@ -139,8 +140,17 @@ Applications deploy as **StatefulSets** (not Deployments) with `enableServiceLin
 
 Deployment triggering logic lives in `DeploymentService` (not `PipelineService`). The `DeploymentController` at `/api/namespaces/{namespace}/applications/{name}/deployments` handles deploy triggers and source uploads.
 
+**Deploy processor chain**: `ArtifactDeployTask` orchestrates deployment via a sequence of `DeployProcessor`s sharing a `DeployContext`:
+1. `NamespaceProcessor` — ensures target namespace exists
+2. `ImagePullSecretProcessor` — creates registry pull secret
+3. `StatefulSetProcessor` — applies the StatefulSet (sets `ownerReference` on context)
+4. `ServiceProcessor` — creates Service with `ownerReference` → StatefulSet
+5. `IngressRouteProcessor` — creates Traefik IngressRoutes with TLS/redirect logic and `ownerReference` → StatefulSet
+
+The K8s client is created per-task and closed via try-with-resources in `ArtifactDeployTask.call()`.
+
 **Per-application config entities**:
-- `ApplicationServiceConfig`: Stores port and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.
+- `ApplicationServiceConfig`: Stores container `port` and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.
 - `ApplicationPerformanceConfig`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`). Frontend: `application-performance-info.tsx`.
 
 **Application deletion**: The "Danger Zone" tab (`application-danger-zone.tsx`) provides cascade deletion that cleans up Kubernetes resources (StatefulSet, Service, IngressRoute) alongside the database record.
@@ -164,6 +174,15 @@ Default IDE config (extensions, settings) is stored at `src/main/resources/ide-d
 
 ### External Accounts
 `ExternalAccount` entity stores linked OAuth accounts (`email`, `provider`, `providerUserId`). Used by the notification system to route pipeline status messages to the user's linked provider (e.g., Feishu).
+
+### Domain Management
+`Domain` entities store managed domains with `host`, `https`, `certMode` (`AUTO` or `UPLOADED`), and optional PEM cert/key. Domains are admin-managed at `/api/domains` (ADMIN-only writes) and listed at `/networks/domains`. Domain lookup uses longest-suffix matching (supports wildcard by stripping `*.`).
+
+When `IngressRouteProcessor` creates Traefik IngressRoutes, it resolves the domain for each host:
+- **UPLOADED**: Syncs a TLS Secret (`domain-{host}`) into the application namespace and references it in the IngressRoute TLS block.
+- **AUTO**: Uses the Traefik `certResolver` from `IngressConfig`.
+
+HTTPS applications automatically get an HTTP→HTTPS redirect Middleware (`oops-redirect-https`) applied to a companion `web` entrypoint IngressRoute.
 
 ### Pipeline Deploy Modes
 `Pipeline.deployMode` is either `IMMEDIATE` (default) or `MANUAL`. With `MANUAL`, `PipelineInstanceScanJob` transitions the pipeline to `BUILD_SUCCEEDED` after the K8s Job completes but does **not** automatically deploy — a separate `deployPipeline()` call is required. With `IMMEDIATE`, it continues to `DEPLOYING → SUCCEEDED` inline.
@@ -224,6 +243,13 @@ Three handlers registered in `WebSocketConfig` (all allow `setAllowedOrigins("*"
 All three handlers respond to text `"ping"` with `"pong"`. JWT is accepted as `?token=` query param for WebSocket connections (browsers cannot set custom headers on upgrade).
 
 ## Frontend Patterns
+
+### Navigation
+Sidebar navigation is defined in `web/lib/nav-config.ts` with four groups:
+- **Cluster**: Nodes (`/nodes`)
+- **Network**: Domains (`/networks/domains`)
+- **App Management**: Apps (`/apps`), IDEs (`/ides`), Pipelines (`/pipelines`)
+- **System Settings**: Users (`/settings/users`), Environments (`/settings/environments`), Namespaces (`/settings/namespaces`)
 
 ### Auth & Routing
 JWT stored in cookie `auth_token` (SameSite=Lax, 7 days). The Next.js middleware is `web/proxy.ts` (not `middleware.ts`) — it reads the cookie and redirects unauthenticated requests to `/login`. Paths `/auth/feishu/callback` and `/api/auth/external` are exempt. `apiFetch` reads the cookie to attach `Authorization: Bearer` and hard-redirects to `/login` on HTTP 401.
