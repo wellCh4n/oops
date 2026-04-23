@@ -46,20 +46,17 @@ public class IDEService {
 
     private final EnvironmentService environmentService;
     private final ApplicationService applicationService;
-    private final BuildSourceObjectStorageService buildSourceObjectStorageService;
     private final PipelineImageConfig pipelineImageConfig;
     private final IDEConfig ideConfig;
     private final IngressConfig ingressConfig;
 
     public IDEService(EnvironmentService environmentService,
                       ApplicationService applicationService,
-                      BuildSourceObjectStorageService buildSourceObjectStorageService,
                       PipelineImageConfig pipelineImageConfig,
                       IDEConfig ideConfig,
                       IngressConfig ingressConfig) {
         this.environmentService = environmentService;
         this.applicationService = applicationService;
-        this.buildSourceObjectStorageService = buildSourceObjectStorageService;
         this.pipelineImageConfig = pipelineImageConfig;
         this.ideConfig = ideConfig;
         this.ingressConfig = ingressConfig;
