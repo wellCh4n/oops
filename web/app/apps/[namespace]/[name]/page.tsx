@@ -85,7 +85,7 @@ export default function EditAppPage() {
       }
     }
     fetchApp()
-  }, [namespace, name, router, t, setRecentApp])
+  }, [namespace, name, router, setRecentApp]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
