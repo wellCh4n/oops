@@ -253,7 +253,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   const parsedImportContent = parseEnvContent(importContent)
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       {envsLoading && (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-9 w-64" />

@@ -61,7 +61,7 @@ const VALID_TABS = new Set<ApplicationTab>([
 
 function TabContentSkeleton({ rows = 3 }: { rows?: number }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       {Array.from({ length: rows }).map((_, i) => (
         <Skeleton key={i} className="h-10 w-full" />
       ))}

@@ -53,7 +53,7 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <div className="space-y-2">
         <h3 className="text-base font-medium text-red-500">{t("apps.danger.title")}</h3>
         <p className="text-sm text-muted-foreground">{t("apps.danger.desc")}</p>

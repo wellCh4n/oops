@@ -19,7 +19,7 @@ import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { GitBranch, FileCode, Box, Terminal } from "lucide-react"
+import { GitBranch, FileCode, Box, Terminal, PackageSearch } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -184,7 +184,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="w-full">
         <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
           <div className="flex flex-col gap-4">
@@ -193,7 +193,8 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
               control={form.control}
               name="sourceType"
               render={({ field }) => (
-                <FormItem className="space-y-3">
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><PackageSearch className="h-3.5 w-3.5" />{t("apps.build.sourceType")}</FormLabel>
                   <FormControl>
                     <Tabs value={field.value} onValueChange={field.onChange}>
                       <TabsList className="justify-start h-auto flex-wrap">

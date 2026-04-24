@@ -167,7 +167,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   if (loading) {
     return (
-      <div className="flex max-w-4xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-10 w-full" />
@@ -179,7 +179,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex max-w-4xl flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
         <FormField
           control={form.control}
           name="name"

@@ -484,8 +484,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="grid gap-2 max-w-xs">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
+        <div className="grid gap-2">
           <Label htmlFor="service-port" className="flex items-center gap-1">
             <Plug className="h-3.5 w-3.5" />
             {t("apps.service.port")}
@@ -539,7 +539,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
                 return (
                   <TabsContent key={field.id} value={group.environmentName}>
-                    <div className="grid gap-4 max-w-xl">
+                    <div className="grid gap-4">
                       <Label className="flex items-center gap-1">
                         <Globe className="h-3.5 w-3.5" />
                         {t("apps.service.hosts")}

@@ -152,12 +152,12 @@ export const ApplicationPerformanceInfo = forwardRef<ApplicationTabHandle, Appli
   return (
     <>
       {envsLoading && (
-        <div className="flex flex-col gap-3">
+        <div className="flex w-full flex-col gap-3">
           <Skeleton className="h-9 w-64" />
           <Skeleton className="h-48 w-full" />
         </div>
       )}
-      <div className={envsLoading ? "hidden" : ""}>
+      <div className={envsLoading ? "hidden" : "w-full"}>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
             <div className="w-full">
@@ -257,7 +257,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           </FormItem>
         )}
       />
-      <div className="grid grid-cols-2 gap-x-4 gap-y-4 w-fit">
+      <div className="inline-grid self-start grid-cols-2 gap-x-8 gap-y-4">
         <FormField
           control={control}
           name={`environmentConfigs.${index}.cpuRequest`}
