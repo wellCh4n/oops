@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
 import { searchAllApplications } from "@/lib/api/applications"
-import { Activity, Rocket, Loader2, Keyboard, Terminal, GitBranch, LayoutGrid } from "lucide-react"
+import { Activity, Rocket, Loader2, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
 import { toast } from "sonner"
@@ -32,8 +32,12 @@ interface CommandOption {
   icon: React.ReactNode
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false)
+interface CommandPaletteProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [inputValue, setInputValue] = useState("")
   const [selectedCommand, setSelectedCommand] = useState<CommandType>(null)
   const [applications, setApplications] = useState<Application[]>([])
@@ -92,18 +96,18 @@ export function CommandPalette() {
           return
         }
         e.preventDefault()
-        setOpen(true)
+        onOpenChange(true)
       }
 
       // Close with Escape
       if (e.key === "Escape" && open) {
-        setOpen(false)
+        onOpenChange(false)
       }
     }
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [open])
+  }, [open, onOpenChange])
 
   // Focus input when opened
   useEffect(() => {
@@ -189,7 +193,7 @@ export function CommandPalette() {
       ownerName: app.ownerName,
     })
 
-    setOpen(false)
+    onOpenChange(false)
 
     switch (selectedCommand) {
       case "status":
@@ -230,19 +234,7 @@ export function CommandPalette() {
   }
 
   return (
-    <>
-      {/* Hint button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed top-0.5 left-1/2 -translate-x-1/2 z-30 hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full border shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-      >
-        <Keyboard className="w-3.5 h-3.5" />
-        <span>{t("cmd.hint")}</span>
-        <kbd className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono">/</kbd>
-      </button>
-
-      {/* Command palette dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent showCloseButton={false} className="p-0 gap-0 max-w-2xl overflow-hidden fixed top-[20%] translate-y-0 -translate-x-1/2">
           <DialogTitle className="sr-only">{t("cmd.title")}</DialogTitle>
           <Command
@@ -430,6 +422,5 @@ export function CommandPalette() {
           </Command>
         </DialogContent>
       </Dialog>
-    </>
   )
 }

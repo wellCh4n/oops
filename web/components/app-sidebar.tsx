@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from "lucide-react"
+import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Keyboard } from "lucide-react"
 
 import {
   Sidebar,
@@ -48,7 +48,7 @@ import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { localeLabels, Locale } from "@/lib/i18n"
 
-export function AppSidebar() {
+export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -113,7 +113,7 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="gap-0">
         {navConfig.map((group) => {
           const filteredGroups = group.items.filter((item) => {
             if (item.url === "/ides" && !ideEnabled) return false
@@ -122,7 +122,7 @@ export function AppSidebar() {
           if (filteredGroups.length === 0) return null
           return (
           <React.Fragment key={group.title}>
-            <SidebarGroup>
+            <SidebarGroup className="py-1 px-2">
               {open && <SidebarGroupLabel>{t(group.title)}</SidebarGroupLabel>}
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -157,6 +157,18 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
+          {open && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={onOpenCommandPalette}
+                tooltip={t("cmd.hint")}
+              >
+                <Keyboard className="size-4" />
+                <span>{t("cmd.hint")}</span>
+                <kbd className="bg-sidebar-border px-1.5 py-0.5 rounded text-[10px] font-mono ml-auto">/</kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleSidebar}

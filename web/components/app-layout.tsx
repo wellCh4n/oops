@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/sonner"
@@ -25,6 +25,7 @@ export function AppLayout({
   const isLoginPage = pathname === "/login"
   const isPublicPage = pathname === "/auth/feishu/callback"
   const loadFeatures = useFeaturesStore((s) => s.load)
+  const [cmdOpen, setCmdOpen] = useState(false)
 
   useEffect(() => {
     if (!isLoginPage && !isPublicPage && !getToken()) {
@@ -50,14 +51,14 @@ export function AppLayout({
   return (
     <LanguageProvider initialLocale={initialLocale}>
       <SidebarProvider defaultOpen={defaultSidebarOpen}>
-        <AppSidebar />
+        <AppSidebar onOpenCommandPalette={() => setCmdOpen(true)} />
         <SidebarInset className="overflow-x-auto overflow-y-auto overscroll-y-none">
           <div className="flex min-h-full flex-col gap-4 p-4 min-w-[720px]">
             {children}
           </div>
         </SidebarInset>
         <Toaster position="top-right" />
-        <CommandPalette />
+        <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
       </SidebarProvider>
     </LanguageProvider>
   )
