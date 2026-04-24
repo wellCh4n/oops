@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
 import { useLanguage } from "@/contexts/language-context"
+import { ContentPage } from "@/components/content-page"
 import { RefreshCw, WifiOff } from "lucide-react"
 
 export default function ApplicationPodLogsPage() {
@@ -94,28 +95,33 @@ export default function ApplicationPodLogsPage() {
   const isConnected = connectionStatus === "connected"
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      {connectionStatus === "disconnected" && (
-        <div
-          role="status"
-          className="flex shrink-0 items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-        >
-          <div className="flex min-w-0 items-center gap-2 text-sm">
-            <WifiOff className="size-4 shrink-0" />
-            <span className="truncate">{t("common.disconnected")}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="xs"
-            onClick={() => window.location.reload()}
-            className="shrink-0 bg-background/80 text-foreground hover:bg-background"
+    <ContentPage
+      title={t("apps.logs.label")}
+      disableGutter
+      className="-m-4 w-[calc(100%+2rem)] gap-0 min-h-0 overflow-hidden self-stretch"
+      bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        {connectionStatus === "disconnected" && (
+          <div
+            role="status"
+            className="flex shrink-0 items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
           >
-            <RefreshCw className="size-3" />
-            {t("common.refresh")}
-          </Button>
-        </div>
-      )}
-      <div className="flex-1 min-h-0 rounded-md border bg-background shadow-sm overflow-hidden flex flex-col">
+            <div className="flex min-w-0 items-center gap-2 text-sm">
+              <WifiOff className="size-4 shrink-0" />
+              <span className="truncate">{t("common.disconnected")}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => window.location.reload()}
+              className="shrink-0 bg-background/80 text-foreground hover:bg-background"
+            >
+              <RefreshCw className="size-3" />
+              {t("common.refresh")}
+            </Button>
+          </div>
+        )}
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <div className="flex items-center gap-3 min-w-0">
             <span
@@ -148,6 +154,6 @@ export default function ApplicationPodLogsPage() {
           </ScrollArea>
         </div>
       </div>
-    </div>
+    </ContentPage>
   )
 }

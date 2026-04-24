@@ -156,22 +156,20 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="flex-1 min-h-0 rounded-md border bg-background shadow-sm overflow-hidden flex flex-col">
-                <div className="flex items-center justify-between px-3 py-2 border-b">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`} />
-                        <div className="text-xs font-medium text-muted-foreground shrink-0">终端</div>
-                        <Badge className="bg-orange-500 text-white">{env}</Badge>
-                        <div className="text-sm font-semibold text-foreground truncate">{pod}</div>
-                    </div>
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+                <div className="flex items-center gap-3 min-w-0">
+                    <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`} />
+                    <div className="text-xs font-medium text-muted-foreground shrink-0">终端</div>
+                    <Badge className="bg-orange-500 text-white">{env}</Badge>
+                    <div className="text-sm font-semibold text-foreground truncate">{pod}</div>
                 </div>
-                <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden">
-                    <div 
-                        className="h-full w-full cursor-text" 
-                        ref={terminalRef} 
-                        onClick={handleContainerClick}
-                    />
-                </div>
+            </div>
+            <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden">
+                <div
+                    className="h-full w-full cursor-text"
+                    ref={terminalRef}
+                    onClick={handleContainerClick}
+                />
             </div>
         </div>
     )
