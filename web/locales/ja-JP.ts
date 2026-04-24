@@ -226,7 +226,7 @@ const locale = {
   "apps.service.port": "ポート",
   "apps.service.portPlaceholder": "例: 8080",
   "apps.service.portError": "ポートは 1 ～ 65535 の整数である必要があります",
-  "apps.service.saveSuccess": "サービスポートが保存されました",
+  "apps.service.saveSuccess": "アクセス入口を保存しました",
   "apps.service.saveError": "保存に失敗しました",
   "apps.service.copyAddress": "完全なURLをコピー",
   "apps.service.copied": "コピーされました",

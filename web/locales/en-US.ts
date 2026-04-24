@@ -233,7 +233,7 @@ const en = {
   "apps.service.port": "Port",
   "apps.service.portPlaceholder": "e.g. 8080",
   "apps.service.portError": "Port must be an integer (1-65535)",
-  "apps.service.saveSuccess": "Service port saved",
+  "apps.service.saveSuccess": "Service saved",
   "apps.service.saveError": "Save failed",
   "apps.service.copyAddress": "Copy URL",
   "apps.service.copied": "Copied",

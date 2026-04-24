@@ -233,7 +233,7 @@ const zh = {
   "apps.service.port": "端口",
   "apps.service.portPlaceholder": "例如 8080",
   "apps.service.portError": "端口必须是 1-65535 的整数",
-  "apps.service.saveSuccess": "服务端口已保存",
+  "apps.service.saveSuccess": "访问入口已保存",
   "apps.service.saveError": "保存失败",
   "apps.service.copyAddress": "复制完整地址",
   "apps.service.copied": "已复制",

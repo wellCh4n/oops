@@ -226,7 +226,7 @@ const locale = {
   "apps.service.port": "連接埠",
   "apps.service.portPlaceholder": "例如 8080",
   "apps.service.portError": "連接埠必須是 1-65535 的整數",
-  "apps.service.saveSuccess": "服務連接埠已儲存",
+  "apps.service.saveSuccess": "訪問入口已儲存",
   "apps.service.saveError": "保存失敗",
   "apps.service.copyAddress": "複製完整地址",
   "apps.service.copied": "已複製",
