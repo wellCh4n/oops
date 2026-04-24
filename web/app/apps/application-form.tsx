@@ -195,8 +195,8 @@ export function ApplicationForm({
           <TabsList>
             <TabsTrigger value="app-info" className="px-6 cursor-pointer">{t("apps.tab.appInfo")}</TabsTrigger>
             <TabsTrigger value="build-config" className="px-6 cursor-pointer">{t("apps.tab.buildConfig")}</TabsTrigger>
-            <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
             <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
+            <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
             <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
           </TabsList>
@@ -208,18 +208,6 @@ export function ApplicationForm({
               ref={basicInfoRef}
               initialData={formState.application}
               onSaved={(nextApplication) => updateFormState({ application: nextApplication })}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="service-info" className="rounded-md border bg-background p-4">
-          {loading ? <TabContentSkeleton rows={3} /> : (
-            <ApplicationServiceInfo
-              ref={serviceInfoRef}
-              initialServiceConfig={formState.serviceConfig}
-              applicationName={formState.application?.name}
-              namespace={formState.application?.namespace}
-              onSaved={(nextServiceConfig) => updateFormState({ serviceConfig: nextServiceConfig })}
             />
           )}
         </TabsContent>
@@ -239,6 +227,18 @@ export function ApplicationForm({
                   buildEnvConfigs: nextBuildEnvConfigs,
                 })
               }}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="service-info" className="rounded-md border bg-background p-4">
+          {loading ? <TabContentSkeleton rows={3} /> : (
+            <ApplicationServiceInfo
+              ref={serviceInfoRef}
+              initialServiceConfig={formState.serviceConfig}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
+              onSaved={(nextServiceConfig) => updateFormState({ serviceConfig: nextServiceConfig })}
             />
           )}
         </TabsContent>

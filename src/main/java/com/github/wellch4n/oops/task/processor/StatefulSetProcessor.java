@@ -37,7 +37,7 @@ public class StatefulSetProcessor implements DeployProcessor {
         }
         if (ctx.getHealthCheck() != null && ctx.getHealthCheck().probeEnabled() && appPort != null && appPort > 0) {
             var healthCheck = ctx.getHealthCheck();
-            containerBuilder.withNewReadinessProbe()
+            containerBuilder.withNewLivenessProbe()
                     .withNewHttpGet()
                         .withPath(healthCheck.normalizedPath())
                         .withNewPort(appPort)
@@ -46,7 +46,7 @@ public class StatefulSetProcessor implements DeployProcessor {
                     .withPeriodSeconds(healthCheck.effectivePeriodSeconds())
                     .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
                     .withFailureThreshold(healthCheck.effectiveFailureThreshold())
-                .endReadinessProbe();
+                .endLivenessProbe();
         }
 
         StatefulSet statefulSet = new StatefulSetBuilder()

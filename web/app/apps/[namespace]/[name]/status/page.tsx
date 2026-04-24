@@ -10,6 +10,7 @@ import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { toast } from "sonner"
 import { ExternalLink } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   AlertDialog,
@@ -23,6 +24,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
 
@@ -155,6 +164,52 @@ export default function ApplicationStatusPage() {
 
   const columns = getStatusColumns(t, handleRestartClick, handleViewLogs, handleTerminal)
 
+  const renderExpandedRow = (pod: ApplicationPodStatus) => {
+    const containers = pod.containers ?? []
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="text-sm font-medium text-muted-foreground">
+          {t("apps.status.containers")} ({containers.length})
+        </div>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="h-8 px-3">{t("apps.status.containerName")}</TableHead>
+                <TableHead className="h-8 px-3">{t("apps.status.containerImage")}</TableHead>
+                <TableHead className="h-8 px-3">{t("apps.status.containerReady")}</TableHead>
+                <TableHead className="h-8 px-3">{t("apps.status.containerRestarts")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {containers.map((container) => (
+                <TableRow key={container.name}>
+                  <TableCell className="px-3 py-2 font-medium">{container.name}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground truncate max-w-xs">{container.image}</TableCell>
+                  <TableCell className="px-3 py-2">
+                    <Badge variant={container.ready ? "default" : "destructive"}>
+                      {container.ready ? "Ready" : "Not Ready"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className={container.restartCount > 0 ? "px-3 py-2 text-destructive font-medium" : "px-3 py-2"}>
+                    {container.restartCount}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {containers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                    {t("common.noData")}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ContentPage title={t("apps.status.title")}>
       <TableForm
@@ -198,6 +253,7 @@ export default function ApplicationStatusPage() {
               columns={columns}
               data={podStatuses}
               loading={loading}
+              renderExpandedRow={renderExpandedRow}
             />
           </div>
         }

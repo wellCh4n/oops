@@ -9,14 +9,13 @@ import com.github.wellch4n.oops.objects.ApplicationResponse;
 import com.github.wellch4n.oops.objects.ClusterDomainResponse;
 import com.github.wellch4n.oops.objects.ServiceHostConflictResponse;
 import com.github.wellch4n.oops.objects.Page;
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import org.springframework.dao.DataIntegrityViolationException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -343,9 +342,7 @@ public class ApplicationService {
         List<ApplicationRuntimeSpec.EnvironmentConfig> configs = request.getEnvironmentConfigs() != null
                 ? request.getEnvironmentConfigs()
                 : Collections.emptyList();
-        ApplicationRuntimeSpec.HealthCheck existingHealthCheck = normalizeHealthCheck(runtimeSpec.getHealthCheck());
         ApplicationRuntimeSpec.HealthCheck nextHealthCheck = normalizeHealthCheck(request.getHealthCheck());
-        boolean healthCheckChanged = !Objects.equals(existingHealthCheck, nextHealthCheck);
         List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs =
                 runtimeSpec.getEnvironmentConfigs() != null ? runtimeSpec.getEnvironmentConfigs() : Collections.emptyList();
 
@@ -354,7 +351,6 @@ public class ApplicationService {
         applicationRuntimeSpecRepository.save(runtimeSpec);
 
         applyRuntimeSpecEnvironmentConfigUpdates(namespace, appName, configs, existingConfigs);
-        applyHealthCheckUpdate(namespace, appName, nextHealthCheck, healthCheckChanged);
 
         return true;
     }
@@ -408,43 +404,6 @@ public class ApplicationService {
         }
     }
 
-    private void applyHealthCheckUpdate(String namespace,
-                                        String appName,
-                                        ApplicationRuntimeSpec.HealthCheck healthCheck,
-                                        boolean healthCheckChanged) {
-        if (!healthCheckChanged) {
-            return;
-        }
-
-        ApplicationServiceConfig serviceConfig = applicationServiceConfigRepository
-                .findByNamespaceAndApplicationName(namespace, appName)
-                .orElse(null);
-        Integer appPort = serviceConfig != null ? serviceConfig.getPort() : null;
-        if (healthCheck.probeEnabled() && (appPort == null || appPort <= 0)) {
-            log.warn("Runtime spec health check is enabled but service port is not configured for app={}", appName);
-            return;
-        }
-
-        for (ApplicationEnvironment appEnv : getApplicationEnvironments(namespace, appName)) {
-            Environment environment = environmentRepository.findFirstByName(appEnv.getEnvironmentName());
-            if (environment == null) {
-                continue;
-            }
-            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-                client.apps().statefulSets().inNamespace(namespace).withName(appName)
-                        .edit(ss -> {
-                            ss.getSpec().getTemplate().getSpec().getContainers()
-                                    .forEach(container -> container.setReadinessProbe(
-                                            buildReadinessProbe(healthCheck, appPort)
-                                    ));
-                            return ss;
-                        });
-            } catch (Exception e) {
-                log.warn("Failed to apply runtime health check for app={} env={}: {}", appName, appEnv.getEnvironmentName(), e.getMessage());
-            }
-        }
-    }
-
     private ApplicationRuntimeSpec.HealthCheck normalizeHealthCheck(ApplicationRuntimeSpec.HealthCheck healthCheck) {
         ApplicationRuntimeSpec.HealthCheck normalized = healthCheck != null
                 ? healthCheck
@@ -471,22 +430,6 @@ public class ApplicationService {
             normalized.setFailureThreshold(ApplicationRuntimeSpec.HealthCheck.DEFAULT_FAILURE_THRESHOLD);
         }
         return normalized;
-    }
-
-    private io.fabric8.kubernetes.api.model.Probe buildReadinessProbe(ApplicationRuntimeSpec.HealthCheck healthCheck, Integer appPort) {
-        if (!healthCheck.probeEnabled()) {
-            return null;
-        }
-        return new io.fabric8.kubernetes.api.model.ProbeBuilder()
-                .withNewHttpGet()
-                    .withPath(healthCheck.normalizedPath())
-                    .withNewPort(appPort)
-                .endHttpGet()
-                .withInitialDelaySeconds(healthCheck.effectiveInitialDelaySeconds())
-                .withPeriodSeconds(healthCheck.effectivePeriodSeconds())
-                .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
-                .withFailureThreshold(healthCheck.effectiveFailureThreshold())
-                .build();
     }
 
     public List<ApplicationEnvironment> getApplicationEnvironments(String namespace, String name) {
@@ -591,7 +534,19 @@ public class ApplicationService {
                     status.setNamespace(pod.getMetadata().getNamespace());
                     status.setPodIP(pod.getStatus().getPodIP());
                     status.setStatus(pod.getStatus().getPhase());
-                    status.setImage(pod.getSpec().getContainers().stream().map(Container::getImage).toList());
+                    var containerStatuses = pod.getStatus().getContainerStatuses();
+                    List<ApplicationPodStatusResponse.ContainerStatus> containers = new ArrayList<>();
+                    if (containerStatuses != null) {
+                        for (var cs : containerStatuses) {
+                            var c = new ApplicationPodStatusResponse.ContainerStatus();
+                            c.setName(cs.getName());
+                            c.setImage(cs.getImage());
+                            c.setReady(cs.getReady());
+                            c.setRestartCount(cs.getRestartCount());
+                            containers.add(c);
+                        }
+                    }
+                    status.setContainers(containers);
                     return status;
                 }).toList();
             }

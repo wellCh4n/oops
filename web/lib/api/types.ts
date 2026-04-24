@@ -145,8 +145,15 @@ export interface ApplicationPodStatus {
   name: string
   namespace: string
   status: string
-  image: string[]
   podIP: string
+  containers: ApplicationContainerStatus[]
+}
+
+export interface ApplicationContainerStatus {
+  name: string
+  image: string
+  ready: boolean
+  restartCount: number
 }
 
 export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'

@@ -15,7 +15,14 @@ public class ApplicationPodStatusResponse {
     private String name;
     private String namespace;
     private String status;
-
-    private List<String> image;
     private String podIP;
+    private List<ContainerStatus> containers;
+
+    @Data
+    public static class ContainerStatus {
+        private String name;
+        private String image;
+        private Boolean ready;
+        private Integer restartCount;
+    }
 }

@@ -17,7 +17,8 @@ interface DeployStatusCellProps {
 }
 
 const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: DeployStatusCellProps) => {
-  const tag = images.length > 0 && images[0].includes(":") ? images[0].split(":").pop()! : ""
+  const firstImage = images.length > 0 ? images[0] : ""
+  const tag = firstImage.includes(":") ? firstImage.split(":").pop()! : ""
   const versionMached = tag === pipelineId
   const icon = !tag ? null : versionMached ? (
     <Check className="h-4 w-4 text-green-500" />
@@ -32,7 +33,7 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
-              <Copyable value={tag} copyValue={images[0]} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
+              <Copyable value={tag} copyValue={firstImage} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
             </span>
           </TooltipTrigger>
           <TooltipContent className="w-fit max-w-160 break-all">
@@ -80,7 +81,7 @@ export const getPipelineStatusColumns = (
     id: "deployStatus",
     header: t("apps.pipeline.col.currentVersion"),
     cell: ({ row }) => {
-      const images = row.original.image ?? []
+      const images = (row.original.containers ?? []).map((c) => c.image)
       return (
         <DeployStatusCell
           images={images}
