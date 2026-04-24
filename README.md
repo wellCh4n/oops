@@ -172,3 +172,7 @@ stateDiagram-v2
 ![quick_command.png](snapshots/quick_command.png)
 
 ![web_ide.png](snapshots/web_ide.png)
+
+## License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
