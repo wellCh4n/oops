@@ -20,6 +20,6 @@ public enum ConfigMapMountTypes {
     }
 
     public static List<String> keys() {
-        return Arrays.stream(ConfigMapMountTypes.values()).map(ConfigMapMountTypes::getKey).toList();
+        return Arrays.stream(values()).map(ConfigMapMountTypes::getKey).toList();
     }
 }

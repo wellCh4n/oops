@@ -2,14 +2,18 @@ package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.wellch4n.oops.utils.NanoIdUtils;
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import jakarta.persistence.*;
 import java.time.Duration;
 import lombok.*;
+import okhttp3.Credentials;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -23,7 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 @AllArgsConstructor
 public class Environment {
 
-    private static final OkHttpClient HTTP_CLIENT = new okhttp3.OkHttpClient.Builder()
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
             .connectTimeout(Duration.ofSeconds(5))
             .build();
 
@@ -75,7 +79,7 @@ public class Environment {
 
         @JsonIgnore
         public KubernetesClient fabric8Client() {
-            io.fabric8.kubernetes.client.Config config = new ConfigBuilder()
+            Config config = new ConfigBuilder()
                     .withMasterUrl(this.url)
                     .withOauthToken(this.token)
                     .withTrustCerts(false)
@@ -122,13 +126,13 @@ public class Environment {
             HttpUrl rootUrl = httpUrl.resolve("/");
             if (rootUrl == null) return false;
 
-            String credential = okhttp3.Credentials.basic(this.username, this.password);
-            okhttp3.Request request = new okhttp3.Request.Builder()
+            String credential = Credentials.basic(this.username, this.password);
+            Request request = new Request.Builder()
                     .url(rootUrl)
                     .header("Authorization", credential)
                     .get()
                     .build();
-            try (okhttp3.Response response = HTTP_CLIENT.newCall(request).execute()) {
+            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
                 return response.isSuccessful();
             } catch (Exception e) {
                 return false;

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -76,7 +77,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                 var job = k8sClient.batch().v1().jobs().inNamespace(workNamespace).withName(jobName).get();
                 if (job != null) {
                     var spec = job.getSpec().getTemplate().getSpec();
-                    java.util.List<String> containers = new java.util.ArrayList<>();
+                    List<String> containers = new ArrayList<>();
                     if (spec.getInitContainers() != null) spec.getInitContainers().forEach(c -> containers.add(c.getName()));
                     if (spec.getContainers() != null) spec.getContainers().forEach(c -> containers.add(c.getName()));
 
@@ -149,7 +150,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     }
 
                     var spec = job.getSpec().getTemplate().getSpec();
-                    java.util.List<String> containers = new java.util.ArrayList<>();
+                    List<String> containers = new ArrayList<>();
                     if (spec.getInitContainers() != null) spec.getInitContainers().forEach(c -> containers.add(c.getName()));
                     if (spec.getContainers() != null) spec.getContainers().forEach(c -> containers.add(c.getName()));
 
@@ -157,7 +158,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                         if (!session.isOpen()) break;
 
                         // Wait for pod with Watch reconnect on connection drop
-                        io.fabric8.kubernetes.api.model.Pod pod = null;
+                        Pod pod = null;
                         while (pod == null && session.isOpen()) {
                             try {
                                 pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)

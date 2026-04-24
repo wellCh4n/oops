@@ -22,7 +22,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -96,12 +100,12 @@ public class PipelineService {
     private List<PipelineResponse> toPipelineResponses(List<Pipeline> pipelines) {
         Set<String> operatorIds = pipelines.stream()
                 .map(Pipeline::getOperatorId)
-                .filter(org.apache.commons.lang3.StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
         Map<String, String> operatorNameMap = userService.getUsernameMapByIds(operatorIds);
         return pipelines.stream()
                 .map(pipeline -> PipelineResponse.from(pipeline,
-                        org.apache.commons.lang3.StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null))
+                        StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null))
                 .toList();
     }
 
@@ -110,7 +114,7 @@ public class PipelineService {
             return null;
         }
         String operatorName = null;
-        if (org.apache.commons.lang3.StringUtils.isNotBlank(pipeline.getOperatorId())) {
+        if (StringUtils.isNotBlank(pipeline.getOperatorId())) {
             operatorName = userService.findById(pipeline.getOperatorId())
                     .map(User::getUsername)
                     .orElse(null);
@@ -214,9 +218,9 @@ public class PipelineService {
 
     private boolean isContainerReady(Pod pod, String containerName) {
         if (pod == null || pod.getStatus() == null) return false;
-        return java.util.stream.Stream.concat(
-                java.util.Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(List.of()).stream(),
-                java.util.Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
+        return Stream.concat(
+                Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(List.of()).stream(),
+                Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
         ).anyMatch(s -> s.getName().equals(containerName) &&
                 (s.getState().getRunning() != null || s.getState().getTerminated() != null));
     }
@@ -230,7 +234,7 @@ public class PipelineService {
             throw new BizException("Pipeline is not in BUILD_SUCCEEDED state");
         }
         if (pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, java.util.List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
         )) {
             throw new BizException("Application is being deployed");
         }

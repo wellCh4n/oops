@@ -13,6 +13,7 @@ import com.github.wellch4n.oops.objects.GitDeployStrategyParam;
 import com.github.wellch4n.oops.objects.ZipDeployStrategyParam;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.task.PipelineExecuteTask;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import org.springframework.context.ApplicationEventPublisher;
@@ -55,7 +56,7 @@ public class DeploymentService {
             throw new BizException("Deploy strategy is required");
         }
         if (pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, java.util.List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
         )) {
             throw new BizException("Application is being deployed");
         }

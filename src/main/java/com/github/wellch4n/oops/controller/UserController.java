@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.objects.UpdateUserRequest;
 import com.github.wellch4n.oops.service.UserService;
 import java.util.List;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,7 +37,7 @@ public class UserController {
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public Result<User> me(org.springframework.security.core.Authentication authentication) {
+    public Result<User> me(Authentication authentication) {
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return userService.findById(principal.userId())
                 .map(Result::success)

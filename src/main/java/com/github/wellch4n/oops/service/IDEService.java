@@ -30,7 +30,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -81,7 +83,7 @@ public class IDEService {
         }
 
         try (var client = environment.getKubernetesApiServer().fabric8Client()) {
-            io.fabric8.kubernetes.api.model.ConfigMap configMap = client.configMaps()
+            ConfigMap configMap = client.configMaps()
                     .inNamespace(environment.getWorkNamespace())
                     .withName("ide-config")
                     .get();
@@ -96,7 +98,7 @@ public class IDEService {
                         configMap.getData().get("extensions"));
             }
 
-            Map<String, String> data = new java.util.HashMap<>();
+            Map<String, String> data = new HashMap<>();
             if (configMap != null && configMap.getData() != null) {
                 data.putAll(configMap.getData());
             }
@@ -104,7 +106,7 @@ public class IDEService {
             data.put(".env", fileDefaults.getEnv());
             data.put("extensions", fileDefaults.getExtensions());
 
-            io.fabric8.kubernetes.api.model.ConfigMap newConfigMap = new io.fabric8.kubernetes.api.model.ConfigMapBuilder()
+            ConfigMap newConfigMap = new ConfigMapBuilder()
                     .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
                     .withData(data)
                     .build();
@@ -150,7 +152,7 @@ public class IDEService {
                 "oops.ide.id", ideId
         );
 
-        Map<String, String> annotations = new java.util.HashMap<>();
+        Map<String, String> annotations = new HashMap<>();
         if (request.getName() != null && !request.getName().isBlank()) {
             annotations.put("oops.ide.name", request.getName());
         }
@@ -166,7 +168,7 @@ public class IDEService {
         String ideSettings = (request.getSettings() != null && !request.getSettings().isBlank())
                 ? request.getSettings().replaceAll("\\s+", " ").trim()
                 : getDefaultIDEConfig(env).getSettings();
-        List<EnvVar> envVars = new java.util.ArrayList<>(request.getEnv() != null ? request.getEnv().lines()
+        List<EnvVar> envVars = new ArrayList<>(request.getEnv() != null ? request.getEnv().lines()
                 .map(String::trim)
                 .filter(line -> !line.isBlank() && !line.startsWith("#") && line.contains("="))
                 .map(line -> {
@@ -182,7 +184,7 @@ public class IDEService {
 
         String proxyDomainTemplate = getProxyDomainTemplate();
 
-        List<String> startupCmds = new java.util.ArrayList<>();
+        List<String> startupCmds = new ArrayList<>();
         startupCmds.add("cp -r /workspace /home/coder/" + applicationName);
         startupCmds.add("mkdir -p /home/coder/.local/share/code-server/User");
         startupCmds.add("echo '" + ideSettings + "' > /home/coder/.local/share/code-server/User/settings.json");
@@ -255,7 +257,7 @@ public class IDEService {
                     .withNewSpec()
                         .addNewPort()
                             .withPort(80)
-                            .withTargetPort(new io.fabric8.kubernetes.api.model.IntOrString(1114))
+                            .withTargetPort(new IntOrString(1114))
                         .endPort()
                         .withSelector(labels)
                     .endSpec()
@@ -325,24 +327,24 @@ public class IDEService {
                     .list()
                     .getItems()
                     .stream()
-                    .sorted((a, b) -> {
-                        String ta = a.getMetadata().getCreationTimestamp();
-                        String tb = b.getMetadata().getCreationTimestamp();
-                        if (ta == null && tb == null) return 0;
-                        if (ta == null) return 1;
-                        if (tb == null) return -1;
-                        return tb.compareTo(ta); // 倒序，最新在前
+                    .sorted((left, right) -> {
+                        String leftTimestamp = left.getMetadata().getCreationTimestamp();
+                        String rightTimestamp = right.getMetadata().getCreationTimestamp();
+                        if (leftTimestamp == null && rightTimestamp == null) return 0;
+                        if (leftTimestamp == null) return 1;
+                        if (rightTimestamp == null) return -1;
+                        return rightTimestamp.compareTo(leftTimestamp);
                     })
-                    .map(ss -> {
-                        String id = ss.getMetadata().getName();
-                        String annotationName = ss.getMetadata().getAnnotations() != null
-                                ? ss.getMetadata().getAnnotations().get("oops.ide.name") : null;
+                    .map(statefulSet -> {
+                        String id = statefulSet.getMetadata().getName();
+                        String annotationName = statefulSet.getMetadata().getAnnotations() != null
+                                ? statefulSet.getMetadata().getAnnotations().get("oops.ide.name") : null;
                         String name = (annotationName != null && !annotationName.isBlank()) ? annotationName : id;
                         String host = id + "." + ideConfig.getDomain();
-                        String createdAt = ss.getMetadata().getCreationTimestamp();
-                        boolean ready = ss.getStatus() != null
-                                && ss.getStatus().getReadyReplicas() != null
-                                && ss.getStatus().getReadyReplicas() > 0;
+                        String createdAt = statefulSet.getMetadata().getCreationTimestamp();
+                        boolean ready = statefulSet.getStatus() != null
+                                && statefulSet.getStatus().getReadyReplicas() != null
+                                && statefulSet.getStatus().getReadyReplicas() > 0;
                         return new IDEResponse(id, name, host, ideConfig.isHttps(), createdAt, ready);
                     })
                     .toList();

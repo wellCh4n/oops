@@ -11,6 +11,7 @@ import com.github.wellch4n.oops.objects.ServiceHostConflictResponse;
 import com.github.wellch4n.oops.objects.Page;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -90,7 +91,7 @@ public class ApplicationService {
         Set<String> ownerIds = limitedApplications.stream()
                 .map(Application::getOwner)
                 .filter(StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
         return limitedApplications.stream()
                 .map(application -> ApplicationResponse.from(application,
@@ -177,7 +178,7 @@ public class ApplicationService {
         Set<String> ownerIds = applications.stream()
                 .map(Application::getOwner)
                 .filter(StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
         Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(namespace, applications);
         return applications.stream()
@@ -213,9 +214,9 @@ public class ApplicationService {
         Set<String> applicationNames = applications.stream()
                 .map(Application::getName)
                 .filter(StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         return applicationBuildConfigRepository.findByNamespaceAndApplicationNameIn(namespace, applicationNames).stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         config -> config.getNamespace() + "/" + config.getApplicationName(),
                         config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
                         (left, right) -> right
@@ -229,13 +230,13 @@ public class ApplicationService {
         Set<String> namespaces = applications.stream()
                 .map(Application::getNamespace)
                 .filter(StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         Set<String> applicationNames = applications.stream()
                 .map(Application::getName)
                 .filter(StringUtils::isNotBlank)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         return applicationBuildConfigRepository.findByNamespaceInAndApplicationNameIn(namespaces, applicationNames).stream()
-                .collect(java.util.stream.Collectors.toMap(
+                .collect(Collectors.toMap(
                         config -> config.getNamespace() + "/" + config.getApplicationName(),
                         config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
                         (left, right) -> right
@@ -390,10 +391,10 @@ public class ApplicationService {
                                 .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(config.getMemoryLimit() + "Mi", "512Mi")))
                                 .build();
                         client.apps().statefulSets().inNamespace(namespace).withName(appName)
-                                .edit(ss -> {
-                                    ss.getSpec().getTemplate().getSpec().getContainers()
-                                            .forEach(c -> c.setResources(resources));
-                                    return ss;
+                                .edit(statefulSet -> {
+                                    statefulSet.getSpec().getTemplate().getSpec().getContainers()
+                                            .forEach(container -> container.setResources(resources));
+                                    return statefulSet;
                                 });
                     }
                 }
@@ -435,7 +436,7 @@ public class ApplicationService {
         List<ApplicationEnvironment> all = applicationEnvironmentRepository.findByNamespaceAndApplicationName(namespace, name);
         Set<String> existingEnvNames = environmentRepository.findAll().stream()
                 .map(Environment::getName)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         return all.stream()
                 .filter(e -> existingEnvNames.contains(e.getEnvironmentName()))
                 .toList();
@@ -536,13 +537,13 @@ public class ApplicationService {
                     var containerStatuses = pod.getStatus().getContainerStatuses();
                     List<ApplicationPodStatusResponse.ContainerStatus> containers = new ArrayList<>();
                     if (containerStatuses != null) {
-                        for (var cs : containerStatuses) {
-                            var c = new ApplicationPodStatusResponse.ContainerStatus();
-                            c.setName(cs.getName());
-                            c.setImage(cs.getImage());
-                            c.setReady(cs.getReady());
-                            c.setRestartCount(cs.getRestartCount());
-                            containers.add(c);
+                        for (var containerStatus : containerStatuses) {
+                            var container = new ApplicationPodStatusResponse.ContainerStatus();
+                            container.setName(containerStatus.getName());
+                            container.setImage(containerStatus.getImage());
+                            container.setReady(containerStatus.getReady());
+                            container.setRestartCount(containerStatus.getRestartCount());
+                            containers.add(container);
                         }
                     }
                     status.setContainers(containers);

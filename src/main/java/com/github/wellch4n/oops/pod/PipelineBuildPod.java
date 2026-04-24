@@ -6,6 +6,8 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.JobSpecBuilder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
@@ -53,7 +55,7 @@ public class PipelineBuildPod extends Job {
                 .endSpec()
                 .build();
 
-        this.setSpec(new io.fabric8.kubernetes.api.model.batch.v1.JobSpecBuilder()
+        this.setSpec(new JobSpecBuilder()
                 .withTemplate(podTemplateSpec)
                 .withBackoffLimit(0)
                 .withTtlSecondsAfterFinished(3 * 24 * 60 * 60)
@@ -69,7 +71,7 @@ public class PipelineBuildPod extends Job {
 
         PodSpec podSpec = this.getSpec().getTemplate().getSpec();
         if (podSpec.getVolumes() == null) {
-            podSpec.setVolumes(new java.util.ArrayList<>());
+            podSpec.setVolumes(new ArrayList<>());
         }
 
         for (List<Volume> volList : volumes) {

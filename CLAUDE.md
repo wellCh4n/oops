@@ -307,6 +307,8 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 - Lombok for boilerplate reduction
 - Constructor injection for dependencies
 - Virtual threads for concurrent tasks (`Thread.ofVirtual()`, `Thread.startVirtualThread()`)
+- **Use full descriptive variable names** — readability over brevity. Avoid single-letter names like `e`, `n`, `ss`, `cs`, `c`. Prefer `environment`, `name`, `statefulSet`, `containerStatus`, `container`.
+- **Avoid fully-qualified class names** — use imports instead of inline qualifiers like `java.util.stream.Collectors.toSet()` or `io.fabric8.kubernetes.api.model.Pod`. Only exception is when two classes with the same simple name are used in the same file and renaming is not practical.
 
 ### Frontend
 - ESLint config in `web/eslint.config.mjs`
