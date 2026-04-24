@@ -10,7 +10,7 @@ const locale = {
   "login.feishu": "Feishuでログイン",
   "login.callback.processing": "リダイレクト中...",
   "login.callback.error": "ログインに失敗しました：",
-  "nav.cluster": "クラスタ",
+  "nav.clusters": "クラスタ",
   "nav.nodes": "ノード",
   "nav.appManagement": "アプリケーション",
   "nav.apps": "アプリ",

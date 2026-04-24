@@ -12,7 +12,7 @@ const zh = {
   "login.callback.processing": "跳转中...",
   "login.callback.error": "登录失败: ",
   // Navigation
-  "nav.cluster": "集群",
+  "nav.clusters": "集群",
   "nav.nodes": "节点",
   "nav.appManagement": "应用",
   "nav.apps": "应用",

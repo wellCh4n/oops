@@ -12,7 +12,7 @@ const en = {
   "login.callback.processing": "Redirecting...",
   "login.callback.error": "Login failed: ",
   // Navigation
-  "nav.cluster": "Clusters",
+  "nav.clusters": "Clusters",
   "nav.nodes": "Nodes",
   "nav.appManagement": "Applications",
   "nav.apps": "Apps",

@@ -10,7 +10,7 @@ const locale = {
   "login.feishu": "使用飛書登入",
   "login.callback.processing": "跳轉中...",
   "login.callback.error": "登入失敗:",
-  "nav.cluster": "叢集",
+  "nav.clusters": "叢集",
   "nav.nodes": "節點",
   "nav.appManagement": "應用",
   "nav.apps": "應用",

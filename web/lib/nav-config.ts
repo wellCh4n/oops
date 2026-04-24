@@ -15,11 +15,11 @@ export interface NavGroup {
 
 export const navConfig: NavGroup[] = [
   {
-    title: "nav.cluster",
+    title: "nav.clusters",
     items: [
       {
         title: "nav.nodes",
-        url: "/nodes",
+        url: "/clusters/nodes",
         icon: HardDrive,
       },
     ],
