@@ -16,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +40,7 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
-    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
+    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
     private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final EnvironmentRepository environmentRepository;
@@ -47,13 +48,13 @@ public class ApplicationService {
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               ApplicationBuildConfigRepository applicationBuildConfigRepository,
-                              ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+                              ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
                               ApplicationEnvironmentRepository applicationEnvironmentRepository, ApplicationServiceConfigRepository applicationServiceConfigRepository,
                               EnvironmentRepository environmentRepository,
                               UserService userService) {
         this.applicationRepository = applicationRepository;
         this.applicationBuildConfigRepository = applicationBuildConfigRepository;
-        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
+        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
         this.applicationEnvironmentRepository = applicationEnvironmentRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.environmentRepository = environmentRepository;
@@ -155,7 +156,7 @@ public class ApplicationService {
 
         applicationEnvironmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationBuildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
-        applicationPerformanceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationRuntimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationServiceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationRepository.deleteByNamespaceAndName(namespace, name);
 
@@ -285,12 +286,24 @@ public class ApplicationService {
         return buildConfig.getEnvironmentConfigs();
     }
 
-    public List<ApplicationPerformanceConfig.EnvironmentConfig> getApplicationPerformanceEnvironmentConfigs(String namespace, String name) {
-        ApplicationPerformanceConfig performanceConfig = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
-        if (performanceConfig == null || performanceConfig.getEnvironmentConfigs() == null) {
+    public List<ApplicationRuntimeSpec.EnvironmentConfig> getApplicationRuntimeSpecEnvironmentConfigs(String namespace, String name) {
+        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        if (runtimeSpec == null || runtimeSpec.getEnvironmentConfigs() == null) {
             return Collections.emptyList();
         }
-        return performanceConfig.getEnvironmentConfigs();
+        return runtimeSpec.getEnvironmentConfigs();
+    }
+
+    public ApplicationRuntimeSpec getApplicationRuntimeSpec(String namespace, String name) {
+        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        if (runtimeSpec == null) {
+            runtimeSpec = new ApplicationRuntimeSpec();
+            runtimeSpec.setNamespace(namespace);
+            runtimeSpec.setApplicationName(name);
+            runtimeSpec.setEnvironmentConfigs(Collections.emptyList());
+        }
+        runtimeSpec.setHealthCheck(normalizeHealthCheck(runtimeSpec.getHealthCheck()));
+        return runtimeSpec;
     }
 
     @Transactional
@@ -309,23 +322,49 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Boolean updateApplicationPerformanceEnvironmentConfigs(String namespace, String appName, List<ApplicationPerformanceConfig.EnvironmentConfig> configs) {
-        ApplicationPerformanceConfig performanceConfig = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, appName)
+    public Boolean updateApplicationRuntimeSpecEnvironmentConfigs(String namespace, String appName, List<ApplicationRuntimeSpec.EnvironmentConfig> configs) {
+        ApplicationRuntimeSpec existing = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, appName).orElse(null);
+        ApplicationRuntimeSpec request = new ApplicationRuntimeSpec();
+        request.setEnvironmentConfigs(configs);
+        request.setHealthCheck(existing != null ? existing.getHealthCheck() : null);
+        return updateApplicationRuntimeSpec(namespace, appName, request);
+    }
+
+    @Transactional
+    public Boolean updateApplicationRuntimeSpec(String namespace, String appName, ApplicationRuntimeSpec request) {
+        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, appName)
                 .orElseGet(() -> {
-                    ApplicationPerformanceConfig config = new ApplicationPerformanceConfig();
+                    ApplicationRuntimeSpec config = new ApplicationRuntimeSpec();
                     config.setNamespace(namespace);
                     config.setApplicationName(appName);
                     return config;
                 });
 
-        List<ApplicationPerformanceConfig.EnvironmentConfig> existingConfigs =
-                performanceConfig.getEnvironmentConfigs() != null ? performanceConfig.getEnvironmentConfigs() : Collections.emptyList();
+        List<ApplicationRuntimeSpec.EnvironmentConfig> configs = request.getEnvironmentConfigs() != null
+                ? request.getEnvironmentConfigs()
+                : Collections.emptyList();
+        ApplicationRuntimeSpec.HealthCheck existingHealthCheck = normalizeHealthCheck(runtimeSpec.getHealthCheck());
+        ApplicationRuntimeSpec.HealthCheck nextHealthCheck = normalizeHealthCheck(request.getHealthCheck());
+        boolean healthCheckChanged = !Objects.equals(existingHealthCheck, nextHealthCheck);
+        List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs =
+                runtimeSpec.getEnvironmentConfigs() != null ? runtimeSpec.getEnvironmentConfigs() : Collections.emptyList();
 
-        performanceConfig.setEnvironmentConfigs(configs);
-        applicationPerformanceConfigRepository.save(performanceConfig);
+        runtimeSpec.setEnvironmentConfigs(configs);
+        runtimeSpec.setHealthCheck(nextHealthCheck);
+        applicationRuntimeSpecRepository.save(runtimeSpec);
 
-        for (ApplicationPerformanceConfig.EnvironmentConfig config : configs) {
-            ApplicationPerformanceConfig.EnvironmentConfig existing = existingConfigs.stream()
+        applyRuntimeSpecEnvironmentConfigUpdates(namespace, appName, configs, existingConfigs);
+        applyHealthCheckUpdate(namespace, appName, nextHealthCheck, healthCheckChanged);
+
+        return true;
+    }
+
+    private void applyRuntimeSpecEnvironmentConfigUpdates(String namespace,
+                                                          String appName,
+                                                          List<ApplicationRuntimeSpec.EnvironmentConfig> configs,
+                                                          List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs) {
+        for (ApplicationRuntimeSpec.EnvironmentConfig config : configs) {
+            ApplicationRuntimeSpec.EnvironmentConfig existing = existingConfigs.stream()
                     .filter(c -> c.getEnvironmentName().equals(config.getEnvironmentName()))
                     .findFirst().orElse(null);
 
@@ -364,11 +403,90 @@ public class ApplicationService {
                     }
                 }
             } catch (Exception e) {
-                log.warn("Failed to apply performance config for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
+                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
             }
         }
+    }
 
-        return true;
+    private void applyHealthCheckUpdate(String namespace,
+                                        String appName,
+                                        ApplicationRuntimeSpec.HealthCheck healthCheck,
+                                        boolean healthCheckChanged) {
+        if (!healthCheckChanged) {
+            return;
+        }
+
+        ApplicationServiceConfig serviceConfig = applicationServiceConfigRepository
+                .findByNamespaceAndApplicationName(namespace, appName)
+                .orElse(null);
+        Integer appPort = serviceConfig != null ? serviceConfig.getPort() : null;
+        if (healthCheck.probeEnabled() && (appPort == null || appPort <= 0)) {
+            log.warn("Runtime spec health check is enabled but service port is not configured for app={}", appName);
+            return;
+        }
+
+        for (ApplicationEnvironment appEnv : getApplicationEnvironments(namespace, appName)) {
+            Environment environment = environmentRepository.findFirstByName(appEnv.getEnvironmentName());
+            if (environment == null) {
+                continue;
+            }
+            try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+                client.apps().statefulSets().inNamespace(namespace).withName(appName)
+                        .edit(ss -> {
+                            ss.getSpec().getTemplate().getSpec().getContainers()
+                                    .forEach(container -> container.setReadinessProbe(
+                                            buildReadinessProbe(healthCheck, appPort)
+                                    ));
+                            return ss;
+                        });
+            } catch (Exception e) {
+                log.warn("Failed to apply runtime health check for app={} env={}: {}", appName, appEnv.getEnvironmentName(), e.getMessage());
+            }
+        }
+    }
+
+    private ApplicationRuntimeSpec.HealthCheck normalizeHealthCheck(ApplicationRuntimeSpec.HealthCheck healthCheck) {
+        ApplicationRuntimeSpec.HealthCheck normalized = healthCheck != null
+                ? healthCheck
+                : new ApplicationRuntimeSpec.HealthCheck();
+        normalized.setEnabled(Boolean.TRUE.equals(normalized.getEnabled()));
+        if (normalized.getPath() == null || normalized.getPath().isBlank()) {
+            if (Boolean.TRUE.equals(normalized.getEnabled())) {
+                throw new BizException("Health check path is required");
+            }
+            normalized.setPath("/health");
+        } else if (!normalized.getPath().startsWith("/")) {
+            normalized.setPath("/" + normalized.getPath());
+        }
+        if (normalized.getInitialDelaySeconds() == null || normalized.getInitialDelaySeconds() < 0) {
+            normalized.setInitialDelaySeconds(ApplicationRuntimeSpec.HealthCheck.DEFAULT_INITIAL_DELAY_SECONDS);
+        }
+        if (normalized.getPeriodSeconds() == null || normalized.getPeriodSeconds() <= 0) {
+            normalized.setPeriodSeconds(ApplicationRuntimeSpec.HealthCheck.DEFAULT_PERIOD_SECONDS);
+        }
+        if (normalized.getTimeoutSeconds() == null || normalized.getTimeoutSeconds() <= 0) {
+            normalized.setTimeoutSeconds(ApplicationRuntimeSpec.HealthCheck.DEFAULT_TIMEOUT_SECONDS);
+        }
+        if (normalized.getFailureThreshold() == null || normalized.getFailureThreshold() <= 0) {
+            normalized.setFailureThreshold(ApplicationRuntimeSpec.HealthCheck.DEFAULT_FAILURE_THRESHOLD);
+        }
+        return normalized;
+    }
+
+    private io.fabric8.kubernetes.api.model.Probe buildReadinessProbe(ApplicationRuntimeSpec.HealthCheck healthCheck, Integer appPort) {
+        if (!healthCheck.probeEnabled()) {
+            return null;
+        }
+        return new io.fabric8.kubernetes.api.model.ProbeBuilder()
+                .withNewHttpGet()
+                    .withPath(healthCheck.normalizedPath())
+                    .withNewPort(appPort)
+                .endHttpGet()
+                .withInitialDelaySeconds(healthCheck.effectiveInitialDelaySeconds())
+                .withPeriodSeconds(healthCheck.effectivePeriodSeconds())
+                .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
+                .withFailureThreshold(healthCheck.effectiveFailureThreshold())
+                .build();
     }
 
     public List<ApplicationEnvironment> getApplicationEnvironments(String namespace, String name) {

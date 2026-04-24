@@ -5,8 +5,8 @@ import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ApplicationPerformanceConfigRepository extends CrudRepository<ApplicationPerformanceConfig, String> {
-    Optional<ApplicationPerformanceConfig> findByNamespaceAndApplicationName(String namespace, String applicationName);
+public interface ApplicationRuntimeSpecRepository extends CrudRepository<ApplicationRuntimeSpec, String> {
+    Optional<ApplicationRuntimeSpec> findByNamespaceAndApplicationName(String namespace, String applicationName);
 
     void deleteByNamespaceAndApplicationName(String namespace, String applicationName);
 }

@@ -32,18 +32,18 @@
 //
 //    private final PipelineRepository pipelineRepository;
 //    private final ApplicationRepository applicationRepository;
-//    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
+//    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
 //    private final EnvironmentService environmentService;
 //
 //    private final Map<String, SharedInformerFactory> factories = new ConcurrentHashMap<>();
 //
 //    public PipelineWatcher(PipelineRepository pipelineRepository,
 //                           ApplicationRepository applicationRepository,
-//                           ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+//                           ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
 //                           EnvironmentService environmentService) {
 //        this.pipelineRepository = pipelineRepository;
 //        this.applicationRepository = applicationRepository;
-//        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
+//        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
 //        this.environmentService = environmentService;
 //    }
 //
@@ -158,10 +158,10 @@
 //        if ("Succeeded".equals(status)) {
 //            try {
 //                Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-//                ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
+//                ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
 //                        application.getNamespace(), application.getName(), pipeline.getEnvironment());
 //
-//                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationPerformanceEnvironmentConfig, null, null);
+//                ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(pipeline, application, environment, applicationRuntimeSpecEnvironmentConfig, null, null);
 //                artifactDeployTask.call();
 //
 //                pipeline.setStatus(PipelineStatus.SUCCEEDED);
@@ -177,14 +177,14 @@
 //        }
 //    }
 //
-//    private ApplicationPerformanceConfig.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
-//        ApplicationPerformanceConfig config = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+//    private ApplicationRuntimeSpec.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
+//        ApplicationRuntimeSpec config = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
 //        if (config == null || config.getEnvironmentConfigs() == null) {
-//            return new ApplicationPerformanceConfig.EnvironmentConfig();
+//            return new ApplicationRuntimeSpec.EnvironmentConfig();
 //        }
 //        return config.getEnvironmentConfigs().stream()
 //                .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
 //                .findFirst()
-//                .orElseGet(ApplicationPerformanceConfig.EnvironmentConfig::new);
+//                .orElseGet(ApplicationRuntimeSpec.EnvironmentConfig::new);
 //    }
 //}

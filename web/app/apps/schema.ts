@@ -51,7 +51,7 @@ export const applicationBuildSchema = z.object({
   }
 })
 
-export const applicationPerformanceEnvSchema = z.object({
+export const applicationRuntimeSpecSchema = z.object({
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
     replicas: z.number().int().min(0).optional(),
@@ -60,6 +60,21 @@ export const applicationPerformanceEnvSchema = z.object({
     memoryRequest: z.string().optional(),
     memoryLimit: z.string().optional(),
   })),
+  healthCheck: z.object({
+    enabled: z.boolean().optional(),
+    path: z.string().optional(),
+    initialDelaySeconds: z.number().int().min(0).optional(),
+    periodSeconds: z.number().int().min(1).optional(),
+    timeoutSeconds: z.number().int().min(1).optional(),
+    failureThreshold: z.number().int().min(1).optional(),
+  }).optional(),
+}).superRefine((value, ctx) => {
+  if (value.healthCheck?.enabled && !value.healthCheck.path?.trim()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", "path"], message: "Path is required" })
+  }
+  if (value.healthCheck?.path && !value.healthCheck.path.startsWith("/")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", "path"], message: "Path must start with /" })
+  }
 })
 
 export const applicationConfigSchema = z.object({
@@ -87,6 +102,6 @@ export type ApplicationBasicFormValues = z.infer<typeof applicationBasicSchema>
 export type ApplicationBuildConfigFormValues = z.infer<typeof applicationBuildConfigSchema>
 export type CreateApplicationFormValues = z.infer<typeof createApplicationSchema>
 export type ApplicationBuildFormValues = z.infer<typeof applicationBuildSchema>
-export type ApplicationPerformanceEnvFormValues = z.infer<typeof applicationPerformanceEnvSchema>
+export type ApplicationRuntimeSpecFormValues = z.infer<typeof applicationRuntimeSpecSchema>
 export type ApplicationConfigFormValues = z.infer<typeof applicationConfigSchema>
 export type ApplicationServiceFormValues = z.infer<typeof applicationServiceSchema>

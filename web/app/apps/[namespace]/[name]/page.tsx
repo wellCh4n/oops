@@ -8,14 +8,14 @@ import {
   getApplication, 
   getApplicationBuildConfig, 
   getApplicationBuildEnvConfigs, 
-  getApplicationPerformanceEnvConfigs,
+  getApplicationRuntimeSpec,
   getApplicationService
 } from "@/lib/api/applications"
 import { 
   Application, 
   ApplicationBuildConfig, 
   ApplicationBuildEnvironmentConfig, 
-  ApplicationPerformanceConfigEnvironmentConfig,
+  ApplicationRuntimeSpec,
   ApplicationServiceConfig
 } from "@/lib/api/types"
 import { toast } from "sonner"
@@ -32,7 +32,7 @@ export default function EditAppPage() {
   const [application, setApplication] = useState<Application | null>(null)
   const [buildConfig, setBuildConfig] = useState<ApplicationBuildConfig | undefined>(undefined)
   const [buildEnvConfigs, setBuildEnvConfigs] = useState<ApplicationBuildEnvironmentConfig[]>([])
-  const [performanceEnvConfigs, setPerformanceEnvConfigs] = useState<ApplicationPerformanceConfigEnvironmentConfig[]>([])
+  const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | undefined>(undefined)
   const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
   
   const [loading, setLoading] = useState(true)
@@ -42,11 +42,11 @@ export default function EditAppPage() {
   useEffect(() => {
     const fetchApp = async () => {
       try {
-        const [appRes, buildConfigRes, buildEnvRes, perfEnvRes, serviceRes] = await Promise.all([
+        const [appRes, buildConfigRes, buildEnvRes, runtimeSpecRes, serviceRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationBuildConfig(namespace, name),
           getApplicationBuildEnvConfigs(namespace, name),
-          getApplicationPerformanceEnvConfigs(namespace, name),
+          getApplicationRuntimeSpec(namespace, name),
           getApplicationService(namespace, name),
         ])
 
@@ -68,8 +68,8 @@ export default function EditAppPage() {
             setBuildEnvConfigs(buildEnvRes.data)
         }
 
-        if (perfEnvRes.data) {
-            setPerformanceEnvConfigs(perfEnvRes.data)
+        if (runtimeSpecRes.data) {
+            setRuntimeSpec(runtimeSpecRes.data)
         }
 
         if (serviceRes.data) {
@@ -99,7 +99,7 @@ export default function EditAppPage() {
         initialData={application ?? undefined}
         initialBuildConfig={buildConfig}
         initialBuildEnvConfigs={buildEnvConfigs}
-        initialPerformanceEnvConfigs={performanceEnvConfigs}
+        initialRuntimeSpec={runtimeSpec}
         initialServiceConfig={serviceConfig}
       />
     </ContentPage>

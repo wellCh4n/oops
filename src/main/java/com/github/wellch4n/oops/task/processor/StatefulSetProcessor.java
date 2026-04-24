@@ -18,28 +18,41 @@ public class StatefulSetProcessor implements DeployProcessor {
 
         log.info("Checking stateful set for application: {}/{}", namespace, applicationName);
 
-        var perfEnvConfig = ctx.getPerfEnvConfig();
+        var runtimeSpec = ctx.getRuntimeSpec();
 
         ContainerBuilder containerBuilder = new ContainerBuilder()
                 .withName(applicationName)
                 .withImage(ctx.getPipeline().getArtifact())
                 .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom()
                 .withNewResources()
-                    .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuRequest(), "100m")))
-                    .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getCpuLimit(), "500m")))
-                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryRequest(), "128") + "Mi"))
-                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(perfEnvConfig.getMemoryLimit(), "512") + "Mi"))
+                    .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getCpuRequest(), "100m")))
+                    .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getCpuLimit(), "500m")))
+                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getMemoryRequest(), "128") + "Mi"))
+                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getMemoryLimit(), "512") + "Mi"))
                 .endResources();
 
         Integer appPort = ctx.getApplicationServiceConfig().getPort();
         if (appPort != null && appPort > 0) {
             containerBuilder.addNewPort().withName("http").withContainerPort(appPort).endPort();
         }
+        if (ctx.getHealthCheck() != null && ctx.getHealthCheck().probeEnabled() && appPort != null && appPort > 0) {
+            var healthCheck = ctx.getHealthCheck();
+            containerBuilder.withNewReadinessProbe()
+                    .withNewHttpGet()
+                        .withPath(healthCheck.normalizedPath())
+                        .withNewPort(appPort)
+                    .endHttpGet()
+                    .withInitialDelaySeconds(healthCheck.effectiveInitialDelaySeconds())
+                    .withPeriodSeconds(healthCheck.effectivePeriodSeconds())
+                    .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
+                    .withFailureThreshold(healthCheck.effectiveFailureThreshold())
+                .endReadinessProbe();
+        }
 
         StatefulSet statefulSet = new StatefulSetBuilder()
                 .withNewMetadata().withName(applicationName).withLabels(ctx.getLabels()).endMetadata()
                 .withNewSpec()
-                    .withReplicas(perfEnvConfig.getReplicas() == null ? 0 : perfEnvConfig.getReplicas())
+                    .withReplicas(runtimeSpec.getReplicas() == null ? 0 : runtimeSpec.getReplicas())
                     .withServiceName(applicationName)
                     .withNewSelector().withMatchLabels(ctx.getLabels()).endSelector()
                     .withNewTemplate()

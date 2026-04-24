@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.IngressConfig;
 import com.github.wellch4n.oops.data.Application;
-import com.github.wellch4n.oops.data.ApplicationPerformanceConfig;
+import com.github.wellch4n.oops.data.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.data.ApplicationServiceConfig;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
@@ -28,7 +28,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final Pipeline pipeline;
     private final Application application;
     private final Environment environment;
-    private final ApplicationPerformanceConfig.EnvironmentConfig perfEnvConfig;
+    private final ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec;
+    private final ApplicationRuntimeSpec.HealthCheck healthCheck;
     private final ApplicationServiceConfig applicationServiceConfig;
     private final IngressConfig ingressConfig;
 
@@ -36,13 +37,15 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
                               Environment environment,
-                              ApplicationPerformanceConfig.EnvironmentConfig environmentConfig,
+                              ApplicationRuntimeSpec.EnvironmentConfig environmentConfig,
+                              ApplicationRuntimeSpec.HealthCheck healthCheck,
                               ApplicationServiceConfig applicationServiceConfig,
                               IngressConfig ingressConfig) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;
-        this.perfEnvConfig = environmentConfig;
+        this.runtimeSpec = environmentConfig;
+        this.healthCheck = healthCheck;
         this.applicationServiceConfig = applicationServiceConfig;
         this.ingressConfig = ingressConfig;
     }
@@ -57,7 +60,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                     .build();
 
             DeployContext ctx = new DeployContext(
-                    pipeline, application, environment, perfEnvConfig,
+                    pipeline, application, environment, runtimeSpec, healthCheck,
                     applicationServiceConfig, ingressConfig, client, patchContext,
                     SERVICE_PORT, Map.of(
                             "oops.type", OopsTypes.APPLICATION.name(),

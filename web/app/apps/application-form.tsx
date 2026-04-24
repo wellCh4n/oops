@@ -1,12 +1,12 @@
 "use client"
 
-import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationServiceConfig } from "@/lib/api/types"
+import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { RefObject, useMemo, useRef, useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
-import { ApplicationPerformanceInfo } from "./components/application-performance-info"
+import { ApplicationRuntimeSpec } from "./components/application-runtime-spec"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
@@ -29,14 +29,14 @@ interface ApplicationFormProps {
   initialData?: Application
   initialBuildConfig?: ApplicationBuildConfig
   initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
-  initialPerformanceEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+  initialRuntimeSpec?: ApplicationRuntimeSpecType
   initialServiceConfig?: ApplicationServiceConfig
 }
 
 type ApplicationTab =
   | "app-info"
   | "build-config"
-  | "performance-info"
+  | "runtime-spec"
   | "service-info"
   | "config-info"
   | "danger-zone"
@@ -45,7 +45,7 @@ interface ApplicationFormState {
   application?: Application
   buildConfig?: ApplicationBuildConfig
   buildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
-  performanceEnvConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+  runtimeSpec?: ApplicationRuntimeSpecType
   serviceConfig?: ApplicationServiceConfig
 }
 
@@ -53,7 +53,7 @@ const DEFAULT_TAB: ApplicationTab = "app-info"
 const VALID_TABS = new Set<ApplicationTab>([
   "app-info",
   "build-config",
-  "performance-info",
+  "runtime-spec",
   "service-info",
   "config-info",
   "danger-zone",
@@ -74,7 +74,7 @@ export function ApplicationForm({
   initialData,
   initialBuildConfig,
   initialBuildEnvConfigs,
-  initialPerformanceEnvConfigs,
+  initialRuntimeSpec,
   initialServiceConfig
 }: ApplicationFormProps) {
   const router = useRouter()
@@ -91,7 +91,7 @@ export function ApplicationForm({
   const [formStateOverrides, setFormStateOverrides] = useState<Partial<ApplicationFormState>>({})
   const basicInfoRef = useRef<ApplicationTabHandle>(null)
   const buildInfoRef = useRef<ApplicationTabHandle>(null)
-  const performanceInfoRef = useRef<ApplicationTabHandle>(null)
+  const runtimeSpecRef = useRef<ApplicationTabHandle>(null)
   const serviceInfoRef = useRef<ApplicationTabHandle>(null)
   const configInfoRef = useRef<ApplicationTabHandle>(null)
 
@@ -99,7 +99,7 @@ export function ApplicationForm({
     application: initialData,
     buildConfig: initialBuildConfig,
     buildEnvConfigs: initialBuildEnvConfigs,
-    performanceEnvConfigs: initialPerformanceEnvConfigs,
+    runtimeSpec: initialRuntimeSpec,
     serviceConfig: initialServiceConfig,
     ...formStateOverrides,
   }), [
@@ -107,14 +107,14 @@ export function ApplicationForm({
     initialBuildConfig,
     initialBuildEnvConfigs,
     initialData,
-    initialPerformanceEnvConfigs,
+    initialRuntimeSpec,
     initialServiceConfig,
   ])
 
   const tabHandles = useMemo<Record<ApplicationTab, RefObject<ApplicationTabHandle | null>>>(() => ({
     "app-info": basicInfoRef,
     "build-config": buildInfoRef,
-    "performance-info": performanceInfoRef,
+    "runtime-spec": runtimeSpecRef,
     "service-info": serviceInfoRef,
     "config-info": configInfoRef,
     "danger-zone": { current: null },
@@ -195,7 +195,7 @@ export function ApplicationForm({
           <TabsList>
             <TabsTrigger value="app-info" className="px-6 cursor-pointer">{t("apps.tab.appInfo")}</TabsTrigger>
             <TabsTrigger value="build-config" className="px-6 cursor-pointer">{t("apps.tab.buildConfig")}</TabsTrigger>
-            <TabsTrigger value="performance-info" className="px-6 cursor-pointer">{t("apps.tab.performanceConfig")}</TabsTrigger>
+            <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
             <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
             <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
@@ -243,15 +243,15 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="performance-info" className="rounded-md border bg-background p-4">
+        <TabsContent value="runtime-spec" className="rounded-md border bg-background p-4">
           {loading ? <TabContentSkeleton rows={3} /> : (
-            <ApplicationPerformanceInfo
-              ref={performanceInfoRef}
-              initialEnvConfigs={formState.performanceEnvConfigs}
+            <ApplicationRuntimeSpec
+              ref={runtimeSpecRef}
+              initialRuntimeSpec={formState.runtimeSpec}
               applicationId={formState.application?.id}
               applicationName={formState.application?.name}
               namespace={formState.application?.namespace}
-              onSaved={(nextPerformanceEnvConfigs) => updateFormState({ performanceEnvConfigs: nextPerformanceEnvConfigs })}
+              onSaved={(nextRuntimeSpec) => updateFormState({ runtimeSpec: nextRuntimeSpec })}
             />
           )}
         </TabsContent>

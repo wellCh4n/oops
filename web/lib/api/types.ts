@@ -115,20 +115,30 @@ export interface ApplicationEnvironment {
   environmentName: string
 }
 
-export interface ApplicationPerformanceConfig {
+export interface ApplicationRuntimeSpec {
   id?: string
   namespace: string
   applicationName: string
-  environmentConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+  environmentConfigs?: ApplicationRuntimeSpecEnvironmentConfig[]
+  healthCheck?: ApplicationRuntimeSpecHealthCheck
 }
 
-export interface ApplicationPerformanceConfigEnvironmentConfig {
+export interface ApplicationRuntimeSpecEnvironmentConfig {
   environmentName: string
   replicas?: number
   cpuRequest?: string
   cpuLimit?: string
   memoryRequest?: string
   memoryLimit?: string
+}
+
+export interface ApplicationRuntimeSpecHealthCheck {
+  enabled?: boolean
+  path?: string
+  initialDelaySeconds?: number
+  periodSeconds?: number
+  timeoutSeconds?: number
+  failureThreshold?: number
 }
 
 export interface ApplicationPodStatus {
