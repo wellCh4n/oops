@@ -316,9 +316,6 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 - Try shadcn/ui components first. Use the auto-install feature: `npx shadcn add <component>`
 
 ## Collaboration
-
-When Claude assists with commits, include `Co-Authored-By` using the **current model's name** (e.g., `Claude Opus 4.7`, `Claude Sonnet 4.6`, etc.), not a fixed default:
-
 ```
-Co-Authored-By: Claude <model> <noreply@anthropic.com>
+Co-Authored-By: Claude <noreply@anthropic.com>
 ```
