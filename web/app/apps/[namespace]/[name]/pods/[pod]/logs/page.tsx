@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
 import { useLanguage } from "@/contexts/language-context"
+import { RefreshCw, WifiOff } from "lucide-react"
 
 export default function ApplicationPodLogsPage() {
   const params = useParams()
@@ -92,16 +94,25 @@ export default function ApplicationPodLogsPage() {
   const isConnected = connectionStatus === "connected"
 
   return (
-    <div className="flex h-full min-h-0 flex-col relative">
+    <div className="flex h-full min-h-0 flex-col gap-2">
       {connectionStatus === "disconnected" && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-background/80 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground">{t("common.disconnected")}</p>
-          <button
+        <div
+          role="status"
+          className="flex shrink-0 items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
+        >
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <WifiOff className="size-4 shrink-0" />
+            <span className="truncate">{t("common.disconnected")}</span>
+          </div>
+          <Button
+            variant="outline"
+            size="xs"
             onClick={() => window.location.reload()}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="shrink-0 bg-background/80 text-foreground hover:bg-background"
           >
+            <RefreshCw className="size-3" />
             {t("common.refresh")}
-          </button>
+          </Button>
         </div>
       )}
       <div className="flex-1 min-h-0 rounded-md border bg-background shadow-sm overflow-hidden flex flex-col">
