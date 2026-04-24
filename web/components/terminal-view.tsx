@@ -14,12 +14,17 @@ interface TerminalViewProps {
     name: string
     pod: string
     env: string
+    onConnectionStatusChange?: (status: "connecting" | "connected" | "disconnected") => void
 }
 
-export default function TerminalView({ namespace, name, pod, env }: TerminalViewProps) {
+export default function TerminalView({ namespace, name, pod, env, onConnectionStatusChange }: TerminalViewProps) {
     const terminalRef = useRef<HTMLDivElement>(null)
     const xtermRef = useRef<Terminal | null>(null)
     const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
+
+    useEffect(() => {
+        onConnectionStatusChange?.(connectionStatus)
+    }, [connectionStatus, onConnectionStatusChange])
 
     useEffect(() => {
         if (!terminalRef.current) return
@@ -152,18 +157,8 @@ export default function TerminalView({ namespace, name, pod, env }: TerminalView
         }
     }
 
-    const isConnected = connectionStatus === "connected"
-
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="flex items-center justify-between px-3 py-2 border-b">
-                <div className="flex items-center gap-3 min-w-0">
-                    <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`} />
-                    <div className="text-xs font-medium text-muted-foreground shrink-0">终端</div>
-                    <Badge className="bg-orange-500 text-white">{env}</Badge>
-                    <div className="text-sm font-semibold text-foreground truncate">{pod}</div>
-                </div>
-            </div>
             <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden">
                 <div
                     className="h-full w-full cursor-text"

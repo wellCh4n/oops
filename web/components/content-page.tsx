@@ -31,7 +31,7 @@ export function ContentPage({
     >
       <div
         className={cn(
-          "sticky top-0 z-10 shrink-0 bg-sidebar/95 border-b border-sidebar-border px-4 py-2 flex items-center justify-between backdrop-blur supports-[backdrop-filter]:bg-sidebar/85",
+          "sticky top-0 z-10 shrink-0 h-10 bg-sidebar/95 border-b border-sidebar-border px-4 flex items-center justify-between backdrop-blur supports-[backdrop-filter]:bg-sidebar/85",
           disableGutter ? "w-full" : "-mx-4 -mt-4 w-[calc(100%+2rem)]"
         )}
       >
@@ -39,7 +39,7 @@ export function ContentPage({
           <SidebarTrigger className="md:hidden -ml-1" />
           <h2 className="text-sm font-medium text-sidebar-foreground/80 tracking-normal">{title}</h2>
         </div>
-        {actions && <div>{actions}</div>}
+        {actions && <div className="flex items-center">{actions}</div>}
       </div>
       {disableGutter ? (
         <div className={cn("flex-1 min-h-0", bodyClassName)}>
