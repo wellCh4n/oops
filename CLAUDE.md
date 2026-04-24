@@ -273,6 +273,16 @@ Triggered by pressing `/` (outside input/textarea). Two-stage: select command (S
 - Theme via `next-themes` with `defaultTheme="system"`.
 - `API_BASE_URL` is empty string in production (same-origin), `http://localhost:8080` in dev — set via `NEXT_PUBLIC_API_URL`.
 
+## Database Migrations
+
+OOPS uses Flyway to apply schema and data migrations automatically during application startup.
+
+- SQLite migrations live in `src/main/resources/db/migration/sqlite`
+- MySQL migrations live in `src/main/resources/db/migration/mysql`
+- Migration files must be append-only and named like `V2__add_pipeline_index.sql`
+- Existing databases without Flyway history are baselined at version `1`; new databases run `V1__baseline_schema.sql`
+- Hibernate DDL generation is disabled with `spring.jpa.hibernate.ddl-auto=none`
+
 ## Configuration Notes
 
 Default admin credentials: `admin` / password from env `ADMIN_PASSWORD` (defaults to `admin123`), created by `UserInitializer` on first startup if no admin exists.
@@ -304,3 +314,11 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 - Tailwind CSS for styling
 - Component imports use `@/components/` path alias
 - Try shadcn/ui components first. Use the auto-install feature: `npx shadcn add <component>`
+
+## Collaboration
+
+When Claude assists with commits, include `Co-Authored-By` using the **current model's name** (e.g., `Claude Opus 4.7`, `Claude Sonnet 4.6`, etc.), not a fixed default:
+
+```
+Co-Authored-By: Claude <model> <noreply@anthropic.com>
+```
