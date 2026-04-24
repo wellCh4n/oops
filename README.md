@@ -60,6 +60,16 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 - SQLite (default) or MySQL database
 - Traefik (optional, for ingress/HTTPS)
 
+## Database Migrations
+
+OOPS uses Flyway to apply schema and data migrations automatically during application startup.
+
+- SQLite migrations live in `src/main/resources/db/migration/sqlite`
+- MySQL migrations live in `src/main/resources/db/migration/mysql`
+- Migration files must be append-only and named like `V2__add_pipeline_index.sql`
+- Existing databases without Flyway history are baselined at version `1`; new databases run `V1__baseline_schema.sql`
+- Hibernate DDL generation is disabled with `spring.jpa.hibernate.ddl-auto=none`
+
 ## Quick Start
 
 1. Copy and configure `src/main/resources/application.properties.example`
