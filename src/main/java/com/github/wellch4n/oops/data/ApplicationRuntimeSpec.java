@@ -52,10 +52,11 @@ public class ApplicationRuntimeSpec extends BaseDataObject {
         public static final int DEFAULT_PERIOD_SECONDS = 10;
         public static final int DEFAULT_TIMEOUT_SECONDS = 3;
         public static final int DEFAULT_FAILURE_THRESHOLD = 3;
+        public static final String DEFAULT_PATH = "/";
 
         private Boolean enabled = false;
 
-        private String path = "/health";
+        private String path = DEFAULT_PATH;
 
         private Integer initialDelaySeconds = DEFAULT_INITIAL_DELAY_SECONDS;
 
@@ -71,7 +72,7 @@ public class ApplicationRuntimeSpec extends BaseDataObject {
 
         public String normalizedPath() {
             if (path == null || path.isBlank()) {
-                return "/health";
+                return DEFAULT_PATH;
             }
             return path.startsWith("/") ? path : "/" + path;
         }

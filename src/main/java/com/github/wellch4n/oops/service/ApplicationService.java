@@ -342,12 +342,11 @@ public class ApplicationService {
         List<ApplicationRuntimeSpec.EnvironmentConfig> configs = request.getEnvironmentConfigs() != null
                 ? request.getEnvironmentConfigs()
                 : Collections.emptyList();
-        ApplicationRuntimeSpec.HealthCheck nextHealthCheck = normalizeHealthCheck(request.getHealthCheck());
         List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs =
                 runtimeSpec.getEnvironmentConfigs() != null ? runtimeSpec.getEnvironmentConfigs() : Collections.emptyList();
 
         runtimeSpec.setEnvironmentConfigs(configs);
-        runtimeSpec.setHealthCheck(nextHealthCheck);
+        runtimeSpec.setHealthCheck(request.getHealthCheck());
         applicationRuntimeSpecRepository.save(runtimeSpec);
 
         applyRuntimeSpecEnvironmentConfigUpdates(namespace, appName, configs, existingConfigs);
@@ -413,7 +412,7 @@ public class ApplicationService {
             if (Boolean.TRUE.equals(normalized.getEnabled())) {
                 throw new BizException("Health check path is required");
             }
-            normalized.setPath("/health");
+            normalized.setPath(ApplicationRuntimeSpec.HealthCheck.DEFAULT_PATH);
         } else if (!normalized.getPath().startsWith("/")) {
             normalized.setPath("/" + normalized.getPath());
         }

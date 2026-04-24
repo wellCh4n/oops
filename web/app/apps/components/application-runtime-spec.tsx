@@ -46,7 +46,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
 }: ApplicationRuntimeSpecProps, ref) {
   const initialHealthCheck = {
     enabled: false,
-    path: "/health",
+    path: "/",
     initialDelaySeconds: 30,
     periodSeconds: 10,
     timeoutSeconds: 3,
@@ -313,7 +313,7 @@ function HealthCheckConfig() {
                   <FormLabel className="flex items-center gap-1"><Route className="h-3.5 w-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="/health"
+                      placeholder="/"
                       {...field}
                       value={field.value ?? ""}
                       autoComplete="off"
