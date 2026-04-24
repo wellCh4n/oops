@@ -1,5 +1,6 @@
 "use client"
 
+import { Fragment, ReactNode, useEffect, useState } from "react"
 import {
   ColumnDef,
   TableMeta,
@@ -16,7 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
+import { ChevronDown, ChevronUp } from "lucide-react"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -24,6 +27,7 @@ interface DataTableProps<TData, TValue> {
   meta?: TableMeta<TData>
   loading?: boolean
   getRowId?: (row: TData) => string
+  renderExpandedRow?: (row: TData) => ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -32,8 +36,24 @@ export function DataTable<TData, TValue>({
   meta,
   loading,
   getRowId,
+  renderExpandedRow,
 }: DataTableProps<TData, TValue>) {
   const { t } = useLanguage()
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (data.length > 0 && renderExpandedRow) {
+      setExpanded((prev) => {
+        const next: Record<string, boolean> = {}
+        data.forEach((item, index) => {
+          const id = getRowId ? getRowId(item) : String(index)
+          next[id] = prev[id] ?? true
+        })
+        return next
+      })
+    }
+  }, [data, getRowId, renderExpandedRow])
+
   const table = useReactTable({
     data,
     columns,
@@ -41,6 +61,10 @@ export function DataTable<TData, TValue>({
     meta,
     ...(getRowId ? { getRowId } : {}),
   })
+
+  const toggleRow = (rowId: string) => {
+    setExpanded((prev) => ({ ...prev, [rowId]: !prev[rowId] }))
+  }
 
   const renderBody = () => {
     if (loading) {
@@ -62,17 +86,46 @@ export function DataTable<TData, TValue>({
       )
     }
     return table.getRowModel().rows.map((row) => (
-      <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-        {row.getVisibleCells().map((cell) => (
-          <TableCell
-            key={cell.id}
-            className="px-4 py-2"
-            style={cell.column.columnDef.size !== undefined ? { width: cell.column.columnDef.size, minWidth: cell.column.columnDef.size } : undefined}
-          >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-          </TableCell>
-        ))}
-      </TableRow>
+      <Fragment key={row.id}>
+        <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+          {row.getVisibleCells().map((cell, cellIndex) => (
+            <TableCell
+              key={cell.id}
+              className="px-4 py-2"
+              style={cell.column.columnDef.size !== undefined ? { width: cell.column.columnDef.size, minWidth: cell.column.columnDef.size } : undefined}
+            >
+              {cellIndex === 0 && renderExpandedRow ? (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 shrink-0 -ml-2"
+                    onClick={() => toggleRow(row.id)}
+                  >
+                    {expanded[row.id] ? (
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </div>
+              ) : (
+                flexRender(cell.column.columnDef.cell, cell.getContext())
+              )}
+            </TableCell>
+          ))}
+        </TableRow>
+        {expanded[row.id] && renderExpandedRow && (
+          <TableRow>
+            <TableCell colSpan={columns.length} className="p-0">
+              <div className="px-4 py-3 bg-muted/30">
+                {renderExpandedRow(row.original)}
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+      </Fragment>
     ))
   }
 

@@ -115,14 +115,15 @@ export interface ApplicationEnvironment {
   environmentName: string
 }
 
-export interface ApplicationPerformanceConfig {
+export interface ApplicationRuntimeSpec {
   id?: string
   namespace: string
   applicationName: string
-  environmentConfigs?: ApplicationPerformanceConfigEnvironmentConfig[]
+  environmentConfigs?: ApplicationRuntimeSpecEnvironmentConfig[]
+  healthCheck?: ApplicationRuntimeSpecHealthCheck
 }
 
-export interface ApplicationPerformanceConfigEnvironmentConfig {
+export interface ApplicationRuntimeSpecEnvironmentConfig {
   environmentName: string
   replicas?: number
   cpuRequest?: string
@@ -131,12 +132,28 @@ export interface ApplicationPerformanceConfigEnvironmentConfig {
   memoryLimit?: string
 }
 
+export interface ApplicationRuntimeSpecHealthCheck {
+  enabled?: boolean
+  path?: string
+  initialDelaySeconds?: number
+  periodSeconds?: number
+  timeoutSeconds?: number
+  failureThreshold?: number
+}
+
 export interface ApplicationPodStatus {
   name: string
   namespace: string
   status: string
-  image: string[]
   podIP: string
+  containers: ApplicationContainerStatus[]
+}
+
+export interface ApplicationContainerStatus {
+  name: string
+  image: string
+  ready: boolean
+  restartCount: number
 }
 
 export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'

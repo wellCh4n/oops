@@ -43,7 +43,7 @@ public class PipelineService {
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
+    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final IngressConfig ingressConfig;
     private final UserService userService;
@@ -51,7 +51,7 @@ public class PipelineService {
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
-                           ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+                           ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
                            ApplicationServiceConfigRepository applicationServiceConfigRepository,
                            IngressConfig ingressConfig,
                            UserService userService,
@@ -59,7 +59,7 @@ public class PipelineService {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
-        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
+        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.ingressConfig = ingressConfig;
         this.userService = userService;
@@ -248,24 +248,27 @@ public class PipelineService {
             Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
             Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
 
-            ApplicationPerformanceConfig.EnvironmentConfig performanceConfig = null;
-            ApplicationPerformanceConfig perfConfig = applicationPerformanceConfigRepository
+            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec = null;
+            ApplicationRuntimeSpec runtimeSpecEntity = applicationRuntimeSpecRepository
                     .findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
-            if (perfConfig != null && perfConfig.getEnvironmentConfigs() != null) {
-                performanceConfig = perfConfig.getEnvironmentConfigs().stream()
+            if (runtimeSpecEntity != null && runtimeSpecEntity.getEnvironmentConfigs() != null) {
+                runtimeSpec = runtimeSpecEntity.getEnvironmentConfigs().stream()
                         .filter(c -> pipeline.getEnvironment().equals(c.getEnvironmentName()))
                         .findFirst().orElse(null);
             }
-            if (performanceConfig == null) {
-                performanceConfig = new ApplicationPerformanceConfig.EnvironmentConfig();
+            if (runtimeSpec == null) {
+                runtimeSpec = new ApplicationRuntimeSpec.EnvironmentConfig();
             }
+            ApplicationRuntimeSpec.HealthCheck healthCheck = runtimeSpecEntity != null && runtimeSpecEntity.getHealthCheck() != null
+                    ? runtimeSpecEntity.getHealthCheck()
+                    : new ApplicationRuntimeSpec.HealthCheck();
 
             ApplicationServiceConfig serviceConfig = applicationServiceConfigRepository
                     .findByNamespaceAndApplicationName(namespace, applicationName)
                     .orElse(new ApplicationServiceConfig());
 
             ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
-                    pipeline, application, environment, performanceConfig, serviceConfig, ingressConfig
+                    pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, ingressConfig
             );
             artifactDeployTask.call();
 

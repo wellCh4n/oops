@@ -25,21 +25,21 @@ public class PipelineInstanceScanJob {
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
-    private final ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository;
+    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
     private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final IngressConfig ingressConfig;
     private final ApplicationEventPublisher eventPublisher;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
-                                   ApplicationPerformanceConfigRepository applicationPerformanceConfigRepository,
+                                   ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
                                    IngressConfig ingressConfig,
                                    ApplicationServiceConfigRepository applicationServiceConfigRepository,
                                    ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
-        this.applicationPerformanceConfigRepository = applicationPerformanceConfigRepository;
+        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
         this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.ingressConfig = ingressConfig;
         this.eventPublisher = eventPublisher;
@@ -86,15 +86,21 @@ public class PipelineInstanceScanJob {
                         ));
 
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                        ApplicationPerformanceConfig.EnvironmentConfig applicationPerformanceEnvironmentConfig = resolveEnvironmentConfig(
-                                application.getNamespace(), application.getName(), pipeline.getEnvironment());
+                        ApplicationRuntimeSpec applicationRuntimeSpec = applicationRuntimeSpecRepository
+                                .findByNamespaceAndApplicationName(application.getNamespace(), application.getName())
+                                .orElse(null);
+                        ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
+                                applicationRuntimeSpec, pipeline.getEnvironment());
+                        ApplicationRuntimeSpec.HealthCheck healthCheck = applicationRuntimeSpec != null && applicationRuntimeSpec.getHealthCheck() != null
+                                ? applicationRuntimeSpec.getHealthCheck()
+                                : new ApplicationRuntimeSpec.HealthCheck();
 
                         var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
                                 application.getNamespace(), application.getName()).orElse(new ApplicationServiceConfig());
 
                         ArtifactDeployTask artifactDeployTask = new ArtifactDeployTask(
                                 pipeline, application, environment,
-                                applicationPerformanceEnvironmentConfig, applicationServiceConfig, ingressConfig
+                                applicationRuntimeSpecEnvironmentConfig, healthCheck, applicationServiceConfig, ingressConfig
                         );
                         artifactDeployTask.call();
 
@@ -136,14 +142,13 @@ public class PipelineInstanceScanJob {
         }
     }
 
-    private ApplicationPerformanceConfig.EnvironmentConfig resolveEnvironmentConfig(String namespace, String applicationName, String environmentName) {
-        ApplicationPerformanceConfig config = applicationPerformanceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+    private ApplicationRuntimeSpec.EnvironmentConfig resolveEnvironmentConfig(ApplicationRuntimeSpec config, String environmentName) {
         if (config == null || config.getEnvironmentConfigs() == null) {
-            return new ApplicationPerformanceConfig.EnvironmentConfig();
+            return new ApplicationRuntimeSpec.EnvironmentConfig();
         }
         return config.getEnvironmentConfigs().stream()
                 .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
                 .findFirst()
-                .orElseGet(ApplicationPerformanceConfig.EnvironmentConfig::new);
+                .orElseGet(ApplicationRuntimeSpec.EnvironmentConfig::new);
     }
 }

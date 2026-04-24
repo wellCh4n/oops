@@ -371,7 +371,29 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   }, [])
 
   useEffect(() => {
-    form.reset(buildServiceFormValues(initialServiceConfig))
+    const built = buildServiceFormValues(initialServiceConfig)
+    const currentConfigs = form.getValues("environmentConfigs") ?? []
+
+    const mergedConfigs = currentConfigs.map((current) => {
+      const builtGroup = built.environmentConfigs.find(
+        (g) => g.environmentName === current.environmentName
+      )
+      return {
+        environmentName: current.environmentName,
+        hosts: builtGroup?.hosts ?? [],
+      }
+    })
+
+    built.environmentConfigs.forEach((builtGroup) => {
+      if (!mergedConfigs.some((c) => c.environmentName === builtGroup.environmentName)) {
+        mergedConfigs.push(builtGroup)
+      }
+    })
+
+    form.reset({
+      port: built.port,
+      environmentConfigs: mergedConfigs,
+    })
   }, [form, initialServiceConfig])
 
   useEffect(() => {

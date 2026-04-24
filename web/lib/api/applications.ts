@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationPerformanceConfigEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationRuntimeSpecEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -144,12 +144,20 @@ export const getApplicationBuildEnvConfigs = async (namespace: string, name: str
   return response.json() as Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>>
 }
 
-export const getApplicationPerformanceEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`)
+export const getApplicationRuntimeSpecEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationRuntimeSpecEnvironmentConfig[]>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/runtime-specs`)
   if (!response.ok) {
-    throw new Error("Failed to fetch application performance environment configs")
+    throw new Error("Failed to fetch application runtime specs")
   }
-  return response.json() as Promise<ApiResponse<ApplicationPerformanceConfigEnvironmentConfig[]>>
+  return response.json() as Promise<ApiResponse<ApplicationRuntimeSpecEnvironmentConfig[]>>
+}
+
+export const getApplicationRuntimeSpec = async (namespace: string, name: string): Promise<ApiResponse<ApplicationRuntimeSpec>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/runtime-spec`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch application runtime spec")
+  }
+  return response.json() as Promise<ApiResponse<ApplicationRuntimeSpec>>
 }
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {
@@ -196,18 +204,34 @@ export const updateApplicationBuildEnvConfigs = async (
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
-export const updateApplicationPerformanceEnvConfigs = async (
+export const updateApplicationRuntimeSpecEnvConfigs = async (
   namespace: string,
   name: string,
-  configs: ApplicationPerformanceConfigEnvironmentConfig[]
+  configs: ApplicationRuntimeSpecEnvironmentConfig[]
 ): Promise<ApiResponse<boolean>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/performance/configs`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/runtime-specs`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(configs),
   })
   if (!response.ok) {
-    throw new Error("Failed to save application performance environment configs")
+    throw new Error("Failed to save application runtime specs")
+  }
+  return response.json() as Promise<ApiResponse<boolean>>
+}
+
+export const updateApplicationRuntimeSpec = async (
+  namespace: string,
+  name: string,
+  runtimeSpec: Pick<ApplicationRuntimeSpec, "environmentConfigs" | "healthCheck">
+): Promise<ApiResponse<boolean>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/runtime-spec`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(runtimeSpec),
+  })
+  if (!response.ok) {
+    throw new Error("Failed to save application runtime spec")
   }
   return response.json() as Promise<ApiResponse<boolean>>
 }

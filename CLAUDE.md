@@ -151,7 +151,7 @@ The K8s client is created per-task and closed via try-with-resources in `Artifac
 
 **Per-application config entities**:
 - `ApplicationServiceConfig`: Stores container `port` and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.
-- `ApplicationPerformanceConfig`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`). Frontend: `application-performance-info.tsx`.
+- `ApplicationRuntimeSpec`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`) plus global health check settings. Frontend: `application-runtime-spec.tsx`.
 
 **Application deletion**: The "Danger Zone" tab (`application-danger-zone.tsx`) provides cascade deletion that cleans up Kubernetes resources (StatefulSet, Service, IngressRoute) alongside the database record.
 

@@ -1,0 +1,1 @@
+ALTER TABLE application_performance_config RENAME TO application_runtime_spec;

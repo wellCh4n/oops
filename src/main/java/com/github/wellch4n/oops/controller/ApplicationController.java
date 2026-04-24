@@ -91,10 +91,16 @@ public class ApplicationController {
         return Result.success(applicationService.getApplicationBuildEnvironmentConfigs(namespace, name));
     }
 
-    @GetMapping("/{name}/environments/performance/configs")
-    public Result<List<ApplicationPerformanceConfig.EnvironmentConfig>> getApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
+    @GetMapping("/{name}/environments/runtime-specs")
+    public Result<List<ApplicationRuntimeSpec.EnvironmentConfig>> getApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
                                                                                                                   @PathVariable String name) {
-        return Result.success(applicationService.getApplicationPerformanceEnvironmentConfigs(namespace, name));
+        return Result.success(applicationService.getApplicationRuntimeSpecEnvironmentConfigs(namespace, name));
+    }
+
+    @GetMapping("/{name}/runtime-spec")
+    public Result<ApplicationRuntimeSpec> getApplicationRuntimeSpec(@PathVariable String namespace,
+                                                                    @PathVariable String name) {
+        return Result.success(applicationService.getApplicationRuntimeSpec(namespace, name));
     }
 
     @PutMapping("/{name}/environments/build/configs")
@@ -104,11 +110,18 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplicationBuildEnvironmentConfigs(namespace, name, configs));
     }
 
-    @PutMapping("/{name}/environments/performance/configs")
-    public Result<Boolean> updateApplicationPerformanceEnvironmentConfigs(@PathVariable String namespace,
+    @PutMapping("/{name}/environments/runtime-specs")
+    public Result<Boolean> updateApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
                                                                           @PathVariable String name,
-                                                                          @RequestBody List<ApplicationPerformanceConfig.EnvironmentConfig> configs) {
-        return Result.success(applicationService.updateApplicationPerformanceEnvironmentConfigs(namespace, name, configs));
+                                                                          @RequestBody List<ApplicationRuntimeSpec.EnvironmentConfig> configs) {
+        return Result.success(applicationService.updateApplicationRuntimeSpecEnvironmentConfigs(namespace, name, configs));
+    }
+
+    @PutMapping("/{name}/runtime-spec")
+    public Result<Boolean> updateApplicationRuntimeSpec(@PathVariable String namespace,
+                                                        @PathVariable String name,
+                                                        @RequestBody ApplicationRuntimeSpec request) {
+        return Result.success(applicationService.updateApplicationRuntimeSpec(namespace, name, request));
     }
 
     @GetMapping("/{name}/environments")

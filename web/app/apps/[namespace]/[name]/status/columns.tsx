@@ -37,22 +37,6 @@ export const getStatusColumns = (
     header: t("apps.status.col.ip"),
   },
   {
-    accessorKey: "image",
-    header: t("apps.status.col.image"),
-    cell: ({ row }) => {
-      const images = row.getValue("image") as string[]
-      return (
-        <div className="flex max-w-[28rem] flex-col gap-1 whitespace-normal break-all">
-          {images.map((img, i) => (
-            <span key={i} className="text-sm text-muted-foreground">
-              {img}
-            </span>
-          ))}
-        </div>
-      )
-    },
-  },
-  {
     id: "actions",
     cell: ({ row }) => {
       return (
