@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.data;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.github.wellch4n.oops.converter.EncryptedStringConverter;
 import com.github.wellch4n.oops.utils.NanoIdUtils;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.ConfigBuilder;
@@ -68,6 +69,7 @@ public class Environment {
         @Setter
         @Lob
         @Column(name = "api_server_token", columnDefinition = "TEXT")
+        @Convert(converter = EncryptedStringConverter.class)
         private String token;
 
         public static KubernetesApiServer of(String url, String token) {
@@ -111,6 +113,7 @@ public class Environment {
         private String username;
 
         @Column(name = "image_repository_password")
+        @Convert(converter = EncryptedStringConverter.class)
         private String password;
 
         public static ImageRepository of(String url, String username, String password) {

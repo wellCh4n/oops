@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.data;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.wellch4n.oops.enums.DomainCertMode;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -29,11 +30,13 @@ public class Domain extends BaseDataObject {
     @JsonIgnore
     @Lob
     @Column(columnDefinition = "TEXT")
+    @Convert(converter = com.github.wellch4n.oops.converter.EncryptedStringConverter.class)
     private String certPem;
 
     @JsonIgnore
     @Lob
     @Column(columnDefinition = "TEXT")
+    @Convert(converter = com.github.wellch4n.oops.converter.EncryptedStringConverter.class)
     private String keyPem;
 
     private String certSubject;
