@@ -27,7 +27,7 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         try {
             return EncryptionUtils.decrypt(dbData);
         } catch (Exception e) {
-            logger.warn("Decryption failed, returning plaintext fallback", e);
+            logger.warn("Decryption failed, returning plaintext fallback");
             return dbData;
         }
     }
