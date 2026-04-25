@@ -8,8 +8,12 @@ import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EncryptionUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(EncryptionUtils.class);
 
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
@@ -73,6 +77,7 @@ public class EncryptionUtils {
             byte[] plaintext = cipher.doFinal(encrypted);
             return new String(plaintext, StandardCharsets.UTF_8);
         } catch (Exception e) {
+            logger.warn("Decryption failed, returning plaintext fallback", e);
             return ciphertext;
         }
     }
