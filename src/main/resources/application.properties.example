@@ -31,6 +31,8 @@ oops.object-storage.upload-url-expiration-seconds=900
 oops.object-storage.download-url-expiration-seconds=1800
 oops.object-storage.max-file-size-bytes=524288000
 
+oops.crypto.secret-key=oops-crypto-secret-key-please-change-in-production
+
 oops.jwt.secret=oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
 oops.jwt.expiration=604800000
 
