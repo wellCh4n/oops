@@ -5,13 +5,17 @@
 
 OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provides a web UI for deploying and managing containerized applications across multiple clusters.
 
+[中文](docs/README.zh.md)
+
 ## Features
 
 ### Application Management
 - Deploy applications as StatefulSets with automatic service and ingress configuration
 - Manage environment variables via ConfigMap injection
-- Support for multiple replicas and resource configuration
+- Support for multiple replicas and optional resource configuration (cpu/memory requests and limits)
+- Configurable HTTP health checks (liveness probe)
 - Real-time pod status monitoring
+- Cascade deletion of Kubernetes resources (StatefulSet, Service, IngressRoute)
 
 ### Multi-cluster Support
 - Manage multiple Kubernetes clusters (Environments) from a single interface
@@ -20,13 +24,18 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 
 ### CI/CD Pipelines
 - Git-based build pipelines powered by Kubernetes Jobs
+- **ZIP-based deployments** with S3-compatible object storage (presigned URL upload)
 - Three-stage pipeline: **clone** (shallow clone support) → **build** → **push** (Kaniko image build)
 - Two deploy modes: **IMMEDIATE** (auto-deploy after build) or **MANUAL** (wait for manual trigger)
 - Real-time log streaming via WebSocket
 - Pipeline history and status tracking
+- **Pipeline status notifications** via linked external accounts (Feishu/Lark)
+
+### Cluster Operations
+- View and monitor cluster nodes across environments
 
 ### Command Palette
-- Press `/` to quickly search applications, deploy apps, open IDEs, or jump to pipelines
+- Press `/` or click the sidebar trigger to quickly search applications, deploy apps, open IDEs, or jump to pipelines
 - Fast keyboard-driven navigation across namespaces
 
 ### Pod Operations
@@ -40,18 +49,25 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 - Proxy domain support for IDE ingress routing
 - Toggle via `oops.ide.enabled=true`
 
+### Domain Management
+- Admin-managed domains with TLS certificate configuration
+- Support for auto (Traefik certResolver) and uploaded certificate modes
+- Longest-suffix domain matching with wildcard support
+
 ### Authentication & Authorization
 - Built-in username/password authentication with JWT
 - Optional Feishu (Lark) OAuth integration
+- External account linking for notification routing
 - Namespace-based resource isolation
 - Application ownership — users are assigned as owners of their applications
 
 ### Localization
-- Chinese (`zh`) and English (`en`) UI support
+- Four languages: Chinese (Simplified/Traditional), English, Japanese
 - Language preference persisted across sessions
 
 ### Ingress
 - Traefik IngressRoute CRD support for automatic HTTPS routing
+- HTTP to HTTPS redirect middleware for HTTPS applications
 - Gracefully skips ingress setup if Traefik CRDs are absent
 
 ## Requirements
