@@ -320,7 +320,7 @@ export default function EnvironmentEditPage() {
                             <FormControl>
                               <div className="relative w-full">
                                 <Textarea 
-                                  placeholder="sk-..." 
+                                  placeholder="token" 
                                   {...field} 
                                   rows={3}
                                   className="pr-10 min-h-[unset] max-h-[80px] break-all resize-none overflow-y-auto"
