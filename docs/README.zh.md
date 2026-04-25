@@ -1,9 +1,7 @@
 # OOPS
 > Kubernetes Is All You Need
 
-<p align="center">
-  <img src="../web/public/icon.png" width="120" alt="OOPS logo">
-</p>
+<img src="../web/public/icon.png" width="120" alt="OOPS logo">
 
 OOPS 是一个轻量级的基于 Kubernetes 的 PaaS（平台即服务），提供 Web UI 用于在多个集群中部署和管理容器化应用。
 

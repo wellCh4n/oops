@@ -1,9 +1,7 @@
 # OOPS
 > Kubernetes Is All You Need
 
-<p align="center">
-  <img src="web/public/icon.png" width="120" alt="OOPS logo">
-</p>
+<img src="web/public/icon.png" width="120" alt="OOPS logo">
 
 OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provides a web UI for deploying and managing containerized applications across multiple clusters.
 
