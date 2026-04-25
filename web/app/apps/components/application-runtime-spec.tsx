@@ -104,10 +104,10 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
         existing || {
           environmentName: env.environmentName,
           replicas: 0,
-          cpuRequest: "0.1",
-          cpuLimit: "1",
-          memoryRequest: "128",
-          memoryLimit: "512",
+          cpuRequest: "",
+          cpuLimit: "",
+          memoryRequest: "",
+          memoryLimit: "",
         }
       )
     })
@@ -423,7 +423,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
               <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.runtimeSpec.cpuRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
-                  <Input placeholder="0.1" {...field} autoComplete="off" className="pr-10" />
+                  <Input {...field} autoComplete="off" className="pr-10" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
                 </div>
               </FormControl>
@@ -439,7 +439,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
               <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.runtimeSpec.cpuLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
-                  <Input placeholder="1" {...field} autoComplete="off" className="pr-10" />
+                  <Input {...field} autoComplete="off" className="pr-10" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
                 </div>
               </FormControl>
@@ -455,7 +455,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
               <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.runtimeSpec.memRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
-                  <Input placeholder="128" {...field} autoComplete="off" className="pr-8" />
+                  <Input {...field} autoComplete="off" className="pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
                 </div>
               </FormControl>
@@ -471,7 +471,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
               <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.runtimeSpec.memLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
-                  <Input placeholder="512" {...field} autoComplete="off" className="pr-8" />
+                  <Input {...field} autoComplete="off" className="pr-8" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
                 </div>
               </FormControl>

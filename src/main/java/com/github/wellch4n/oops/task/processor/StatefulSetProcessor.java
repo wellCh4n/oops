@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.task.processor;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +24,29 @@ public class StatefulSetProcessor implements DeployProcessor {
         ContainerBuilder containerBuilder = new ContainerBuilder()
                 .withName(applicationName)
                 .withImage(ctx.getPipeline().getArtifact())
-                .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom()
-                .withNewResources()
-                    .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getCpuRequest(), "100m")))
-                    .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getCpuLimit(), "500m")))
-                    .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getMemoryRequest(), "128") + "Mi"))
-                    .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(runtimeSpec.getMemoryLimit(), "512") + "Mi"))
-                .endResources();
+                .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom();
+
+        boolean hasResource = StringUtils.isNotBlank(runtimeSpec.getCpuRequest())
+                || StringUtils.isNotBlank(runtimeSpec.getCpuLimit())
+                || StringUtils.isNotBlank(runtimeSpec.getMemoryRequest())
+                || StringUtils.isNotBlank(runtimeSpec.getMemoryLimit());
+
+        if (hasResource) {
+            var resourcesBuilder = new ResourceRequirementsBuilder();
+            if (StringUtils.isNotBlank(runtimeSpec.getCpuRequest())) {
+                resourcesBuilder.addToRequests("cpu", new Quantity(runtimeSpec.getCpuRequest()));
+            }
+            if (StringUtils.isNotBlank(runtimeSpec.getCpuLimit())) {
+                resourcesBuilder.addToLimits("cpu", new Quantity(runtimeSpec.getCpuLimit()));
+            }
+            if (StringUtils.isNotBlank(runtimeSpec.getMemoryRequest())) {
+                resourcesBuilder.addToRequests("memory", new Quantity(runtimeSpec.getMemoryRequest() + "Mi"));
+            }
+            if (StringUtils.isNotBlank(runtimeSpec.getMemoryLimit())) {
+                resourcesBuilder.addToLimits("memory", new Quantity(runtimeSpec.getMemoryLimit() + "Mi"));
+            }
+            containerBuilder.withResources(resourcesBuilder.build());
+        }
 
         Integer appPort = ctx.getApplicationServiceConfig().getPort();
         if (appPort != null && appPort > 0) {

@@ -384,12 +384,20 @@ public class ApplicationService {
                                 .scale(config.getReplicas());
                     }
                     if (resourceChanged) {
-                        var resources = new ResourceRequirementsBuilder()
-                                .addToRequests("cpu", new Quantity(StringUtils.defaultIfEmpty(config.getCpuRequest(), "100m")))
-                                .addToLimits("cpu", new Quantity(StringUtils.defaultIfEmpty(config.getCpuLimit(), "500m")))
-                                .addToRequests("memory", new Quantity(StringUtils.defaultIfEmpty(config.getMemoryRequest() + "Mi", "128Mi")))
-                                .addToLimits("memory", new Quantity(StringUtils.defaultIfEmpty(config.getMemoryLimit() + "Mi", "512Mi")))
-                                .build();
+                        var resourcesBuilder = new ResourceRequirementsBuilder();
+                        if (StringUtils.isNotBlank(config.getCpuRequest())) {
+                            resourcesBuilder.addToRequests("cpu", new Quantity(config.getCpuRequest()));
+                        }
+                        if (StringUtils.isNotBlank(config.getCpuLimit())) {
+                            resourcesBuilder.addToLimits("cpu", new Quantity(config.getCpuLimit()));
+                        }
+                        if (StringUtils.isNotBlank(config.getMemoryRequest())) {
+                            resourcesBuilder.addToRequests("memory", new Quantity(config.getMemoryRequest() + "Mi"));
+                        }
+                        if (StringUtils.isNotBlank(config.getMemoryLimit())) {
+                            resourcesBuilder.addToLimits("memory", new Quantity(config.getMemoryLimit() + "Mi"));
+                        }
+                        var resources = resourcesBuilder.build();
                         client.apps().statefulSets().inNamespace(namespace).withName(appName)
                                 .edit(statefulSet -> {
                                     statefulSet.getSpec().getTemplate().getSpec().getContainers()
