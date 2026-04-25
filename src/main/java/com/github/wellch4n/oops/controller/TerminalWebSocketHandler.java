@@ -52,11 +52,11 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
                 .usingListener(new ExecListener() {
                     @Override
                     public void onClose(int code, String reason) {
-                        try { session.close(); } catch (IOException ignored) {}
+                        try { session.close(); } catch (IOException _) {}
                     }
                     @Override
                     public void onFailure(Throwable t, Response response) {
-                        try { session.close(CloseStatus.SERVER_ERROR); } catch (IOException ignored) {}
+                        try { session.close(CloseStatus.SERVER_ERROR); } catch (IOException _) {}
                     }
                 })
                 .exec("sh", "-c", "export TERM=xterm-256color; exec /bin/sh");

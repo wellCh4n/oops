@@ -41,17 +41,17 @@ public class UserController {
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return userService.findById(principal.userId())
                 .map(Result::success)
-                .orElse(Result.failure("用户不存在"));
+                .orElse(Result.failure("User not found"));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> createUser(@RequestBody CreateUserRequest request) {
         if (request.username() == null || request.username().isBlank()) {
-            return Result.failure("用户名不能为空");
+            return Result.failure("Username is required");
         }
         if (request.email() == null || request.email().isBlank()) {
-            return Result.failure("邮箱不能为空");
+            return Result.failure("Email is required");
         }
         userService.createUser(request.username(), request.email(), request.password(), UserRole.USER);
         return Result.success(true);

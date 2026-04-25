@@ -107,9 +107,9 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                 try {
                     Thread.sleep(10000);
                     session.sendMessage(new TextMessage("ping"));
-                } catch (InterruptedException e) {
+                } catch (InterruptedException _) {
                     break;
-                } catch (IOException e) {
+                } catch (IOException _) {
                     break;
                 }
             }
@@ -163,7 +163,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                             try {
                                 pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
                                         .waitUntilCondition(Objects::nonNull, 5, TimeUnit.MINUTES);
-                            } catch (Exception e) {
+                            } catch (Exception _) {
                                 if (!session.isOpen()) break;
                                 Thread.sleep(1000);
                             }
@@ -178,7 +178,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                             try {
                                 pod = client.pods().inNamespace(workNamespace).withName(podName)
                                         .waitUntilCondition(p -> isContainerReady(p, containerName), 5, TimeUnit.MINUTES);
-                            } catch (Exception e) {
+                            } catch (Exception _) {
                                 if (!session.isOpen()) break;
                                 Thread.sleep(1000);
                             }
@@ -210,12 +210,12 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                                     }
                                 }
                                 break; // clean EOF — container done
-                            } catch (Exception e) {
+                            } catch (Exception _) {
                                 if (!session.isOpen()) break;
                                 retries++;
                                 var refreshedPod = client.pods().inNamespace(workNamespace).withName(podName).get();
                                 if (isContainerTerminated(refreshedPod, containerName)) break;
-                                try { Thread.sleep(Math.min(2000L * retries, 30000L)); } catch (InterruptedException ie) { break; }
+                                try { Thread.sleep(Math.min(2000L * retries, 30000L)); } catch (InterruptedException _) { break; }
                             }
                         }
                     }
@@ -234,7 +234,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                             "data", "Failed to watch pipeline logs: " + e.getMessage()
                         ));
                         session.sendMessage(new TextMessage(errorJson));
-                    } catch (IOException ignored) {}
+                    } catch (IOException _) {}
                 }
             }
         });

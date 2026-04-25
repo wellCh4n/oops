@@ -77,13 +77,13 @@ public class PodLogWebSocketHandler extends AbstractWebSocketHandler {
                 if (session.isOpen()) {
                     try {
                         session.sendMessage(new TextMessage("Error reading logs: " + e.getMessage()));
-                    } catch (IOException ignored) {}
+                    } catch (IOException _) {}
                 }
             } finally {
                 if (session.isOpen()) {
                     try {
                         session.close();
-                    } catch (IOException ignored) {}
+                    } catch (IOException _) {}
                 }
             }
         });

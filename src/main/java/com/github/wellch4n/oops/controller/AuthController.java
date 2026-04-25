@@ -28,7 +28,7 @@ public class AuthController {
     public Result<LoginResponse> login(@RequestBody LoginRequest request) {
         Optional<User> userOpt = userService.findByUsernameOrEmail(request.username());
         if (userOpt.isEmpty() || !userService.checkPassword(userOpt.get(), request.password())) {
-            return Result.failure("用户名或密码错误");
+            return Result.failure("Invalid username or password");
         }
         User user = userOpt.get();
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());

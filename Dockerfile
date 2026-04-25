@@ -13,7 +13,7 @@ COPY web/ ./
 RUN pnpm build
 
 # --- 阶段 2: 后端构建 (修正 Maven 镜像源) ---
-FROM maven:3.9-eclipse-temurin-21 AS backend-builder
+FROM maven:3.9-eclipse-temurin-25 AS backend-builder
 WORKDIR /build/backend
 
 # 强力手段：直接覆盖 Maven 默认的 settings.xml 为阿里云源

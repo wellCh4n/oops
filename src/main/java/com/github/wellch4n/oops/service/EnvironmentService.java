@@ -72,20 +72,20 @@ public class EnvironmentService {
         String workNamespace = request.getWorkNamespace();
 
         if (kubernetesApiServer == null || !kubernetesApiServer.isValid()) {
-            return new KubernetesValidationResult(false, "CONNECTION_FAILED", "无法连接到 Kubernetes API Server");
+            return new KubernetesValidationResult(false, "CONNECTION_FAILED", "Unable to connect to Kubernetes API Server");
         }
 
         if (workNamespace == null || workNamespace.isEmpty()) {
-             return new KubernetesValidationResult(true, "VALID", "连接成功");
+             return new KubernetesValidationResult(true, "VALID", "Connection successful");
         }
 
         try (var client = kubernetesApiServer.fabric8Client()) {
             if (client.namespaces().withName(workNamespace).get() == null) {
-                return new KubernetesValidationResult(false, "NAMESPACE_MISSING", "工作空间不存在");
+                return new KubernetesValidationResult(false, "NAMESPACE_MISSING", "Work namespace does not exist");
             }
-            return new KubernetesValidationResult(true, "VALID", "验证通过");
+            return new KubernetesValidationResult(true, "VALID", "Validation passed");
         } catch (Exception e) {
-            return new KubernetesValidationResult(false, "ERROR", "验证过程中发生错误: " + e.getMessage());
+            return new KubernetesValidationResult(false, "ERROR", "Validation failed: " + e.getMessage());
         }
     }
 
@@ -99,7 +99,7 @@ public class EnvironmentService {
                     .create();
             return true;
         } catch (Exception e) {
-            throw new RuntimeException("创建工作空间失败: " + e.getMessage());
+            throw new RuntimeException("Failed to create work namespace: " + e.getMessage());
         }
     }
 

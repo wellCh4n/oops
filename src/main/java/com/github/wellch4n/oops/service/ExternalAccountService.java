@@ -36,7 +36,7 @@ public class ExternalAccountService {
         try {
             return getEnabledStrategy(provider).authenticate(code);
         } catch (IOException e) {
-            throw new BizException("登录失败", e);
+            throw new BizException("Authentication failed", e);
         }
     }
 

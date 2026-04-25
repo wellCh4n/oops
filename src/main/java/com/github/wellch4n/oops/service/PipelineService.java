@@ -145,7 +145,7 @@ public class PipelineService {
             if (isClosed.compareAndSet(false, true)) {
                 log.info("Closing resources for pipeline: {}", id);
                 while (!resources.isEmpty()) {
-                    try { resources.poll().close(); } catch (Exception ignored) {}
+                    try { resources.poll().close(); } catch (Exception _) {}
                 }
             }
         };

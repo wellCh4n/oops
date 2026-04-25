@@ -42,32 +42,32 @@ public class NodeService {
     }
 
     private NodeStatusResponse toResponse(Node node) {
-        NodeStatusResponse res = new NodeStatusResponse();
-        res.setName(node.getMetadata() != null ? node.getMetadata().getName() : null);
-        res.setCreationTimestamp(node.getMetadata() != null ? node.getMetadata().getCreationTimestamp() : null);
+        NodeStatusResponse response = new NodeStatusResponse();
+        response.setName(node.getMetadata() != null ? node.getMetadata().getName() : null);
+        response.setCreationTimestamp(node.getMetadata() != null ? node.getMetadata().getCreationTimestamp() : null);
 
-        res.setReady(isNodeReady(node));
-        res.setRoles(extractRoles(node));
-        res.setInternalIP(extractInternalIP(node));
+        response.setReady(isNodeReady(node));
+        response.setRoles(extractRoles(node));
+        response.setInternalIP(extractInternalIP(node));
 
         if (node.getStatus() != null && node.getStatus().getNodeInfo() != null) {
-            res.setKubeletVersion(node.getStatus().getNodeInfo().getKubeletVersion());
-            res.setOsImage(node.getStatus().getNodeInfo().getOsImage());
-            res.setContainerRuntimeVersion(node.getStatus().getNodeInfo().getContainerRuntimeVersion());
+            response.setKubeletVersion(node.getStatus().getNodeInfo().getKubeletVersion());
+            response.setOsImage(node.getStatus().getNodeInfo().getOsImage());
+            response.setContainerRuntimeVersion(node.getStatus().getNodeInfo().getContainerRuntimeVersion());
         }
 
         Map<String, Quantity> allocatable = node.getStatus() != null ? node.getStatus().getAllocatable() : null;
-        res.setCpu(quantityToString(allocatable != null ? allocatable.get("cpu") : null));
-        res.setMemory(formatMemory(allocatable != null ? allocatable.get("memory") : null));
-        res.setPods(quantityToString(allocatable != null ? allocatable.get("pods") : null));
-        return res;
+        response.setCpu(quantityToString(allocatable != null ? allocatable.get("cpu") : null));
+        response.setMemory(formatMemory(allocatable != null ? allocatable.get("memory") : null));
+        response.setPods(quantityToString(allocatable != null ? allocatable.get("pods") : null));
+        return response;
     }
 
     private boolean isNodeReady(Node node) {
         if (node.getStatus() == null || node.getStatus().getConditions() == null) return false;
         return node.getStatus().getConditions().stream()
                 .filter(Objects::nonNull)
-                .anyMatch(c -> "Ready".equals(c.getType()) && "True".equals(c.getStatus()));
+                .anyMatch(condition -> "Ready".equals(condition.getType()) && "True".equals(condition.getStatus()));
     }
 
     private String extractRoles(Node node) {
@@ -75,9 +75,9 @@ public class NodeService {
         var labels = node.getMetadata().getLabels();
         String prefix = "node-role.kubernetes.io/";
         var roles = labels.keySet().stream()
-                .filter(k -> k != null && k.startsWith(prefix))
-                .map(k -> {
-                    String role = k.substring(prefix.length());
+                .filter(label -> label != null && label.startsWith(prefix))
+                .map(label -> {
+                    String role = label.substring(prefix.length());
                     return role.isEmpty() ? "master" : role;
                 })
                 .distinct()
@@ -93,7 +93,7 @@ public class NodeService {
     private String extractInternalIP(Node node) {
         if (node.getStatus() == null || node.getStatus().getAddresses() == null) return "-";
         List<NodeAddress> addresses = node.getStatus().getAddresses().stream().filter(Objects::nonNull).toList();
-        var internal = addresses.stream().filter(a -> "InternalIP".equals(a.getType())).findFirst().orElse(null);
+        var internal = addresses.stream().filter(address -> "InternalIP".equals(address.getType())).findFirst().orElse(null);
         if (internal != null && internal.getAddress() != null && !internal.getAddress().isEmpty()) {
             return internal.getAddress();
         }
@@ -101,27 +101,27 @@ public class NodeService {
         return first != null && first.getAddress() != null && !first.getAddress().isEmpty() ? first.getAddress() : "-";
     }
 
-    private String quantityToString(Quantity q) {
-        if (q == null) return "-";
-        return q.toString();
+    private String quantityToString(Quantity quantity) {
+        if (quantity == null) return "-";
+        return quantity.toString();
     }
 
-    private String formatMemory(Quantity q) {
-        if (q == null) return "-";
-        String s = q.toString();
-        if (s == null || s.isEmpty()) return "-";
-        if (s.endsWith("Ki")) {
+    private String formatMemory(Quantity quantity) {
+        if (quantity == null) return "-";
+        String quantityString = quantity.toString();
+        if (quantityString == null || quantityString.isEmpty()) return "-";
+        if (quantityString.endsWith("Ki")) {
             try {
-                BigDecimal ki = new BigDecimal(s.substring(0, s.length() - 2));
+                BigDecimal ki = new BigDecimal(quantityString.substring(0, quantityString.length() - 2));
                 BigDecimal mb = ki.divide(new BigDecimal("1024"), 1, RoundingMode.HALF_UP);
                 if (mb.stripTrailingZeros().scale() <= 0) {
                     return mb.setScale(0, RoundingMode.HALF_UP) + " MB";
                 }
                 return mb + " MB";
-            } catch (Exception ignored) {
-                return s;
+            } catch (Exception _) {
+                return quantityString;
             }
         }
-        return s;
+        return quantityString;
     }
 }

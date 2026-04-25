@@ -44,14 +44,14 @@ public class DomainService {
 
     public Domain get(String id) {
         return domainRepository.findById(id)
-                .orElseThrow(() -> new BizException("Domain 不存在: " + id));
+                .orElseThrow(() -> new BizException("Domain not found: " + id));
     }
 
     public Domain create(DomainRequest request) {
         String host = normalizeHost(request.getHost());
         validateHost(host);
         if (domainRepository.existsByHost(host)) {
-            throw new BizException("域名已存在: " + host);
+            throw new BizException("Domain already exists: " + host);
         }
 
         Domain domain = new Domain();
@@ -100,7 +100,7 @@ public class DomainService {
 
         DomainCertMode mode = request.getCertMode();
         if (mode == null) {
-            throw new BizException("启用 HTTPS 时必须指定证书模式");
+            throw new BizException("Certificate mode is required when HTTPS is enabled");
         }
         domain.setCertMode(mode);
 
@@ -117,7 +117,7 @@ public class DomainService {
         boolean hasNewKey = request.getKeyPem() != null && !request.getKeyPem().isBlank();
 
         if (hasNewCert != hasNewKey) {
-            throw new BizException("证书和私钥必须同时提供");
+            throw new BizException("Certificate and private key must be provided together");
         }
 
         if (hasNewCert) {
@@ -129,7 +129,7 @@ public class DomainService {
                 throw new BizException(e.getMessage(), e);
             }
             if (!PemCertificateParser.hostMatches(domain.getHost(), meta.getDnsNames())) {
-                throw new BizException("证书与域名不匹配，证书适用于: "
+                throw new BizException("Certificate does not match domain, certificate is for: "
                         + String.join(", ", meta.getDnsNames()));
             }
             domain.setCertPem(request.getCertPem());
@@ -137,7 +137,7 @@ public class DomainService {
             domain.setCertSubject(meta.getSubject());
             domain.setCertNotAfter(meta.getNotAfter());
         } else if (domain.getCertPem() == null || domain.getCertPem().isBlank()) {
-            throw new BizException("UPLOADED 模式需要上传证书和私钥");
+            throw new BizException("UPLOADED mode requires certificate and private key");
         }
     }
 
@@ -152,10 +152,10 @@ public class DomainService {
 
     private void validateHost(String host) {
         if (host.isEmpty()) {
-            throw new BizException("域名不能为空");
+            throw new BizException("Domain host is required");
         }
         if (!HOST_PATTERN.matcher(host).matches()) {
-            throw new BizException("域名格式不正确：" + host);
+            throw new BizException("Invalid domain format: " + host);
         }
     }
 }

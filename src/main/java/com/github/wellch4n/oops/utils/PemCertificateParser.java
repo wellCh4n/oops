@@ -39,11 +39,11 @@ public final class PemCertificateParser {
 
     public static CertMeta parseCertificate(String certPem) {
         if (certPem == null || certPem.isBlank()) {
-            throw new IllegalArgumentException("证书内容为空");
+            throw new IllegalArgumentException("Certificate content is empty");
         }
         Matcher m = CERT_BLOCK.matcher(certPem);
         if (!m.find()) {
-            throw new IllegalArgumentException("证书格式不正确，应为 PEM（-----BEGIN CERTIFICATE-----）");
+            throw new IllegalArgumentException("Invalid certificate format, expected PEM (-----BEGIN CERTIFICATE-----)");
         }
         try {
             CertificateFactory factory = CertificateFactory.getInstance("X.509");
@@ -54,7 +54,7 @@ public final class PemCertificateParser {
             String subject = cert.getSubjectX500Principal().getName();
             return new CertMeta(subject, notAfter, extractDnsNames(cert, subject));
         } catch (Exception e) {
-            throw new IllegalArgumentException("无法解析证书：" + e.getMessage(), e);
+            throw new IllegalArgumentException("Failed to parse certificate: " + e.getMessage(), e);
         }
     }
 
@@ -98,29 +98,29 @@ public final class PemCertificateParser {
 
     public static void validatePrivateKey(String keyPem) {
         if (keyPem == null || keyPem.isBlank()) {
-            throw new IllegalArgumentException("私钥内容为空");
+            throw new IllegalArgumentException("Private key content is empty");
         }
         if (LEGACY_RSA_KEY_BLOCK.matcher(keyPem).find()) {
             throw new IllegalArgumentException(
-                    "不支持 PKCS#1 格式私钥，请使用 openssl pkcs8 -topk8 -nocrypt 转换为 PKCS#8 (-----BEGIN PRIVATE KEY-----)");
+                    "PKCS#1 format is not supported, please convert to PKCS#8 using: openssl pkcs8 -topk8 -nocrypt (-----BEGIN PRIVATE KEY-----)");
         }
         Matcher m = PKCS8_KEY_BLOCK.matcher(keyPem);
         if (!m.find()) {
-            throw new IllegalArgumentException("私钥格式不正确，应为 PKCS#8 PEM（-----BEGIN PRIVATE KEY-----）");
+            throw new IllegalArgumentException("Invalid private key format, expected PKCS#8 PEM (-----BEGIN PRIVATE KEY-----)");
         }
         byte[] der = Base64.getMimeDecoder().decode(m.group(1).trim());
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(der);
-        if (!tryKeyFactory("RSA", keySpec) && !tryKeyFactory("EC", keySpec)) {
-            throw new IllegalArgumentException("无法解析私钥（既不是 RSA 也不是 EC）");
+        if (isInvalidKeyFactory("RSA", keySpec) && isInvalidKeyFactory("EC", keySpec)) {
+            throw new IllegalArgumentException("Failed to parse private key (neither RSA nor EC)");
         }
     }
 
-    private static boolean tryKeyFactory(String algorithm, PKCS8EncodedKeySpec keySpec) {
+    private static boolean isInvalidKeyFactory(String algorithm, PKCS8EncodedKeySpec keySpec) {
         try {
             KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
-            return true;
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             return false;
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException _) {
+            return true;
         }
     }
 
