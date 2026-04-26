@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.task;
 
 import com.github.wellch4n.oops.config.IngressConfig;
+import com.github.wellch4n.oops.config.OopsConstants;
 import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.data.ApplicationServiceConfig;
@@ -15,8 +16,6 @@ import com.github.wellch4n.oops.task.processor.NamespaceProcessor;
 import com.github.wellch4n.oops.task.processor.ServiceProcessor;
 import com.github.wellch4n.oops.task.processor.StatefulSetProcessor;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.base.PatchContext;
-import io.fabric8.kubernetes.client.dsl.base.PatchType;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -53,15 +52,9 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     @Override
     public Boolean call() {
         try (KubernetesClient client = environment.getKubernetesApiServer().fabric8Client()) {
-            PatchContext patchContext = new PatchContext.Builder()
-                    .withPatchType(PatchType.SERVER_SIDE_APPLY)
-                    .withFieldManager("oops")
-                    .withForce(true)
-                    .build();
-
             DeployContext ctx = new DeployContext(
                     pipeline, application, environment, runtimeSpec, healthCheck,
-                    applicationServiceConfig, ingressConfig, client, patchContext,
+                    applicationServiceConfig, ingressConfig, client, OopsConstants.PATCH_CONTEXT,
                     SERVICE_PORT, Map.of(
                             "oops.type", OopsTypes.APPLICATION.name(),
                             "oops.app.name", application.getName())

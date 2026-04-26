@@ -1,15 +1,22 @@
 package com.github.wellch4n.oops.service;
 
+import com.github.wellch4n.oops.config.OopsConstants;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.EnvironmentRepository;
 import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.utils.ResourceNameChecker;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 /**
@@ -17,6 +24,7 @@ import org.springframework.stereotype.Service;
  * @date 2025/7/31
  */
 
+@Slf4j
 @Service
 public class EnvironmentService {
 
@@ -50,6 +58,7 @@ public class EnvironmentService {
         existingEnvironment.setWorkNamespace(environment.getWorkNamespace());
         existingEnvironment.setImageRepository(environment.getImageRepository());
 
+        syncDockerHubSecret(existingEnvironment);
         environmentRepository.saveAndFlush(existingEnvironment);
         return true;
     }
@@ -64,6 +73,7 @@ public class EnvironmentService {
         if (existing != null) {
             throw new BizException("Environment already exists: " + environment.getName());
         }
+        syncDockerHubSecret(environment);
         return environmentRepository.save(environment);
     }
 
@@ -122,6 +132,49 @@ public class EnvironmentService {
         private boolean success;
         private String status; // VALID, CONNECTION_FAILED, NAMESPACE_MISSING, ERROR
         private String message;
+    }
+
+    private void syncDockerHubSecret(Environment environment) {
+        Environment.ImageRepository imageRepository = environment.getImageRepository();
+        String workNamespace = environment.getWorkNamespace();
+        Environment.KubernetesApiServer kubernetesApiServer = environment.getKubernetesApiServer();
+
+        if (imageRepository == null
+                || StringUtils.isAnyEmpty(workNamespace, imageRepository.getUrl(), imageRepository.getUsername(), imageRepository.getPassword())) {
+            return;
+        }
+        if (kubernetesApiServer == null) {
+            return;
+        }
+
+        String registryUrl = imageRepository.getUrl();
+        String username = imageRepository.getUsername();
+        String password = imageRepository.getPassword();
+
+        String auth = Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+        String dockerConfig = String.format(
+                "{\"auths\":{\"%s\":{\"username\":\"%s\",\"password\":\"%s\",\"auth\":\"%s\"}}}",
+                registryUrl, username, password, auth);
+
+        Map<String, String> data = Map.of(
+                ".dockerconfigjson",
+                Base64.getEncoder().encodeToString(dockerConfig.getBytes(StandardCharsets.UTF_8)));
+
+        var secret = new SecretBuilder()
+                .withNewMetadata()
+                    .withName("dockerhub")
+                    .withNamespace(workNamespace)
+                .endMetadata()
+                .withType("kubernetes.io/dockerconfigjson")
+                .withData(data)
+                .build();
+
+        try (var client = kubernetesApiServer.fabric8Client()) {
+            client.secrets().inNamespace(workNamespace).resource(secret).patch(OopsConstants.PATCH_CONTEXT);
+            log.info("Synced dockerhub secret to namespace: {}", workNamespace);
+        } catch (Exception e) {
+            throw new BizException("Failed to sync dockerhub secret to namespace " + workNamespace + ": " + e.getMessage(), e);
+        }
     }
 
     public Boolean deleteEnvironment(String id) {

@@ -24,6 +24,7 @@ public class StatefulSetProcessor implements DeployProcessor {
         ContainerBuilder containerBuilder = new ContainerBuilder()
                 .withName(applicationName)
                 .withImage(ctx.getPipeline().getArtifact())
+                .withImagePullPolicy("IfNotPresent")
                 .addNewEnvFrom().withNewConfigMapRef(applicationName, true).endEnvFrom();
 
         boolean hasResource = StringUtils.isNotBlank(runtimeSpec.getCpuRequest())
