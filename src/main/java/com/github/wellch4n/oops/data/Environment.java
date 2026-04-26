@@ -91,6 +91,7 @@ public class Environment {
                     .build();
         }
 
+        @JsonIgnore
         public boolean isValid() {
             try (var client = fabric8Client()) {
                 client.namespaces().list();
@@ -120,6 +121,7 @@ public class Environment {
             return new ImageRepository(url, username, password);
         }
 
+        @JsonIgnore
         public boolean isValid() {
             if (StringUtils.isAnyEmpty(this.url, this.username, this.password)) return false;
 

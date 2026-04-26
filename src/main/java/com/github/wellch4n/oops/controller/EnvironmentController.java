@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.controller;
 
 import com.github.wellch4n.oops.data.Environment;
+import com.github.wellch4n.oops.objects.EnvironmentResponse;
 import com.github.wellch4n.oops.objects.Result;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import java.util.List;
@@ -22,13 +23,17 @@ public class EnvironmentController {
     }
 
     @GetMapping
-    public Result<List<Environment>> getEnvironments() {
-        return Result.success(environmentService.getEnvironments());
+    public Result<List<EnvironmentResponse>> getEnvironments() {
+        List<EnvironmentResponse> responses = environmentService.getEnvironments().stream()
+                .map(EnvironmentResponse::from)
+                .toList();
+        return Result.success(responses);
     }
 
     @GetMapping("{id}")
-    public Result<Environment> getEnvironment(@PathVariable String id) {
-        return Result.success(environmentService.getEnvironmentById(id));
+    public Result<EnvironmentResponse> getEnvironment(@PathVariable String id) {
+        Environment environment = environmentService.getEnvironmentById(id);
+        return Result.success(environment == null ? null : EnvironmentResponse.from(environment));
     }
 
     @PutMapping("{id}")
@@ -38,8 +43,8 @@ public class EnvironmentController {
     }
 
     @PostMapping
-    public Result<Environment> createEnvironment(@RequestBody Environment environment) {
-        return Result.success(environmentService.createEnvironment(environment));
+    public Result<EnvironmentResponse> createEnvironment(@RequestBody Environment environment) {
+        return Result.success(EnvironmentResponse.from(environmentService.createEnvironment(environment)));
     }
 
     @DeleteMapping("{id}")
