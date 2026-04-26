@@ -54,6 +54,8 @@ export function DataTable<TData, TValue>({
     }
   }, [data, getRowId, renderExpandedRow])
 
+  // TanStack Table returns non-memoizable functions; React Compiler skips this component intentionally.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,

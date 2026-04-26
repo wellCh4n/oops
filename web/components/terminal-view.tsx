@@ -7,7 +7,6 @@ import { WebLinksAddon } from "@xterm/addon-web-links"
 import "@xterm/xterm/css/xterm.css"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
-import { Badge } from "@/components/ui/badge"
 
 interface TerminalViewProps {
     namespace: string
