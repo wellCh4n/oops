@@ -16,10 +16,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+@ConditionalOnProperty(prefix = "oops.feishu", name = "enabled", havingValue = "true")
 public class FeishuMessageStrategy implements ExternalMessageStrategy {
 
     private final ExternalAccountRepository externalAccountRepository;

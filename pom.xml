@@ -200,4 +200,33 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <configuration>
+                            <metadataRepository>
+                                <enabled>true</enabled>
+                            </metadataRepository>
+                            <buildArgs>
+                                <buildArg>--no-fallback</buildArg>
+                                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                                <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                                <buildArg>-H:+AddAllCharsets</buildArg>
+                                <buildArg>--initialize-at-run-time=okhttp3.internal.platform.Platform,okhttp3.internal.platform.Android10Platform,okhttp3.internal.platform.ConscryptPlatform,okhttp3.internal.platform.Jdk9Platform</buildArg>
+                                <buildArg>--initialize-at-run-time=com.lark.oapi.okhttp.internal.platform.Platform,com.lark.oapi.okhttp.internal.platform.Android10Platform,com.lark.oapi.okhttp.internal.platform.ConscryptPlatform,com.lark.oapi.okhttp.internal.platform.Jdk9Platform</buildArg>
+                                <buildArg>--initialize-at-run-time=org.sqlite.SQLiteJDBCLoader</buildArg>
+                                <buildArg>-J-Xmx12g</buildArg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
 </project>

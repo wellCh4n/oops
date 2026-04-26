@@ -18,9 +18,11 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(prefix = "oops.feishu", name = "enabled", havingValue = "true")
 public class FeishuAuthStrategy implements ExternalAuthStrategy {
 
     private final ExternalAccountRepository externalAccountRepository;
