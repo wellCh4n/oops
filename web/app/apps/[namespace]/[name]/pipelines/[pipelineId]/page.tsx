@@ -219,7 +219,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
             setLogs(prev => [...prev, jsonData.data])
             setActiveStep(jsonData.container)
           } else if (isErrorMessage(jsonData)) {
-            console.error("Pipeline error:", jsonData.data)
+            setLogs(prev => [...prev, `[ERROR] ${jsonData.data}`])
           }
         } catch {
           // Fallback for non-JSON messages (backward compatibility)
@@ -231,7 +231,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               console.error("Failed to parse legacy steps format", parseError)
             }
           } else if (message.startsWith("ERROR:")) {
-            console.error("Pipeline error:", message.substring(6))
+            setLogs(prev => [...prev, `[ERROR] ${message.substring(6)}`])
           } else if (message.includes(":")) {
             const [stepName, ...logParts] = message.split(":")
             setLogs(prev => [...prev, logParts.join(":")])
@@ -429,7 +429,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
             <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                 {logs.map((log, i) => (
-                  <div key={i}>{log}</div>
+                  <div key={i} className={log.startsWith("[ERROR]") ? "text-red-400" : undefined}>{log}</div>
                 ))}
                 {logs.length === 0 && <div className="text-gray-500">Waiting for logs...</div>}
               </div>

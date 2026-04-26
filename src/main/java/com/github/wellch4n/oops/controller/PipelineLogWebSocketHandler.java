@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
+import com.github.wellch4n.oops.enums.PipelineStatus;
 import com.github.wellch4n.oops.service.EnvironmentService;
 import com.github.wellch4n.oops.service.PipelineService;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -27,6 +28,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
 public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
+
+    private static final String LOGS_EXPIRED_MESSAGE = "Logs expired: the build job has been cleaned up";
 
     private final EnvironmentService environmentService;
     private final PipelineService pipelineService;
@@ -87,6 +90,12 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                         "data", containers
                     ));
                     session.sendMessage(new TextMessage(stepsJson));
+                } else if (isPipelineFinished(pipeline)) {
+                    String errorJson = objectMapper.writeValueAsString(Map.of(
+                        "type", "error",
+                        "data", LOGS_EXPIRED_MESSAGE
+                    ));
+                    session.sendMessage(new TextMessage(errorJson));
                 }
             }
         } catch (Exception e) {
@@ -140,9 +149,10 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                     var job = client.batch().v1().jobs().inNamespace(workNamespace).withName(jobName).get();
                     if (job == null) {
                         if (session.isOpen()) {
+                            String message = isPipelineFinished(pipeline) ? LOGS_EXPIRED_MESSAGE : "Job not found";
                             String errorJson = objectMapper.writeValueAsString(Map.of(
                                 "type", "error",
-                                "data", "Job not found"
+                                "data", message
                             ));
                             session.sendMessage(new TextMessage(errorJson));
                         }
@@ -255,6 +265,15 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                 Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
         ).anyMatch(s -> s.getName().equals(containerName) &&
                 (s.getState().getRunning() != null || s.getState().getTerminated() != null));
+    }
+
+    private boolean isPipelineFinished(Pipeline pipeline) {
+        if (pipeline == null) return false;
+        PipelineStatus status = pipeline.getStatus();
+        return status == PipelineStatus.SUCCEEDED
+                || status == PipelineStatus.ERROR
+                || status == PipelineStatus.STOPPED
+                || status == PipelineStatus.BUILD_SUCCEEDED;
     }
 
     @Override
