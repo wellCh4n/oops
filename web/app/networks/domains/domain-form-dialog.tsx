@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -100,6 +101,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props)
       <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>{isEdit ? t("domains.editTitle") : t("domains.createTitle")}</DialogTitle>
+          <DialogDescription>{isEdit ? t("domains.editDesc") : t("domains.createDesc")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
           <div className="space-y-4 overflow-y-auto px-6 pb-4">

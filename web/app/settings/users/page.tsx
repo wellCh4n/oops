@@ -5,7 +5,7 @@ import { Plus, Eye, EyeOff, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
@@ -183,6 +183,7 @@ export default function UsersPage() {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>{t("users.createTitle")}</DialogTitle>
+                    <DialogDescription>{t("users.createDesc")}</DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreate} className="space-y-4">
                     <div className="space-y-2">
@@ -278,6 +279,7 @@ export default function UsersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("users.editTitle")}</DialogTitle>
+            <DialogDescription>{t("users.editDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -320,6 +322,7 @@ export default function UsersPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("users.changePwdTitle")}</DialogTitle>
+            <DialogDescription>{t("users.changePwdDesc")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

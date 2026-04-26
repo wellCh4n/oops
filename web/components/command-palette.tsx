@@ -14,6 +14,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
@@ -237,6 +238,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent showCloseButton={false} className="p-0 gap-0 max-w-2xl overflow-hidden fixed top-[20%] translate-y-0 -translate-x-1/2">
           <DialogTitle className="sr-only">{t("cmd.title")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("cmd.description")}</DialogDescription>
           <Command
             className="rounded-lg border shadow-md"
             value={commandValue}

@@ -33,6 +33,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
+  AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
@@ -58,13 +59,11 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const { theme, setTheme } = useTheme()
   const { locale, setLocale, t } = useLanguage()
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
-  const loadFeatures = useFeaturesStore((s) => s.load)
   const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
-    loadFeatures()
-  }, [loadFeatures])
+  }, [])
 
   function handleLogout() {
     clearAuth()
@@ -84,6 +83,7 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("sidebar.logoutConfirm")}</AlertDialogTitle>
+          <AlertDialogDescription>{t("sidebar.logoutDescription")}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t("sidebar.cancel")}</AlertDialogCancel>
@@ -98,7 +98,7 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
             <div className="flex items-center px-1 py-1">
               <Link href="/" className="flex items-center gap-2 min-w-0">
                 <div className={`relative aspect-square overflow-hidden shrink-0 ${open ? "size-12 rounded-lg" : "size-6 rounded-md"}`}>
-                  <Image src="/icon.png" alt="Oops" fill className="object-cover dark:[filter:url(#white-stroke)]" />
+                  <Image src="/icon.png" alt="Oops" fill sizes="48px" priority className="object-cover dark:[filter:url(#white-stroke)]" />
                 </div>
                 {open && (
                   <div className="flex flex-col gap-0.5 leading-none min-w-0">
