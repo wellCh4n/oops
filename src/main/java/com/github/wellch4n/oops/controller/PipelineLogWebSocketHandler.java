@@ -90,13 +90,9 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
                         "data", containers
                     ));
                     session.sendMessage(new TextMessage(stepsJson));
-                } else if (isPipelineFinished(pipeline)) {
-                    String errorJson = objectMapper.writeValueAsString(Map.of(
-                        "type", "error",
-                        "data", LOGS_EXPIRED_MESSAGE
-                    ));
-                    session.sendMessage(new TextMessage(errorJson));
                 }
+                // Note: when job is null, startPipelineLogWatch handles the error message
+                // (either "Logs expired" or "Job not found") to avoid duplicate messages.
             }
         } catch (Exception e) {
             // Send error as JSON format
