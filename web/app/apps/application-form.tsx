@@ -202,7 +202,7 @@ export function ApplicationForm({
           </TabsList>
         </div>
 
-        <TabsContent value="app-info" className="rounded-md border bg-background p-4">
+        <TabsContent value="app-info">
           {loading ? <TabContentSkeleton rows={4} /> : (
             <ApplicationBasicInfo
               ref={basicInfoRef}
@@ -212,7 +212,7 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="build-config" className="rounded-md border bg-background p-4">
+        <TabsContent value="build-config">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationBuildInfo
               ref={buildInfoRef}
@@ -231,7 +231,7 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="service-info" className="rounded-md border bg-background p-4">
+        <TabsContent value="service-info">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationServiceInfo
               ref={serviceInfoRef}
@@ -243,7 +243,7 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="runtime-spec" className="rounded-md border bg-background p-4">
+        <TabsContent value="runtime-spec">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationRuntimeSpec
               ref={runtimeSpecRef}
@@ -256,7 +256,7 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="config-info" className="rounded-md border bg-background p-4">
+        <TabsContent value="config-info">
           {loading ? <TabContentSkeleton rows={3} /> : (
             <ApplicationConfigInfo
               ref={configInfoRef}

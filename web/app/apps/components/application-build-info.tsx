@@ -19,7 +19,7 @@ import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer } from "lucide-react"
+import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -54,7 +54,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     defaultValues: {
       sourceType: initialBuildConfig?.sourceType || "GIT",
       repository: initialBuildConfig?.repository || "",
-      dockerFile: initialBuildConfig?.dockerFile || "Dockerfile",
+      dockerFileConfig: initialBuildConfig?.dockerFileConfig || { type: "BUILTIN", path: "Dockerfile" },
       buildImage: initialBuildConfig?.buildImage || "",
       environmentConfigs: initialEnvConfigs,
     },
@@ -72,13 +72,14 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const { t } = useLanguage()
   const sourceType = form.watch("sourceType")
+  const dockerFileConfigValue = form.watch("dockerFileConfig")
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
   const featuresLoaded = useFeaturesStore((s) => s.loaded)
 
   const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
-    dockerFile: values.dockerFile ?? "",
+    dockerFileConfig: values.dockerFileConfig ?? { type: "BUILTIN", path: "Dockerfile" },
     buildImage: values.buildImage ?? "",
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
       environmentName: config.environmentName,
@@ -141,7 +142,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
         repository: data.sourceType === "GIT" ? data.repository : undefined,
-        dockerFile: data.dockerFile,
+        dockerFileConfig: data.dockerFileConfig,
         buildImage: data.buildImage,
         namespace,
         applicationName,
@@ -189,7 +190,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className="w-full">
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {/* Global Build Config Section */}
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
@@ -240,19 +241,98 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
               <div className="text-sm text-muted-foreground">{t("apps.build.zipConfiguredInPublish")}</div>
             )}
 
-            <FormField
-              control={form.control}
-              name="dockerFile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
-                  <FormControl>
-                    <Input autoComplete="off" placeholder="Dockerfile" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid gap-2">
+              <Label className="flex items-center gap-1">
+                <FileCode className="h-3.5 w-3.5" />
+                {t("apps.build.dockerfile")}
+              </Label>
+              <div className="grid gap-3 border rounded-md p-3">
+              <div className="flex items-center gap-1 text-sm font-medium">
+                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                {t("apps.build.dockerfileType")}
+              </div>
+              <FormField
+                control={form.control}
+                name="dockerFileConfig.type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Tabs value={field.value || "BUILTIN"} onValueChange={(value) => {
+                        field.onChange(value)
+                        const current = form.getValues("dockerFileConfig")
+                        form.setValue("dockerFileConfig", {
+                          type: value as "BUILTIN" | "USER",
+                          path: value === "BUILTIN" ? (current?.path || "Dockerfile") : current?.path,
+                          content: current?.content,
+                        })
+                      }}>
+                        <TabsList className="justify-start h-auto flex-wrap">
+                          <TabsTrigger value="BUILTIN" className="px-6 cursor-pointer">
+                            {t("apps.build.dockerfileBuiltin")}
+                          </TabsTrigger>
+                          <TabsTrigger value="USER" className="px-6 cursor-pointer">
+                            {t("apps.build.dockerfileUser")}
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className={(dockerFileConfigValue?.type || "BUILTIN") === "BUILTIN" ? "" : "hidden"}>
+                <FormField
+                  control={form.control}
+                  name="dockerFileConfig.path"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><FolderOpen className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
+                      <FormControl>
+                        <Input autoComplete="off" placeholder="Dockerfile" {...field} value={field.value || ""} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className={(dockerFileConfigValue?.type || "BUILTIN") === "USER" ? "" : "hidden"}>
+                <FormField
+                  control={form.control}
+                  name="dockerFileConfig.content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfileContent")}</FormLabel>
+                      <FormControl>
+                        <div className="border rounded-md overflow-hidden">
+                          <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">
+                            <span>dockerfile</span>
+                          </div>
+                          <div className="h-[120px]">
+                            <Editor
+                              height="100%"
+                              defaultLanguage="dockerfile"
+                              theme={editorTheme}
+                              value={field.value || ""}
+                              onChange={field.onChange}
+                              options={{
+                                minimap: { enabled: false },
+                                lineNumbers: "on",
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                padding: { top: 10 },
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            </div>
             </div>
           </div>
 
@@ -312,7 +392,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                           <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">
                             <span>shell</span>
                           </div>
-                          <div className="h-[200px]">
+                          <div className="h-[120px]">
                             <Editor
                               height="100%"
                               defaultLanguage="shell"

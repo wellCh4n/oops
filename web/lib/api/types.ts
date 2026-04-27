@@ -72,13 +72,21 @@ export interface Application {
   sourceType?: ApplicationSourceType
 }
 
+export type DockerFileType = 'BUILTIN' | 'USER'
+
+export interface DockerFileConfig {
+  type: DockerFileType
+  path?: string
+  content?: string
+}
+
 export interface ApplicationBuildConfig {
   id?: string
   namespace: string
   applicationName: string
   sourceType?: ApplicationSourceType
   repository?: string
-  dockerFile?: string
+  dockerFileConfig?: DockerFileConfig
   buildImage?: string
   environmentConfigs?: ApplicationBuildEnvironmentConfig[]
 }

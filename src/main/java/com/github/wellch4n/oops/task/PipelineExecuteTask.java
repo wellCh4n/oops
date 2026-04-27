@@ -7,7 +7,9 @@ import com.github.wellch4n.oops.container.clone.CloneStrategyParam;
 import com.github.wellch4n.oops.container.clone.GitCloneParam;
 import com.github.wellch4n.oops.container.clone.ZipCloneParam;
 import com.github.wellch4n.oops.data.*;
+import com.github.wellch4n.oops.data.ApplicationBuildConfig.DockerFileConfig;
 import com.github.wellch4n.oops.enums.ApplicationSourceType;
+import com.github.wellch4n.oops.enums.DockerFileType;
 // import com.github.wellch4n.oops.objects.BuildStorage;
 import com.github.wellch4n.oops.pod.PipelineBuildPod;
 //import com.github.wellch4n.oops.service.BuildStorageService;
@@ -86,6 +88,13 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam());
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
+
+        DockerFileConfig dockerFileConfig = applicationBuildConfig.getDockerFileConfig();
+        if (dockerFileConfig != null && dockerFileConfig.getType() == DockerFileType.USER) {
+            DockerfileContainer dockerfile = new DockerfileContainer(dockerFileConfig, pipelineImageConfig.getClone());
+            dockerfile.addVolumeMounts(workspaceVolume.getVolumeMounts());
+            initContainers.add(dockerfile);
+        }
 
         if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
             BuildContainer build = new BuildContainer(application, applicationBuildConfig, buildCommand);

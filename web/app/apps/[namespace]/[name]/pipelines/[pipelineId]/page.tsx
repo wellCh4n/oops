@@ -399,13 +399,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
           <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
             {/* Steps Progress Bar */}
             {steps.length > 0 && (
-              <div className="flex items-start px-1 pt-1">
+              <div className="flex items-start px-1 pt-1 pb-5">
                 {steps.map((step, index) => {
                   const isCompleted = index < activeIndex
                   const isActive = index === activeIndex
                   return (
                     <div key={step} className="flex items-center flex-1 last:flex-none">
-                      <div className="flex flex-col items-center gap-1 min-w-0">
+                      <div className="flex flex-col items-center relative w-6">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
                               ${isCompleted ? 'bg-primary text-primary-foreground' : ''}
                               ${isActive ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : ''}
@@ -413,12 +413,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
                             `}>
                           {isCompleted ? <Check className="w-3 h-3" /> : index + 1}
                         </div>
-                        <span className={`text-xs truncate max-w-24 text-center ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                        <span className={`absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs truncate max-w-24 text-center whitespace-nowrap ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                           {step}
                         </span>
                       </div>
                       {index < steps.length - 1 && (
-                        <div className={`flex-1 h-0.5 mb-5 mx-1 ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
+                        <div className={`flex-1 h-0.5 mx-1 ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
                       )}
                     </div>
                   )

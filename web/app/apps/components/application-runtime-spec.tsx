@@ -186,7 +186,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
       )}
       <div className={envsLoading ? "hidden" : "w-full"}>
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
                 <Gauge className="h-4 w-4 text-muted-foreground" />

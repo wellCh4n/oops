@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.service;
 
 import com.github.wellch4n.oops.data.*;
 import com.github.wellch4n.oops.enums.ApplicationSourceType;
+import com.github.wellch4n.oops.enums.DockerFileType;
 import com.github.wellch4n.oops.enums.OopsTypes;
 import com.github.wellch4n.oops.exception.BizException;
 import com.github.wellch4n.oops.objects.ApplicationPodStatusResponse;
@@ -263,7 +264,13 @@ public class ApplicationService {
         } else {
             buildConfig.setRepository(null);
         }
-        buildConfig.setDockerFile(request.getDockerFile());
+        var dockerFileConfig = request.getDockerFileConfig();
+        if (dockerFileConfig != null && dockerFileConfig.getType() == DockerFileType.USER) {
+            if (StringUtils.isBlank(dockerFileConfig.getContent())) {
+                throw new BizException("Dockerfile content is required when type is USER");
+            }
+        }
+        buildConfig.setDockerFileConfig(dockerFileConfig);
         buildConfig.setBuildImage(request.getBuildImage());
         buildConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
         applicationBuildConfigRepository.save(buildConfig);
