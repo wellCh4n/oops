@@ -263,7 +263,7 @@ public class ApplicationService {
         } else {
             buildConfig.setRepository(null);
         }
-        buildConfig.setDockerFile(request.getDockerFile());
+        buildConfig.setDockerFileConfig(request.getDockerFileConfig());
         buildConfig.setBuildImage(request.getBuildImage());
         buildConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
         applicationBuildConfigRepository.save(buildConfig);

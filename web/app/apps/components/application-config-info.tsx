@@ -255,7 +255,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   return (
     <>
       <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
             <Container className="h-4 w-4 text-muted-foreground" />

@@ -28,7 +28,7 @@ import { updateApplication, getApplicationEnvironments, updateApplicationEnviron
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
-import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon } from "lucide-react"
+import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon, LayoutGrid } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -179,128 +179,141 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
-              <FormControl>
-                <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+        {/* App Info Section */}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("apps.basic.appInfoSection")}</span>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="namespace"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />{t("common.namespace")}</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!!initialData}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("apps.basic.nsPlaceholder")} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {namespaces.map((ns) => (
-                    <SelectItem key={ns} value={ns}>
-                      {ns}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="namespace"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />{t("common.namespace")}</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!!initialData}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("apps.basic.nsPlaceholder")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {namespaces.map((ns) => (
+                        <SelectItem key={ns} value={ns}>
+                          {ns}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="owner"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{t("common.owner")}</FormLabel>
-              <Select
-                onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}
-                defaultValue={field.value || "__none__"}
-                value={field.value || "__none__"}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("common.selectOwner")} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="__none__">{t("common.unassigned")}</SelectItem>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.username} ({user.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="owner"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{t("common.owner")}</FormLabel>
+                  <Select
+                    onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}
+                    defaultValue={field.value || "__none__"}
+                    value={field.value || "__none__"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t("common.selectOwner")} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t("common.unassigned")}</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.username} ({user.id})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
-              <FormControl>
-                <Textarea autoComplete="off" placeholder={t("apps.basic.descPlaceholder")} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
+                  <FormControl>
+                    <Textarea autoComplete="off" placeholder={t("apps.basic.descPlaceholder")} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
 
+        {/* Environments Section */}
         {initialData && (
-            <FormItem>
-                <FormLabel className="flex items-center gap-1"><Server className="h-3.5 w-3.5" />{t("apps.basic.deployEnv")}</FormLabel>
-                <div className="flex flex-wrap gap-3">
-                    {environments.map(env => {
-                        const selected = selectedEnvNames.includes(env.name)
-                        return (
-                            <div
-                                key={env.id}
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => toggleEnv(env.name)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                        e.preventDefault()
-                                        toggleEnv(env.name)
-                                    }
-                                }}
-                                className={cn(
-                                    "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[12rem]",
-                                    selected
-                                        ? "border-primary bg-primary/5 text-primary"
-                                        : "border-border hover:bg-accent/50"
-                                )}
-                            >
-                                <span className="text-sm font-medium">{env.name}</span>
-                                {selected ? (
-                                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                        <Check className="h-3 w-3" />
-                                    </div>
-                                ) : (
-                                    <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
-            </FormItem>
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+              <Server className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold">{t("apps.basic.envInfoSection")}</span>
+            </div>
+            <div className="flex flex-wrap gap-3 p-4">
+              {environments.map(env => {
+                const selected = selectedEnvNames.includes(env.name)
+                return (
+                  <div
+                    key={env.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleEnv(env.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        toggleEnv(env.name)
+                      }
+                    }}
+                    className={cn(
+                      "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[12rem]",
+                      selected
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:bg-accent/50"
+                    )}
+                  >
+                    <span className="text-sm font-medium">{env.name}</span>
+                    {selected ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         )}
 
         <div className="flex">

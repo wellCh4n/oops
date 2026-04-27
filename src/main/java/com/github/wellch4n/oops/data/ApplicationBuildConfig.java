@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.data;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.enums.ApplicationSourceType;
+import com.github.wellch4n.oops.enums.DockerFileType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -29,7 +30,10 @@ public class ApplicationBuildConfig extends BaseDataObject {
 
     private String repository;
 
-    private String dockerFile;
+    @Lob
+    @Column(name = "docker_file_config")
+    @Convert(converter = DockerFileConfigConverter.class)
+    private DockerFileConfig dockerFileConfig;
 
     private String buildImage;
 
@@ -39,11 +43,51 @@ public class ApplicationBuildConfig extends BaseDataObject {
     private List<EnvironmentConfig> environmentConfigs;
 
     @Data
+    public static class DockerFileConfig {
+
+        private DockerFileType type;
+
+        private String path;
+
+        private String content;
+    }
+
+    @Data
     public static class EnvironmentConfig {
 
         private String environmentName;
 
         private String buildCommand;
+    }
+
+    @Converter
+    public static class DockerFileConfigConverter implements AttributeConverter<DockerFileConfig, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+        @Override
+        public String convertToDatabaseColumn(DockerFileConfig attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize dockerFileConfig", e);
+            }
+        }
+
+        @Override
+        public DockerFileConfig convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, DockerFileConfig.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize dockerFileConfig", e);
+            }
+        }
     }
 
     @Converter

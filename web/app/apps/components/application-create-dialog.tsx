@@ -78,7 +78,7 @@ export function ApplicationCreateDialog({
         ...data,
         workspaceId: data.namespace,
         repository: "", // Default empty as it's not in the simple form
-        dockerFile: "Dockerfile",
+        dockerFileConfig: { type: "BUILTIN", path: "Dockerfile" },
         buildImage: "",
       }
       
