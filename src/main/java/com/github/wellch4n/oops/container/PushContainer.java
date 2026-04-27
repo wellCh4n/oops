@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.data.Application;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig;
 import com.github.wellch4n.oops.data.ApplicationBuildConfig.DockerFileConfig;
 import com.github.wellch4n.oops.data.Pipeline;
+import com.github.wellch4n.oops.enums.DockerFileType;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import lombok.Getter;
@@ -28,7 +29,13 @@ public class PushContainer extends BaseContainer {
         String dockerFile;
         if (applicationBuildConfig != null) {
             DockerFileConfig dockerFileConfig = applicationBuildConfig.getDockerFileConfig();
-            dockerFile = dockerFileConfig != null ? StringUtils.defaultIfBlank(dockerFileConfig.getPath(), "Dockerfile") : "Dockerfile";
+            if (dockerFileConfig != null && dockerFileConfig.getType() == DockerFileType.USER) {
+                dockerFile = "Dockerfile";
+            } else if (dockerFileConfig != null) {
+                dockerFile = StringUtils.defaultIfBlank(dockerFileConfig.getPath(), "Dockerfile");
+            } else {
+                dockerFile = "Dockerfile";
+            }
         } else {
             dockerFile = "Dockerfile";
         }
