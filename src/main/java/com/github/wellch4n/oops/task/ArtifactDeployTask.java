@@ -32,7 +32,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final ApplicationServiceConfig applicationServiceConfig;
     private final IngressConfig ingressConfig;
 
-    private static final int SERVICE_PORT = 1114;
+    private static final int SERVICE_PORT = 80;
 
     public ArtifactDeployTask(Pipeline pipeline, Application application,
                               Environment environment,

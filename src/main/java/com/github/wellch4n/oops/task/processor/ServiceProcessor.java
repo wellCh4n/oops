@@ -17,27 +17,31 @@ public class ServiceProcessor implements DeployProcessor {
             return;
         }
 
-        log.info("Checking service for application: {}/{}", namespace, applicationName);
+        log.info("Applying service for application: {}/{}", namespace, applicationName);
 
-        ctx.getClient().services().inNamespace(namespace).resource(
-                new ServiceBuilder()
-                        .withNewMetadata()
-                            .withName(applicationName)
-                            .withNamespace(namespace)
-                            .withLabels(ctx.getLabels())
-                            .withOwnerReferences(ctx.getOwnerRef())
-                        .endMetadata()
-                        .withNewSpec()
-                            .withType("ClusterIP")
-                            .withSelector(ctx.getLabels())
-                            .addNewPort()
-                                .withName("web")
-                                .withProtocol("TCP")
-                                .withPort(ctx.getServicePort())
-                                .withTargetPort(new IntOrString(appPort))
-                            .endPort()
-                        .endSpec()
-                        .build()
-        ).serverSideApply();
+        var existing = ctx.getClient().services().inNamespace(namespace).withName(applicationName).get();
+        var service = new ServiceBuilder()
+                .withNewMetadata()
+                    .withName(applicationName)
+                    .withNamespace(namespace)
+                    .withLabels(ctx.getLabels())
+                    .withOwnerReferences(ctx.getOwnerRef())
+                .endMetadata()
+                .withNewSpec()
+                    .withType("ClusterIP")
+                    .withSelector(ctx.getLabels())
+                    .addNewPort()
+                        .withName("web")
+                        .withProtocol("TCP")
+                        .withPort(ctx.getServicePort())
+                        .withTargetPort(new IntOrString(appPort))
+                    .endPort()
+                .endSpec()
+                .build();
+
+        if (existing != null) {
+            ctx.getClient().services().inNamespace(namespace).withName(applicationName).delete();
+        }
+        ctx.getClient().services().inNamespace(namespace).resource(service).create();
     }
 }
