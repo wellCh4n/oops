@@ -213,11 +213,9 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
               </div>
             </div>
             <div className="border rounded-lg overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/50 border-b">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">{t("apps.runtimeSpec.healthCheck")}</span>
-                </div>
+              <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold">{t("apps.runtimeSpec.healthCheck")}</span>
                 <FormField
                   control={form.control}
                   name="healthCheck.enabled"

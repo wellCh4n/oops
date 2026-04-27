@@ -318,6 +318,5 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 - Try shadcn/ui components first. Use the auto-install feature: `npx shadcn add <component>`
 
 ## Collaboration
-```
-Co-Authored-By: Claude <noreply@anthropic.com>
-```
+
+List Claude as a co-author when committing.

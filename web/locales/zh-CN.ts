@@ -205,6 +205,7 @@ const zh = {
   "apps.runtimeSpec.saveSuccess": "运行规格保存成功",
   "apps.runtimeSpec.saveError": "保存运行规格失败",
   "apps.runtimeSpec.noAppInfo": "请先保存应用基本信息",
+  "apps.config.title": "环境变量",
   "apps.config.noConfig": "暂无配置项",
   "apps.config.addItem": "添加配置项",
   "apps.config.fetchError": "获取配置失败",

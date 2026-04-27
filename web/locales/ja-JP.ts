@@ -204,6 +204,7 @@ const locale = {
   "apps.config.updateSuccess": "設定が保存されました",
   "apps.config.updateError": "設定の保存に失敗しました",
   "apps.config.import": "インポート",
+  "apps.config.title": "環境変数",
   "apps.config.importTitle": "設定のインポート",
   "apps.config.importDesc": ".env 形式の内容を貼り付けてインポートします",
   "apps.config.importMode": "インポートモード",

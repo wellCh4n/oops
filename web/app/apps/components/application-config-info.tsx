@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2, Upload, Copy } from "lucide-react"
+import { Plus, Trash2, Loader2, Upload, Copy, Container } from "lucide-react"
 import { toast } from "sonner"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -253,25 +253,31 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   const parsedImportContent = parseEnvContent(importContent)
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      {envsLoading && (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      )}
-      <div className={envsLoading ? "hidden" : ""}>
-        <ApplicationEnvironmentSelector
-          namespace={namespace}
-          applicationName={applicationName}
-          value={activeTab}
-          onValueChange={setActiveTab}
-          onEnvironmentsLoaded={handleEnvironmentsLoaded}
-          onLoadingChange={setEnvsLoading}
-        >
-          <Form {...form}>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="rounded-md border">
+    <>
+      <Form {...form}>
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
+        <div className="border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+            <Container className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("apps.config.title")}</span>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            {envsLoading && (
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-9 w-64" />
+                <Skeleton className="h-48 w-full" />
+              </div>
+            )}
+            <div className={envsLoading ? "hidden" : ""}>
+              <ApplicationEnvironmentSelector
+                namespace={namespace}
+                applicationName={applicationName}
+                value={activeTab}
+                onValueChange={setActiveTab}
+                onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                onLoadingChange={setEnvsLoading}
+              >
+                <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -351,98 +357,102 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                   </TableBody>
                 </Table>
               </div>
+              </ApplicationEnvironmentSelector>
+            </div>
 
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleExportAll}
-                  disabled={isLoadingConfig}
-                >
-                  <Copy className="h-4 w-4" />
-                  {t("apps.config.copyAll")}
-                </Button>
-                <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isLoadingConfig}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {t("apps.config.import")}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
-                    <DialogHeader>
-                      <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
-                      <DialogDescription>
-                        {t("apps.config.importDesc")}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-                      <div className="flex items-center gap-6 mb-4">
-                        <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
-                        <RadioGroup
-                          value={importMode}
-                          onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
-                          className="flex gap-4"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="key-value" id="key-value" />
-                            <Label htmlFor="key-value" className="cursor-pointer">
-                              {t("apps.config.importKeyValue")}
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="key-only" id="key-only" />
-                            <Label htmlFor="key-only" className="cursor-pointer">
-                              {t("apps.config.importKeyOnly")}
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
-                      <Textarea
-                        id="import-content"
-                        autoComplete="off"
-                        placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
-                        value={importContent}
-                        onChange={(e) => setImportContent(e.target.value)}
-                        className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
-                      />
-                    </div>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setImportInputDialogOpen(false)}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportAll}
+                disabled={isLoadingConfig}
+              >
+                <Copy className="h-4 w-4" />
+                {t("apps.config.copyAll")}
+              </Button>
+              <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isLoadingConfig}
+                  >
+                    <Upload className="h-4 w-4" />
+                    {t("apps.config.import")}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
+                  <DialogHeader>
+                    <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
+                    <DialogDescription>
+                      {t("apps.config.importDesc")}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex items-center gap-6 mb-4">
+                      <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
+                      <RadioGroup
+                        value={importMode}
+                        onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
+                        className="flex gap-4"
                       >
-                        {t("common.cancel")}
-                      </Button>
-                      <Button onClick={handleImportSubmit}>
-                        {t("apps.config.previewImport")}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="key-value" id="key-value" />
+                          <Label htmlFor="key-value" className="cursor-pointer">
+                            {t("apps.config.importKeyValue")}
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="key-only" id="key-only" />
+                          <Label htmlFor="key-only" className="cursor-pointer">
+                            {t("apps.config.importKeyOnly")}
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    <Textarea
+                      id="import-content"
+                      autoComplete="off"
+                      placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
+                      value={importContent}
+                      onChange={(e) => setImportContent(e.target.value)}
+                      className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setImportInputDialogOpen(false)}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                    <Button onClick={handleImportSubmit}>
+                      {t("apps.config.previewImport")}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </div>
 
-                <Button type="submit" disabled={isSaving || isLoadingConfig}>
-                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {t("common.save")}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </ApplicationEnvironmentSelector>
-      </div>
+        <div className="flex">
+          <Button type="submit" disabled={isSaving || isLoadingConfig}>
+            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {t("common.save")}
+          </Button>
+        </div>
+      </form>
+    </Form>
 
-      <EnvImportDialog
-        open={importConfirmDialogOpen}
-        onOpenChange={setImportConfirmDialogOpen}
-        currentConfigs={form.getValues("configMaps")}
-        parsedEnvContent={parsedImportContent}
-        importMode={importMode}
-        onConfirm={handleImportConfirm}
-      />
-    </div>
+    <EnvImportDialog
+      open={importConfirmDialogOpen}
+      onOpenChange={setImportConfirmDialogOpen}
+      currentConfigs={form.getValues("configMaps")}
+      parsedEnvContent={parsedImportContent}
+      importMode={importMode}
+      onConfirm={handleImportConfirm}
+    />
+    </>
   )
 })

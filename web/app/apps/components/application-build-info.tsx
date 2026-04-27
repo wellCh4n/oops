@@ -261,7 +261,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
               <Hammer className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.build.envConfig")}</span>
             </div>
-            <div className="flex flex-col gap-2 p-4">
+            <div className="flex flex-col gap-4 p-4">
               <FormField
                 control={form.control}
                 name="buildImage"

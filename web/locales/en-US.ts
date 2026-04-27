@@ -205,6 +205,7 @@ const en = {
   "apps.runtimeSpec.saveSuccess": "Runtime spec saved",
   "apps.runtimeSpec.saveError": "Failed to save runtime spec",
   "apps.runtimeSpec.noAppInfo": "Please save app info first",
+  "apps.config.title": "Environment Variables",
   "apps.config.noConfig": "No config items",
   "apps.config.addItem": "Add Item",
   "apps.config.fetchError": "Failed to fetch config",
