@@ -17,7 +17,7 @@ import { ApplicationRuntimeSpecFormValues, applicationRuntimeSpecSchema } from "
 import { TabsContent } from "@/components/ui/tabs"
 import { ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationRuntimeSpec } from "@/lib/api/applications"
-import { Activity, ChevronDown, Copy, Cpu, MemoryStick, Timer, RotateCcw, TimerOff, ShieldAlert, Route } from "lucide-react"
+import { Activity, ChevronDown, Copy, Cpu, MemoryStick, Timer, RotateCcw, TimerOff, ShieldAlert, Route, Gauge } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -187,26 +187,57 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
       <div className={envsLoading ? "hidden" : "w-full"}>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <div className="w-full">
-              <ApplicationEnvironmentSelector
-                namespace={namespace}
-                applicationName={applicationName}
-                value={activeTab}
-                onValueChange={setActiveTab}
-                onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                onLoadingChange={setEnvsLoading}
-                className="w-full"
-              >
-                {fields.map((field, index) => (
-                  <TabsContent key={field.id} value={field.environmentName}>
-                    <SingleEnvironmentConfig
-                      index={index}
-                    />
-                  </TabsContent>
-                ))}
-              </ApplicationEnvironmentSelector>
+            <div className="border rounded-lg overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+                <Gauge className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-semibold">{t("apps.runtimeSpec.title")}</span>
+              </div>
+              <div className="flex flex-col gap-4 p-4">
+                <ApplicationEnvironmentSelector
+                  namespace={namespace}
+                  applicationName={applicationName}
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                  onLoadingChange={setEnvsLoading}
+                  className="w-full"
+                >
+                  {fields.map((field, index) => (
+                    <TabsContent key={field.id} value={field.environmentName}>
+                      <SingleEnvironmentConfig
+                        index={index}
+                      />
+                    </TabsContent>
+                  ))}
+                </ApplicationEnvironmentSelector>
+              </div>
             </div>
-            <HealthCheckConfig />
+            <div className="border rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/50 border-b">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">{t("apps.runtimeSpec.healthCheck")}</span>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="healthCheck.enabled"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Switch
+                          checked={!!field.value}
+                          onCheckedChange={field.onChange}
+                          aria-label={t("apps.runtimeSpec.healthCheck")}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex flex-col gap-4 p-4">
+                <HealthCheckConfig />
+              </div>
+            </div>
             <div className="flex">
               <Button type="submit" disabled={isSaving}>
                 {isSaving ? t("common.saving") : t("common.save")}
@@ -283,114 +314,98 @@ function NumberInput({ value, onChange, min = 0 }: { value: number | undefined, 
 }
 
 function HealthCheckConfig() {
-  const { control, watch } = useFormContext<ApplicationRuntimeSpecFormValues>()
+  const { control } = useFormContext<ApplicationRuntimeSpecFormValues>()
   const { t } = useLanguage()
-  const healthCheckEnabled = watch("healthCheck.enabled")
 
   return (
-    <div className="flex flex-col gap-4 border-t pt-6">
-      <FormField
-        control={control}
-        name="healthCheck.enabled"
-        render={({ field }) => (
-          <FormItem className="flex items-center gap-3">
-            <FormLabel className="flex items-center gap-1 m-0"><Activity className="h-3.5 w-3.5" />{t("apps.runtimeSpec.healthCheck")}</FormLabel>
-            <FormControl>
-              <Switch checked={!!field.value} onCheckedChange={field.onChange} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      {healthCheckEnabled && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <FormField
-              control={control}
-              name="healthCheck.path"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-1"><Route className="h-3.5 w-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="/"
-                      {...field}
-                      value={field.value ?? ""}
-                      autoComplete="off"
-                      className="w-64"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Collapsible className="contents">
-              <CollapsibleTrigger asChild>
-                <Button type="button" variant="ghost" size="sm" className="w-fit px-0">
-                  <ChevronDown className="h-4 w-4" />
-                  {t("apps.runtimeSpec.advanced")}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="w-full">
-                <div className="flex flex-wrap gap-x-6 gap-y-4 pt-3">
-                  <FormField
-                    control={control}
-                    name="healthCheck.initialDelaySeconds"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />{t("apps.runtimeSpec.initialDelay")}</FormLabel>
-                        <FormControl>
-                          <NumberInput value={field.value} onChange={field.onChange} min={0} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <FormField
+            control={control}
+            name="healthCheck.path"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex items-center gap-1"><Route className="h-3.5 w-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="/"
+                    {...field}
+                    value={field.value ?? ""}
+                    autoComplete="off"
+                    className="w-64"
                   />
-                  <FormField
-                    control={control}
-                    name="healthCheck.periodSeconds"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" />{t("apps.runtimeSpec.period")}</FormLabel>
-                        <FormControl>
-                          <NumberInput value={field.value} onChange={field.onChange} min={1} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="healthCheck.timeoutSeconds"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1"><TimerOff className="h-3.5 w-3.5" />{t("apps.runtimeSpec.timeout")}</FormLabel>
-                        <FormControl>
-                          <NumberInput value={field.value} onChange={field.onChange} min={1} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={control}
-                    name="healthCheck.failureThreshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />{t("apps.runtimeSpec.failureThreshold")}</FormLabel>
-                        <FormControl>
-                          <NumberInput value={field.value} onChange={field.onChange} min={1} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Collapsible className="contents">
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="w-fit px-0">
+                <ChevronDown className="h-4 w-4" />
+                {t("apps.runtimeSpec.advanced")}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="w-full">
+              <div className="flex flex-wrap gap-x-6 gap-y-4 pt-3">
+                <FormField
+                  control={control}
+                  name="healthCheck.initialDelaySeconds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />{t("apps.runtimeSpec.initialDelay")}</FormLabel>
+                      <FormControl>
+                        <NumberInput value={field.value} onChange={field.onChange} min={0} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="healthCheck.periodSeconds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" />{t("apps.runtimeSpec.period")}</FormLabel>
+                      <FormControl>
+                        <NumberInput value={field.value} onChange={field.onChange} min={1} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="healthCheck.timeoutSeconds"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><TimerOff className="h-3.5 w-3.5" />{t("apps.runtimeSpec.timeout")}</FormLabel>
+                      <FormControl>
+                        <NumberInput value={field.value} onChange={field.onChange} min={1} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="healthCheck.failureThreshold"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />{t("apps.runtimeSpec.failureThreshold")}</FormLabel>
+                      <FormControl>
+                        <NumberInput value={field.value} onChange={field.onChange} min={1} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copyable } from "@/components/ui/copyable"
-import { Check, ExternalLink, Pencil, Plug, Globe, Plus, Trash2, X } from "lucide-react"
+import { Check, ExternalLink, Pencil, Plug, Globe, Plus, Trash2, X, Network } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
@@ -135,7 +135,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     defaultValues: buildServiceFormValues(initialServiceConfig),
   })
 
-  const { fields } = useFieldArray({
+  const { fields: envFields } = useFieldArray({
     control: form.control,
     name: "environmentConfigs",
   })
@@ -507,224 +507,232 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
-        <div className="grid gap-2">
-          <Label htmlFor="service-port" className="flex items-center gap-1">
-            <Plug className="h-3.5 w-3.5" />
-            {t("apps.service.port")}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+            <Network className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("apps.service.accessEntry")}</span>
+          </div>
+          <div className="flex flex-col gap-4 p-4">
+            <div className="grid gap-2">
+            <Label htmlFor="service-port" className="flex items-center gap-1">
+              <Plug className="h-3.5 w-3.5" />
+              {t("apps.service.port")}
+            </Label>
+            <FormField
+              control={form.control}
+              name="port"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      autoComplete="off"
+                      id="service-port"
+                      type="number"
+                      inputMode="numeric"
+                      placeholder={t("apps.service.portPlaceholder")}
+                      min={1}
+                      max={65535}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <Label className="flex items-center gap-1">
+            <Globe className="h-3.5 w-3.5" />
+            {t("apps.service.hosts")}
           </Label>
-          <FormField
-            control={form.control}
-            name="port"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <Input
-                    {...field}
-                    autoComplete="off"
-                    id="service-port"
-                    type="number"
-                    inputMode="numeric"
-                    placeholder={t("apps.service.portPlaceholder")}
-                    min={1}
-                    max={65535}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+
+          <div className="flex flex-col gap-2">
+            {envsLoading && (
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-9 w-64" />
+                <Skeleton className="h-32 w-full" />
+              </div>
             )}
-          />
-        </div>
 
-        <div className="flex flex-col gap-2">
-          {envsLoading && (
-            <div className="flex flex-col gap-3">
-              <Skeleton className="h-9 w-64" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          )}
+            <div className={envsLoading ? "hidden" : ""}>
+              <ApplicationEnvironmentSelector
+                namespace={namespace}
+                applicationName={applicationName}
+                value={activeTab}
+                onValueChange={setActiveTab}
+                onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                onLoadingChange={setEnvsLoading}
+                className="w-full"
+              >
+                {envFields.map((field, environmentIndex) => {
+                  const group = environmentConfigs[environmentIndex]
+                  if (!group) {
+                    return null
+                  }
 
-          <div className={envsLoading ? "hidden" : ""}>
-            <ApplicationEnvironmentSelector
-              namespace={namespace}
-              applicationName={applicationName}
-              value={activeTab}
-              onValueChange={setActiveTab}
-              onEnvironmentsLoaded={handleEnvironmentsLoaded}
-              onLoadingChange={setEnvsLoading}
-              className="w-full"
-            >
-              {fields.map((field, environmentIndex) => {
-                const group = environmentConfigs[environmentIndex]
-                if (!group) {
-                  return null
-                }
+                  return (
+                    <TabsContent key={field.id} value={group.environmentName}>
+                      <div className="grid gap-4">
+                        {domains.length === 0 ? (
+                          <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed">
+                            {t("apps.service.noDomainPrefix")}
+                            <Link href="/networks/domains" className="inline-flex items-center gap-0.5 text-primary mx-1">
+                              <span className="hover:underline">{t("apps.service.noDomainLink")}</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
+                            {t("apps.service.noDomainSuffix")}
+                          </div>
+                        ) : (
+                          group.hosts.map((hostConfig, hostIndex) => {
+                            const error = hostErrors[hostErrorKey(group.environmentName, hostIndex)]
 
-                return (
-                  <TabsContent key={field.id} value={group.environmentName}>
-                    <div className="grid gap-4">
-                      <Label className="flex items-center gap-1">
-                        <Globe className="h-3.5 w-3.5" />
-                        {t("apps.service.hosts")}
-                      </Label>
-
-                      {domains.length === 0 ? (
-                        <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed">
-                          {t("apps.service.noDomainPrefix")}
-                          <Link href="/networks/domains" className="inline-flex items-center gap-0.5 text-primary mx-1">
-                            <span className="hover:underline">{t("apps.service.noDomainLink")}</span>
-                            <ExternalLink className="h-3 w-3" />
-                          </Link>
-                          {t("apps.service.noDomainSuffix")}
-                        </div>
-                      ) : (
-                        group.hosts.map((hostConfig, hostIndex) => {
-                          const error = hostErrors[hostErrorKey(group.environmentName, hostIndex)]
-
-                          return (
-                            <div key={`${group.environmentName}-${hostIndex}`} className="flex w-full items-start gap-2">
-                              {hostConfig.editing && (
-                                <div className="flex h-9 items-center gap-2">
-                                  <Checkbox
-                                    id={`service-https-${group.environmentName}-${hostIndex}`}
-                                    checked={hostConfig.https}
-                                    onCheckedChange={(checked) => {
-                                      updateHost(group.environmentName, hostIndex, { https: checked === true })
-                                    }}
-                                  />
-                                  <Label htmlFor={`service-https-${group.environmentName}-${hostIndex}`}>HTTPS</Label>
-                                </div>
-                              )}
-
-                              <div className="flex flex-1 flex-col gap-1">
-                                {hostConfig.editing ? (
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      className="flex-1"
-                                      autoComplete="off"
-                                      value={hostConfig.prefix}
-                                      onChange={(event) => {
-                                        updateHost(group.environmentName, hostIndex, {
-                                          prefix: event.target.value.trim().toLowerCase(),
-                                        })
-                                      }}
-                                      placeholder={t("apps.service.prefixPlaceholder")}
-                                    />
-                                    <span className="text-muted-foreground">.</span>
-                                    <Select
-                                      value={hostConfig.suffix}
-                                      onValueChange={(value) => {
-                                        updateHost(group.environmentName, hostIndex, { suffix: value })
-                                      }}
-                                    >
-                                      <SelectTrigger className="flex-1">
-                                        <SelectValue placeholder={t("apps.service.suffixPlaceholder")}>
-                                          {hostConfig.suffix}
-                                        </SelectValue>
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {domains.map((domain) => (
-                                          <SelectItem key={domain.id} value={domain.host}>
-                                            <div className="flex flex-col items-start">
-                                              <span>{domain.host}</span>
-                                              {domain.description && (
-                                                <span className="text-xs text-muted-foreground">{domain.description}</span>
-                                              )}
-                                            </div>
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                ) : hostConfig.host ? (
+                            return (
+                              <div key={`${group.environmentName}-${hostIndex}`} className="flex w-full items-start gap-2">
+                                {hostConfig.editing && (
                                   <div className="flex h-9 items-center gap-2">
-                                    <Copyable
-                                      value={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
-                                      maxLength={Infinity}
+                                    <Checkbox
+                                      id={`service-https-${group.environmentName}-${hostIndex}`}
+                                      checked={hostConfig.https}
+                                      onCheckedChange={(checked) => {
+                                        updateHost(group.environmentName, hostIndex, { https: checked === true })
+                                      }}
                                     />
-                                    <a
-                                      href={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                      <ExternalLink className="h-4 w-4" />
-                                    </a>
+                                    <Label htmlFor={`service-https-${group.environmentName}-${hostIndex}`}>HTTPS</Label>
                                   </div>
-                                ) : (
-                                  <span className="h-9 inline-flex items-center text-sm text-muted-foreground">
-                                    {t("apps.service.domainPlaceholder")}
-                                  </span>
                                 )}
-                                {error && <p className="text-xs text-destructive">{error}</p>}
+
+                                <div className="flex flex-1 flex-col gap-1">
+                                  {hostConfig.editing ? (
+                                    <div className="flex items-center gap-1">
+                                      <Input
+                                        className="flex-1"
+                                        autoComplete="off"
+                                        value={hostConfig.prefix}
+                                        onChange={(event) => {
+                                          updateHost(group.environmentName, hostIndex, {
+                                            prefix: event.target.value.trim().toLowerCase(),
+                                          })
+                                        }}
+                                        placeholder={t("apps.service.prefixPlaceholder")}
+                                      />
+                                      <span className="text-muted-foreground">.</span>
+                                      <Select
+                                        value={hostConfig.suffix}
+                                        onValueChange={(value) => {
+                                          updateHost(group.environmentName, hostIndex, { suffix: value })
+                                        }}
+                                      >
+                                        <SelectTrigger className="flex-1">
+                                          <SelectValue placeholder={t("apps.service.suffixPlaceholder")}>
+                                            {hostConfig.suffix}
+                                          </SelectValue>
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {domains.map((domain) => (
+                                            <SelectItem key={domain.id} value={domain.host}>
+                                              <div className="flex flex-col items-start">
+                                                <span>{domain.host}</span>
+                                                {domain.description && (
+                                                  <span className="text-xs text-muted-foreground">{domain.description}</span>
+                                                )}
+                                              </div>
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  ) : hostConfig.host ? (
+                                    <div className="flex h-9 items-center gap-2">
+                                      <Copyable
+                                        value={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
+                                        maxLength={Infinity}
+                                      />
+                                      <a
+                                        href={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-muted-foreground hover:text-foreground transition-colors"
+                                      >
+                                        <ExternalLink className="h-4 w-4" />
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    <span className="h-9 inline-flex items-center text-sm text-muted-foreground">
+                                      {t("apps.service.domainPlaceholder")}
+                                    </span>
+                                  )}
+                                  {error && <p className="text-xs text-destructive">{error}</p>}
+                                </div>
+
+                                {hostConfig.editing ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label={t("apps.service.confirmHost")}
+                                    onClick={() => confirmEdit(group.environmentName, hostIndex)}
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label={t("apps.service.editHost")}
+                                    onClick={() => beginEdit(group.environmentName, hostIndex)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+
+                                {hostConfig.editing ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    aria-label={t("apps.service.cancelHost")}
+                                    onClick={() => cancelEdit(group.environmentName, hostIndex)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => removeHost(group.environmentName, hostIndex)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                )}
                               </div>
+                            )
+                          })
+                        )}
 
-                              {hostConfig.editing ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  aria-label={t("apps.service.confirmHost")}
-                                  onClick={() => confirmEdit(group.environmentName, hostIndex)}
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  aria-label={t("apps.service.editHost")}
-                                  onClick={() => beginEdit(group.environmentName, hostIndex)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              )}
-
-                              {hostConfig.editing ? (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  aria-label={t("apps.service.cancelHost")}
-                                  onClick={() => cancelEdit(group.environmentName, hostIndex)}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => removeHost(group.environmentName, hostIndex)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              )}
-                            </div>
-                          )
-                        })
-                      )}
-
-                      {domains.length > 0 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => addHost(group.environmentName)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          {t("apps.service.addHost")}
-                        </Button>
-                      )}
-                    </div>
-                  </TabsContent>
-                )
-              })}
-            </ApplicationEnvironmentSelector>
+                        {domains.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => addHost(group.environmentName)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            {t("apps.service.addHost")}
+                          </Button>
+                        )}
+                      </div>
+                    </TabsContent>
+                  )
+                })}
+              </ApplicationEnvironmentSelector>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div>
+      <div>
           <Button type="submit" disabled={saving || !namespace || !applicationName}>
             {saving ? t("common.saving") : t("common.save")}
           </Button>

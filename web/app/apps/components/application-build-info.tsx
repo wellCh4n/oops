@@ -11,15 +11,15 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { useForm, useFieldArray, useFormContext } from "react-hook-form"
+import { Label } from "@/components/ui/label"
+import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Editor from "@monaco-editor/react"
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { GitBranch, FileCode, Box, Terminal, PackageSearch } from "lucide-react"
+import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -182,13 +182,21 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     onSubmit: submitForm,
   })
 
+  const { resolvedTheme } = useTheme()
+  const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
+  const activeEnvironmentIndex = fields.findIndex((f) => f.environmentName === activeTab)
+
   return (
     <Form {...form}>
       <form onSubmit={handleSubmit} className="w-full">
         <div className="flex flex-col gap-6">
           {/* Global Build Config Section */}
-          <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-medium">{t("apps.build.sourceConfig")}</h3>
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold">{t("apps.build.sourceConfig")}</span>
+            </div>
+            <div className="flex flex-col gap-4 p-4">
             <FormField
               control={form.control}
               name="sourceType"
@@ -232,21 +240,28 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
               <div className="text-sm text-muted-foreground">{t("apps.build.zipConfiguredInPublish")}</div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dockerFile"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
-                    <FormControl>
-                      <Input autoComplete="off" placeholder="Dockerfile" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="dockerFile"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="off" placeholder="Dockerfile" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            </div>
+          </div>
 
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+              <Hammer className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-semibold">{t("apps.build.envConfig")}</span>
+            </div>
+            <div className="flex flex-col gap-2 p-4">
               <FormField
                 control={form.control}
                 name="buildImage"
@@ -260,41 +275,71 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   </FormItem>
                 )}
               />
-            </div>
-          </div>
 
-          <Separator />
-          <div className="flex flex-col gap-4">
-            <h3 className="text-lg font-medium">{t("apps.build.envConfig")}</h3>
-            <div className="w-full">
-              {envsLoading && (
-                <div className="flex flex-col gap-3">
-                  <Skeleton className="h-9 w-64" />
-                  <Skeleton className="h-32 w-full" />
+              <div className="grid gap-2">
+                <Label className="flex items-center gap-1">
+                  <Terminal className="h-3.5 w-3.5" />
+                  {t("apps.build.buildCommand")}
+                </Label>
+                <div className="w-full">
+                  {envsLoading && (
+                    <div className="flex flex-col gap-3">
+                      <Skeleton className="h-9 w-64" />
+                    </div>
+                  )}
+                  <div className={envsLoading ? "hidden" : ""}>
+                    <ApplicationEnvironmentSelector
+                      namespace={namespace}
+                      applicationName={applicationName}
+                      value={activeTab}
+                      onValueChange={setActiveTab}
+                      onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                      onLoadingChange={setEnvsLoading}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
-              )}
-              <div className={envsLoading ? "hidden" : ""}>
-                <ApplicationEnvironmentSelector
-                  namespace={namespace}
-                  applicationName={applicationName}
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                  onLoadingChange={setEnvsLoading}
-                  className="w-full"
-                >
-                  {fields.map((field, index) => (
-                    <TabsContent key={field.id} value={field.environmentName}>
-                      <SingleEnvironmentConfig index={index} />
-                    </TabsContent>
-                  ))}
-                </ApplicationEnvironmentSelector>
               </div>
-            </div>
-          </div>
 
-          <div className="flex">
-             <Button type="submit" disabled={isSaving}>
+              {activeEnvironmentIndex >= 0 && (
+                <FormField
+                  control={form.control}
+                  name={`environmentConfigs.${activeEnvironmentIndex}.buildCommand`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="border rounded-md overflow-hidden">
+                          <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">
+                            <span>shell</span>
+                          </div>
+                          <div className="h-[200px]">
+                            <Editor
+                              height="100%"
+                              defaultLanguage="shell"
+                              theme={editorTheme}
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={{
+                                minimap: { enabled: false },
+                                lineNumbers: "on",
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                padding: { top: 10 },
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+          </div>
+        </div>
+
+        <div className="flex">
+          <Button type="submit" disabled={isSaving}>
                 {isSaving ? t("common.saving") : t("common.save")}
              </Button>
           </div>
@@ -303,52 +348,3 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     </Form>
   )
 })
-
-interface SingleEnvironmentConfigProps {
-  index: number
-}
-
-function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
-  const { control } = useFormContext<ApplicationBuildFormValues>()
-  const { resolvedTheme } = useTheme()
-  const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
-  const { t } = useLanguage()
-
-  return (
-    <div className="flex flex-col gap-4">
-      <FormField
-        control={control}
-        name={`environmentConfigs.${index}.buildCommand`}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="flex items-center gap-1"><Terminal className="h-3.5 w-3.5" />{t("apps.build.buildCommand")}</FormLabel>
-            <FormControl>
-              <div className="border rounded-md overflow-hidden">
-                <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">
-                  <span>shell</span>
-                </div>
-                <div className="h-[200px]">
-                  <Editor
-                    height="100%"
-                    defaultLanguage="shell"
-                    theme={editorTheme}
-                    value={field.value}
-                    onChange={field.onChange}
-                    options={{
-                      minimap: { enabled: false },
-                      lineNumbers: "on",
-                      scrollBeyondLastLine: false,
-                      automaticLayout: true,
-                      padding: { top: 10 },
-                    }}
-                  />
-                </div>
-              </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  )
-}
