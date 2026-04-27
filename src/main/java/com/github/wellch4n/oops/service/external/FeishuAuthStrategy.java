@@ -91,9 +91,12 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
         }
 
         String providerUserId = userInfoResp.getData().getUserId();
+        if (!hasText(providerUserId)) {
+            throw new IOException("Feishu user id is missing");
+        }
         String userEmail = userInfoResp.getData().getEmail();
         String enterpriseEmail = userInfoResp.getData().getEnterpriseEmail();
-        String email = enterpriseEmail != null ? enterpriseEmail : userEmail;
+        String email = resolveEmail(enterpriseEmail, userEmail, providerUserId);
 
         Optional<ExternalAccount> existingAccount = externalAccountRepository
                 .findByProviderAndProviderUserId(ExternalAccountProvider.FEISHU, providerUserId);
@@ -129,5 +132,19 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
                 ? name
                 : "feishu_" + System.currentTimeMillis();
         return userService.createUser(username, email, null, UserRole.USER);
+    }
+
+    private String resolveEmail(String enterpriseEmail, String userEmail, String providerUserId) {
+        if (hasText(enterpriseEmail)) {
+            return enterpriseEmail;
+        }
+        if (hasText(userEmail)) {
+            return userEmail;
+        }
+        return "feishu_" + providerUserId.replaceAll("[^A-Za-z0-9._-]", "_") + "@feishu.invalid";
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
