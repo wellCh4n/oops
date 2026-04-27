@@ -41,7 +41,7 @@ public class PushContainer extends BaseContainer {
         }
 
         ContainerBuilder builder = new ContainerBuilder()
-                .withName("push")
+                .withName("publish")
                 .withImage(image)
                 .withWorkingDir("/workspace")
                 .withArgs(

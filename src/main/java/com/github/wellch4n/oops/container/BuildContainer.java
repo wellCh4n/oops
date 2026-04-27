@@ -13,7 +13,7 @@ public class BuildContainer extends BaseContainer {
 
     public BuildContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String buildCommand) {
         Container container = new ContainerBuilder()
-                .withName("build")
+                .withName("compile")
                 .withImage(applicationBuildConfig.getBuildImage())
                 .withWorkingDir("/workspace")
                 .withCommand("sh", "-c", buildCommand)

@@ -25,7 +25,7 @@ public class CloneContainer extends BaseContainer {
         String command = buildCommand(application, strategyParam);
 
         Container container = new ContainerBuilder()
-                .withName("clone")
+                .withName("fetch")
                 .withImage(strategyParam.image())
                 .withCommand("sh", "-c", command)
                 .addNewEnv()
