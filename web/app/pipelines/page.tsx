@@ -54,6 +54,8 @@ function PipelinesContent() {
   const [loading, setLoading] = useState(false)
   const [totalPages, setTotalPages] = useState(0)
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
+  const [stopTarget, setStopTarget] = useState<Pipeline | null>(null)
+  const [stopping, setStopping] = useState(false)
 
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<string[]>([])
@@ -165,13 +167,22 @@ function PipelinesContent() {
     router.push(`/apps/${selectedNamespace}/${selectedApp}/pipelines/${pipeline.id}`)
   }
 
-  const handleStop = async (pipeline: Pipeline) => {
+  const handleStop = (pipeline: Pipeline) => {
+    setStopTarget(pipeline)
+  }
+
+  const confirmStop = async () => {
+    if (!stopTarget) return
+    setStopping(true)
     try {
-      await stopPipeline(selectedNamespace, selectedApp, pipeline.id)
+      await stopPipeline(selectedNamespace, selectedApp, stopTarget.id)
       toast.success(t("pipelines.stopSuccess"))
       fetchPipelines()
     } catch {
       toast.error(t("pipelines.stopError"))
+    } finally {
+      setStopping(false)
+      setStopTarget(null)
     }
   }
 
@@ -322,6 +333,22 @@ function PipelinesContent() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeploy}>{t("pipelines.confirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!stopTarget} onOpenChange={(open) => { if (!open && !stopping) setStopTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("pipelines.stopConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("pipelines.stopConfirmDesc")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={stopping}>{t("common.cancel")}</AlertDialogCancel>
+            <Button onClick={confirmStop} disabled={stopping}>
+              {stopping ? t("pipelines.stopping") : t("pipelines.stopConfirm")}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

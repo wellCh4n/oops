@@ -96,7 +96,7 @@ export const getPipelineColumns = (
               {t("pipelines.col.deployBtn")}
             </Button>
           )}
-          {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING") && (
+          {(row.original.status === "RUNNING" || row.original.status === "DEPLOYING" || row.original.status === "BUILD_SUCCEEDED") && (
             <Button variant="destructive" size="sm" className="h-8 px-2 gap-1" onClick={() => onStop(row.original)}>
               <Ban className="h-4 w-4" />
               {t("pipelines.col.stop")}

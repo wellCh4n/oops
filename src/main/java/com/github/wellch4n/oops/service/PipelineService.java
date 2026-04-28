@@ -298,6 +298,15 @@ public class PipelineService {
             throw new BizException("Pipeline not found");
         }
 
+        if (pipeline.getStatus() == PipelineStatus.BUILD_SUCCEEDED) {
+            pipeline.setStatus(PipelineStatus.STOPPED);
+            pipelineRepository.save(pipeline);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
+            ));
+            return true;
+        }
+
         String environmentName = pipeline.getEnvironment();
         Environment environment = environmentService.getEnvironment(environmentName);
 
