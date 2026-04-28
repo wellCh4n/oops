@@ -25,7 +25,6 @@ import { ApplicationEnvironmentSelector } from "./application-environment-select
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
-import { useFeaturesStore } from "@/store/features"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 
@@ -73,9 +72,6 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const { t } = useLanguage()
   const sourceType = form.watch("sourceType")
   const dockerFileConfigValue = form.watch("dockerFileConfig")
-  const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
-  const featuresLoaded = useFeaturesStore((s) => s.loaded)
-
   const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
@@ -86,14 +82,6 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       buildCommand: config.buildCommand ?? "",
     })),
   }), [form])
-
-  // If object storage is disabled but current source type is ZIP, fall back to GIT.
-  // Gate on featuresLoaded to avoid downgrading ZIP apps before the async features API resolves.
-  useEffect(() => {
-    if (featuresLoaded && !objectStorageEnabled && sourceType === "ZIP") {
-      form.setValue("sourceType", "GIT", { shouldValidate: true })
-    }
-  }, [featuresLoaded, objectStorageEnabled, sourceType, form])
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     // Sync form fields with fetched environments
@@ -210,11 +198,9 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                         <TabsTrigger value="GIT" className="px-6 cursor-pointer">
                           {t("apps.build.sourceGit")}
                         </TabsTrigger>
-                        {objectStorageEnabled && (
-                          <TabsTrigger value="ZIP" className="px-6 cursor-pointer">
-                            {t("apps.build.sourceZip")}
-                          </TabsTrigger>
-                        )}
+                        <TabsTrigger value="ZIP" className="px-6 cursor-pointer">
+                          {t("apps.build.sourceZip")}
+                        </TabsTrigger>
                       </TabsList>
                     </Tabs>
                   </FormControl>

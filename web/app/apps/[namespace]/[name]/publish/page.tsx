@@ -75,14 +75,20 @@ export default function PublishPage({ params }: PageProps) {
             }
           }
         }
-        if (lastPipelineRes.data) {
-          setLastSuccessfulPipeline(lastPipelineRes.data)
-          setBranch(normalizeText(lastPipelineRes.data.branch) || "main")
-          setDeployMode(lastPipelineRes.data.deployMode)
-          setPublishRepository(normalizeText(lastPipelineRes.data.publishRepository))
-        }
         if (buildConfigRes.data?.sourceType) {
           setSourceType(buildConfigRes.data.sourceType)
+        }
+        if (lastPipelineRes.data) {
+          setLastSuccessfulPipeline(lastPipelineRes.data)
+          setDeployMode(lastPipelineRes.data.deployMode)
+          const currentSourceType = buildConfigRes.data?.sourceType || "GIT"
+          const lastPublishType = lastPipelineRes.data.publishType || "GIT"
+          if (currentSourceType === "GIT" && lastPublishType === "GIT") {
+            setBranch(normalizeText(lastPipelineRes.data.branch) || "main")
+          }
+          if (currentSourceType === "ZIP" && lastPublishType === "ZIP") {
+            setPublishRepository(normalizeText(lastPipelineRes.data.publishRepository))
+          }
         }
       } catch {
         toast.error(t("apps.publish.fetchError"))
