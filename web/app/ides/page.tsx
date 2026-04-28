@@ -488,7 +488,7 @@ function IDEPageContent() {
             <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting || deleteConfirmText !== "OK"}
+              disabled={deleting || deleteConfirmText.toUpperCase() !== "OK"}
               className="!bg-destructive !text-destructive-foreground hover:!bg-destructive/90"
             >
               {deleting ? t("ide.deleting") : t("ide.deleteConfirmBtn")}
