@@ -12,6 +12,6 @@ public class PipelineImageConfig {
     private String clone;
     private String zip;
     private String push;
-    private String registryMirrors = "index.docker.io=docker.m.daocloud.io";
+    private String registryMirrors = "docker.io=docker.m.daocloud.io";
 
 }

@@ -43,6 +43,7 @@ public class PublishContainer extends BaseContainer {
         }
 
         String buildahArgs = "--storage-driver=vfs --tls-verify=false";
+        String buildahBudArgs = buildahArgs + " --isolation chroot";
 
         StringBuilder command = new StringBuilder();
         String registriesConf = buildRegistriesConf(registryMirrors);
@@ -50,8 +51,9 @@ public class PublishContainer extends BaseContainer {
         command.append(registriesConf);
         command.append("REGCONF_EOF\n");
         buildahArgs += " --registries-conf " + REGISTRIES_CONF_PATH;
+        buildahBudArgs += " --registries-conf " + REGISTRIES_CONF_PATH;
 
-        command.append("buildah bud ").append(buildahArgs)
+        command.append("buildah bud ").append(buildahBudArgs)
                 .append(" -t ").append(this.artifact)
                 .append(" -f ").append(dockerFile)
                 .append(" /workspace")
@@ -69,6 +71,10 @@ public class PublishContainer extends BaseContainer {
                 .withValue("/var/buildah/.docker/config.json")
                 .endEnv();
 
+        builder.withNewSecurityContext()
+                .withPrivileged(true)
+                .endSecurityContext();
+
         Container container = builder.build();
 
         this.setName(container.getName());
@@ -76,6 +82,7 @@ public class PublishContainer extends BaseContainer {
         this.setWorkingDir(container.getWorkingDir());
         this.setCommand(container.getCommand());
         this.setEnv(container.getEnv());
+        this.setSecurityContext(container.getSecurityContext());
     }
 
     /**
@@ -94,6 +101,9 @@ public class PublishContainer extends BaseContainer {
             String mirror = parts[1].trim();
             if (prefix.isEmpty() || mirror.isEmpty()) {
                 continue;
+            }
+            if ("index.docker.io".equals(prefix)) {
+                prefix = "docker.io";
             }
             conf.append("[[registry]]\n");
             conf.append("prefix = \"").append(prefix).append("\"\n");
