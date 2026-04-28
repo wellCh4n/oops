@@ -3,11 +3,10 @@
 import { use, useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Rocket, ExternalLink, Upload } from "lucide-react"
+import { Rocket, Upload, ExternalLink, Check } from "lucide-react"
 import { toast } from "sonner"
 import { createApplicationBuildSourceUpload, getApplication, getApplicationBuildConfig, getApplicationEnvironments, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
 import { Application, ApplicationEnvironment, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/contexts/language-context"
@@ -15,6 +14,7 @@ import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
 import { useRecentAppStore } from "@/store/recent-app"
 import { useFeaturesStore } from "@/store/features"
+import { cn } from "@/lib/utils"
 
 interface PageProps {
   params: Promise<{
@@ -27,7 +27,7 @@ export default function PublishPage({ params }: PageProps) {
   const router = useRouter()
   // Unwrap params using React.use()
   const { namespace, name } = use(params)
-  
+
   const [application, setApplication] = useState<Application | null>(null)
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
@@ -39,6 +39,7 @@ export default function PublishPage({ params }: PageProps) {
   const [loading, setLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const envInitialized = useRef(false)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
@@ -54,7 +55,7 @@ export default function PublishPage({ params }: PageProps) {
           getLastSuccessfulPipeline(namespace, name),
           getApplicationBuildConfig(namespace, name)
         ])
-        
+
         if (appRes.data) {
           setApplication(appRes.data)
           setRecentApp({
@@ -66,10 +67,11 @@ export default function PublishPage({ params }: PageProps) {
         }
         if (envRes.data) {
           setEnvironments(envRes.data)
-          if (envRes.data.length > 0) {
+          if (!envInitialized.current && envRes.data.length > 0) {
             const firstEnv = envRes.data[0].environmentName
             if (firstEnv) {
               setSelectedEnv(firstEnv)
+              envInitialized.current = true
             }
           }
         }
@@ -201,15 +203,42 @@ export default function PublishPage({ params }: PageProps) {
         </div>
         <div className="grid gap-2">
           <Label>{t("apps.publish.env")}</Label>
-          <RadioGroup value={selectedEnv} onValueChange={setSelectedEnv} className="flex flex-row gap-6">
-            {environments.map(env => (
-              <div className="flex items-center space-x-2" key={env.environmentName}>
-                <RadioGroupItem value={env.environmentName} id={env.environmentName} />
-                <Label htmlFor={env.environmentName}>{env.environmentName}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-          {environments.length === 0 && (
+          {environments.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              {environments.map(env => {
+                const selected = selectedEnv === env.environmentName
+                return (
+                  <div
+                    key={env.environmentName}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedEnv(env.environmentName)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        setSelectedEnv(env.environmentName)
+                      }
+                    }}
+                    className={cn(
+                      "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[12rem]",
+                      selected
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border hover:bg-accent/50"
+                    )}
+                  >
+                    <span className="text-sm font-medium">{env.environmentName}</span>
+                    {selected ? (
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    ) : (
+                      <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
             <p className="text-sm text-destructive">
               {t("apps.publish.noEnvPrefix")}
               <Link
@@ -303,16 +332,42 @@ export default function PublishPage({ params }: PageProps) {
               </button>
             )}
           </Label>
-          <RadioGroup value={deployMode} onValueChange={(v) => setDeployMode(v as DeployMode)} className="flex flex-row gap-6">
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="MANUAL" id="mode-manual" />
-              <Label htmlFor="mode-manual">{t("apps.publish.modeManual")}</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="IMMEDIATE" id="mode-immediate" />
-              <Label htmlFor="mode-immediate">{t("apps.publish.modeImmediate")}</Label>
-            </div>
-          </RadioGroup>
+          <div className="flex flex-wrap gap-3">
+            {(["MANUAL", "IMMEDIATE"] as DeployMode[]).map(mode => {
+              const selected = deployMode === mode
+              return (
+                <div
+                  key={mode}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setDeployMode(mode)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      setDeployMode(mode)
+                    }
+                  }}
+                  className={cn(
+                    "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[12rem]",
+                    selected
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:bg-accent/50"
+                  )}
+                >
+                  <span className="text-sm font-medium">
+                    {mode === "MANUAL" ? t("apps.publish.modeManual") : t("apps.publish.modeImmediate")}
+                  </span>
+                  {selected ? (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  ) : (
+                    <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         <div className="pt-2">
