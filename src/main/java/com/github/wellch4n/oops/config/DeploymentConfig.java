@@ -14,10 +14,4 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "oops.deployment")
 public class DeploymentConfig {
 
-    private Push push;
-
-    @Data
-    public static class Push {
-        private String image = "gcr.io/kaniko-project/executor:v1.24.0";
-    }
 }

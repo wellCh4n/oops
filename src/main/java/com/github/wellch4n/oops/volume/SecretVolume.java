@@ -19,7 +19,7 @@ public class SecretVolume {
 
     public SecretVolume() {
         this.volumes.add(new VolumeBuilder()
-                .withName("kaniko-secret")
+                .withName("registry-secret")
                 .withNewSecret()
                 .withSecretName("dockerhub")
                 .addNewItem()
@@ -30,8 +30,8 @@ public class SecretVolume {
                 .build());
 
         this.volumeMounts.add(new VolumeMountBuilder()
-                .withName("kaniko-secret")
-                .withMountPath("/kaniko/.docker")
+                .withName("registry-secret")
+                .withMountPath("/var/buildah/.docker")
                 .build());
 
         this.volumes.add(new VolumeBuilder()

@@ -25,7 +25,7 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 ### CI/CD Pipelines
 - Git-based build pipelines powered by Kubernetes Jobs
 - **ZIP-based deployments** with S3-compatible object storage (presigned URL upload)
-- Three-stage pipeline: **clone** (shallow clone support) → **build** → **push** (Kaniko image build)
+- Three-stage pipeline: **clone** (shallow clone support) → **build** → **push** (Buildah image build)
 - Two deploy modes: **IMMEDIATE** (auto-deploy after build) or **MANUAL** (wait for manual trigger)
 - Real-time log streaming via WebSocket
 - Pipeline history and status tracking
