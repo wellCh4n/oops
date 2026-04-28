@@ -40,8 +40,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final PipelineImageConfig pipelineImageConfig;
 
     private final String branch;
-//    private final DeploymentConfig deploymentConfig;
-
     private final String repositoryUrl;
 
     public PipelineExecuteTask(Pipeline pipeline, Environment environment) {

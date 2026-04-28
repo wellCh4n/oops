@@ -7,6 +7,9 @@ import com.github.wellch4n.oops.data.Pipeline;
 import com.github.wellch4n.oops.enums.DockerFileType;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.regex.Pattern;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
@@ -16,7 +19,8 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class PublishContainer extends BaseContainer {
 
-    private static final String REGISTRIES_CONF_PATH = "/tmp/registries.conf";
+    private static final Pattern REGISTRY_LOCATION = Pattern.compile(
+            "[a-zA-Z0-9][a-zA-Z0-9._:-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)*");
 
     @Getter
     private final String artifact;
@@ -42,29 +46,20 @@ public class PublishContainer extends BaseContainer {
             dockerFile = "Dockerfile";
         }
 
-        String buildahArgs = "--storage-driver=vfs --tls-verify=false";
-        String buildahBudArgs = buildahArgs + " --isolation chroot";
-
-        StringBuilder command = new StringBuilder();
         String registriesConf = buildRegistriesConf(registryMirrors);
-        command.append("cat > ").append(REGISTRIES_CONF_PATH).append(" << 'REGCONF_EOF'\n");
-        command.append(registriesConf);
-        command.append("REGCONF_EOF\n");
-        buildahArgs += " --registries-conf " + REGISTRIES_CONF_PATH;
-        buildahBudArgs += " --registries-conf " + REGISTRIES_CONF_PATH;
-
-        command.append("buildah bud ").append(buildahBudArgs)
-                .append(" -t ").append(this.artifact)
-                .append(" -f ").append(dockerFile)
-                .append(" /workspace")
-                .append(" && buildah push ").append(buildahArgs)
-                .append(" ").append(this.artifact);
+        String registriesConfEncoded = Base64.getEncoder().encodeToString(
+                registriesConf.getBytes(StandardCharsets.UTF_8));
+        String command = """
+                printf '%s' "$3" | base64 -d > /tmp/registries.conf
+                buildah bud --storage-driver=vfs --tls-verify=false --isolation chroot --registries-conf /tmp/registries.conf -t "$1" -f "$2" /workspace
+                buildah push --storage-driver=vfs --tls-verify=false --registries-conf /tmp/registries.conf "$1"
+                """;
 
         ContainerBuilder builder = new ContainerBuilder()
                 .withName("publish")
                 .withImage(image)
                 .withWorkingDir("/workspace")
-                .withCommand("sh", "-c", command.toString());
+                .withCommand("sh", "-eu", "-c", command, "publish", this.artifact, dockerFile, registriesConfEncoded);
 
         builder.addNewEnv()
                 .withName("REGISTRY_AUTH_FILE")
@@ -92,6 +87,9 @@ public class PublishContainer extends BaseContainer {
     private static String buildRegistriesConf(String registryMirrors) {
         StringBuilder conf = new StringBuilder();
         conf.append("unqualified-search-registries = [\"docker.io\"]\n\n");
+        if (StringUtils.isBlank(registryMirrors)) {
+            return conf.toString();
+        }
         for (String pair : registryMirrors.split(",")) {
             String[] parts = pair.split("=", 2);
             if (parts.length != 2) {
@@ -105,6 +103,9 @@ public class PublishContainer extends BaseContainer {
             if ("index.docker.io".equals(prefix)) {
                 prefix = "docker.io";
             }
+            if (isInvalidRegistryLocation(prefix) || isInvalidRegistryLocation(mirror)) {
+                continue;
+            }
             conf.append("[[registry]]\n");
             conf.append("prefix = \"").append(prefix).append("\"\n");
             conf.append("location = \"").append(prefix).append("\"\n");
@@ -114,5 +115,9 @@ public class PublishContainer extends BaseContainer {
             conf.append("\n");
         }
         return conf.toString();
+    }
+
+    private static boolean isInvalidRegistryLocation(String value) {
+        return !REGISTRY_LOCATION.matcher(value).matches();
     }
 }
