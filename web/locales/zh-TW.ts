@@ -279,6 +279,7 @@ const locale = {
   "apps.status.containerImage": "鏡像",
   "apps.status.containerReady": "就緒",
   "apps.status.containerRestarts": "重啟次數",
+  "apps.status.containerUptime": "運行時長",
   "apps.status.col.status": "狀態",
   "apps.status.col.ip": "IP 位址",
   "apps.status.col.image": "鏡像",

@@ -286,6 +286,7 @@ const zh = {
   "apps.status.containerImage": "镜像",
   "apps.status.containerReady": "就绪",
   "apps.status.containerRestarts": "重启次数",
+  "apps.status.containerUptime": "运行时长",
   "apps.status.col.status": "状态",
   "apps.status.col.ip": "IP 地址",
   "apps.status.col.image": "镜像",

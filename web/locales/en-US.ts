@@ -286,6 +286,7 @@ const en = {
   "apps.status.containerImage": "Image",
   "apps.status.containerReady": "Ready",
   "apps.status.containerRestarts": "Restarts",
+  "apps.status.containerUptime": "Uptime",
   "apps.status.col.status": "Status",
   "apps.status.col.ip": "IP Address",
   "apps.status.col.image": "Image",

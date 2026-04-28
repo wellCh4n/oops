@@ -162,6 +162,7 @@ export interface ApplicationContainerStatus {
   image: string
   ready: boolean
   restartCount: number
+  startedAt?: string | null
 }
 
 export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'

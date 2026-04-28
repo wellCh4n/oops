@@ -35,6 +35,21 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
 
+function formatUptime(startedAt: string | null | undefined): string {
+  if (!startedAt) return "-"
+  const startTime = new Date(startedAt).getTime()
+  if (isNaN(startTime)) return "-"
+  const diffMs = Date.now() - startTime
+  if (diffMs < 0) return "-"
+  const totalSeconds = Math.floor(diffMs / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  if (days > 0) return `${days}d ${hours}h`
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
+}
+
 export default function ApplicationStatusPage() {
   const params = useParams()
   const router = useRouter()
@@ -179,6 +194,7 @@ export default function ApplicationStatusPage() {
                 <TableHead className="h-8 px-3">{t("apps.status.containerImage")}</TableHead>
                 <TableHead className="h-8 px-3">{t("apps.status.containerReady")}</TableHead>
                 <TableHead className="h-8 px-3">{t("apps.status.containerRestarts")}</TableHead>
+                <TableHead className="h-8 px-3">{t("apps.status.containerUptime")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,11 +210,14 @@ export default function ApplicationStatusPage() {
                   <TableCell className={container.restartCount > 0 ? "px-3 py-2 text-destructive font-medium" : "px-3 py-2"}>
                     {container.restartCount}
                   </TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground">
+                    {formatUptime(container.startedAt)}
+                  </TableCell>
                 </TableRow>
               ))}
               {containers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-16 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-16 text-center text-muted-foreground">
                     {t("common.noData")}
                   </TableCell>
                 </TableRow>

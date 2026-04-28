@@ -558,6 +558,9 @@ public class ApplicationService {
                             container.setImage(containerStatus.getImage());
                             container.setReady(containerStatus.getReady());
                             container.setRestartCount(containerStatus.getRestartCount());
+                            if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
+                                container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
+                            }
                             containers.add(container);
                         }
                     }

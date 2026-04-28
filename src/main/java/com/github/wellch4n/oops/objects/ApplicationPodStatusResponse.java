@@ -24,5 +24,6 @@ public class ApplicationPodStatusResponse {
         private String image;
         private Boolean ready;
         private Integer restartCount;
+        private String startedAt;
     }
 }
