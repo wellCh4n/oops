@@ -9,9 +9,9 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
  * @author wellCh4n
  * @date 2025/7/7
  */
-public class BuildContainer extends BaseContainer {
+public class CompileContainer extends BaseContainer {
 
-    public BuildContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String buildCommand) {
+    public CompileContainer(Application application, ApplicationBuildConfig applicationBuildConfig, String buildCommand) {
         Container container = new ContainerBuilder()
                 .withName("compile")
                 .withImage(applicationBuildConfig.getBuildImage())

@@ -40,8 +40,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final PipelineImageConfig pipelineImageConfig;
 
     private final String branch;
-//    private final DeploymentConfig deploymentConfig;
-
     private final String repositoryUrl;
 
     public PipelineExecuteTask(Pipeline pipeline, Environment environment) {
@@ -97,19 +95,19 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         }
 
         if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
-            BuildContainer build = new BuildContainer(application, applicationBuildConfig, buildCommand);
+            CompileContainer build = new CompileContainer(application, applicationBuildConfig, buildCommand);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
 //            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);
         }
 
-        PushContainer push = new PushContainer(
+        PublishContainer push = new PublishContainer(
                 application,
                 applicationBuildConfig,
                 pipeline,
                 repositoryUrl,
                 pipelineImageConfig.getPush(),
-                pipelineImageConfig.getKanikoRegistryMap()
+                pipelineImageConfig.getRegistryMirrors()
         );
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(push);

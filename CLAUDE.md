@@ -18,7 +18,7 @@ Key components:
 - **Controllers** (`src/main/java/.../controller/`): REST API and WebSocket handlers
 - **Services** (`src/main/java/.../service/`): Business logic layer
 - **Data/Entities** (`src/main/java/.../data/`): JPA entities and repositories
-- **Pipeline System** (`task/`, `container/`, `pod/`): Kubernetes Job-based build pipeline using Kaniko
+- **Pipeline System** (`task/`, `container/`, `pod/`): Kubernetes Job-based build pipeline using Buildah
 - **Deploy Processors** (`task/processor/`): Chain-of-responsibility deploy orchestration (`ArtifactDeployTask` drives `DeployProcessor`s)
 - **Multi-host support**: Environment entity stores K8s API server credentials, allowing management of multiple clusters
 
@@ -105,7 +105,7 @@ Copy `src/main/resources/application.properties.example` to `application.propert
 
 - `spring.datasource.url`: SQLite (default) or MySQL connection
 - `oops.jwt.secret`: JWT signing key (min 32 chars)
-- `oops.pipeline.image.*`: Clone, Kaniko, and ZIP (curl) images for builds
+- `oops.pipeline.image.*`: Clone, Buildah, and ZIP (curl) images for builds
 - `oops.ingress.cert-resolver`: Traefik certificate resolver name
 - `oops.object-storage.*`: S3-compatible object storage for ZIP source uploads (`enabled`, `endpoint`, `region`, `bucket`, `access-key`, `secret-key`, `path-style-access`, `key-prefix`, URL expiration, max file size)
 - `oops.feishu.*`: Feishu (Lark) OAuth configuration (optional)
@@ -125,7 +125,7 @@ Applications can be deployed to any configured environment.
 Build pipelines run as Kubernetes Jobs with init containers:
 1. **clone**: Clones source code from git (or downloads ZIP via curl for ZIP source type)
 2. **build** (optional): Runs custom build commands
-3. **push**: Builds and pushes Docker image using Kaniko
+3. **push**: Builds and pushes Docker image using Buildah
 
 Two source types exist: `GIT` (default) and `ZIP`. ZIP uploads use presigned S3 URLs via `BuildSourceObjectStorageService` — the frontend gets a presigned PUT URL from `POST .../deployments/source-upload`, uploads the file, then triggers the pipeline. ZIP builds use `oops.pipeline.image.zip` (defaults to `alpine/curl:8.17.0`) to download the archive.
 

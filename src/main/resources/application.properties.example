@@ -15,8 +15,8 @@ spring.flyway.baseline-version=1
 
 oops.pipeline.image.clone=alpine/git:v2.49.0
 oops.pipeline.image.zip=alpine/curl:8.17.0
-oops.pipeline.image.push=gcr.io/kaniko-project/executor:v1.23.2
-oops.pipeline.image.kaniko-registry-map=index.docker.io=docker.m.daocloud.io
+oops.pipeline.image.push=quay.io/buildah/stable:v1.43.1
+oops.pipeline.image.registry-mirrors=docker.io=docker.m.daocloud.io
 oops.ingress.cert-resolver=letsencrypt-prod
 
 oops.object-storage.enabled=false
