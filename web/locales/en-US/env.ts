@@ -29,6 +29,7 @@ const env = {
   "env.repoPassword": "Password",
   "env.delete": "Delete",
   "env.save": "Save",
+  "env.dangerZone": "Danger Zone",
   "env.workspaceCreating": "Creating workspace...",
   "env.workspaceCreated": "Workspace created",
   "env.workspaceCreateError": "Failed to create workspace",

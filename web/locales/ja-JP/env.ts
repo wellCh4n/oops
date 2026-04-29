@@ -29,6 +29,7 @@ const env = {
   "env.repoPassword": "パスワード",
   "env.delete": "環境を削除",
   "env.save": "設定を保存",
+  "env.dangerZone": "危険区域",
   "env.workspaceCreating": "ワークスペースを作成しています...",
   "env.workspaceCreated": "ワークスペースが正常に作成されました",
   "env.workspaceCreateError": "ワークスペースの作成に失敗しました",
