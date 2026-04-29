@@ -1,9 +1,16 @@
 package com.github.wellch4n.oops.container.clone;
 
 import com.github.wellch4n.oops.data.Application;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
+
+    private static final List<String> UNZIP_EXCLUDES = List.of(
+            "node_modules/*",
+            "*/node_modules/*"
+    );
 
     @Override
     public boolean supports(CloneStrategyParam param) {
@@ -34,7 +41,7 @@ public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
                     exit 1
                 fi
 
-                unzip -o /tmp/source.zip -d /tmp/source-download
+                unzip -o /tmp/source.zip -d /tmp/source-download -x %s
 
                 find /tmp/source-download -mindepth 1 -maxdepth 1 \\
                   ! -name '__MACOSX' \\
@@ -49,6 +56,7 @@ public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
                   cp -a /tmp/source-download/. /workspace/
                   rm -rf /workspace/__MACOSX /workspace/.DS_Store
                 fi
-                """.formatted(param.sourceDownloadUrl());
+                """.formatted(param.sourceDownloadUrl(),
+                        UNZIP_EXCLUDES.stream().map(e -> "'" + e + "'").collect(Collectors.joining(" ")));
     }
 }
