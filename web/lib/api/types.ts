@@ -70,6 +70,7 @@ export interface Application {
   owner?: string
   ownerName?: string
   sourceType?: ApplicationSourceType
+  createdTime?: string
 }
 
 export type DockerFileType = 'BUILTIN' | 'USER'

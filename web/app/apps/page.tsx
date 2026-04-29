@@ -151,7 +151,7 @@ function AppsContent() {
                 <SelectWithSearch
                   value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
-                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
+                  options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("common.selectNamespace")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -285,7 +285,7 @@ function AppsContent() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         namespaces={namespaces}
-        defaultNamespace={selectedNamespace}
+        defaultNamespace={selectedNamespace === "all" ? (namespaces[0]?.name ?? "") : selectedNamespace}
       />
     </ContentPage>
   )

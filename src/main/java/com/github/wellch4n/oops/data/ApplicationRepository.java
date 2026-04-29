@@ -23,7 +23,7 @@ public interface ApplicationRepository extends JpaRepository<Application, String
 
     Page<Application> findByNamespaceAndNameContainingIgnoreCase(String namespace, String keyword, Pageable pageable);
 
-    @Query("SELECT a FROM Application a WHERE a.namespace = :namespace AND LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) AND (:ownerId IS NULL OR a.owner = :ownerId) ORDER BY CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC")
+    @Query("SELECT a FROM Application a WHERE (:namespace = 'all' OR a.namespace = :namespace) AND (LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(a.description, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:ownerId IS NULL OR a.owner = :ownerId) ORDER BY CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC")
     Page<Application> findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
             @Param("namespace") String namespace,
             @Param("keyword") String keyword,

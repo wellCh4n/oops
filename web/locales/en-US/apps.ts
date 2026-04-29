@@ -4,7 +4,7 @@ const apps = {
   "apps.fetchError": "Failed to fetch applications",
   "apps.namespaceFilter": "Namespace:",
   "apps.appNameFilter": "Application:",
-  "apps.searchPlaceholder": "Search apps...",
+  "apps.searchPlaceholder": "Search by name or description...",
   "apps.searchBtn": "Search",
   "apps.ownerAll": "All",
   "apps.ownerMine": "Mine",

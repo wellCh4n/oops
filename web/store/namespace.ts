@@ -30,9 +30,11 @@ export const useNamespaceStore = create<NamespaceState>()(
           if (res.data && Array.isArray(res.data)) {
             const nsList = res.data.map((ns) => ({ id: ns.name, name: ns.name }))
             const { selectedNamespace } = get()
-            const validNs = selectedNamespace && nsList.some((ns) => ns.id === selectedNamespace)
-              ? selectedNamespace
-              : nsList[0]?.id ?? ""
+            const validNs = selectedNamespace === "all"
+              ? "all"
+              : selectedNamespace && nsList.some((ns) => ns.id === selectedNamespace)
+                ? selectedNamespace
+                : nsList[0]?.id ?? ""
             set({ namespaces: nsList, selectedNamespace: validNs, loaded: true })
           }
         } catch {

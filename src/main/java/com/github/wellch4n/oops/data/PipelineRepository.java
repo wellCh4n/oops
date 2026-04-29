@@ -34,6 +34,12 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
 
     Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironment(String namespace, String applicationName, String environment, Pageable pageable);
 
+    @Query("SELECT p FROM Pipeline p WHERE (:namespace = 'all' OR p.namespace = :namespace) AND p.applicationName = :applicationName")
+    Page<Pipeline> findByNamespaceAndApplicationNameWithAllNamespace(@Param("namespace") String namespace, @Param("applicationName") String applicationName, Pageable pageable);
+
+    @Query("SELECT p FROM Pipeline p WHERE (:namespace = 'all' OR p.namespace = :namespace) AND p.applicationName = :applicationName AND p.environment = :environment")
+    Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironmentWithAllNamespace(@Param("namespace") String namespace, @Param("applicationName") String applicationName, @Param("environment") String environment, Pageable pageable);
+
     Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(String namespace, String applicationName, PipelineStatus status);
 
     boolean existsByNamespaceAndApplicationNameAndStatusIn(String namespace, String applicationName, List<PipelineStatus> statuses);
