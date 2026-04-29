@@ -108,16 +108,8 @@ function IDEPageContent() {
     }
     const loadApps = async () => {
       try {
-        let apps: Application[]
-        if (selectedNamespace === "all") {
-          const results = await Promise.all(
-            namespaces.map(ns => getApplications(ns.name))
-          )
-          apps = results.flatMap(res => res.data?.data ?? [])
-        } else {
-          const res = await getApplications(selectedNamespace)
-          apps = res.data?.data ?? []
-        }
+        const res = await getApplications(selectedNamespace)
+        const apps = res.data?.data ?? []
         setApplications(apps)
         if (!selectedApp && apps.length > 0) {
           const recent = recentApp
@@ -289,17 +281,12 @@ function IDEPageContent() {
                   value: app.name,
                   label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                 }))}
-                onSearch={selectedNamespace && selectedNamespace !== "all" ? async (query) => {
+                onSearch={selectedNamespace ? async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
-                  return (res.data?.data ?? []).map(app => ({ value: app.name, label: app.name }))
-                } : selectedNamespace === "all" ? async (query) => {
-                  const results = await Promise.all(
-                    namespaces.map(ns => getApplications(ns.name, query || undefined, 1, 20))
-                  )
-                  return results.flatMap(res => (res.data?.data ?? []).map(app => ({
+                  return (res.data?.data ?? []).map(app => ({
                     value: app.name,
-                    label: `${app.name} (${app.namespace})`,
-                  })))
+                    label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                  }))
                 } : undefined}
                 placeholder={t("ide.page.selectApp")}
                 searchPlaceholder={t("common.search")}

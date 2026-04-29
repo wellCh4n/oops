@@ -75,7 +75,13 @@ public class PipelineService {
         int s = size == null ? 20 : size;
         PageRequest pageable = PageRequest.of(Math.max(p - 1, 0), s, Sort.by(Sort.Direction.DESC, "createdTime"));
         org.springframework.data.domain.Page<Pipeline> pipelinePage;
-        if (environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment)) {
+        boolean allNamespace = "all".equalsIgnoreCase(namespace);
+        boolean allEnvironment = environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment);
+        if (allNamespace && allEnvironment) {
+            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameWithAllNamespace(namespace, applicationName, pageable);
+        } else if (allNamespace) {
+            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironmentWithAllNamespace(namespace, applicationName, environment, pageable);
+        } else if (allEnvironment) {
             pipelinePage = pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable);
         } else {
             pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable);

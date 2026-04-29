@@ -110,28 +110,10 @@ function AppsContent() {
 
     setLoading(true)
     try {
-      if (selectedNamespace === "all") {
-        const currentUserId = localStorage.getItem("auth_user_id") ?? ""
-        const results = await Promise.all(
-          namespaces.map(ns => getApplications(ns.name, searchQuery || undefined, 1, 1000, ownerOnly))
-        )
-        const allApps = results.flatMap(res => res.data?.data ?? [])
-        allApps.sort((a, b) => {
-          const aOwner = a.owner === currentUserId ? 0 : 1
-          const bOwner = b.owner === currentUserId ? 0 : 1
-          if (aOwner !== bOwner) return aOwner - bOwner
-          return new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime()
-        })
-        const totalPages = Math.ceil(allApps.length / size)
-        const start = (page - 1) * size
-        setApplications(allApps.slice(start, start + size))
-        setTotalPages(totalPages)
-      } else {
-        const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
-        if (res.data) {
-          setApplications(res.data.data)
-          setTotalPages(res.data.totalPages)
-        }
+      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
+      if (res.data) {
+        setApplications(res.data.data)
+        setTotalPages(res.data.totalPages)
       }
     } catch (error) {
       console.error("Failed to fetch applications:", error)
