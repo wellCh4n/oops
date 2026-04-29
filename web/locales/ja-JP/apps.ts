@@ -182,6 +182,7 @@ const apps = {
   "apps.status.containerUptime": "稼働時間",
   "apps.status.col.status": "ステータス",
   "apps.status.col.ip": "IP アドレス",
+  "apps.status.col.node": "ノード",
   "apps.status.col.image": "イメージ",
   "apps.status.col.restart": "再起動",
   "apps.status.col.logs": "ログ",

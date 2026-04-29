@@ -182,6 +182,7 @@ const apps = {
   "apps.status.containerUptime": "运行时长",
   "apps.status.col.status": "状态",
   "apps.status.col.ip": "IP 地址",
+  "apps.status.col.node": "节点",
   "apps.status.col.image": "镜像",
   "apps.status.col.restart": "重启",
   "apps.status.col.logs": "日志",

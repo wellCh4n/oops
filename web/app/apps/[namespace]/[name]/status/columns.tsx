@@ -37,6 +37,10 @@ export const getStatusColumns = (
     header: t("apps.status.col.ip"),
   },
   {
+    accessorKey: "nodeName",
+    header: t("apps.status.col.node"),
+  },
+  {
     id: "actions",
     cell: ({ row }) => {
       return (

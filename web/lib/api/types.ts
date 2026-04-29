@@ -154,6 +154,7 @@ export interface ApplicationPodStatus {
   namespace: string
   status: string
   podIP: string
+  nodeName: string
   containers: ApplicationContainerStatus[]
 }
 

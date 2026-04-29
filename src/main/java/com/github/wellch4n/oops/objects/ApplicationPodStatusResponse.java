@@ -16,6 +16,7 @@ public class ApplicationPodStatusResponse {
     private String namespace;
     private String status;
     private String podIP;
+    private String nodeName;
     private List<ContainerStatus> containers;
 
     @Data

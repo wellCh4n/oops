@@ -182,6 +182,7 @@ const apps = {
   "apps.status.containerUptime": "Uptime",
   "apps.status.col.status": "Status",
   "apps.status.col.ip": "IP Address",
+  "apps.status.col.node": "Node",
   "apps.status.col.image": "Image",
   "apps.status.col.restart": "Restart",
   "apps.status.col.logs": "Logs",

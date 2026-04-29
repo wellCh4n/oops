@@ -549,6 +549,7 @@ public class ApplicationService {
                     status.setNamespace(pod.getMetadata().getNamespace());
                     status.setPodIP(pod.getStatus().getPodIP());
                     status.setStatus(pod.getStatus().getPhase());
+                    status.setNodeName(pod.getSpec().getNodeName());
                     var containerStatuses = pod.getStatus().getContainerStatuses();
                     List<ApplicationPodStatusResponse.ContainerStatus> containers = new ArrayList<>();
                     if (containerStatuses != null) {
