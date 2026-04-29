@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
 import { getPipelines, stopPipeline, deployPipeline } from "@/lib/api/pipelines"
@@ -69,6 +69,12 @@ function PipelinesContent() {
   const page = Number(searchParams.get("page") ?? "1")
   const size = Number(searchParams.get("size") ?? "10")
 
+  const resolvedNamespace = useMemo(() => {
+    if (selectedNamespace !== "all") return selectedNamespace
+    const app = applications.find(a => a.name === selectedApp)
+    return app?.namespace ?? ""
+  }, [selectedNamespace, selectedApp, applications])
+
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
     Object.entries(updates).forEach(([k, v]) => {
@@ -100,16 +106,23 @@ function PipelinesContent() {
     }
     const load = async () => {
       try {
-        const res = await getApplications(selectedNamespace)
-        if (res.data) {
-          setApplications(res.data.data)
-          if (!searchParams.get("app") && res.data.data.length > 0) {
-            const recent = recentApp && recentApp.namespace === selectedNamespace
-              ? res.data.data.find(a => a.name === recentApp.name)
-              : undefined
-            const targetApp = recent ?? res.data.data[0]
-            updateParams({ app: targetApp.name })
-          }
+        let apps: Application[]
+        if (selectedNamespace === "all") {
+          const results = await Promise.all(
+            namespaces.map(ns => getApplications(ns.name))
+          )
+          apps = results.flatMap(res => res.data?.data ?? [])
+        } else {
+          const res = await getApplications(selectedNamespace)
+          apps = res.data?.data ?? []
+        }
+        setApplications(apps)
+        if (!searchParams.get("app") && apps.length > 0) {
+          const recent = recentApp
+            ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
+            : undefined
+          const targetApp = recent ?? apps[0]
+          updateParams({ app: targetApp.name })
         }
       } catch {
         toast.error(t("pipelines.fetchAppsError"))
@@ -122,13 +135,13 @@ function PipelinesContent() {
 
   // Load environments when app changes
   useEffect(() => {
-    if (!selectedNamespace || !selectedApp) {
+    if (!resolvedNamespace || !selectedApp) {
       setEnvironments([])
       return
     }
     const load = async () => {
       try {
-        const res = await getApplicationBuildEnvConfigs(selectedNamespace, selectedApp)
+        const res = await getApplicationBuildEnvConfigs(resolvedNamespace, selectedApp)
         if (res.data) {
           setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
         }
@@ -137,7 +150,7 @@ function PipelinesContent() {
       }
     }
     load()
-  }, [selectedNamespace, selectedApp])
+  }, [resolvedNamespace, selectedApp])
 
   // Fetch pipelines
   const fetchPipelines = useCallback(async () => {
@@ -147,24 +160,39 @@ function PipelinesContent() {
     }
     setLoading(true)
     try {
-      const res = await getPipelines(selectedNamespace, selectedApp, selectedEnv, page, size)
-      if (res.data) {
-        setPipelines(res.data.data)
-        setTotalPages(res.data.totalPages)
+      if (selectedNamespace === "all") {
+        const appNamespaces = [...new Set(
+          applications.filter(a => a.name === selectedApp).map(a => a.namespace)
+        )]
+        const results = await Promise.all(
+          appNamespaces.map(ns => getPipelines(ns, selectedApp, selectedEnv, 1, 1000))
+        )
+        const allPipelines = results.flatMap(res => res.data?.data ?? [])
+        allPipelines.sort((a, b) => new Date(b.createdTime).getTime() - new Date(a.createdTime).getTime())
+        const totalPages = Math.ceil(allPipelines.length / size)
+        const start = (page - 1) * size
+        setPipelines(allPipelines.slice(start, start + size))
+        setTotalPages(totalPages)
+      } else {
+        const res = await getPipelines(selectedNamespace, selectedApp, selectedEnv, page, size)
+        if (res.data) {
+          setPipelines(res.data.data)
+          setTotalPages(res.data.totalPages)
+        }
       }
     } catch {
       toast.error(t("pipelines.fetchError"))
     } finally {
       setLoading(false)
     }
-  }, [selectedNamespace, selectedApp, selectedEnv, page, size, t])
+  }, [selectedNamespace, selectedApp, selectedEnv, page, size, t, applications])
 
   useEffect(() => {
     if (initialized) fetchPipelines()
   }, [initialized, fetchPipelines])
 
   const handleView = (pipeline: Pipeline) => {
-    router.push(`/apps/${selectedNamespace}/${selectedApp}/pipelines/${pipeline.id}`)
+    router.push(`/apps/${resolvedNamespace}/${selectedApp}/pipelines/${pipeline.id}`)
   }
 
   const handleStop = (pipeline: Pipeline) => {
@@ -175,7 +203,7 @@ function PipelinesContent() {
     if (!stopTarget) return
     setStopping(true)
     try {
-      await stopPipeline(selectedNamespace, selectedApp, stopTarget.id)
+      await stopPipeline(resolvedNamespace, selectedApp, stopTarget.id)
       toast.success(t("pipelines.stopSuccess"))
       fetchPipelines()
     } catch {
@@ -193,7 +221,7 @@ function PipelinesContent() {
   const confirmDeploy = async () => {
     if (!deployTarget) return
     try {
-      await deployPipeline(selectedNamespace, selectedApp, deployTarget.id)
+      await deployPipeline(resolvedNamespace, selectedApp, deployTarget.id)
       toast.success(t("pipelines.deploySuccess"))
       fetchPipelines()
     } catch {
@@ -214,7 +242,7 @@ function PipelinesContent() {
                 <SelectWithSearch
                   value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
-                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
+                  options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("pipelines.selectNs")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -237,10 +265,21 @@ function PipelinesContent() {
                     }
                     updateParams({ app: v, env: "all", page: "1" })
                   }}
-                  options={applications.map(app => ({ value: app.name, label: app.name }))}
-                  onSearch={selectedNamespace ? async (query) => {
+                  options={applications.map(app => ({
+                    value: app.name,
+                    label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                  }))}
+                  onSearch={selectedNamespace && selectedNamespace !== "all" ? async (query) => {
                     const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
                     return (res.data?.data ?? []).map(app => ({ value: app.name, label: app.name }))
+                  } : selectedNamespace === "all" ? async (query) => {
+                    const results = await Promise.all(
+                      namespaces.map(ns => getApplications(ns.name, query || undefined, 1, 20))
+                    )
+                    return results.flatMap(res => (res.data?.data ?? []).map(app => ({
+                      value: app.name,
+                      label: `${app.name} (${app.namespace})`,
+                    })))
                   } : undefined}
                   placeholder={t("pipelines.selectApp")}
                   searchPlaceholder={t("common.search")}

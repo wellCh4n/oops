@@ -31,6 +31,7 @@ const common = {
   "common.edit": "編輯",
   "common.delete": "刪除",
   "common.name": "名稱",
+  "common.allNamespaces": "全部",
 }
 
 export default common

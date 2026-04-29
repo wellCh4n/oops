@@ -110,10 +110,28 @@ function AppsContent() {
 
     setLoading(true)
     try {
-      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
-      if (res.data) {
-        setApplications(res.data.data)
-        setTotalPages(res.data.totalPages)
+      if (selectedNamespace === "all") {
+        const currentUserId = localStorage.getItem("auth_user_id") ?? ""
+        const results = await Promise.all(
+          namespaces.map(ns => getApplications(ns.name, searchQuery || undefined, 1, 1000, ownerOnly))
+        )
+        const allApps = results.flatMap(res => res.data?.data ?? [])
+        allApps.sort((a, b) => {
+          const aOwner = a.owner === currentUserId ? 0 : 1
+          const bOwner = b.owner === currentUserId ? 0 : 1
+          if (aOwner !== bOwner) return aOwner - bOwner
+          return new Date(b.createdTime ?? 0).getTime() - new Date(a.createdTime ?? 0).getTime()
+        })
+        const totalPages = Math.ceil(allApps.length / size)
+        const start = (page - 1) * size
+        setApplications(allApps.slice(start, start + size))
+        setTotalPages(totalPages)
+      } else {
+        const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
+        if (res.data) {
+          setApplications(res.data.data)
+          setTotalPages(res.data.totalPages)
+        }
       }
     } catch (error) {
       console.error("Failed to fetch applications:", error)
@@ -151,7 +169,7 @@ function AppsContent() {
                 <SelectWithSearch
                   value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
-                  options={namespaces.map(ns => ({ value: ns.id, label: ns.name }))}
+                  options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("common.selectNamespace")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -285,7 +303,7 @@ function AppsContent() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         namespaces={namespaces}
-        defaultNamespace={selectedNamespace}
+        defaultNamespace={selectedNamespace === "all" ? (namespaces[0]?.name ?? "") : selectedNamespace}
       />
     </ContentPage>
   )

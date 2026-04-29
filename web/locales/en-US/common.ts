@@ -31,6 +31,7 @@ const common = {
   "common.edit": "Edit",
   "common.delete": "Delete",
   "common.name": "Name",
+  "common.allNamespaces": "ALL",
 }
 
 export default common
