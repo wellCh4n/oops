@@ -1,0 +1,134 @@
+package com.github.wellch4n.oops.shared.util;
+
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+public final class PemCertificateParser {
+
+    private static final Pattern CERT_BLOCK = Pattern.compile(
+            "-----BEGIN CERTIFICATE-----(.*?)-----END CERTIFICATE-----",
+            Pattern.DOTALL);
+
+    private static final Pattern PKCS8_KEY_BLOCK = Pattern.compile(
+            "-----BEGIN PRIVATE KEY-----(.*?)-----END PRIVATE KEY-----",
+            Pattern.DOTALL);
+
+    private static final Pattern LEGACY_RSA_KEY_BLOCK = Pattern.compile(
+            "-----BEGIN (RSA|EC) PRIVATE KEY-----",
+            Pattern.DOTALL);
+
+    private PemCertificateParser() {}
+
+    private static final Pattern CN_PATTERN = Pattern.compile("CN=([^,]+)");
+
+    public static CertMeta parseCertificate(String certPem) {
+        if (certPem == null || certPem.isBlank()) {
+            throw new IllegalArgumentException("Certificate content is empty");
+        }
+        Matcher m = CERT_BLOCK.matcher(certPem);
+        if (!m.find()) {
+            throw new IllegalArgumentException("Invalid certificate format, expected PEM (-----BEGIN CERTIFICATE-----)");
+        }
+        try {
+            CertificateFactory factory = CertificateFactory.getInstance("X.509");
+            X509Certificate cert = (X509Certificate) factory.generateCertificate(
+                    new ByteArrayInputStream(certPem.getBytes(StandardCharsets.UTF_8)));
+            LocalDateTime notAfter = cert.getNotAfter().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDateTime();
+            String subject = cert.getSubjectX500Principal().getName();
+            return new CertMeta(subject, notAfter, extractDnsNames(cert, subject));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to parse certificate: " + e.getMessage(), e);
+        }
+    }
+
+    private static List<String> extractDnsNames(X509Certificate cert, String subject) throws CertificateParsingException {
+        List<String> names = new ArrayList<>();
+        Matcher cn = CN_PATTERN.matcher(subject);
+        if (cn.find()) {
+            names.add(cn.group(1).trim().toLowerCase());
+        }
+        var altNames = cert.getSubjectAlternativeNames();
+        if (altNames != null) {
+            for (List<?> entry : altNames) {
+                // entry[0] = type (2 = dNSName), entry[1] = value
+                if (entry.size() >= 2 && Integer.valueOf(2).equals(entry.get(0))) {
+                    Object value = entry.get(1);
+                    if (value instanceof String s) {
+                        String lower = s.trim().toLowerCase();
+                        if (!names.contains(lower)) {
+                            names.add(lower);
+                        }
+                    }
+                }
+            }
+        }
+        return names;
+    }
+
+    public static boolean hostMatches(String host, List<String> certDnsNames) {
+        if (host == null || certDnsNames == null || certDnsNames.isEmpty()) return false;
+        String normalizedHost = stripWildcard(host);
+        for (String cn : certDnsNames) {
+            if (stripWildcard(cn).equals(normalizedHost)) return true;
+        }
+        return false;
+    }
+
+    private static String stripWildcard(String name) {
+        String s = name == null ? "" : name.trim().toLowerCase();
+        return s.startsWith("*.") ? s.substring(2) : s;
+    }
+
+    public static void validatePrivateKey(String keyPem) {
+        if (keyPem == null || keyPem.isBlank()) {
+            throw new IllegalArgumentException("Private key content is empty");
+        }
+        if (LEGACY_RSA_KEY_BLOCK.matcher(keyPem).find()) {
+            throw new IllegalArgumentException(
+                    "PKCS#1 format is not supported, please convert to PKCS#8 using: openssl pkcs8 -topk8 -nocrypt (-----BEGIN PRIVATE KEY-----)");
+        }
+        Matcher m = PKCS8_KEY_BLOCK.matcher(keyPem);
+        if (!m.find()) {
+            throw new IllegalArgumentException("Invalid private key format, expected PKCS#8 PEM (-----BEGIN PRIVATE KEY-----)");
+        }
+        byte[] der = Base64.getMimeDecoder().decode(m.group(1).trim());
+        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(der);
+        if (isInvalidKeyFactory("RSA", keySpec) && isInvalidKeyFactory("EC", keySpec)) {
+            throw new IllegalArgumentException("Failed to parse private key (neither RSA nor EC)");
+        }
+    }
+
+    private static boolean isInvalidKeyFactory(String algorithm, PKCS8EncodedKeySpec keySpec) {
+        try {
+            KeyFactory.getInstance(algorithm).generatePrivate(keySpec);
+            return false;
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException _) {
+            return true;
+        }
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class CertMeta {
+        private String subject;
+        private LocalDateTime notAfter;
+        private List<String> dnsNames;
+    }
+}
