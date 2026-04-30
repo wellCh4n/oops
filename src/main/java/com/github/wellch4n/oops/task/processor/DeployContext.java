@@ -6,9 +6,8 @@ import com.github.wellch4n.oops.data.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.data.ApplicationServiceConfig;
 import com.github.wellch4n.oops.data.Environment;
 import com.github.wellch4n.oops.data.Pipeline;
+import com.github.wellch4n.oops.port.KubernetesOperations;
 import io.fabric8.kubernetes.api.model.OwnerReference;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.dsl.base.PatchContext;
 import java.util.Map;
 import lombok.Data;
 
@@ -21,8 +20,7 @@ public class DeployContext {
     private final ApplicationRuntimeSpec.HealthCheck healthCheck;
     private final ApplicationServiceConfig applicationServiceConfig;
     private final IngressConfig ingressConfig;
-    private final KubernetesClient client;
-    private final PatchContext patchContext;
+    private final KubernetesOperations k8s;
     private final int servicePort;
     private final Map<String, String> labels;
     private OwnerReference ownerRef;
