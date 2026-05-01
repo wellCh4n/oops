@@ -56,13 +56,40 @@ function IDEPageContent() {
   const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
 
   const selectedApp = searchParams.get("app") ?? ""
+  const selectedAppNamespace = searchParams.get("appNamespace") ?? ""
   const selectedEnv = searchParams.get("env") ?? ""
 
   const resolvedNamespace = useMemo(() => {
     if (selectedNamespace !== "all") return selectedNamespace
+    if (selectedAppNamespace) return selectedAppNamespace
     const app = applications.find(a => a.name === selectedApp)
     return app?.namespace ?? ""
-  }, [selectedNamespace, selectedApp, applications])
+  }, [selectedNamespace, selectedApp, selectedAppNamespace, applications])
+
+  const selectedAppValue = useMemo(() => {
+    if (!selectedApp) return ""
+    if (selectedNamespace !== "all") return selectedApp
+    return resolvedNamespace ? `${resolvedNamespace}/${selectedApp}` : selectedApp
+  }, [selectedNamespace, resolvedNamespace, selectedApp])
+
+  const appOptionValue = useCallback((app: Application) => (
+    selectedNamespace === "all" ? `${app.namespace}/${app.name}` : app.name
+  ), [selectedNamespace])
+
+  const resolveSelectedApp = useCallback((value: string) => {
+    if (selectedNamespace !== "all") {
+      return { namespace: selectedNamespace, name: value }
+    }
+    const separatorIndex = value.indexOf("/")
+    if (separatorIndex > 0) {
+      return {
+        namespace: value.slice(0, separatorIndex),
+        name: value.slice(separatorIndex + 1),
+      }
+    }
+    const app = applications.find(a => a.name === value)
+    return { namespace: app?.namespace ?? "", name: value }
+  }, [selectedNamespace, applications])
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -116,7 +143,11 @@ function IDEPageContent() {
             ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
             : undefined
           const targetApp = recent ?? apps[0]
-          updateParams({ app: targetApp.name, env: "" })
+          updateParams({
+            app: targetApp.name,
+            appNamespace: selectedNamespace === "all" ? targetApp.namespace : "",
+            env: "",
+          })
         }
       } catch {
         toast.error(t("apps.fetchError"))
@@ -240,6 +271,15 @@ function IDEPageContent() {
     }
   }
 
+  const buildIDEHref = useCallback((id: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (resolvedNamespace) {
+      params.set("namespace", resolvedNamespace)
+      params.delete("appNamespace")
+    }
+    return `/ides/${id}${params.toString() ? `?${params.toString()}` : ""}`
+  }, [resolvedNamespace, searchParams])
+
   return (
     <ContentPage title={t("nav.ide")}>
       <TableForm
@@ -251,7 +291,7 @@ function IDEPageContent() {
               </span>
               <SelectWithSearch
                 value={selectedNamespace}
-                onValueChange={(v: string) => { updateParams({ namespace: v, app: "", env: "" }) }}
+                onValueChange={(v: string) => { updateParams({ namespace: v, app: "", appNamespace: "", env: "" }) }}
                 options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map((ns) => ({ value: ns.id, label: ns.name }))]}
                 placeholder={t("common.selectNamespace")}
                 searchPlaceholder={t("common.search")}
@@ -264,9 +304,10 @@ function IDEPageContent() {
                 <LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}
               </span>
               <SelectWithSearch
-                value={selectedApp}
+                value={selectedAppValue}
                 onValueChange={(v: string) => {
-                  const app = applications.find(a => a.name === v)
+                  const selected = resolveSelectedApp(v)
+                  const app = applications.find(a => a.name === selected.name && a.namespace === selected.namespace)
                   if (app) {
                     setRecentApp({
                       namespace: app.namespace,
@@ -275,16 +316,20 @@ function IDEPageContent() {
                       ownerName: app.ownerName,
                     })
                   }
-                  updateParams({ app: v, env: "" })
+                  updateParams({
+                    app: selected.name,
+                    appNamespace: selectedNamespace === "all" ? selected.namespace : "",
+                    env: "",
+                  })
                 }}
                 options={applications.map((app) => ({
-                  value: app.name,
+                  value: appOptionValue(app),
                   label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                 }))}
                 onSearch={selectedNamespace ? async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
                   return (res.data?.data ?? []).map(app => ({
-                    value: app.name,
+                    value: selectedNamespace === "all" ? `${app.namespace}/${app.name}` : app.name,
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                   }))
                 } : undefined}
@@ -375,7 +420,7 @@ function IDEPageContent() {
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Link
-                              href={ide.ready ? `/ides/${ide.id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}` : "#"}
+                              href={ide.ready ? buildIDEHref(ide.id) : "#"}
                               className={`font-mono text-sm truncate ${ide.ready ? "text-primary hover:underline cursor-pointer" : "text-muted-foreground cursor-not-allowed pointer-events-none"}`}
                             >
                               {ide.name}
