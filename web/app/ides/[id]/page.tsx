@@ -32,10 +32,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
     ? `${features.ideHttps ? "https" : "http"}://${id}.${features.ideHost}`
     : ""
 
-  const namespaceParam = searchParams.get("namespace")
-  const namespace = namespaceParam === "all"
-    ? searchParams.get("appNamespace")
-    : namespaceParam
+  const namespace = searchParams.get("namespace")
   const app = searchParams.get("app")
 
   useEffect(() => {

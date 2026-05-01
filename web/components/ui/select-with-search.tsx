@@ -21,6 +21,8 @@ import {
 interface Option {
   value: string
   label: string
+  namespace?: string
+  name?: string
 }
 
 interface SelectWithSearchProps {
@@ -33,6 +35,7 @@ interface SelectWithSearchProps {
   className?: string
   disabled?: boolean
   onSearch?: (query: string) => Promise<Option[]>
+  onOptionSelect?: (option: Option) => void
 }
 
 export function SelectWithSearch({
@@ -45,6 +48,7 @@ export function SelectWithSearch({
   className,
   disabled = false,
   onSearch,
+  onOptionSelect,
 }: SelectWithSearchProps) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
@@ -131,8 +135,9 @@ export function SelectWithSearch({
                   <CommandItem
                     key={option.value}
                     value={option.value}
-                    onSelect={(currentValue) => {
-                      onValueChange?.(currentValue)
+                    onSelect={() => {
+                      onValueChange?.(option.value)
+                      onOptionSelect?.(option)
                       setOpen(false)
                       setQuery("")
                     }}
