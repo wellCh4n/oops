@@ -69,11 +69,40 @@ final class PersistenceMapper {
     }
 
     static com.github.wellch4n.oops.domain.routing.Domain toDomain(Domain entity) {
-        return convert(entity, com.github.wellch4n.oops.domain.routing.Domain.class);
+        if (entity == null) {
+            return null;
+        }
+        com.github.wellch4n.oops.domain.routing.Domain domain =
+                new com.github.wellch4n.oops.domain.routing.Domain();
+        domain.setId(entity.getId());
+        domain.setCreatedTime(entity.getCreatedTime());
+        domain.setHost(entity.getHost());
+        domain.setDescription(entity.getDescription());
+        domain.setHttps(entity.getHttps());
+        domain.setCertMode(entity.getCertMode());
+        domain.setCertPem(entity.getCertPem());
+        domain.setKeyPem(entity.getKeyPem());
+        domain.setCertSubject(entity.getCertSubject());
+        domain.setCertNotAfter(entity.getCertNotAfter());
+        return domain;
     }
 
     static Domain toEntity(com.github.wellch4n.oops.domain.routing.Domain domain) {
-        return convert(domain, Domain.class);
+        if (domain == null) {
+            return null;
+        }
+        Domain entity = new Domain();
+        entity.setId(domain.getId());
+        entity.setCreatedTime(domain.getCreatedTime());
+        entity.setHost(domain.getHost());
+        entity.setDescription(domain.getDescription());
+        entity.setHttps(domain.getHttps());
+        entity.setCertMode(domain.getCertMode());
+        entity.setCertPem(domain.getCertPem());
+        entity.setKeyPem(domain.getKeyPem());
+        entity.setCertSubject(domain.getCertSubject());
+        entity.setCertNotAfter(domain.getCertNotAfter());
+        return entity;
     }
 
     static com.github.wellch4n.oops.domain.namespace.Namespace toDomain(Namespace entity) {
