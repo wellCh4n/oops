@@ -1,0 +1,162 @@
+package com.github.wellch4n.oops.infrastructure.kubernetes.task;
+
+import com.github.wellch4n.oops.infrastructure.config.PipelineImageConfig;
+import com.github.wellch4n.oops.infrastructure.config.SpringContext;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.*;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneParam;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.ZipCloneParam;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig.DockerFileConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.DockerFileType;
+// import com.github.wellch4n.oops.interfaces.dto.BuildStorage;
+import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
+//import com.github.wellch4n.oops.application.service.BuildStorageService;
+import com.github.wellch4n.oops.application.port.BuildSourceStorage;
+import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
+import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
+import io.fabric8.kubernetes.api.model.Container;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import org.apache.commons.lang3.StringUtils;
+
+/**
+ * @author wellCh4n
+ * @date 2025/7/5
+ */
+public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
+
+    private final Pipeline pipeline;
+    private final Application application;
+    private final ApplicationBuildConfig applicationBuildConfig;
+    private final String buildCommand;
+
+    private final Environment environment;
+    // private final List<BuildStorage> buildStorages = null;
+
+    private final PipelineImageConfig pipelineImageConfig;
+
+    private final String branch;
+    private final String repositoryUrl;
+
+    public PipelineExecuteTask(Pipeline pipeline,
+                               Application application,
+                               ApplicationBuildConfig applicationBuildConfig,
+                               Environment environment) {
+        this.pipeline = pipeline;
+        this.application = application;
+        if (applicationBuildConfig == null) {
+            throw new IllegalStateException("Application build config not found.");
+        }
+        this.applicationBuildConfig = applicationBuildConfig;
+
+        this.buildCommand = resolveBuildCommand(this.applicationBuildConfig, environment.getName()).orElse(null);
+
+        this.environment = environment;
+        this.branch = pipeline.getBranch();
+
+
+        this.pipelineImageConfig = SpringContext.getBean(PipelineImageConfig.class);
+
+        String imageRepositoryUrl = environment.getImageRepository().getUrl();
+        imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
+        this.repositoryUrl = imageRepositoryUrl;
+
+    }
+
+    @Override
+    public PipelineBuildPod call() {
+        WorkspaceVolume workspaceVolume = new WorkspaceVolume();
+        SecretVolume secretVolume = new SecretVolume();
+//        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
+
+        List<Container> initContainers = new ArrayList<>();
+
+        CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam());
+        clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
+        initContainers.add(clone);
+
+        DockerFileConfig dockerFileConfig = applicationBuildConfig.getDockerFileConfig();
+        if (dockerFileConfig != null && dockerFileConfig.getType() == DockerFileType.USER) {
+            DockerfileContainer dockerfile = new DockerfileContainer(dockerFileConfig, pipelineImageConfig.getClone());
+            dockerfile.addVolumeMounts(workspaceVolume.getVolumeMounts());
+            initContainers.add(dockerfile);
+        }
+
+        if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
+            CompileContainer build = new CompileContainer(application, applicationBuildConfig, buildCommand);
+            build.addVolumeMounts(workspaceVolume.getVolumeMounts());
+//            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
+            initContainers.add(build);
+        }
+
+        PublishContainer push = new PublishContainer(
+                application,
+                applicationBuildConfig,
+                pipeline,
+                repositoryUrl,
+                pipelineImageConfig.getPush(),
+                pipelineImageConfig.getRegistryMirrors()
+        );
+        push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
+        initContainers.add(push);
+        String artifact = push.getArtifact();
+
+        DoneContainer done = new DoneContainer();
+        done.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
+
+        PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, environment, initContainers, done);
+        pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
+//        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
+        pipelineBuildPod.setArtifact(artifact);
+
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+            client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).resource(pipelineBuildPod).create();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return pipelineBuildPod;
+    }
+
+    private CloneStrategyParam buildCloneStrategyParam() {
+        ApplicationSourceType publishType = pipeline.getPublishType() != null
+                ? pipeline.getPublishType()
+                : applicationBuildConfig != null && applicationBuildConfig.getSourceType() != null
+                        ? applicationBuildConfig.getSourceType()
+                        : ApplicationSourceType.GIT;
+        if (publishType == ApplicationSourceType.ZIP) {
+            BuildSourceStorage buildSourceStorage = SpringContext.getBean(BuildSourceStorage.class);
+            if (StringUtils.isEmpty(pipelineImageConfig.getZip())) {
+                throw new IllegalStateException("ZIP source requires oops.pipeline.image.zip to be configured");
+            }
+            String sourceImage = pipelineImageConfig.getZip();
+            String sourceDownloadUrl = buildSourceStorage.resolveDownloadUrl(pipeline.getPublishRepository());
+            return new ZipCloneParam(sourceImage, sourceDownloadUrl);
+        }
+        return new GitCloneParam(
+                pipelineImageConfig.getClone(),
+                pipeline.getPublishRepository(),
+                branch,
+                true
+        );
+    }
+
+    private static Optional<String> resolveBuildCommand(ApplicationBuildConfig buildConfig, String environmentName) {
+        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
+            return Optional.empty();
+        }
+        for (ApplicationBuildConfig.EnvironmentConfig config : buildConfig.getEnvironmentConfigs()) {
+            if (config != null && environmentName != null && environmentName.equals(config.getEnvironmentName())) {
+                return Optional.ofNullable(config.getBuildCommand());
+            }
+        }
+        return Optional.empty();
+    }
+}

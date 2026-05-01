@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from "react"
+import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
@@ -57,12 +57,9 @@ function IDEPageContent() {
 
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? ""
-
-  const resolvedNamespace = useMemo(() => {
-    if (selectedNamespace !== "all") return selectedNamespace
-    const app = applications.find(a => a.name === selectedApp)
-    return app?.namespace ?? ""
-  }, [selectedNamespace, selectedApp, applications])
+  const activeNamespace = selectedNamespace === "all" ? "" : selectedNamespace
+  const selectedApplication = applications.find(app => app.name === selectedApp)
+  const selectedAppValue = selectedApplication?.id ?? selectedApp
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -116,7 +113,11 @@ function IDEPageContent() {
             ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
             : undefined
           const targetApp = recent ?? apps[0]
-          updateParams({ app: targetApp.name, env: "" })
+          updateParams({
+            namespace: targetApp.namespace,
+            app: targetApp.name,
+            env: "",
+          })
         }
       } catch {
         toast.error(t("apps.fetchError"))
@@ -127,37 +128,47 @@ function IDEPageContent() {
   }, [selectedNamespace])
 
   useEffect(() => {
+    if (selectedNamespace !== "all" || !selectedApp || applications.length === 0) {
+      return
+    }
+    if (selectedApplication) {
+      updateParams({ namespace: selectedApplication.namespace })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNamespace, selectedApp, selectedApplication])
+
+  useEffect(() => {
     if (selectedApp && !selectedEnv && environments.length > 0) {
       updateParams({ env: environments[0].environmentName })
     }
   }, [selectedApp, selectedEnv, environments, updateParams])
 
   useEffect(() => {
-    if (!resolvedNamespace || !selectedApp) {
+    if (!activeNamespace || !selectedApp) {
       setSourceType("GIT")
       return
     }
-    getApplicationBuildConfig(resolvedNamespace, selectedApp)
+    getApplicationBuildConfig(activeNamespace, selectedApp)
       .then((res) => {
         setSourceType(res.data?.sourceType || "GIT")
       })
       .catch(() => {
         setSourceType("GIT")
       })
-  }, [resolvedNamespace, selectedApp])
+  }, [activeNamespace, selectedApp])
 
   const fetchIDEs = useCallback(async () => {
-    if (!resolvedNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !selectedEnv) return
     setLoading(true)
     try {
-      const res = await listIDEs(resolvedNamespace, selectedApp, selectedEnv)
+      const res = await listIDEs(activeNamespace, selectedApp, selectedEnv)
       setIdes(res.data ?? [])
     } catch {
       toast.error(t("ide.fetchError"))
     } finally {
       setLoading(false)
     }
-  }, [resolvedNamespace, selectedApp, selectedEnv, t])
+  }, [activeNamespace, selectedApp, selectedEnv, t])
 
   useEffect(() => {
     if (selectedEnv) {
@@ -177,7 +188,7 @@ function IDEPageContent() {
   }, [ides]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreateDialog = async () => {
-    if (!resolvedNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !selectedEnv) return
     if (sourceType === "ZIP") {
       toast.error(t("ide.zipUnsupported"))
       return
@@ -185,7 +196,7 @@ function IDEPageContent() {
     setCreateOpen(true)
     setConfigLoading(true)
     try {
-      const res = await getDefaultIDEConfig(resolvedNamespace, selectedApp, selectedEnv)
+      const res = await getDefaultIDEConfig(activeNamespace, selectedApp, selectedEnv)
       const raw = res.data?.settings ?? ""
       try { setSettings(JSON.stringify(JSON.parse(raw), null, 2)) } catch { setSettings(raw) }
       setEnvVars(res.data?.env ?? "")
@@ -198,14 +209,14 @@ function IDEPageContent() {
   }
 
   const handleCreate = async () => {
-    if (!resolvedNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !selectedEnv) return
     if (sourceType === "ZIP") {
       toast.error(t("ide.zipUnsupported"))
       return
     }
     setCreating(true)
     try {
-      await createIDE(resolvedNamespace, selectedApp, selectedEnv, {
+      await createIDE(activeNamespace, selectedApp, selectedEnv, {
         name: name.trim() || undefined,
         branch: branch.trim() || undefined,
         settings,
@@ -225,10 +236,10 @@ function IDEPageContent() {
   }
 
   const handleDelete = async () => {
-    if (!resolvedNamespace || !selectedApp || !selectedEnv || !deleteTarget) return
+    if (!activeNamespace || !selectedApp || !selectedEnv || !deleteTarget) return
     setDeleting(true)
     try {
-      await deleteIDE(resolvedNamespace, selectedApp, deleteTarget.id, selectedEnv)
+      await deleteIDE(activeNamespace, selectedApp, deleteTarget.id, selectedEnv)
       toast.success(t("ide.deleteSuccess"))
       setDeleteTarget(null)
       setDeleteConfirmText("")
@@ -264,9 +275,10 @@ function IDEPageContent() {
                 <LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}
               </span>
               <SelectWithSearch
-                value={selectedApp}
-                onValueChange={(v: string) => {
-                  const app = applications.find(a => a.name === v)
+                value={selectedAppValue}
+                onOptionSelect={(option) => {
+                  if (!option.namespace || !option.name) return
+                  const app = applications.find(a => a.id === option.value)
                   if (app) {
                     setRecentApp({
                       namespace: app.namespace,
@@ -274,18 +286,31 @@ function IDEPageContent() {
                       description: app.description,
                       ownerName: app.ownerName,
                     })
+                  } else {
+                    setRecentApp({
+                      namespace: option.namespace,
+                      name: option.name,
+                    })
                   }
-                  updateParams({ app: v, env: "" })
+                  updateParams({
+                    namespace: option.namespace,
+                    app: option.name,
+                    env: "",
+                  })
                 }}
                 options={applications.map((app) => ({
-                  value: app.name,
+                  value: app.id,
                   label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                  namespace: app.namespace,
+                  name: app.name,
                 }))}
                 onSearch={selectedNamespace ? async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
                   return (res.data?.data ?? []).map(app => ({
-                    value: app.name,
+                    value: app.id,
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                    namespace: app.namespace,
+                    name: app.name,
                   }))
                 } : undefined}
                 placeholder={t("ide.page.selectApp")}
@@ -311,7 +336,7 @@ function IDEPageContent() {
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <ApplicationEnvironmentSelector
-                    namespace={resolvedNamespace}
+                    namespace={activeNamespace}
                     applicationName={selectedApp}
                     value={selectedEnv}
                     onValueChange={(v) => updateParams({ env: v })}
@@ -323,7 +348,7 @@ function IDEPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={fetchIDEs}
-                    disabled={loading || !selectedApp || !selectedEnv}
+                    disabled={loading || !activeNamespace || !selectedApp || !selectedEnv}
                   >
                     <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                     {t("pipelines.refresh")}
@@ -331,7 +356,7 @@ function IDEPageContent() {
                   <Button
                     size="sm"
                     onClick={openCreateDialog}
-                    disabled={!selectedNamespace || !selectedApp || !selectedEnv || sourceType === "ZIP"}
+                    disabled={!activeNamespace || !selectedApp || !selectedEnv || sourceType === "ZIP"}
                   >
                     <Plus className="h-4 w-4" />
                     {t("ide.create")}
