@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneS
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneStrategy;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.ZipCloneStrategy;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
+import com.github.wellch4n.oops.domain.application.Application;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import java.util.List;

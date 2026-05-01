@@ -1,9 +1,9 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.container;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig.DockerFileConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig.DockerFileConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;

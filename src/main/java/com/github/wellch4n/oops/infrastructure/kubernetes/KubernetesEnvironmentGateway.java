@@ -2,24 +2,33 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.EnvironmentGateway;
 import com.github.wellch4n.oops.infrastructure.config.OopsConstants;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.SecretBuilder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.Map;
+import okhttp3.Credentials;
+import okhttp3.HttpUrl;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 @Component
 public class KubernetesEnvironmentGateway implements EnvironmentGateway {
+    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     @Override
     public boolean canConnect(Environment.KubernetesApiServer kubernetesApiServer) {
         if (kubernetesApiServer == null) {
             return false;
         }
-        try (var client = kubernetesApiServer.fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
             client.namespaces().list();
             return true;
         } catch (Exception e) {
@@ -29,14 +38,14 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
 
     @Override
     public boolean namespaceExists(Environment.KubernetesApiServer kubernetesApiServer, String namespace) {
-        try (var client = kubernetesApiServer.fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
             return client.namespaces().withName(namespace).get() != null;
         }
     }
 
     @Override
     public void createNamespace(Environment.KubernetesApiServer kubernetesApiServer, String namespace) {
-        try (var client = kubernetesApiServer.fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
             client.namespaces()
                     .resource(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build())
                     .create();
@@ -45,7 +54,31 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
 
     @Override
     public boolean isImageRepositoryValid(Environment.ImageRepository imageRepository) {
-        return imageRepository != null && imageRepository.isValid();
+        if (imageRepository == null || !imageRepository.hasCredentials()) {
+            return false;
+        }
+
+        HttpUrl httpUrl = HttpUrl.parse(imageRepository.getUrl());
+        if (httpUrl == null) {
+            return false;
+        }
+
+        HttpUrl rootUrl = httpUrl.resolve("/");
+        if (rootUrl == null) {
+            return false;
+        }
+
+        String credential = Credentials.basic(imageRepository.getUsername(), imageRepository.getPassword());
+        Request request = new Request.Builder()
+                .url(rootUrl)
+                .header("Authorization", credential)
+                .get()
+                .build();
+        try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+            return response.isSuccessful();
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -84,7 +117,7 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
                 .withData(data)
                 .build();
 
-        try (var client = kubernetesApiServer.fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
             client.secrets().inNamespace(workNamespace).resource(secret).patch(OopsConstants.PATCH_CONTEXT);
         }
     }

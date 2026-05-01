@@ -1,9 +1,17 @@
 package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
 import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationPodStatusResponse;
@@ -20,8 +28,6 @@ import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
-    private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
-    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
-    private final ApplicationEnvironmentRepository applicationEnvironmentRepository;
-    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final EnvironmentRepository environmentRepository;
     private final UserService userService;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
@@ -46,17 +48,10 @@ public class ApplicationService {
     private final HealthCheckPolicy healthCheckPolicy = new HealthCheckPolicy();
 
     public ApplicationService(ApplicationRepository applicationRepository,
-                              ApplicationBuildConfigRepository applicationBuildConfigRepository,
-                              ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
-                              ApplicationEnvironmentRepository applicationEnvironmentRepository, ApplicationServiceConfigRepository applicationServiceConfigRepository,
                               EnvironmentRepository environmentRepository,
                               UserService userService,
                               ApplicationRuntimeGateway applicationRuntimeGateway) {
         this.applicationRepository = applicationRepository;
-        this.applicationBuildConfigRepository = applicationBuildConfigRepository;
-        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
-        this.applicationEnvironmentRepository = applicationEnvironmentRepository;
-        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.environmentRepository = environmentRepository;
         this.userService = userService;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
@@ -71,16 +66,14 @@ public class ApplicationService {
     }
 
     public Page<ApplicationResponse> getApplications(String namespace, String keyword, int page, int size, String currentUserId, boolean ownerOnly) {
-        Pageable pageable = PageRequest.of(Math.max(page - 1, 0), size);
         String ownerId = ownerOnly ? currentUserId : null;
-        org.springframework.data.domain.Page<Application> applicationPage =
-                applicationRepository.findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
-                        namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, ownerId, pageable);
+        var applicationPage = applicationRepository.findPageByNamespaceAndKeywordOrderedByOwner(
+                namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, ownerId, page, size);
         return new Page<>(
-                applicationPage.getTotalElements(),
-                toApplicationResponses(namespace, applicationPage.getContent()),
-                applicationPage.getSize(),
-                applicationPage.getTotalPages()
+                applicationPage.totalElements(),
+                toApplicationResponses(namespace, applicationPage.content()),
+                applicationPage.size(),
+                applicationPage.totalPages()
         );
     }
 
@@ -106,7 +99,7 @@ public class ApplicationService {
         application.setNamespace(namespace);
         application.setOwner(normalizeOwner(creatorUserId));
         try {
-            applicationRepository.saveAndFlush(application);
+            application = applicationRepository.saveAndFlush(application);
         } catch (DataIntegrityViolationException e) {
             throw new BizException("Application name already exists");
         }
@@ -146,10 +139,10 @@ public class ApplicationService {
             }
         }
 
-        applicationEnvironmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
-        applicationBuildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
-        applicationRuntimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, name);
-        applicationServiceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationRepository.deleteEnvironments(namespace, name);
+        applicationRepository.deleteBuildConfig(namespace, name);
+        applicationRepository.deleteRuntimeSpec(namespace, name);
+        applicationRepository.deleteServiceConfig(namespace, name);
         applicationRepository.deleteByNamespaceAndName(namespace, name);
 
         return true;
@@ -190,8 +183,8 @@ public class ApplicationService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository
-                .findByNamespaceAndApplicationName(application.getNamespace(), application.getName())
+        ApplicationBuildConfig buildConfig = applicationRepository
+                .findBuildConfig(application.getNamespace(), application.getName())
                 .orElse(null);
         ApplicationSourceType sourceType = buildConfig != null && buildConfig.getSourceType() != null
                 ? buildConfig.getSourceType()
@@ -207,7 +200,7 @@ public class ApplicationService {
                 .map(Application::getName)
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
-        return applicationBuildConfigRepository.findByNamespaceAndApplicationNameIn(namespace, applicationNames).stream()
+        return applicationRepository.findBuildConfigs(namespace, applicationNames).stream()
                 .collect(Collectors.toMap(
                         config -> config.getNamespace() + "/" + config.getApplicationName(),
                         config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
@@ -227,7 +220,7 @@ public class ApplicationService {
                 .map(Application::getName)
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
-        return applicationBuildConfigRepository.findByNamespaceInAndApplicationNameIn(namespaces, applicationNames).stream()
+        return applicationRepository.findBuildConfigs(namespaces, applicationNames).stream()
                 .collect(Collectors.toMap(
                         config -> config.getNamespace() + "/" + config.getApplicationName(),
                         config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
@@ -237,7 +230,7 @@ public class ApplicationService {
 
     @Transactional
     public Boolean updateApplicationBuildConfig(String namespace, String name, ApplicationBuildConfig request) {
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name)
+        ApplicationBuildConfig buildConfig = applicationRepository.findBuildConfig(namespace, name)
                 .orElseGet(() -> {
                     ApplicationBuildConfig config = new ApplicationBuildConfig();
                     config.setNamespace(namespace);
@@ -257,12 +250,12 @@ public class ApplicationService {
         buildConfig.setDockerFileConfig(dockerFileConfig);
         buildConfig.setBuildImage(request.getBuildImage());
         buildConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
-        applicationBuildConfigRepository.save(buildConfig);
+        applicationRepository.saveBuildConfig(buildConfig);
         return true;
     }
 
     public ApplicationBuildConfig getApplicationBuildConfig(String namespace, String name) {
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        ApplicationBuildConfig buildConfig = applicationRepository.findBuildConfig(namespace, name).orElse(null);
         if (buildConfig != null && buildConfig.getSourceType() == null) {
             buildConfig.setSourceType(ApplicationSourceType.GIT);
         }
@@ -270,7 +263,7 @@ public class ApplicationService {
     }
 
     public List<ApplicationBuildConfig.EnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        ApplicationBuildConfig buildConfig = applicationRepository.findBuildConfig(namespace, name).orElse(null);
         if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
             return Collections.emptyList();
         }
@@ -278,7 +271,7 @@ public class ApplicationService {
     }
 
     public List<ApplicationRuntimeSpec.EnvironmentConfig> getApplicationRuntimeSpecEnvironmentConfigs(String namespace, String name) {
-        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        ApplicationRuntimeSpec runtimeSpec = applicationRepository.findRuntimeSpec(namespace, name).orElse(null);
         if (runtimeSpec == null || runtimeSpec.getEnvironmentConfigs() == null) {
             return Collections.emptyList();
         }
@@ -286,7 +279,7 @@ public class ApplicationService {
     }
 
     public ApplicationRuntimeSpec getApplicationRuntimeSpec(String namespace, String name) {
-        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        ApplicationRuntimeSpec runtimeSpec = applicationRepository.findRuntimeSpec(namespace, name).orElse(null);
         if (runtimeSpec == null) {
             runtimeSpec = new ApplicationRuntimeSpec();
             runtimeSpec.setNamespace(namespace);
@@ -299,7 +292,7 @@ public class ApplicationService {
 
     @Transactional
     public Boolean updateApplicationBuildEnvironmentConfigs(String namespace, String appName, List<ApplicationBuildConfig.EnvironmentConfig> configs) {
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(namespace, appName)
+        ApplicationBuildConfig buildConfig = applicationRepository.findBuildConfig(namespace, appName)
                 .orElseGet(() -> {
                     ApplicationBuildConfig config = new ApplicationBuildConfig();
                     config.setNamespace(namespace);
@@ -308,13 +301,13 @@ public class ApplicationService {
                 });
 
         buildConfig.setEnvironmentConfigs(configs);
-        applicationBuildConfigRepository.save(buildConfig);
+        applicationRepository.saveBuildConfig(buildConfig);
         return true;
     }
 
     @Transactional
     public Boolean updateApplicationRuntimeSpecEnvironmentConfigs(String namespace, String appName, List<ApplicationRuntimeSpec.EnvironmentConfig> configs) {
-        ApplicationRuntimeSpec existing = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, appName).orElse(null);
+        ApplicationRuntimeSpec existing = applicationRepository.findRuntimeSpec(namespace, appName).orElse(null);
         ApplicationRuntimeSpec request = new ApplicationRuntimeSpec();
         request.setEnvironmentConfigs(configs);
         request.setHealthCheck(existing != null ? existing.getHealthCheck() : null);
@@ -323,7 +316,7 @@ public class ApplicationService {
 
     @Transactional
     public Boolean updateApplicationRuntimeSpec(String namespace, String appName, ApplicationRuntimeSpec request) {
-        ApplicationRuntimeSpec runtimeSpec = applicationRuntimeSpecRepository.findByNamespaceAndApplicationName(namespace, appName)
+        ApplicationRuntimeSpec runtimeSpec = applicationRepository.findRuntimeSpec(namespace, appName)
                 .orElseGet(() -> {
                     ApplicationRuntimeSpec config = new ApplicationRuntimeSpec();
                     config.setNamespace(namespace);
@@ -339,7 +332,7 @@ public class ApplicationService {
 
         runtimeSpec.setEnvironmentConfigs(configs);
         runtimeSpec.setHealthCheck(request.getHealthCheck());
-        applicationRuntimeSpecRepository.save(runtimeSpec);
+        applicationRepository.saveRuntimeSpec(runtimeSpec);
 
         applyRuntimeSpecEnvironmentConfigUpdates(namespace, appName, configs, existingConfigs);
 
@@ -395,7 +388,7 @@ public class ApplicationService {
     }
 
     public List<ApplicationEnvironment> getApplicationEnvironments(String namespace, String name) {
-        List<ApplicationEnvironment> all = applicationEnvironmentRepository.findByNamespaceAndApplicationName(namespace, name);
+        List<ApplicationEnvironment> all = applicationRepository.findEnvironments(namespace, name);
         Set<String> existingEnvNames = environmentRepository.findAll().stream()
                 .map(Environment::getName)
                 .collect(Collectors.toSet());
@@ -406,26 +399,25 @@ public class ApplicationService {
 
     @Transactional
     public Boolean updateApplicationEnvironments(String namespace, String appName, List<ApplicationEnvironment> configs) {
-        applicationEnvironmentRepository.deleteByNamespaceAndApplicationName(namespace, appName);
         for (ApplicationEnvironment config : configs) {
             config.setId(null);
             config.setNamespace(namespace);
             config.setApplicationName(appName);
         }
-        applicationEnvironmentRepository.saveAll(configs);
+        applicationRepository.replaceEnvironments(namespace, appName, configs);
         return true;
     }
 
     public ApplicationServiceConfig getApplicationServiceConfig(String namespace, String name) {
-        return applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name).orElse(null);
+        return applicationRepository.findServiceConfig(namespace, name).orElse(null);
     }
 
     public ServiceHostConflictResponse findHostConflictApplication(String namespace, String name, String host) {
         if (host == null || host.isBlank()) {
             return null;
         }
-        List<ApplicationServiceConfig> conflicts = applicationServiceConfigRepository
-                .findByHostLikeExcludingSelf("\"" + host + "\"", namespace, name);
+        List<ApplicationServiceConfig> conflicts = applicationRepository
+                .findServiceConfigsByHostLikeExcludingSelf("\"" + host + "\"", namespace, name);
         for (ApplicationServiceConfig conflict : conflicts) {
             if (conflict.getEnvironmentConfigs() == null) {
                 continue;
@@ -458,7 +450,7 @@ public class ApplicationService {
             }
         }
 
-        Optional<ApplicationServiceConfig> exist = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+        Optional<ApplicationServiceConfig> exist = applicationRepository.findServiceConfig(namespace, name);
 
 
         if (exist.isEmpty()) {
@@ -467,12 +459,12 @@ public class ApplicationService {
             newConfig.setApplicationName(name);
             newConfig.setPort(request.getPort());
             newConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
-            applicationServiceConfigRepository.save(newConfig);
+            applicationRepository.saveServiceConfig(newConfig);
         } else {
             ApplicationServiceConfig applicationServiceConfig = exist.get();
             applicationServiceConfig.setPort(request.getPort());
             applicationServiceConfig.setEnvironmentConfigs(request.getEnvironmentConfigs());
-            applicationServiceConfigRepository.save(applicationServiceConfig);
+            applicationRepository.saveServiceConfig(applicationServiceConfig);
         }
         return true;
     }
@@ -513,7 +505,7 @@ public class ApplicationService {
             String internalDomain = applicationRuntimeGateway.findInternalServiceDomain(environment, namespace, name);
 
             List<String> externalDomains = null;
-            var serviceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(namespace, name);
+            var serviceConfig = applicationRepository.findServiceConfig(namespace, name);
             if (serviceConfig.isPresent()) {
                 var envConfigs = serviceConfig.get().getEnvironmentConfigs(environmentName);
                 externalDomains = envConfigs.stream()

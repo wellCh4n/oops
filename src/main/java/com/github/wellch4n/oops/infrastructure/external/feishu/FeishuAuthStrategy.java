@@ -1,10 +1,10 @@
 package com.github.wellch4n.oops.infrastructure.external.feishu;
 
 import com.github.wellch4n.oops.application.port.external.ExternalAuthStrategy;
+import com.github.wellch4n.oops.application.port.repository.ExternalAccountRepository;
 import com.github.wellch4n.oops.infrastructure.config.FeishuConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ExternalAccount;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ExternalAccountRepository;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.User;
+import com.github.wellch4n.oops.domain.identity.ExternalAccount;
+import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ExternalAccountProvider;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.application.service.UserService;

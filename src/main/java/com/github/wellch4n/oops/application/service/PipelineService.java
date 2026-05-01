@@ -3,9 +3,16 @@ package com.github.wellch4n.oops.application.service;
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
 import com.github.wellch4n.oops.application.port.PipelineLogGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
@@ -14,11 +21,9 @@ import com.github.wellch4n.oops.interfaces.dto.LastSuccessfulPipelineResponse;
 import com.github.wellch4n.oops.interfaces.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.PipelineResponse;
 import java.util.*;
-import org.apache.commons.lang3.StringUtils;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -33,8 +38,6 @@ public class PipelineService {
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
     private final ApplicationRepository applicationRepository;
-    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
-    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final UserService userService;
     private final ApplicationEventPublisher eventPublisher;
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
@@ -45,8 +48,6 @@ public class PipelineService {
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
-                           ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
-                           ApplicationServiceConfigRepository applicationServiceConfigRepository,
                            UserService userService,
                            ApplicationEventPublisher eventPublisher,
                            ArtifactDeploymentExecutor artifactDeploymentExecutor,
@@ -55,8 +56,6 @@ public class PipelineService {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
-        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
-        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.userService = userService;
         this.eventPublisher = eventPublisher;
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
@@ -67,24 +66,12 @@ public class PipelineService {
     public Page<PipelineResponse> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
         int p = page == null ? 1 : page;
         int s = size == null ? 20 : size;
-        PageRequest pageable = PageRequest.of(Math.max(p - 1, 0), s, Sort.by(Sort.Direction.DESC, "createdTime"));
-        org.springframework.data.domain.Page<Pipeline> pipelinePage;
-        boolean allNamespace = "all".equalsIgnoreCase(namespace);
-        boolean allEnvironment = environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment);
-        if (allNamespace && allEnvironment) {
-            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameWithAllNamespace(namespace, applicationName, pageable);
-        } else if (allNamespace) {
-            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironmentWithAllNamespace(namespace, applicationName, environment, pageable);
-        } else if (allEnvironment) {
-            pipelinePage = pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable);
-        } else {
-            pipelinePage = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable);
-        }
+        var pipelinePage = pipelineRepository.findPage(namespace, applicationName, environment, p, s);
         return new Page<>(
-                pipelinePage.getTotalElements(),
-                toPipelineResponses(pipelinePage.getContent()),
-                pipelinePage.getSize(),
-                pipelinePage.getTotalPages()
+                pipelinePage.totalElements(),
+                toPipelineResponses(pipelinePage.content()),
+                pipelinePage.size(),
+                pipelinePage.totalPages()
         );
     }
 
@@ -167,8 +154,8 @@ public class PipelineService {
             Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
 
             ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec = null;
-            ApplicationRuntimeSpec runtimeSpecEntity = applicationRuntimeSpecRepository
-                    .findByNamespaceAndApplicationName(namespace, applicationName).orElse(null);
+            ApplicationRuntimeSpec runtimeSpecEntity = applicationRepository
+                    .findRuntimeSpec(namespace, applicationName).orElse(null);
             if (runtimeSpecEntity != null && runtimeSpecEntity.getEnvironmentConfigs() != null) {
                 runtimeSpec = runtimeSpecEntity.getEnvironmentConfigs().stream()
                         .filter(c -> pipeline.getEnvironment().equals(c.getEnvironmentName()))
@@ -181,8 +168,8 @@ public class PipelineService {
                     ? runtimeSpecEntity.getHealthCheck()
                     : new ApplicationRuntimeSpec.HealthCheck();
 
-            ApplicationServiceConfig serviceConfig = applicationServiceConfigRepository
-                    .findByNamespaceAndApplicationName(namespace, applicationName)
+            ApplicationServiceConfig serviceConfig = applicationRepository
+                    .findServiceConfig(namespace, applicationName)
                     .orElse(new ApplicationServiceConfig());
 
             artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig);

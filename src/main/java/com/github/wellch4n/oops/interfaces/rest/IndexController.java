@@ -1,9 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationRepository;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.PipelineRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationQueryRequest;
 import com.github.wellch4n.oops.interfaces.dto.PipelineQueryRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
@@ -22,9 +20,7 @@ public class IndexController {
 
     private final IndexService indexService;
 
-    public IndexController(IndexService indexService,
-                           ApplicationRepository applicationRepository,
-                           PipelineRepository pipelineRepository) {
+    public IndexController(IndexService indexService) {
         this.indexService = indexService;
     }
 

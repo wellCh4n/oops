@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.stream;
 
 import com.github.wellch4n.oops.application.port.PodLogStreamGateway;
 import com.github.wellch4n.oops.application.port.StreamSink;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
@@ -22,7 +22,7 @@ public class KubernetesPodLogStreamGateway implements PodLogStreamGateway {
     @Override
     public AutoCloseable stream(Environment environment, String namespace, String podName, StreamSink sink) {
         KubernetesStreamHandle handle = new KubernetesStreamHandle();
-        KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+        KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
         handle.add(client);
 
         PodResource podResource = client.pods().inNamespace(namespace).withName(podName);

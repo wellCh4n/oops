@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.interfaces.websocket;
 import com.github.wellch4n.oops.application.port.TerminalSessionGateway;
 import com.github.wellch4n.oops.application.port.TerminalSessionGateway.TerminalSession;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;

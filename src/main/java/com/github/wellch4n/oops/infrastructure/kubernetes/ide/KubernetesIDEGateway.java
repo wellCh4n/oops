@@ -11,9 +11,9 @@ import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneS
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneParam;
 import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRoute;
 import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRouteSpec;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.interfaces.dto.IDEConfigResponse;
 import com.github.wellch4n.oops.interfaces.dto.IDECreateRequest;
@@ -75,7 +75,7 @@ public class KubernetesIDEGateway implements IDEGateway {
             return fileDefaults;
         }
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             ConfigMap configMap = client.configMaps()
                     .inNamespace(environment.getWorkNamespace())
                     .withName("ide-config")
@@ -180,7 +180,7 @@ public class KubernetesIDEGateway implements IDEGateway {
         startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
                 + proxyDomainArg + " /home/coder/" + applicationName);
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             StatefulSet statefulSet = new StatefulSetBuilder()
                     .withNewMetadata().withName(name).withLabels(labels).withAnnotations(annotations).endMetadata()
                     .withNewSpec()
@@ -290,7 +290,7 @@ public class KubernetesIDEGateway implements IDEGateway {
             return;
         }
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.apps().statefulSets()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(name)
@@ -304,7 +304,7 @@ public class KubernetesIDEGateway implements IDEGateway {
             return List.of();
         }
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             return client.apps().statefulSets()
                     .inNamespace(environment.getWorkNamespace())
                     .withLabel("oops.type", OopsTypes.IDE.name())

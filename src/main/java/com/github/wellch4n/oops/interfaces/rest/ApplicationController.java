@@ -1,6 +1,10 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationPodStatusResponse;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationResponse;

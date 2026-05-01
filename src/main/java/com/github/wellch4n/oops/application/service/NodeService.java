@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.ClusterNodeGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.EnvironmentRepository;
+import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.NodeStatusResponse;
 import java.util.List;
 import org.springframework.stereotype.Service;

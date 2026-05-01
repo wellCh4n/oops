@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.application.port;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationPodStatusResponse;
 import java.util.List;
 

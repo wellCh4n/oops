@@ -2,14 +2,17 @@ package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.PipelineBuildExecutor;
 import com.github.wellch4n.oops.application.port.PipelineBuildSubmission;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.delivery.DeployStrategyPolicy;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
-import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
-import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.interfaces.dto.DeployRequest;
@@ -29,23 +32,19 @@ import org.springframework.stereotype.Service;
 public class DeploymentService {
 
     private final ApplicationRepository applicationRepository;
-    private final ApplicationBuildConfigRepository applicationBuildConfigRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
     private final ApplicationEventPublisher eventPublisher;
     private final PipelineBuildExecutor pipelineBuildExecutor;
     private final DeployStrategyPolicy deployStrategyPolicy = new DeployStrategyPolicy();
     private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy = new DeploymentConcurrencyPolicy();
-    private final PipelineStateMachine pipelineStateMachine = new PipelineStateMachine();
 
     public DeploymentService(ApplicationRepository applicationRepository,
-                             ApplicationBuildConfigRepository applicationBuildConfigRepository,
                              PipelineRepository pipelineRepository,
                              EnvironmentService environmentService,
                              PipelineBuildExecutor pipelineBuildExecutor,
                              ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
-        this.applicationBuildConfigRepository = applicationBuildConfigRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.pipelineBuildExecutor = pipelineBuildExecutor;
@@ -69,8 +68,8 @@ public class DeploymentService {
         Environment environment = environmentService.getEnvironment(request.environment());
 
         Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
-        ApplicationBuildConfig buildConfig = applicationBuildConfigRepository
-                .findByNamespaceAndApplicationName(namespace, applicationName)
+        ApplicationBuildConfig buildConfig = applicationRepository
+                .findBuildConfig(namespace, applicationName)
                 .orElse(null);
         ApplicationSourceType sourceType = buildConfig != null && buildConfig.getSourceType() != null
                 ? buildConfig.getSourceType()
@@ -78,24 +77,21 @@ public class DeploymentService {
         ApplicationSourceType publishType = request.strategy().getType();
         deployStrategyPolicy.ensureStrategyMatches(sourceType, publishType);
 
-        Pipeline pipeline = new Pipeline();
-        pipeline.setNamespace(namespace);
-        pipeline.setApplicationName(application.getName());
-        pipeline.setStatus(PipelineStatus.INITIALIZED);
-        pipeline.setEnvironment(environment.getName());
-        pipeline.setPublishType(publishType);
+        Pipeline pipeline = Pipeline.initialize(
+                namespace,
+                application.getName(),
+                environment.getName(),
+                publishType,
+                request.deployMode(),
+                operatorUserId);
         applyDeployStrategy(pipeline, request.strategy(), buildConfig);
-        pipeline.setDeployMode(request.deployMode() != null ? request.deployMode() : DeployMode.IMMEDIATE);
-        pipeline.setOperatorId(operatorUserId);
-        pipelineRepository.save(pipeline);
+        pipeline = pipelineRepository.save(pipeline);
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.CREATED, "发布流程已经启动，正在构建镜像。"
         ));
 
-        PipelineBuildSubmission submission = pipelineBuildExecutor.submit(pipeline, environment);
-        pipeline.setArtifact(submission.artifact());
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.INITIALIZED, PipelineStatus.RUNNING);
-        pipeline.setStatus(PipelineStatus.RUNNING);
+        PipelineBuildSubmission submission = pipelineBuildExecutor.submit(pipeline, application, buildConfig, environment);
+        pipeline.startBuild(submission.artifact());
         pipelineRepository.save(pipeline);
         return submission.pipelineId();
     }

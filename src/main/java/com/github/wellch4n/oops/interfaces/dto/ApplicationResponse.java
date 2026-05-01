@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.dto;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
+import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import java.time.LocalDateTime;
 

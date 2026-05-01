@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.application.port.PipelineLogGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -53,7 +53,7 @@ public class KubernetesPipelineLogGateway implements PipelineLogGateway {
 
         Thread.startVirtualThread(() -> {
             try {
-                KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+                KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
                 resources.add(client);
 
                 String workNamespace = environment.getWorkNamespace();

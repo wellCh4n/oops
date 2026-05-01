@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.container.clone;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
+import com.github.wellch4n.oops.domain.application.Application;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;

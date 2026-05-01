@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.dto;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Domain;
+import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;

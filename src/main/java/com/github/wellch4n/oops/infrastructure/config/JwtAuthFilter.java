@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.User;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.UserRepository;
+import com.github.wellch4n.oops.application.port.repository.UserRepository;
+import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.shared.util.JwtUtils;
 import jakarta.servlet.FilterChain;

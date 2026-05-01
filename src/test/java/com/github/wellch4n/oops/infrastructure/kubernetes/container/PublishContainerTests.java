@@ -4,9 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

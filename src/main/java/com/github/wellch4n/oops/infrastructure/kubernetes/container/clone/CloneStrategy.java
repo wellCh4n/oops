@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.container.clone;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
+import com.github.wellch4n.oops.domain.application.Application;
 
 public interface CloneStrategy<T extends CloneStrategyParam> {
 

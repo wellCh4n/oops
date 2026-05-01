@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ConfigMapGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.ConfigMapItem;
 import com.github.wellch4n.oops.interfaces.dto.ConfigMapRequest;
 import io.fabric8.kubernetes.api.model.ConfigMap;
@@ -20,7 +20,7 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
 
     @Override
     public List<ConfigMapItem> getConfigMaps(Environment environment, String namespace, String applicationName) {
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             ConfigMap configMap = client.configMaps()
                     .inNamespace(namespace)
                     .withName(applicationName)
@@ -49,7 +49,7 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
             map.put(configMapRequest.getKey(), configMapRequest.getValue());
         }
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             StatefulSet statefulSet = client.apps().statefulSets()
                     .inNamespace(namespace)
                     .withName(applicationName)

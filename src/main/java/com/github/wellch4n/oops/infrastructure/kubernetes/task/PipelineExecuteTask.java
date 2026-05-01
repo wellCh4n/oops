@@ -6,8 +6,11 @@ import com.github.wellch4n.oops.infrastructure.kubernetes.container.*;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneParam;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.ZipCloneParam;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig.DockerFileConfig;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig.DockerFileConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 // import com.github.wellch4n.oops.interfaces.dto.BuildStorage;
@@ -42,24 +45,16 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final String branch;
     private final String repositoryUrl;
 
-    public PipelineExecuteTask(Pipeline pipeline, Environment environment) {
+    public PipelineExecuteTask(Pipeline pipeline,
+                               Application application,
+                               ApplicationBuildConfig applicationBuildConfig,
+                               Environment environment) {
         this.pipeline = pipeline;
-
-        ApplicationRepository applicationRepository = SpringContext.getBean(ApplicationRepository.class);
-        this.application = applicationRepository.findByNamespaceAndName(
-                pipeline.getNamespace(),
-                pipeline.getApplicationName()
-        );
-
-        ApplicationBuildConfigRepository applicationBuildConfigRepository = SpringContext.getBean(ApplicationBuildConfigRepository.class);
-        var applicationBuildConfig = applicationBuildConfigRepository.findByNamespaceAndApplicationName(
-                application.getNamespace(),
-                application.getName()
-        );
-        if (applicationBuildConfig.isEmpty()) {
+        this.application = application;
+        if (applicationBuildConfig == null) {
             throw new IllegalStateException("Application build config not found.");
         }
-        this.applicationBuildConfig = applicationBuildConfig.get();
+        this.applicationBuildConfig = applicationBuildConfig;
 
         this.buildCommand = resolveBuildCommand(this.applicationBuildConfig, environment.getName()).orElse(null);
 
@@ -121,7 +116,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 //        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).resource(pipelineBuildPod).create();
         } catch (Exception e) {
             e.printStackTrace();

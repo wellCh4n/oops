@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.pod;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import io.fabric8.kubernetes.api.model.*;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;

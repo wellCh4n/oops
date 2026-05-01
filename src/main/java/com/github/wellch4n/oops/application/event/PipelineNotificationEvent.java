@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.application.event;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import java.time.LocalDateTime;
 

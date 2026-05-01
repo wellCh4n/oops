@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.application.port;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 
 public interface EnvironmentGateway {
     boolean canConnect(Environment.KubernetesApiServer kubernetesApiServer);

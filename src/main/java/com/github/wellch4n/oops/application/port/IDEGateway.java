@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.application.port;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationBuildConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.IDEConfigResponse;
 import com.github.wellch4n.oops.interfaces.dto.IDECreateRequest;
 import com.github.wellch4n.oops.interfaces.dto.IDEResponse;

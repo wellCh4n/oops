@@ -1,21 +1,9 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.EncryptedStringConverter;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
-import io.fabric8.kubernetes.client.Config;
-import io.fabric8.kubernetes.client.ConfigBuilder;
-import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import jakarta.persistence.*;
-import java.time.Duration;
 import lombok.*;
-import okhttp3.Credentials;
-import okhttp3.HttpUrl;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author wellCh4n
@@ -27,10 +15,6 @@ import org.apache.commons.lang3.StringUtils;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Environment {
-
-    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
 
     @Id
     private String id;
@@ -79,27 +63,6 @@ public class Environment {
             return kubernetesApiServer;
         }
 
-        @JsonIgnore
-        public KubernetesClient fabric8Client() {
-            Config config = new ConfigBuilder()
-                    .withMasterUrl(this.url)
-                    .withOauthToken(this.token)
-                    .withTrustCerts(false)
-                    .build();
-            return new KubernetesClientBuilder()
-                    .withConfig(config)
-                    .build();
-        }
-
-        @JsonIgnore
-        public boolean isValid() {
-            try (var client = fabric8Client()) {
-                client.namespaces().list();
-                return true;
-            } catch (Exception e) {
-                return false;
-            }
-        }
     }
 
     @Data
@@ -121,27 +84,5 @@ public class Environment {
             return new ImageRepository(url, username, password);
         }
 
-        @JsonIgnore
-        public boolean isValid() {
-            if (StringUtils.isAnyEmpty(this.url, this.username, this.password)) return false;
-
-            HttpUrl httpUrl = HttpUrl.parse(this.url);
-            if (httpUrl == null) return false;
-
-            HttpUrl rootUrl = httpUrl.resolve("/");
-            if (rootUrl == null) return false;
-
-            String credential = Credentials.basic(this.username, this.password);
-            Request request = new Request.Builder()
-                    .url(rootUrl)
-                    .header("Authorization", credential)
-                    .get()
-                    .build();
-            try (Response response = HTTP_CLIENT.newCall(request).execute()) {
-                return response.isSuccessful();
-            } catch (Exception e) {
-                return false;
-            }
-        }
     }
 }

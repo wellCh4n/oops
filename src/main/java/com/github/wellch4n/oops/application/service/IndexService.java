@@ -1,14 +1,11 @@
 package com.github.wellch4n.oops.application.service;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationRepository;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.PipelineRepository;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.interfaces.dto.ApplicationQueryRequest;
 import com.github.wellch4n.oops.interfaces.dto.PipelineQueryRequest;
-import io.micrometer.common.util.StringUtils;
-import jakarta.persistence.criteria.Predicate;
-import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -30,34 +27,10 @@ public class IndexService {
     }
 
     public List<Pipeline> queryPipelines(PipelineQueryRequest pipelineQueryRequest) {
-        return pipelineRepository.findAll((root, query, criteriaBuilder) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            if (StringUtils.isNotEmpty(pipelineQueryRequest.getNamespace())) {
-                predicates.add(criteriaBuilder.equal(root.get("namespace"), pipelineQueryRequest.getNamespace()));
-            }
-
-            if (StringUtils.isNotEmpty(pipelineQueryRequest.getApplicationName())) {
-                predicates.add(criteriaBuilder.like(root.get("applicationName"), "%" + pipelineQueryRequest.getApplicationName() + "%"));
-            }
-
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        });
+        return pipelineRepository.query(pipelineQueryRequest.getNamespace(), pipelineQueryRequest.getApplicationName());
     }
 
     public List<Application> queryApplications(ApplicationQueryRequest applicationQueryRequest) {
-        return applicationRepository.findAll((root, query, criteriaBuilder) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            if (StringUtils.isNotEmpty(applicationQueryRequest.getName())) {
-                predicates.add(criteriaBuilder.like(root.get("name"), "%" + applicationQueryRequest.getName() + "%"));
-            }
-
-            if (StringUtils.isNotEmpty(applicationQueryRequest.getNamespace())) {
-                predicates.add(criteriaBuilder.equal(root.get("namespace"), applicationQueryRequest.getNamespace()));
-            }
-
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        });
+        return applicationRepository.query(applicationQueryRequest.getNamespace(), applicationQueryRequest.getName());
     }
 }

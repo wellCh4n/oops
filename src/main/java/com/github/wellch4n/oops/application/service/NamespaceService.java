@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.application.service;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Namespace;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.NamespaceRepository;
+import com.github.wellch4n.oops.application.port.repository.NamespaceRepository;
+import com.github.wellch4n.oops.domain.namespace.Namespace;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.List;
 import org.springframework.stereotype.Service;

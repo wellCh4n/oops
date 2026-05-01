@@ -1,10 +1,10 @@
 package com.github.wellch4n.oops.application.port;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationServiceConfig;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
 
 public interface ArtifactDeploymentExecutor {
     void deploy(Pipeline pipeline,

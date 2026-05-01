@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.application.port.PipelineLogStreamGateway;
 import com.github.wellch4n.oops.application.port.StreamSink;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -41,7 +41,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
 
     private void streamLogs(Pipeline pipeline, Environment environment, StreamSink sink, KubernetesStreamHandle handle) {
         try {
-            KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+            KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
             handle.add(client);
 
             String workNamespace = environment.getWorkNamespace();

@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.EnvironmentGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.EnvironmentRepository;
+import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.util.List;

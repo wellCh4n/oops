@@ -3,8 +3,14 @@ package com.github.wellch4n.oops.infrastructure.scheduler;
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
 import com.github.wellch4n.oops.application.port.PipelineJobStatus;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.*;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
@@ -26,8 +32,6 @@ public class PipelineInstanceScanJob {
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
-    private final ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository;
-    private final ApplicationServiceConfigRepository applicationServiceConfigRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final PipelineJobGateway pipelineJobGateway;
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
@@ -35,16 +39,12 @@ public class PipelineInstanceScanJob {
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
-                                   ApplicationRuntimeSpecRepository applicationRuntimeSpecRepository,
-                                   ApplicationServiceConfigRepository applicationServiceConfigRepository,
                                    ApplicationEventPublisher eventPublisher,
                                    PipelineJobGateway pipelineJobGateway,
                                    ArtifactDeploymentExecutor artifactDeploymentExecutor) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
-        this.applicationRuntimeSpecRepository = applicationRuntimeSpecRepository;
-        this.applicationServiceConfigRepository = applicationServiceConfigRepository;
         this.eventPublisher = eventPublisher;
         this.pipelineJobGateway = pipelineJobGateway;
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
@@ -92,8 +92,8 @@ public class PipelineInstanceScanJob {
                         ));
 
                         Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                        ApplicationRuntimeSpec applicationRuntimeSpec = applicationRuntimeSpecRepository
-                                .findByNamespaceAndApplicationName(application.getNamespace(), application.getName())
+                        ApplicationRuntimeSpec applicationRuntimeSpec = applicationRepository
+                                .findRuntimeSpec(application.getNamespace(), application.getName())
                                 .orElse(null);
                         ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
                                 applicationRuntimeSpec, pipeline.getEnvironment());
@@ -101,7 +101,7 @@ public class PipelineInstanceScanJob {
                                 ? applicationRuntimeSpec.getHealthCheck()
                                 : new ApplicationRuntimeSpec.HealthCheck();
 
-                        var applicationServiceConfig = applicationServiceConfigRepository.findByNamespaceAndApplicationName(
+                        var applicationServiceConfig = applicationRepository.findServiceConfig(
                                 application.getNamespace(), application.getName()).orElse(new ApplicationServiceConfig());
 
                         artifactDeploymentExecutor.deploy(

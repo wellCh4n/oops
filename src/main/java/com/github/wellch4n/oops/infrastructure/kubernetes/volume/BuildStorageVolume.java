@@ -1,6 +1,6 @@
 //package com.github.wellch4n.oops.infrastructure.kubernetes.volume;
 //
-//import com.github.wellch4n.oops.infrastructure.persistence.jpa.Application;
+//import com.github.wellch4n.oops.domain.application.Application;
 //import com.github.wellch4n.oops.interfaces.dto.BuildStorage;
 //import io.kubernetes.client.openapi.models.V1PersistentVolumeClaimVolumeSource;
 //import io.kubernetes.client.openapi.models.V1Volume;

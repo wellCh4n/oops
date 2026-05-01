@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.dto;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import java.time.LocalDateTime;

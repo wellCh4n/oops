@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Namespace;
+import com.github.wellch4n.oops.domain.namespace.Namespace;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.NamespaceService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;

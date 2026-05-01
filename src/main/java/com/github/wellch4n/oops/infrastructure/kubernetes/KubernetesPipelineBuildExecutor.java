@@ -2,8 +2,10 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.PipelineBuildExecutor;
 import com.github.wellch4n.oops.application.port.PipelineBuildSubmission;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.PipelineExecuteTask;
 import org.springframework.stereotype.Component;
@@ -12,9 +14,12 @@ import org.springframework.stereotype.Component;
 public class KubernetesPipelineBuildExecutor implements PipelineBuildExecutor {
 
     @Override
-    public PipelineBuildSubmission submit(Pipeline pipeline, Environment environment) {
+    public PipelineBuildSubmission submit(Pipeline pipeline,
+                                          Application application,
+                                          ApplicationBuildConfig buildConfig,
+                                          Environment environment) {
         try {
-            PipelineBuildPod pod = new PipelineExecuteTask(pipeline, environment).call();
+            PipelineBuildPod pod = new PipelineExecuteTask(pipeline, application, buildConfig, environment).call();
             return new PipelineBuildSubmission(pod.getPipelineId(), pod.getArtifact());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to submit pipeline build job: " + e.getMessage(), e);

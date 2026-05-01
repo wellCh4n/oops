@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.application.service;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Domain;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.DomainRepository;
+import com.github.wellch4n.oops.application.port.repository.DomainRepository;
+import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
 import com.github.wellch4n.oops.shared.exception.BizException;

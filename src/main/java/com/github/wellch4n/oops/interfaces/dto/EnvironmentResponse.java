@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.dto;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 
 public record EnvironmentResponse(
         String id,

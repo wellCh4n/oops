@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
 import com.github.wellch4n.oops.application.port.PipelineJobStatus;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +11,7 @@ public class KubernetesPipelineJobGateway implements PipelineJobGateway {
 
     @Override
     public PipelineJobStatus getStatus(Environment environment, String jobName) {
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             var job = client.batch().v1().jobs()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(jobName)
@@ -31,7 +31,7 @@ public class KubernetesPipelineJobGateway implements PipelineJobGateway {
 
     @Override
     public void stop(Environment environment, String jobName) {
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.batch().v1().jobs()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(jobName)

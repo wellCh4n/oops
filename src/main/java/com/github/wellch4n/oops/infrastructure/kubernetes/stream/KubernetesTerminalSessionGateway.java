@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.stream;
 
 import com.github.wellch4n.oops.application.port.StreamSink;
 import com.github.wellch4n.oops.application.port.TerminalSessionGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
@@ -17,7 +17,7 @@ public class KubernetesTerminalSessionGateway implements TerminalSessionGateway 
 
     @Override
     public TerminalSession open(Environment environment, String namespace, String podName, String container, StreamSink sink) {
-        KubernetesClient client = environment.getKubernetesApiServer().fabric8Client();
+        KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
         KubernetesStreamHandle handle = new KubernetesStreamHandle();
         handle.add(client);
 

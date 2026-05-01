@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.application.service;
 
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.User;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.UserRepository;
+import com.github.wellch4n.oops.application.port.repository.UserRepository;
+import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import java.util.Collection;
 import java.util.List;

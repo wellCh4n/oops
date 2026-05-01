@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ClusterNodeGateway;
-import com.github.wellch4n.oops.infrastructure.persistence.jpa.Environment;
+import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.NodeStatusResponse;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
@@ -19,7 +19,7 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
 
     @Override
     public List<NodeStatusResponse> getNodes(Environment environment) {
-        try (var client = environment.getKubernetesApiServer().fabric8Client()) {
+        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             var nodes = client.nodes().list().getItems();
             return nodes.stream()
                     .filter(Objects::nonNull)
