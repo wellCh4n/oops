@@ -13,14 +13,22 @@ OOPS is a Kubernetes-based PaaS (Platform as a Service) for deploying applicatio
 **Java version:** 21  
 **Spring Boot:** 3.5.3
 
-Key components:
+The backend follows a **DDD layered architecture** under `com.github.wellch4n.oops`:
 
-- **Controllers** (`src/main/java/.../controller/`): REST API and WebSocket handlers
-- **Services** (`src/main/java/.../service/`): Business logic layer
-- **Data/Entities** (`src/main/java/.../data/`): JPA entities and repositories
-- **Pipeline System** (`task/`, `container/`, `pod/`): Kubernetes Job-based build pipeline using Buildah
-- **Deploy Processors** (`task/processor/`): Chain-of-responsibility deploy orchestration (`ArtifactDeployTask` drives `DeployProcessor`s)
-- **Multi-host support**: Environment entity stores K8s API server credentials, allowing management of multiple clusters
+- **`interfaces/`**: REST controllers (`interfaces/rest/`) and WebSocket handlers (`interfaces/websocket/`). `GlobalExceptionHandler` lives here.
+- **`application/`**: Application services (use cases), DTOs, Spring events, and **ports** (`application/port/repository`, `application/port/external`) — interfaces that infrastructure implements.
+- **`domain/`**: Pure domain model split by aggregate (`application`, `delivery`, `environment`, `identity`, `namespace`, `routing`) plus shared value types (`domain/shared`) and repository interfaces (`domain/repository`).
+- **`infrastructure/`**: Adapters and integrations
+  - `infrastructure/persistence/jpa/` — JPA entities, repositories, attribute converters, mappers
+  - `infrastructure/kubernetes/` — Fabric8 client glue, `task/` (`ArtifactDeployTask`, `PipelineExecuteTask`), `task/processor/` (deploy processor chain), `container/`, `pod/`, `crds/`, `stream/`, `volume/`, `ide/`
+  - `infrastructure/external/feishu/` — Feishu (Lark) OAuth + messaging
+  - `infrastructure/objectstorage/` — S3-compatible storage for ZIP source uploads
+  - `infrastructure/scheduler/` — `@Scheduled` jobs (e.g. `PipelineInstanceScanJob`)
+  - `infrastructure/config/` — Spring config beans, `SpringContext` static accessor
+  - `infrastructure/bootstrap/` — startup initializers (e.g. seed admin user)
+- **`shared/`**: Cross-cutting utilities and exceptions (`BizException`).
+
+**Multi-host support**: Environment entity stores K8s API server credentials, allowing management of multiple clusters.
 
 Key technologies:
 - Fabric8 Kubernetes client for K8s operations

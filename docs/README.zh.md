@@ -119,57 +119,38 @@ docker build -t oops .
 ### 应用构建与部署流水线
 
 ```mermaid
-flowchart TD
-    Start([用户触发部署]) --> SourceType{源码类型?}
-
-    SourceType -->|GIT| GitClone["① 克隆\nGit 克隆源码"]
-    SourceType -->|ZIP| Upload["上传 ZIP 到 S3\n(预签名 URL)"]
-    Upload --> ZipDownload["① 克隆\ncurl 从 S3 下载 ZIP"]
-
-    GitClone --> BuildStep{是否有构建\n命令?}
-    ZipDownload --> BuildStep
-
-    BuildStep -->|是| Build["② 构建\n运行自定义构建命令"]
-    BuildStep -->|否| Push
-
-    Build --> Push["③ 推送\nKaniko 构建并推送\nDocker 镜像到仓库"]
-
-    Push --> ScanJob["PipelineInstanceScanJob\n每 5 秒轮询 K8s Job 状态"]
-
-    ScanJob --> JobResult{K8s Job\n结果?}
-
-    JobResult -->|失败| Error([错误 ❌])
-    JobResult -->|成功| DeployMode{部署模式?}
-
-    DeployMode -->|立即部署| DeployAuto["自动部署"]
-    DeployMode -->|手动部署| WaitManual([BUILD_SUCCEEDED ⏸️\n等待手动触发])
-    WaitManual -->|"用户调用 deployPipeline()"| DeployManual["手动部署"]
-
-    DeployAuto --> Deploy
-    DeployManual --> Deploy
-
-    Deploy["部署到 Kubernetes"] --> CreateSS["创建/更新 StatefulSet\n• enableServiceLinks=false\n• envFrom: ConfigMap"]
-    CreateSS --> CreateSvc["创建 Service\n(ownerRef → StatefulSet)"]
-    CreateSvc --> HasIngress{是否有 Ingress\n配置?}
-    HasIngress -->|是| CreateIR["创建 Traefik IngressRoute\n(ownerRef → StatefulSet)"]
-    HasIngress -->|否| Success
-    CreateIR --> Success([部署成功 ✅])
+flowchart LR
+    Start([用户触发部署]) --> Src{源码类型}
+    Src -->|GIT| Clone["① 克隆<br/>git clone"]
+    Src -->|ZIP| Upload["上传 ZIP<br/>（预签名 S3 URL）"]
+    Upload --> CloneZ["① 克隆<br/>curl 从 S3 下载"]
+    Clone --> Build["② 构建<br/>（可选）"]
+    CloneZ --> Build
+    Build --> Push["③ 推送<br/>Buildah 构建并推送"]
+    Push --> Scan{"Job 结果<br/>（5s 轮询）"}
+    Scan -->|失败| Err([错误 ❌])
+    Scan -->|成功| Mode{部署模式}
+    Mode -->|手动| Wait([BUILD_SUCCEEDED ⏸️<br/>等待手动触发])
+    Mode -->|立即| Deploy["部署 K8s 资源<br/>StatefulSet · Service · IngressRoute"]
+    Wait --> Deploy
+    Deploy --> Ok([部署成功 ✅])
 
     style Start fill:#4CAF50,color:#fff
-    style Success fill:#4CAF50,color:#fff
-    style Error fill:#f44336,color:#fff
-    style WaitManual fill:#FF9800,color:#fff
+    style Ok fill:#4CAF50,color:#fff
+    style Err fill:#f44336,color:#fff
+    style Wait fill:#FF9800,color:#fff
 ```
 
 ### 流水线状态机
 
 ```mermaid
 stateDiagram-v2
+    direction LR
     [*] --> INITIALIZED: 流水线创建
     INITIALIZED --> RUNNING: K8s Job 提交
 
-    RUNNING --> BUILD_SUCCEEDED: Job 成功\n(手动模式)
-    RUNNING --> DEPLOYING: Job 成功\n(立即部署模式)
+    RUNNING --> BUILD_SUCCEEDED: Job 成功<br/>(手动模式)
+    RUNNING --> DEPLOYING: Job 成功<br/>(立即部署模式)
     RUNNING --> ERROR: Job 失败
     RUNNING --> STOPPED: 用户取消
 
