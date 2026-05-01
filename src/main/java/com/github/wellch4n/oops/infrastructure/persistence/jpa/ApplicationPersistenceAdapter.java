@@ -30,8 +30,13 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
-    public com.github.wellch4n.oops.domain.application.Application findByNamespaceAndName(String namespace, String name) {
-        return PersistenceMapper.toDomain(applicationRepository.findByNamespaceAndName(namespace, name));
+    public com.github.wellch4n.oops.domain.application.Application findAggregate(String namespace, String name) {
+        com.github.wellch4n.oops.domain.application.Application application = findByNamespaceAndName(namespace, name);
+        if (application == null) {
+            return null;
+        }
+        hydrateAggregate(application);
+        return application;
     }
 
     @Override
@@ -73,23 +78,25 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
-    public com.github.wellch4n.oops.domain.application.Application save(com.github.wellch4n.oops.domain.application.Application application) {
-        return PersistenceMapper.toDomain(applicationRepository.save(PersistenceMapper.toEntity(application)));
-    }
-
-    @Override
     public com.github.wellch4n.oops.domain.application.Application saveAndFlush(com.github.wellch4n.oops.domain.application.Application application) {
         return PersistenceMapper.toDomain(applicationRepository.saveAndFlush(PersistenceMapper.toEntity(application)));
     }
 
     @Override
-    public void deleteByNamespaceAndName(String namespace, String name) {
-        applicationRepository.deleteByNamespaceAndName(namespace, name);
+    public com.github.wellch4n.oops.domain.application.Application saveAggregate(com.github.wellch4n.oops.domain.application.Application application) {
+        com.github.wellch4n.oops.domain.application.Application saved = PersistenceMapper.toDomain(
+                applicationRepository.save(PersistenceMapper.toEntity(application)));
+        saveChildren(application);
+        return findAggregate(saved.getNamespace(), saved.getName());
     }
 
     @Override
-    public Optional<com.github.wellch4n.oops.domain.application.ApplicationBuildConfig> findBuildConfig(String namespace, String applicationName) {
-        return buildConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
+    public void deleteAggregate(String namespace, String name) {
+        environmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        buildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        runtimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        serviceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        applicationRepository.deleteByNamespaceAndName(namespace, name);
     }
 
     @Override
@@ -107,63 +114,6 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
-    public com.github.wellch4n.oops.domain.application.ApplicationBuildConfig saveBuildConfig(com.github.wellch4n.oops.domain.application.ApplicationBuildConfig config) {
-        return PersistenceMapper.toDomain(buildConfigRepository.save(PersistenceMapper.toEntity(config)));
-    }
-
-    @Override
-    public void deleteBuildConfig(String namespace, String applicationName) {
-        buildConfigRepository.deleteByNamespaceAndApplicationName(namespace, applicationName);
-    }
-
-    @Override
-    public Optional<com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec> findRuntimeSpec(String namespace, String applicationName) {
-        return runtimeSpecRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
-    }
-
-    @Override
-    public com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec saveRuntimeSpec(com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec spec) {
-        return PersistenceMapper.toDomain(runtimeSpecRepository.save(PersistenceMapper.toEntity(spec)));
-    }
-
-    @Override
-    public void deleteRuntimeSpec(String namespace, String applicationName) {
-        runtimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, applicationName);
-    }
-
-    @Override
-    public List<com.github.wellch4n.oops.domain.application.ApplicationEnvironment> findEnvironments(String namespace, String applicationName) {
-        return PersistenceMapper.convertList(
-                environmentRepository.findByNamespaceAndApplicationName(namespace, applicationName),
-                PersistenceMapper::toDomain);
-    }
-
-    @Override
-    public void replaceEnvironments(
-            String namespace,
-            String applicationName,
-            List<com.github.wellch4n.oops.domain.application.ApplicationEnvironment> environments
-    ) {
-        environmentRepository.deleteByNamespaceAndApplicationName(namespace, applicationName);
-        environmentRepository.saveAll(PersistenceMapper.convertList(environments, PersistenceMapper::toEntity));
-    }
-
-    @Override
-    public void deleteEnvironments(String namespace, String applicationName) {
-        environmentRepository.deleteByNamespaceAndApplicationName(namespace, applicationName);
-    }
-
-    @Override
-    public Optional<com.github.wellch4n.oops.domain.application.ApplicationServiceConfig> findServiceConfig(String namespace, String applicationName) {
-        return serviceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
-    }
-
-    @Override
-    public com.github.wellch4n.oops.domain.application.ApplicationServiceConfig saveServiceConfig(com.github.wellch4n.oops.domain.application.ApplicationServiceConfig config) {
-        return PersistenceMapper.toDomain(serviceConfigRepository.save(PersistenceMapper.toEntity(config)));
-    }
-
-    @Override
     public List<com.github.wellch4n.oops.domain.application.ApplicationServiceConfig> findServiceConfigsByHostLikeExcludingSelf(
             String hostPattern,
             String namespace,
@@ -174,8 +124,62 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
                 PersistenceMapper::toDomain);
     }
 
-    @Override
-    public void deleteServiceConfig(String namespace, String applicationName) {
-        serviceConfigRepository.deleteByNamespaceAndApplicationName(namespace, applicationName);
+    private void hydrateAggregate(com.github.wellch4n.oops.domain.application.Application application) {
+        String namespace = application.getNamespace();
+        String name = application.getName();
+        application.setBuildConfig(findBuildConfig(namespace, name).orElse(null));
+        application.setRuntimeSpec(findRuntimeSpec(namespace, name).orElse(null));
+        application.setServiceConfig(findServiceConfig(namespace, name).orElse(null));
+        application.setEnvironments(findEnvironments(namespace, name));
+    }
+
+    private void saveChildren(com.github.wellch4n.oops.domain.application.Application application) {
+        String namespace = application.getNamespace();
+        String name = application.getName();
+        if (application.getBuildConfig() != null) {
+            application.getBuildConfig().setNamespace(namespace);
+            application.getBuildConfig().setApplicationName(name);
+            buildConfigRepository.save(PersistenceMapper.toEntity(application.getBuildConfig()));
+        }
+        if (application.getRuntimeSpec() != null) {
+            application.getRuntimeSpec().setNamespace(namespace);
+            application.getRuntimeSpec().setApplicationName(name);
+            runtimeSpecRepository.save(PersistenceMapper.toEntity(application.getRuntimeSpec()));
+        }
+        if (application.getServiceConfig() != null) {
+            application.getServiceConfig().setNamespace(namespace);
+            application.getServiceConfig().setApplicationName(name);
+            serviceConfigRepository.save(PersistenceMapper.toEntity(application.getServiceConfig()));
+        }
+        if (application.getEnvironments() != null) {
+            environmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
+            application.getEnvironments().forEach(environment -> {
+                environment.setNamespace(namespace);
+                environment.setApplicationName(name);
+            });
+            environmentRepository.saveAll(PersistenceMapper.convertList(application.getEnvironments(), PersistenceMapper::toEntity));
+        }
+    }
+
+    private com.github.wellch4n.oops.domain.application.Application findByNamespaceAndName(String namespace, String name) {
+        return PersistenceMapper.toDomain(applicationRepository.findByNamespaceAndName(namespace, name));
+    }
+
+    private Optional<com.github.wellch4n.oops.domain.application.ApplicationBuildConfig> findBuildConfig(String namespace, String applicationName) {
+        return buildConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
+    }
+
+    private Optional<com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec> findRuntimeSpec(String namespace, String applicationName) {
+        return runtimeSpecRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
+    }
+
+    private List<com.github.wellch4n.oops.domain.application.ApplicationEnvironment> findEnvironments(String namespace, String applicationName) {
+        return PersistenceMapper.convertList(
+                environmentRepository.findByNamespaceAndApplicationName(namespace, applicationName),
+                PersistenceMapper::toDomain);
+    }
+
+    private Optional<com.github.wellch4n.oops.domain.application.ApplicationServiceConfig> findServiceConfig(String namespace, String applicationName) {
+        return serviceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
     }
 }

@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapItem;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.ConfigMapItem;
+import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.ConfigMapService;
 import java.util.List;

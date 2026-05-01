@@ -15,10 +15,10 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.interfaces.dto.DeployRequest;
-import com.github.wellch4n.oops.interfaces.dto.DeployStrategyParam;
-import com.github.wellch4n.oops.interfaces.dto.GitDeployStrategyParam;
-import com.github.wellch4n.oops.interfaces.dto.ZipDeployStrategyParam;
+import com.github.wellch4n.oops.application.dto.DeployRequest;
+import com.github.wellch4n.oops.application.dto.DeployStrategyParam;
+import com.github.wellch4n.oops.application.dto.GitDeployStrategyParam;
+import com.github.wellch4n.oops.application.dto.ZipDeployStrategyParam;
 import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -67,13 +67,12 @@ public class DeploymentService {
 
         Environment environment = environmentService.getEnvironment(request.environment());
 
-        Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
-        ApplicationBuildConfig buildConfig = applicationRepository
-                .findBuildConfig(namespace, applicationName)
-                .orElse(null);
-        ApplicationSourceType sourceType = buildConfig != null && buildConfig.getSourceType() != null
-                ? buildConfig.getSourceType()
-                : ApplicationSourceType.GIT;
+        Application application = applicationRepository.findAggregate(namespace, applicationName);
+        if (application == null) {
+            throw new BizException("Application not found");
+        }
+        ApplicationBuildConfig buildConfig = application.getBuildConfig();
+        ApplicationSourceType sourceType = application.sourceType();
         ApplicationSourceType publishType = request.strategy().getType();
         deployStrategyPolicy.ensureStrategyMatches(sourceType, publishType);
 

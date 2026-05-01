@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.interfaces.dto.DomainRequest;
+import com.github.wellch4n.oops.application.dto.DomainRequest;
 import com.github.wellch4n.oops.interfaces.dto.DomainResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.DomainService;

@@ -1,17 +1,16 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.infrastructure.config.IDEConfig;
-import com.github.wellch4n.oops.interfaces.dto.IDEConfigResponse;
-import com.github.wellch4n.oops.interfaces.dto.IDECreateRequest;
-import com.github.wellch4n.oops.interfaces.dto.IDEResponse;
+import com.github.wellch4n.oops.application.dto.IDEConfigResponse;
+import com.github.wellch4n.oops.application.dto.IDECreateRequest;
+import com.github.wellch4n.oops.application.dto.IDEResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.IDEService;
 import java.util.List;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@ConditionalOnBean(IDEConfig.class)
+@ConditionalOnProperty(prefix = "oops.ide", name = "enabled", havingValue = "true")
 @RequestMapping("/api/namespaces/{namespace}/applications/{application}/ides")
 public class IDEController {
 

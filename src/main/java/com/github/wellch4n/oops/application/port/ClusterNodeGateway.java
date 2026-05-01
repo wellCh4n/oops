@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.application.port;
 
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.NodeStatusResponse;
+import com.github.wellch4n.oops.application.dto.NodeStatusResponse;
 import java.util.List;
 
 public interface ClusterNodeGateway {

@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import java.util.ArrayList;

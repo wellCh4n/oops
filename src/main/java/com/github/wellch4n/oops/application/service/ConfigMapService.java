@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.ConfigMapGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapItem;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.ConfigMapItem;
+import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
 import java.util.List;
 import org.springframework.stereotype.Service;
 

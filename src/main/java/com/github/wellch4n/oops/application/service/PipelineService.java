@@ -17,9 +17,9 @@ import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.interfaces.dto.LastSuccessfulPipelineResponse;
-import com.github.wellch4n.oops.interfaces.dto.Page;
-import com.github.wellch4n.oops.interfaces.dto.PipelineResponse;
+import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineResponse;
+import com.github.wellch4n.oops.application.dto.Page;
+import com.github.wellch4n.oops.application.dto.PipelineResponse;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -151,26 +151,14 @@ public class PipelineService {
 
         try {
             Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
-            Application application = applicationRepository.findByNamespaceAndName(namespace, applicationName);
-
-            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec = null;
-            ApplicationRuntimeSpec runtimeSpecEntity = applicationRepository
-                    .findRuntimeSpec(namespace, applicationName).orElse(null);
-            if (runtimeSpecEntity != null && runtimeSpecEntity.getEnvironmentConfigs() != null) {
-                runtimeSpec = runtimeSpecEntity.getEnvironmentConfigs().stream()
-                        .filter(c -> pipeline.getEnvironment().equals(c.getEnvironmentName()))
-                        .findFirst().orElse(null);
+            Application application = applicationRepository.findAggregate(namespace, applicationName);
+            if (application == null) {
+                throw new BizException("Application not found");
             }
-            if (runtimeSpec == null) {
-                runtimeSpec = new ApplicationRuntimeSpec.EnvironmentConfig();
-            }
-            ApplicationRuntimeSpec.HealthCheck healthCheck = runtimeSpecEntity != null && runtimeSpecEntity.getHealthCheck() != null
-                    ? runtimeSpecEntity.getHealthCheck()
-                    : new ApplicationRuntimeSpec.HealthCheck();
-
-            ApplicationServiceConfig serviceConfig = applicationRepository
-                    .findServiceConfig(namespace, applicationName)
-                    .orElse(new ApplicationServiceConfig());
+            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
+                    application.runtimeEnvironmentConfigOrDefault(pipeline.getEnvironment());
+            ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
+            ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
 
             artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig);
 

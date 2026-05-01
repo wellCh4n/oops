@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.interfaces.dto.DomainRequest;
+import com.github.wellch4n.oops.application.dto.DomainRequest;
 import com.github.wellch4n.oops.shared.util.PemCertificateParser;
 import java.util.List;
 import java.util.Optional;

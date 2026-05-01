@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.application.port;
 
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapItem;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.ConfigMapItem;
+import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
 import java.util.List;
 
 public interface ConfigMapGateway {

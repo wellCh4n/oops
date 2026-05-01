@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.interfaces.dto.Page;
-import com.github.wellch4n.oops.interfaces.dto.PipelineResponse;
+import com.github.wellch4n.oops.application.dto.Page;
+import com.github.wellch4n.oops.application.dto.PipelineResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import org.springframework.web.bind.annotation.*;

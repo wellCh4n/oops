@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.interfaces.dto;
+package com.github.wellch4n.oops.application.dto;
 
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;

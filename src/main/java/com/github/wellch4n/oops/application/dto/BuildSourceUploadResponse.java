@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.interfaces.dto;
+package com.github.wellch4n.oops.application.dto;
 
 import java.util.Map;
 

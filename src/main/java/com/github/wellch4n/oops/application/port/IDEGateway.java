@@ -3,9 +3,9 @@ package com.github.wellch4n.oops.application.port;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.IDEConfigResponse;
-import com.github.wellch4n.oops.interfaces.dto.IDECreateRequest;
-import com.github.wellch4n.oops.interfaces.dto.IDEResponse;
+import com.github.wellch4n.oops.application.dto.IDEConfigResponse;
+import com.github.wellch4n.oops.application.dto.IDECreateRequest;
+import com.github.wellch4n.oops.application.dto.IDEResponse;
 import java.util.List;
 
 public interface IDEGateway {

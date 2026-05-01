@@ -5,17 +5,16 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
-import com.github.wellch4n.oops.infrastructure.config.IDEConfig;
-import com.github.wellch4n.oops.interfaces.dto.IDEConfigResponse;
-import com.github.wellch4n.oops.interfaces.dto.IDECreateRequest;
-import com.github.wellch4n.oops.interfaces.dto.IDEResponse;
+import com.github.wellch4n.oops.application.dto.IDEConfigResponse;
+import com.github.wellch4n.oops.application.dto.IDECreateRequest;
+import com.github.wellch4n.oops.application.dto.IDEResponse;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.List;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnBean(IDEConfig.class)
+@ConditionalOnProperty(prefix = "oops.ide", name = "enabled", havingValue = "true")
 public class IDEService {
 
     private final EnvironmentService environmentService;
@@ -42,7 +41,7 @@ public class IDEService {
         }
 
         Application application = applicationService.getApplication(namespace, applicationName);
-        ApplicationBuildConfig applicationBuildConfig = applicationService.getApplicationBuildConfig(namespace, applicationName);
+        ApplicationBuildConfig applicationBuildConfig = application != null ? application.getBuildConfig() : null;
         ApplicationSourceType sourceType = applicationBuildConfig != null && applicationBuildConfig.getSourceType() != null
                 ? applicationBuildConfig.getSourceType()
                 : ApplicationSourceType.GIT;

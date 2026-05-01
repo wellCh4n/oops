@@ -1,9 +1,9 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
-import com.github.wellch4n.oops.interfaces.dto.BuildSourceUploadRequest;
-import com.github.wellch4n.oops.interfaces.dto.BuildSourceUploadResponse;
-import com.github.wellch4n.oops.interfaces.dto.DeployRequest;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadRequest;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadResponse;
+import com.github.wellch4n.oops.application.dto.DeployRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
 import com.github.wellch4n.oops.application.service.DeploymentService;

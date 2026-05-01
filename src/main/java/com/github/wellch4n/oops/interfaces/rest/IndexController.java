@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
-import com.github.wellch4n.oops.interfaces.dto.ApplicationQueryRequest;
-import com.github.wellch4n.oops.interfaces.dto.PipelineQueryRequest;
+import com.github.wellch4n.oops.application.dto.ApplicationQueryRequest;
+import com.github.wellch4n.oops.application.dto.PipelineQueryRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.IndexService;
 import java.util.List;

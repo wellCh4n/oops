@@ -7,7 +7,6 @@ import com.github.wellch4n.oops.application.port.repository.ApplicationRepositor
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
@@ -91,18 +90,15 @@ public class PipelineInstanceScanJob {
                                 pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
                         ));
 
-                        Application application = applicationRepository.findByNamespaceAndName(pipeline.getNamespace(), pipeline.getApplicationName());
-                        ApplicationRuntimeSpec applicationRuntimeSpec = applicationRepository
-                                .findRuntimeSpec(application.getNamespace(), application.getName())
-                                .orElse(null);
+                        Application application = applicationRepository.findAggregate(pipeline.getNamespace(), pipeline.getApplicationName());
+                        if (application == null) {
+                            throw new IllegalStateException("Application not found: "
+                                    + pipeline.getNamespace() + "/" + pipeline.getApplicationName());
+                        }
                         ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
-                                applicationRuntimeSpec, pipeline.getEnvironment());
-                        ApplicationRuntimeSpec.HealthCheck healthCheck = applicationRuntimeSpec != null && applicationRuntimeSpec.getHealthCheck() != null
-                                ? applicationRuntimeSpec.getHealthCheck()
-                                : new ApplicationRuntimeSpec.HealthCheck();
-
-                        var applicationServiceConfig = applicationRepository.findServiceConfig(
-                                application.getNamespace(), application.getName()).orElse(new ApplicationServiceConfig());
+                                application, pipeline.getEnvironment());
+                        ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
+                        var applicationServiceConfig = application.serviceConfigOrDefault();
 
                         artifactDeploymentExecutor.deploy(
                                 pipeline, application, environment,
@@ -148,13 +144,7 @@ public class PipelineInstanceScanJob {
         }
     }
 
-    private ApplicationRuntimeSpec.EnvironmentConfig resolveEnvironmentConfig(ApplicationRuntimeSpec config, String environmentName) {
-        if (config == null || config.getEnvironmentConfigs() == null) {
-            return new ApplicationRuntimeSpec.EnvironmentConfig();
-        }
-        return config.getEnvironmentConfigs().stream()
-                .filter(c -> environmentName != null && environmentName.equals(c.getEnvironmentName()))
-                .findFirst()
-                .orElseGet(ApplicationRuntimeSpec.EnvironmentConfig::new);
+    private ApplicationRuntimeSpec.EnvironmentConfig resolveEnvironmentConfig(Application application, String environmentName) {
+        return application.runtimeEnvironmentConfigOrDefault(environmentName);
     }
 }

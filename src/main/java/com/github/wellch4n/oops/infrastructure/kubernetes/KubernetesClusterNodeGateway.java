@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ClusterNodeGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.NodeStatusResponse;
+import com.github.wellch4n.oops.application.dto.NodeStatusResponse;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.api.model.Quantity;

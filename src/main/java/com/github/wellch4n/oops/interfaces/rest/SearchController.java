@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.interfaces.dto.ApplicationResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import java.util.List;

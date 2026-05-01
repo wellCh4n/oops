@@ -1,18 +1,14 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.domain.application.Application;
-import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
-import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
-import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
-import com.github.wellch4n.oops.interfaces.dto.ApplicationPodStatusResponse;
-import com.github.wellch4n.oops.interfaces.dto.ApplicationResponse;
-import com.github.wellch4n.oops.interfaces.dto.ClusterDomainResponse;
-import com.github.wellch4n.oops.interfaces.dto.LastSuccessfulPipelineResponse;
-import com.github.wellch4n.oops.interfaces.dto.Page;
+import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationResponse;
+import com.github.wellch4n.oops.application.dto.ClusterDomainResponse;
+import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineResponse;
+import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
-import com.github.wellch4n.oops.interfaces.dto.ServiceHostConflictResponse;
+import com.github.wellch4n.oops.application.dto.ServiceHostConflictResponse;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
@@ -57,9 +53,9 @@ public class ApplicationController {
 
     @PostMapping
     public Result<String> createApplication(@PathVariable String namespace,
-                                            @RequestBody Application application,
+                                            @RequestBody ApplicationConfigDto.Profile application,
                                             Authentication authentication) {
-        ResourceNameChecker.check(application.getName());
+        ResourceNameChecker.check(application.name());
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return Result.success(applicationService.createApplication(namespace, application, principal.userId()));
     }
@@ -67,7 +63,7 @@ public class ApplicationController {
     @PutMapping("/{name}")
     public Result<Boolean> updateApplication(@PathVariable String namespace,
                                              @PathVariable String name,
-                                             @RequestBody Application application) {
+                                             @RequestBody ApplicationConfigDto.Profile application) {
         return Result.success(applicationService.updateApplication(namespace, name, application));
     }
 
@@ -77,60 +73,66 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/build/config")
-    public Result<ApplicationBuildConfig> getApplicationBuildConfig(@PathVariable String namespace,
-                                                                    @PathVariable String name) {
+    public Result<ApplicationConfigDto.BuildConfig> getApplicationBuildConfig(@PathVariable String namespace,
+                                                                              @PathVariable String name) {
         return Result.success(applicationService.getApplicationBuildConfig(namespace, name));
     }
 
     @PutMapping("/{name}/build/config")
     public Result<Boolean> updateApplicationBuildConfig(@PathVariable String namespace,
                                                         @PathVariable String name,
-                                                        @RequestBody ApplicationBuildConfig request) {
+                                                        @RequestBody ApplicationConfigDto.BuildConfig request) {
         return Result.success(applicationService.updateApplicationBuildConfig(namespace, name, request));
     }
 
     @GetMapping("/{name}/environments/build/configs")
-    public Result<List<ApplicationBuildConfig.EnvironmentConfig>> getApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
-                                                                                                       @PathVariable String name) {
+    public Result<List<ApplicationConfigDto.BuildEnvironmentConfig>> getApplicationBuildEnvironmentConfigs(
+            @PathVariable String namespace,
+            @PathVariable String name
+    ) {
         return Result.success(applicationService.getApplicationBuildEnvironmentConfigs(namespace, name));
     }
 
     @GetMapping("/{name}/environments/runtime-specs")
-    public Result<List<ApplicationRuntimeSpec.EnvironmentConfig>> getApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
-                                                                                                                  @PathVariable String name) {
+    public Result<List<ApplicationConfigDto.RuntimeEnvironmentConfig>> getApplicationRuntimeSpecEnvironmentConfigs(
+            @PathVariable String namespace,
+            @PathVariable String name
+    ) {
         return Result.success(applicationService.getApplicationRuntimeSpecEnvironmentConfigs(namespace, name));
     }
 
     @GetMapping("/{name}/runtime-spec")
-    public Result<ApplicationRuntimeSpec> getApplicationRuntimeSpec(@PathVariable String namespace,
-                                                                    @PathVariable String name) {
+    public Result<ApplicationConfigDto.RuntimeSpec> getApplicationRuntimeSpec(@PathVariable String namespace,
+                                                                             @PathVariable String name) {
         return Result.success(applicationService.getApplicationRuntimeSpec(namespace, name));
     }
 
     @PutMapping("/{name}/environments/build/configs")
     public Result<Boolean> updateApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
                                                                     @PathVariable String name,
-                                                                    @RequestBody List<ApplicationBuildConfig.EnvironmentConfig> configs) {
+                                                                    @RequestBody List<ApplicationConfigDto.BuildEnvironmentConfig> configs) {
         return Result.success(applicationService.updateApplicationBuildEnvironmentConfigs(namespace, name, configs));
     }
 
     @PutMapping("/{name}/environments/runtime-specs")
     public Result<Boolean> updateApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
                                                                           @PathVariable String name,
-                                                                          @RequestBody List<ApplicationRuntimeSpec.EnvironmentConfig> configs) {
+                                                                          @RequestBody List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs) {
         return Result.success(applicationService.updateApplicationRuntimeSpecEnvironmentConfigs(namespace, name, configs));
     }
 
     @PutMapping("/{name}/runtime-spec")
     public Result<Boolean> updateApplicationRuntimeSpec(@PathVariable String namespace,
                                                         @PathVariable String name,
-                                                        @RequestBody ApplicationRuntimeSpec request) {
+                                                        @RequestBody ApplicationConfigDto.RuntimeSpec request) {
         return Result.success(applicationService.updateApplicationRuntimeSpec(namespace, name, request));
     }
 
     @GetMapping("/{name}/environments")
-    public Result<List<ApplicationEnvironment>> getApplicationEnvironments(@PathVariable String namespace,
-                                                                           @PathVariable String name) {
+    public Result<List<ApplicationConfigDto.EnvironmentBinding>> getApplicationEnvironments(
+            @PathVariable String namespace,
+            @PathVariable String name
+    ) {
         return Result.success(applicationService.getApplicationEnvironments(namespace, name));
     }
 
@@ -144,17 +146,21 @@ public class ApplicationController {
     @PutMapping("/{name}/environments")
     public Result<Boolean> updateApplicationEnvironments(@PathVariable String namespace,
                                                          @PathVariable String name,
-                                                         @RequestBody List<ApplicationEnvironment> configs) {
+                                                         @RequestBody List<ApplicationConfigDto.EnvironmentBinding> configs) {
         return Result.success(applicationService.updateApplicationEnvironments(namespace, name, configs));
     }
 
     @GetMapping("/{name}/service")
-    public Result<ApplicationServiceConfig> getService(@PathVariable String namespace, @PathVariable String name) {
+    public Result<ApplicationConfigDto.ServiceConfig> getService(@PathVariable String namespace, @PathVariable String name) {
         return Result.success(applicationService.getApplicationServiceConfig(namespace, name));
     }
 
     @PutMapping("/{name}/service")
-    public Result<Boolean> updateService(@PathVariable String namespace, @PathVariable String name, @RequestBody ApplicationServiceConfig config) {
+    public Result<Boolean> updateService(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            @RequestBody ApplicationConfigDto.ServiceConfig config
+    ) {
         return Result.success(applicationService.updateApplicationServiceConfig(namespace, name, config));
     }
 

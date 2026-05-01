@@ -4,8 +4,8 @@ import com.github.wellch4n.oops.application.port.repository.ApplicationRepositor
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
-import com.github.wellch4n.oops.interfaces.dto.ApplicationQueryRequest;
-import com.github.wellch4n.oops.interfaces.dto.PipelineQueryRequest;
+import com.github.wellch4n.oops.application.dto.ApplicationQueryRequest;
+import com.github.wellch4n.oops.application.dto.PipelineQueryRequest;
 import java.util.List;
 import org.springframework.stereotype.Service;
 

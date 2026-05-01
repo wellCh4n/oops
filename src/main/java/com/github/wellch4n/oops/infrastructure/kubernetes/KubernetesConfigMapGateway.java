@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ConfigMapGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapItem;
-import com.github.wellch4n.oops.interfaces.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.ConfigMapItem;
+import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReference;
