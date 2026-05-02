@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config"
-import { setAuth, getToken } from "@/lib/auth"
+import { setAuth, getToken, handleAuthFailure } from "@/lib/auth"
 import { apiFetch } from "./client"
 import { ApiResponse } from "./types"
 
@@ -42,8 +42,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     const res = await fetch(`${API_BASE_URL}/api/users/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
+    if (res.status === 401) {
+      handleAuthFailure()
+      return null
+    }
     const data = await res.json() as ApiResponse<CurrentUser>
-    return data.success ? data.data : null
+    if (!data.success || !data.data) {
+      handleAuthFailure()
+      return null
+    }
+    return data.data
   } catch {
     return null
   }

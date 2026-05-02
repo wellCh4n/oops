@@ -15,10 +15,22 @@ export function setAuth(token: string, userId: string, username: string, role: s
 }
 
 export function clearAuth() {
-  document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-  localStorage.removeItem("auth_user_id")
-  localStorage.removeItem("auth_username")
-  localStorage.removeItem("auth_role")
+  if (typeof document !== "undefined") {
+    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    document.cookie = "auth_token=; path=/; max-age=0; SameSite=Lax"
+  }
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("auth_user_id")
+    localStorage.removeItem("auth_username")
+    localStorage.removeItem("auth_role")
+  }
+}
+
+export function handleAuthFailure() {
+  clearAuth()
+  if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+    window.location.replace("/login")
+  }
 }
 
 export function getUserId(): string | null {

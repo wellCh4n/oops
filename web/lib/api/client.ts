@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "./config"
-import { getToken, clearAuth } from "@/lib/auth"
+import { getToken, handleAuthFailure } from "@/lib/auth"
 
 export async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = getToken()
@@ -9,8 +9,7 @@ export async function apiFetch(path: string, init?: RequestInit): Promise<Respon
   }
   const res = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
   if (res.status === 401) {
-    clearAuth()
-    window.location.href = "/login"
+    handleAuthFailure()
   }
   return res
 }

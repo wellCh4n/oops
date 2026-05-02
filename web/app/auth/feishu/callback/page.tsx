@@ -24,9 +24,10 @@ export default function FeishuCallbackPage() {
         return getCurrentUser().then((user) => ({ token, user }))
       })
       .then(({ token, user }) => {
-        if (user) {
-          setAuth(token, user.id, user.username, user.role)
+        if (!user) {
+          throw new Error(t("login.error"))
         }
+        setAuth(token, user.id, user.username, user.role)
         window.location.href = "/"
       })
       .catch((err: Error) => {
