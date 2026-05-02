@@ -15,6 +15,7 @@ const common = {
   "common.owner": "負責人",
   "common.selectOwner": "選擇負責人",
   "common.unassigned": "未指定",
+  "common.deletedUser": "已刪除用戶",
   "common.disconnected": "連線已斷開",
   "common.empty": "空",
   "common.refresh": "重新整理頁面",

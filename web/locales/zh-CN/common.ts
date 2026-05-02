@@ -15,6 +15,7 @@ const common = {
   "common.owner": "负责人",
   "common.selectOwner": "选择负责人",
   "common.unassigned": "未指定",
+  "common.deletedUser": "已删除用户",
   "common.disconnected": "连接已断开",
   "common.empty": "空",
   "common.refresh": "刷新页面",

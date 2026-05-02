@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { Pencil, Rocket, Activity, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Application } from "@/lib/api/types"
 
 // Define the shape of our table meta to include handlers
@@ -35,7 +36,19 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
       if (!row.original.owner) {
         return t("common.unassigned")
       }
-      return row.original.ownerName || row.original.owner
+      if (!row.original.ownerName) {
+        return (
+          <Tooltip>
+            <TooltipTrigger className="cursor-help">
+              <span className="text-muted-foreground">{t("common.deletedUser")}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{row.original.owner}</p>
+            </TooltipContent>
+          </Tooltip>
+        )
+      }
+      return row.original.ownerName
     },
   },
   {

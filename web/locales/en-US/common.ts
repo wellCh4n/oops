@@ -15,6 +15,7 @@ const common = {
   "common.owner": "Owner",
   "common.selectOwner": "Select owner",
   "common.unassigned": "Unassigned",
+  "common.deletedUser": "Deleted user",
   "common.disconnected": "Connection disconnected",
   "common.empty": "empty",
   "common.refresh": "Refresh",

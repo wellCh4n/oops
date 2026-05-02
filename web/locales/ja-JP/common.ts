@@ -15,6 +15,7 @@ const common = {
   "common.owner": "担当者",
   "common.selectOwner": "担当者を選択",
   "common.unassigned": "未指定",
+  "common.deletedUser": "削除済みユーザー",
   "common.disconnected": "接続が失われました",
   "common.empty": "空",
   "common.refresh": "ページを更新",
