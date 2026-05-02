@@ -14,6 +14,7 @@ import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +53,7 @@ public class ApplicationController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public Result<String> createApplication(@PathVariable String namespace,
                                             @RequestBody ApplicationConfigDto.Profile application,
                                             Authentication authentication) {
@@ -61,6 +63,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplication(@PathVariable String namespace,
                                              @PathVariable String name,
                                              @RequestBody ApplicationConfigDto.Profile application) {
@@ -68,6 +71,7 @@ public class ApplicationController {
     }
 
     @DeleteMapping("/{name}")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name) {
         return Result.success(applicationService.deleteApplication(namespace, name));
     }
@@ -79,6 +83,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/build/config")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplicationBuildConfig(@PathVariable String namespace,
                                                         @PathVariable String name,
                                                         @RequestBody ApplicationConfigDto.BuildConfig request) {
@@ -108,6 +113,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/environments/build/configs")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
                                                                     @PathVariable String name,
                                                                     @RequestBody List<ApplicationConfigDto.BuildEnvironmentConfig> configs) {
@@ -115,6 +121,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/environments/runtime-specs")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
                                                                           @PathVariable String name,
                                                                           @RequestBody List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs) {
@@ -122,6 +129,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/runtime-spec")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplicationRuntimeSpec(@PathVariable String namespace,
                                                         @PathVariable String name,
                                                         @RequestBody ApplicationConfigDto.RuntimeSpec request) {
@@ -144,6 +152,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/environments")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateApplicationEnvironments(@PathVariable String namespace,
                                                          @PathVariable String name,
                                                          @RequestBody List<ApplicationConfigDto.EnvironmentBinding> configs) {
@@ -156,6 +165,7 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/service")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateService(
             @PathVariable String namespace,
             @PathVariable String name,
@@ -184,19 +194,12 @@ public class ApplicationController {
     }
 
     @PutMapping("/{name}/pods/{pod}/restart")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> restartApplication(@PathVariable String namespace,
                                               @PathVariable String name,
                                               @PathVariable String pod,
                                               @RequestParam String env) {
         return Result.success(applicationService.restartApplication(namespace, name, pod, env));
     }
-
-//    @GetMapping(value = "/{name}/pods/{pod}/log", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-//    public SseEmitter getApplicationPodLogs(@PathVariable String namespace,
-//                                            @PathVariable String name,
-//                                            @PathVariable String pod,
-//                                            @RequestParam String env) {
-//        return applicationService.getApplicationPodLogs(namespace, name, pod, env);
-//    }
 
 }

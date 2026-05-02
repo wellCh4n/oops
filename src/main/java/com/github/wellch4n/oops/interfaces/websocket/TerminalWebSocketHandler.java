@@ -30,16 +30,21 @@ public class TerminalWebSocketHandler extends AbstractWebSocketHandler {
         URI uri = session.getUri();
         if (uri == null) return;
 
-        String path = uri.getPath();
-        String[] parts = path.split("/");
-        String namespace = parts[3];
-        String container = parts[5];
-        String podName = parts[7];
+        String namespace = WebSocketSessionSupport.pathSegment(session, 3, "namespace");
+        String container = WebSocketSessionSupport.pathSegment(session, 5, "application");
+        String podName = WebSocketSessionSupport.pathSegment(session, 7, "pod");
+        if (namespace == null || container == null || podName == null) {
+            return;
+        }
 
         Map<String, String> params = UriComponentsBuilder.fromUri(uri)
                 .build().getQueryParams().toSingleValueMap();
         String environmentName = params.get("environment");
         Environment environment = environmentService.getEnvironment(environmentName);
+        if (environment == null) {
+            WebSocketSessionSupport.close(session, "Environment not found");
+            return;
+        }
 
         TerminalSession terminalSession = terminalSessionGateway.open(
                 environment,

@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.application.dto.DeployRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
 import com.github.wellch4n.oops.application.service.DeploymentService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ public class DeploymentController {
     }
 
     @PostMapping("/source-upload")
+    @PreAuthorize("isAuthenticated()")
     public Result<BuildSourceUploadResponse> createBuildSourceUpload(@PathVariable String namespace,
                                                                      @PathVariable String name,
                                                                      @RequestBody BuildSourceUploadRequest request) {
@@ -35,6 +37,7 @@ public class DeploymentController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public Result<String> deployApplication(@PathVariable String namespace,
                                             @PathVariable String name,
                                             @RequestBody DeployRequest request,

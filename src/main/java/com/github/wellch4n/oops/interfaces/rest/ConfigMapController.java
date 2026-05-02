@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.ConfigMapService;
 import java.util.List;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -31,6 +32,7 @@ public class ConfigMapController {
     }
 
     @PutMapping
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateConfigMap(@PathVariable String namespace,
                                            @PathVariable String applicationName,
                                            @RequestBody List<ConfigMapRequest> request,

@@ -733,25 +733,25 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
       </div>
 
       <div>
-          <Button type="submit" disabled={saving || !namespace || !applicationName}>
-            {saving ? t("common.saving") : t("common.save")}
-          </Button>
-        </div>
+        <Button type="submit" disabled={saving || !namespace || !applicationName}>
+          {saving ? t("common.saving") : t("common.save")}
+        </Button>
+      </div>
 
-        <AlertDialog open={!!pendingApexConfirm} onOpenChange={(open) => { if (!open) setPendingApexConfirm(null) }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
+      <AlertDialog open={!!pendingApexConfirm} onOpenChange={(open) => { if (!open) setPendingApexConfirm(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
             <AlertDialogTitle>{t("apps.service.apexConfirmTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-                {t("apps.service.apexConfirmDesc").replace("{host}", pendingApexSuffix)}
+              {t("apps.service.apexConfirmDesc").replace("{host}", pendingApexSuffix)}
             </AlertDialogDescription>
           </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingApexConfirm(null)}>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmApexEdit}>{t("common.confirm")}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingApexConfirm(null)}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmApexEdit}>{t("common.confirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </form>
     </Form>
   )

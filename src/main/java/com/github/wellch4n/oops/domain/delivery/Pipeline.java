@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class Pipeline extends BaseAggregateRoot {
+    private static final PipelineStateMachine STATE_MACHINE = PipelineStateMachine.getInstance();
+
     private String namespace;
     private String applicationName;
     private PipelineStatus status;
@@ -77,7 +79,7 @@ public class Pipeline extends BaseAggregateRoot {
     }
 
     private void transitionTo(PipelineStatus target) {
-        new PipelineStateMachine().ensureCanTransition(status, target);
+        STATE_MACHINE.ensureCanTransition(status, target);
         this.status = target;
     }
 }

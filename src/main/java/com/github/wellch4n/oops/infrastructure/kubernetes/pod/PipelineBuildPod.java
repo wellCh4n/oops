@@ -19,6 +19,8 @@ import lombok.Setter;
  */
 public class PipelineBuildPod extends Job {
 
+    private static final long ACTIVE_DEADLINE_SECONDS = 2 * 60 * 60L;
+
     @Getter
     @Setter
     private String artifact;
@@ -58,6 +60,7 @@ public class PipelineBuildPod extends Job {
         this.setSpec(new JobSpecBuilder()
                 .withTemplate(podTemplateSpec)
                 .withBackoffLimit(0)
+                .withActiveDeadlineSeconds(ACTIVE_DEADLINE_SECONDS)
                 .withTtlSecondsAfterFinished(3 * 24 * 60 * 60)
                 .build());
 

@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.NamespaceService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -33,6 +34,7 @@ public class NamespaceController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> createNamespace(@RequestBody Namespace namespace) {
         ResourceNameChecker.check(namespace.getName());
         namespaceService.createNamespace(namespace.getName(), namespace.getDescription());
@@ -40,6 +42,7 @@ public class NamespaceController {
     }
 
     @PutMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> updateNamespace(@RequestBody Namespace namespace) {
         namespaceService.updateNamespace(namespace.getName(), namespace.getDescription());
         return Result.success(true);

@@ -15,10 +15,11 @@ import org.springframework.stereotype.Service;
 public class DomainService {
 
     private final DomainRepository domainRepository;
-    private final DomainPolicy domainPolicy = new DomainPolicy();
+    private final DomainPolicy domainPolicy;
 
-    public DomainService(DomainRepository domainRepository) {
+    public DomainService(DomainRepository domainRepository, DomainPolicy domainPolicy) {
         this.domainRepository = domainRepository;
+        this.domainPolicy = domainPolicy;
     }
 
     public List<Domain> list() {
@@ -52,13 +53,13 @@ public class DomainService {
     public Domain update(String id, DomainRequest request) {
         Optional<Domain> optional = domainRepository.findById(id);
         if (optional.isEmpty()) {
-            throw new BizException("Domain 不存在: " + id);
+            throw new BizException("Domain not found: " + id);
         }
         Domain domain = optional.get();
         String newHost = domainPolicy.normalizeHost(request.getHost());
         domainPolicy.validateHost(newHost);
         if (!newHost.equals(domain.getHost()) && domainRepository.existsByHost(newHost)) {
-            throw new BizException("域名已存在: " + newHost);
+            throw new BizException("Domain already exists: " + newHost);
         }
         domain.setHost(newHost);
         domain.setDescription(request.getDescription());
@@ -68,7 +69,7 @@ public class DomainService {
 
     public void delete(String id) {
         if (!domainRepository.existsById(id)) {
-            throw new BizException("Domain 不存在: " + id);
+            throw new BizException("Domain not found: " + id);
         }
         domainRepository.deleteById(id);
     }

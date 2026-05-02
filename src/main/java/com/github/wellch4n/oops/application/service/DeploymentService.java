@@ -36,19 +36,23 @@ public class DeploymentService {
     private final EnvironmentService environmentService;
     private final ApplicationEventPublisher eventPublisher;
     private final PipelineBuildExecutor pipelineBuildExecutor;
-    private final DeployStrategyPolicy deployStrategyPolicy = new DeployStrategyPolicy();
-    private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy = new DeploymentConcurrencyPolicy();
+    private final DeployStrategyPolicy deployStrategyPolicy;
+    private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
 
     public DeploymentService(ApplicationRepository applicationRepository,
                              PipelineRepository pipelineRepository,
                              EnvironmentService environmentService,
                              PipelineBuildExecutor pipelineBuildExecutor,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             DeployStrategyPolicy deployStrategyPolicy,
+                             DeploymentConcurrencyPolicy deploymentConcurrencyPolicy) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.pipelineBuildExecutor = pipelineBuildExecutor;
         this.eventPublisher = eventPublisher;
+        this.deployStrategyPolicy = deployStrategyPolicy;
+        this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
     }
 
     public String deployApplication(String namespace,
@@ -65,7 +69,7 @@ public class DeploymentService {
                 namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
         ));
 
-        Environment environment = environmentService.getEnvironment(request.environment());
+        Environment environment = requireEnvironment(request.environment());
 
         Application application = applicationRepository.findAggregate(namespace, applicationName);
         if (application == null) {
@@ -93,6 +97,14 @@ public class DeploymentService {
         pipeline.startBuild(submission.artifact());
         pipelineRepository.save(pipeline);
         return submission.pipelineId();
+    }
+
+    private Environment requireEnvironment(String environmentName) {
+        Environment environment = environmentService.getEnvironment(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        return environment;
     }
 
     private void applyDeployStrategy(Pipeline pipeline, DeployStrategyParam strategy, ApplicationBuildConfig buildConfig) {

@@ -9,6 +9,8 @@ import java.util.Set;
 
 public class PipelineStateMachine {
 
+    private static final PipelineStateMachine INSTANCE = new PipelineStateMachine();
+
     private static final Map<PipelineStatus, Set<PipelineStatus>> ALLOWED_TRANSITIONS =
             new EnumMap<>(PipelineStatus.class);
 
@@ -36,6 +38,10 @@ public class PipelineStateMachine {
         ALLOWED_TRANSITIONS.put(PipelineStatus.STOPPED, EnumSet.noneOf(PipelineStatus.class));
         ALLOWED_TRANSITIONS.put(PipelineStatus.SUCCEEDED, EnumSet.noneOf(PipelineStatus.class));
         ALLOWED_TRANSITIONS.put(PipelineStatus.ERROR, EnumSet.noneOf(PipelineStatus.class));
+    }
+
+    public static PipelineStateMachine getInstance() {
+        return INSTANCE;
     }
 
     public void ensureCanTransition(PipelineStatus current, PipelineStatus target) {

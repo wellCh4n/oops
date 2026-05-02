@@ -8,6 +8,8 @@ import org.apache.commons.lang3.StringUtils;
 public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
 
     private static final List<String> UNZIP_EXCLUDES = List.of(
+            ".git/*",
+            "*/.git/*",
             "node_modules/*",
             "*/node_modules/*"
     );

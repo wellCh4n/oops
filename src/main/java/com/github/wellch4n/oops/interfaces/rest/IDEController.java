@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.IDEService;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,7 +27,11 @@ public class IDEController {
     }
 
     @DeleteMapping("/{name}")
-    public Result<Void> deleteIDE(@PathVariable String name, @RequestParam String env) {
+    @PreAuthorize("isAuthenticated()")
+    public Result<Void> deleteIDE(@PathVariable String namespace,
+                                  @PathVariable String application,
+                                  @PathVariable String name,
+                                  @RequestParam String env) {
         ideService.delete(name, env);
         return Result.success(null);
     }
@@ -37,6 +42,7 @@ public class IDEController {
     }
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public Result<String> createIDE(@PathVariable String namespace, @PathVariable String application,
                                     @RequestParam String env, @RequestBody IDECreateRequest request) {
         return Result.success(ideService.create(namespace, application, env, request));

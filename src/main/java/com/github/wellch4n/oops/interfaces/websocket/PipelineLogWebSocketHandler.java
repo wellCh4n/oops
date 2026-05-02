@@ -6,12 +6,13 @@ import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import java.io.IOException;
-import java.net.URI;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 
+@Slf4j
 public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 
     private final EnvironmentService environmentService;
@@ -30,39 +31,29 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        URI uri = session.getUri();
-        if (uri == null) {
+        String namespace = WebSocketSessionSupport.pathSegment(session, 3, "namespace");
+        String name = WebSocketSessionSupport.pathSegment(session, 5, "application");
+        String pipelineId = WebSocketSessionSupport.pathSegment(session, 7, "pipeline");
+        if (namespace == null || name == null || pipelineId == null) {
             return;
         }
 
-        String path = uri.getPath();
-        String[] parts = path.split("/");
-        String namespace = parts[3];
-        String name = parts[5];
-        String pipelineId = parts[7];
-
         Pipeline pipeline = pipelineService.getPipeline(namespace, name, pipelineId);
+        if (pipeline == null) {
+            WebSocketSessionSupport.close(session, "Pipeline not found");
+            return;
+        }
         Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+        if (environment == null) {
+            WebSocketSessionSupport.close(session, "Environment not found");
+            return;
+        }
 
         WebSocketStreamSink sink = new WebSocketStreamSink(session);
         AutoCloseable stream = pipelineLogStreamGateway.stream(pipeline, environment, sink);
         session.getAttributes().put("streamSink", sink);
         session.getAttributes().put("pipelineLogStream", stream);
-
-        Thread heartbeatThread = Thread.ofVirtual().start(() -> {
-            while (session.isOpen()) {
-                try {
-                    Thread.sleep(10000);
-                    sink.sendText("ping");
-                } catch (InterruptedException _) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (IOException _) {
-                    break;
-                }
-            }
-        });
-        session.getAttributes().put("heartbeatThread", heartbeatThread);
+        WebSocketSessionSupport.startHeartbeat(session, sink, log);
     }
 
     @Override
@@ -78,16 +69,7 @@ public class PipelineLogWebSocketHandler extends AbstractWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         AutoCloseable stream = (AutoCloseable) session.getAttributes().get("pipelineLogStream");
-        if (stream != null) {
-            try {
-                stream.close();
-            } catch (Exception _) {
-            }
-        }
-
-        Thread heartbeatThread = (Thread) session.getAttributes().get("heartbeatThread");
-        if (heartbeatThread != null) {
-            heartbeatThread.interrupt();
-        }
+        WebSocketSessionSupport.closeQuietly(stream, log, "pipeline log stream");
+        WebSocketSessionSupport.stopHeartbeat(session);
     }
 }

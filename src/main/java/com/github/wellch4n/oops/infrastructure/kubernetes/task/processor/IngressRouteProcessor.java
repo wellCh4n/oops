@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 public class IngressRouteProcessor implements DeployProcessor {
 
     private static final String REDIRECT_MIDDLEWARE_NAME = "oops-redirect-https";
+    private static final int TLS_SECRET_SYNC_ATTEMPTS = 3;
 
     @Override
     public void process(DeployContext ctx) {
@@ -193,12 +194,19 @@ public class IngressRouteProcessor implements DeployProcessor {
                 .withType("kubernetes.io/tls")
                 .withData(data)
                 .build();
-        try {
-            ctx.getClient().secrets().inNamespace(ctx.getApplication().getNamespace()).resource(secret).patch(ctx.getPatchContext());
-        } catch (Exception e) {
-            log.error("Error syncing TLS secret {}/{} for domain {}: ", ctx.getApplication().getNamespace(), name, domain.getHost(), e);
-            throw e;
+        Exception lastError = null;
+        for (int attempt = 1; attempt <= TLS_SECRET_SYNC_ATTEMPTS; attempt++) {
+            try {
+                ctx.getClient().secrets().inNamespace(ctx.getApplication().getNamespace()).resource(secret).patch(ctx.getPatchContext());
+                return;
+            } catch (Exception e) {
+                lastError = e;
+                log.warn("TLS secret sync attempt {}/{} failed for {}/{} domain {}",
+                        attempt, TLS_SECRET_SYNC_ATTEMPTS, ctx.getApplication().getNamespace(), name, domain.getHost(), e);
+            }
         }
+        throw new IllegalStateException("Failed to sync TLS secret " + ctx.getApplication().getNamespace() + "/" + name,
+                lastError);
     }
 
     private static String ingressRouteName(String applicationName, String host, String suffix) {

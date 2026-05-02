@@ -13,9 +13,7 @@ import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
-// import com.github.wellch4n.oops.interfaces.dto.BuildStorage;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
-//import com.github.wellch4n.oops.application.service.BuildStorageService;
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
@@ -38,7 +36,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     private final String buildCommand;
 
     private final Environment environment;
-    // private final List<BuildStorage> buildStorages = null;
 
     private final PipelineImageConfig pipelineImageConfig;
 
@@ -74,7 +71,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     public PipelineBuildPod call() {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
-//        BuildStorageVolume buildStorageVolume = new BuildStorageVolume(buildStorages);
 
         List<Container> initContainers = new ArrayList<>();
 
@@ -92,7 +88,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
             CompileContainer build = new CompileContainer(application, applicationBuildConfig, buildCommand);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
-//            build.addVolumeMounts(buildStorageVolume.getVolumeMounts());
             initContainers.add(build);
         }
 
@@ -113,13 +108,12 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, environment, initContainers, done);
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
-//        pipelineBuildPod.addVolumes(buildStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).resource(pipelineBuildPod).create();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new IllegalStateException("Failed to create pipeline job: " + pipeline.getName(), e);
         }
 
         return pipelineBuildPod;

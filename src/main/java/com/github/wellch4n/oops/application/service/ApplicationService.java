@@ -45,17 +45,21 @@ public class ApplicationService {
     private final EnvironmentRepository environmentRepository;
     private final UserService userService;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
-    private final ApplicationBuildConfigPolicy buildConfigPolicy = new ApplicationBuildConfigPolicy();
-    private final HealthCheckPolicy healthCheckPolicy = new HealthCheckPolicy();
+    private final ApplicationBuildConfigPolicy buildConfigPolicy;
+    private final HealthCheckPolicy healthCheckPolicy;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               EnvironmentRepository environmentRepository,
                               UserService userService,
-                              ApplicationRuntimeGateway applicationRuntimeGateway) {
+                              ApplicationRuntimeGateway applicationRuntimeGateway,
+                              ApplicationBuildConfigPolicy buildConfigPolicy,
+                              HealthCheckPolicy healthCheckPolicy) {
         this.applicationRepository = applicationRepository;
         this.environmentRepository = environmentRepository;
         this.userService = userService;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.buildConfigPolicy = buildConfigPolicy;
+        this.healthCheckPolicy = healthCheckPolicy;
     }
 
     public Application getApplication(String namespace, String name) {

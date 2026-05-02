@@ -34,19 +34,21 @@ public class PipelineInstanceScanJob {
     private final ApplicationEventPublisher eventPublisher;
     private final PipelineJobGateway pipelineJobGateway;
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
-    private final PipelineStateMachine pipelineStateMachine = new PipelineStateMachine();
+    private final PipelineStateMachine pipelineStateMachine;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
                                    ApplicationEventPublisher eventPublisher,
                                    PipelineJobGateway pipelineJobGateway,
-                                   ArtifactDeploymentExecutor artifactDeploymentExecutor) {
+                                   ArtifactDeploymentExecutor artifactDeploymentExecutor,
+                                   PipelineStateMachine pipelineStateMachine) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.eventPublisher = eventPublisher;
         this.pipelineJobGateway = pipelineJobGateway;
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
+        this.pipelineStateMachine = pipelineStateMachine;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -61,6 +63,9 @@ public class PipelineInstanceScanJob {
 
                 String environmentName = pipeline.getEnvironment();
                 Environment environment = environmentService.getEnvironment(environmentName);
+                if (environment == null) {
+                    throw new IllegalStateException("Environment not found: " + environmentName);
+                }
 
                 PipelineJobStatus jobStatus = pipelineJobGateway.getStatus(environment, pipeline.getName());
                 if (jobStatus == PipelineJobStatus.SUCCEEDED) {
@@ -70,7 +75,7 @@ public class PipelineInstanceScanJob {
                                     pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
                             );
                             if (updated > 0) {
-                                pipeline.setStatus(PipelineStatus.BUILD_SUCCEEDED);
+                                pipeline.markBuildSucceeded();
                                 eventPublisher.publishEvent(PipelineNotificationEvent.of(
                                         pipeline, PipelineNotificationType.BUILD_SUCCEEDED, "镜像构建完成，等待手动发布。"
                                 ));
@@ -85,7 +90,7 @@ public class PipelineInstanceScanJob {
                         if (claimed == 0) {
                             continue;
                         }
-                        pipeline.setStatus(PipelineStatus.DEPLOYING);
+                        pipeline.markDeploying();
                         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                                 pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
                         ));
@@ -109,7 +114,7 @@ public class PipelineInstanceScanJob {
                         pipelineRepository.updateStatusIfMatch(
                                 pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED
                         );
-                        pipeline.setStatus(PipelineStatus.SUCCEEDED);
+                        pipeline.markSucceeded();
                         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                                 pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
                         ));
@@ -120,7 +125,7 @@ public class PipelineInstanceScanJob {
                                 pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
                         );
                         if (updated > 0) {
-                            pipeline.setStatus(PipelineStatus.ERROR);
+                            pipeline.markFailed();
                             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                                     pipeline, PipelineNotificationType.FAILED, "镜像构建失败，请查看流水线日志。"
                             ));
@@ -135,7 +140,7 @@ public class PipelineInstanceScanJob {
                         pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
                 );
                 if (deployingUpdated > 0 || runningUpdated > 0) {
-                    pipeline.setStatus(PipelineStatus.ERROR);
+                    pipeline.markFailed();
                     eventPublisher.publishEvent(PipelineNotificationEvent.of(
                             pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
                     ));

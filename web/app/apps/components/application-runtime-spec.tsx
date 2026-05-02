@@ -276,6 +276,7 @@ function ReplicasInput({ value, onChange }: { value: number | undefined, onChang
       <Input
         value={text}
         onChange={e => update(e.target.value.replace(/[^0-9]/g, ''))}
+        inputMode="numeric"
         autoComplete="off"
         className="w-16 text-center"
       />
@@ -300,9 +301,11 @@ function NumberInput({ value, onChange, min = 0 }: { value: number | undefined, 
     <Input
       type="number"
       min={min}
+      step={1}
+      inputMode="numeric"
       value={value ?? ""}
       onChange={(event) => {
-        const raw = event.target.value
+        const raw = event.target.value.replace(/[^0-9]/g, "")
         onChange(raw === "" ? undefined : parseInt(raw, 10))
       }}
       autoComplete="off"

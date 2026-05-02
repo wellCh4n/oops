@@ -19,7 +19,6 @@ public class ServiceProcessor implements DeployProcessor {
 
         log.info("Applying service for application: {}/{}", namespace, applicationName);
 
-        var existing = ctx.getClient().services().inNamespace(namespace).withName(applicationName).get();
         var service = new ServiceBuilder()
                 .withNewMetadata()
                     .withName(applicationName)
@@ -39,9 +38,10 @@ public class ServiceProcessor implements DeployProcessor {
                 .endSpec()
                 .build();
 
-        if (existing != null) {
-            ctx.getClient().services().inNamespace(namespace).withName(applicationName).delete();
-        }
-        ctx.getClient().services().inNamespace(namespace).resource(service).create();
+        ctx.getClient().services()
+                .inNamespace(namespace)
+                .resource(service)
+                .forceConflicts()
+                .serverSideApply();
     }
 }

@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -43,8 +44,8 @@ public class PipelineService {
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
     private final PipelineJobGateway pipelineJobGateway;
     private final PipelineLogGateway pipelineLogGateway;
-    private final PipelineStateMachine pipelineStateMachine = new PipelineStateMachine();
-    private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy = new DeploymentConcurrencyPolicy();
+    private final PipelineStateMachine pipelineStateMachine;
+    private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
@@ -52,7 +53,9 @@ public class PipelineService {
                            ApplicationEventPublisher eventPublisher,
                            ArtifactDeploymentExecutor artifactDeploymentExecutor,
                            PipelineJobGateway pipelineJobGateway,
-                           PipelineLogGateway pipelineLogGateway) {
+                           PipelineLogGateway pipelineLogGateway,
+                           PipelineStateMachine pipelineStateMachine,
+                           DeploymentConcurrencyPolicy deploymentConcurrencyPolicy) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
@@ -61,6 +64,8 @@ public class PipelineService {
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
         this.pipelineJobGateway = pipelineJobGateway;
         this.pipelineLogGateway = pipelineLogGateway;
+        this.pipelineStateMachine = pipelineStateMachine;
+        this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
     }
 
     public Page<PipelineResponse> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
@@ -125,10 +130,14 @@ public class PipelineService {
 
     public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
-        Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+        if (pipeline == null) {
+            throw new BizException("Pipeline not found");
+        }
+        Environment environment = requireEnvironment(pipeline.getEnvironment());
         return pipelineLogGateway.watch(pipeline, environment);
     }
 
+    @Transactional(noRollbackFor = RuntimeException.class)
     public Boolean deployPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
@@ -144,13 +153,13 @@ public class PipelineService {
         if (claimed == 0) {
             throw new BizException("Pipeline state changed concurrently, please retry");
         }
-        pipeline.setStatus(PipelineStatus.DEPLOYING);
+        pipeline.markDeploying();
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
         ));
 
         try {
-            Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+            Environment environment = requireEnvironment(pipeline.getEnvironment());
             Application application = applicationRepository.findAggregate(namespace, applicationName);
             if (application == null) {
                 throw new BizException("Application not found");
@@ -164,14 +173,14 @@ public class PipelineService {
 
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
             pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-            pipeline.setStatus(PipelineStatus.SUCCEEDED);
+            pipeline.markSucceeded();
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                     pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
             ));
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            pipeline.setStatus(PipelineStatus.ERROR);
+            pipeline.markFailed();
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                     pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
             ));
@@ -180,6 +189,7 @@ public class PipelineService {
         return true;
     }
 
+    @Transactional(noRollbackFor = RuntimeException.class)
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
@@ -188,7 +198,7 @@ public class PipelineService {
         pipelineStateMachine.ensureCanTransition(pipeline.getStatus(), PipelineStatus.STOPPED);
 
         if (pipeline.getStatus() == PipelineStatus.BUILD_SUCCEEDED) {
-            pipeline.setStatus(PipelineStatus.STOPPED);
+            pipeline.stop();
             pipelineRepository.save(pipeline);
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                     pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
@@ -197,14 +207,22 @@ public class PipelineService {
         }
 
         String environmentName = pipeline.getEnvironment();
-        Environment environment = environmentService.getEnvironment(environmentName);
+        Environment environment = requireEnvironment(environmentName);
 
         pipelineJobGateway.stop(environment, pipeline.getName());
-        pipeline.setStatus(PipelineStatus.STOPPED);
+        pipeline.stop();
         pipelineRepository.save(pipeline);
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
         ));
         return true;
+    }
+
+    private Environment requireEnvironment(String environmentName) {
+        Environment environment = environmentService.getEnvironment(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        return environment;
     }
 }

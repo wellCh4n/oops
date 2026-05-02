@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.PipelineResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -37,14 +38,8 @@ public class PipelineController {
         return Result.success(pipelineService.getPipelineDetail(namespace, name, id));
     }
 
-//    @GetMapping(value = "/{id}/watch", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-//    public SseEmitter watchPipeline(@PathVariable String namespace,
-//                                    @PathVariable String name,
-//                                    @PathVariable String id) {
-//        return pipelineService.watchPipeline(namespace, name, id);
-//    }
-
     @PutMapping("/{id}/stop")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> stopPipeline(@PathVariable String namespace,
                                         @PathVariable String name,
                                         @PathVariable String id) {
@@ -52,6 +47,7 @@ public class PipelineController {
     }
 
     @PutMapping("/{id}/deploy")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> deployPipeline(@PathVariable String namespace,
                                           @PathVariable String name,
                                           @PathVariable String id) {

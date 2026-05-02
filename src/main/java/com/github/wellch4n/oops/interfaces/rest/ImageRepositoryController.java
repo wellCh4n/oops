@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.interfaces.rest;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +24,7 @@ public class ImageRepositoryController {
     }
 
     @PostMapping("/validations")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> validate(@RequestBody Environment.ImageRepository imageRepository) {
         return Result.success(environmentService.validateImageRepository(imageRepository));
     }

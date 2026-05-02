@@ -7,9 +7,11 @@ import com.github.wellch4n.oops.application.port.external.ExternalUserFact;
 import com.github.wellch4n.oops.application.port.external.ExternalUserMessage;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class PipelineNotificationListener {
 
@@ -27,6 +29,7 @@ public class PipelineNotificationListener {
     @EventListener
     public void onPipelineNotification(PipelineNotificationEvent event) {
         if (event == null || event.operatorId() == null || event.operatorId().isBlank()) {
+            log.debug("Skip pipeline notification because operatorId is empty");
             return;
         }
 

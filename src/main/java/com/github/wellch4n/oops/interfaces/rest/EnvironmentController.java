@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.interfaces.dto.EnvironmentResponse;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -37,17 +38,20 @@ public class EnvironmentController {
     }
 
     @PutMapping("{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> updateEnvironment(@PathVariable String id,
                                              @RequestBody Environment environment) {
         return Result.success(environmentService.updateEnvironment(id, environment));
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<EnvironmentResponse> createEnvironment(@RequestBody Environment environment) {
         return Result.success(EnvironmentResponse.from(environmentService.createEnvironment(environment)));
     }
 
     @DeleteMapping("{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> deleteEnvironment(@PathVariable String id) {
         return Result.success(environmentService.deleteEnvironment(id));
     }
