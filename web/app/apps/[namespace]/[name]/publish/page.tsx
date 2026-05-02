@@ -9,6 +9,7 @@ import { createApplicationBuildSourceUpload, getApplication, getApplicationBuild
 import { Application, ApplicationEnvironment, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
@@ -192,7 +193,44 @@ export default function PublishPage({ params }: PageProps) {
   }
 
   if (!application) {
-    return <ContentPage title={name}>Loading...</ContentPage>
+    return (
+      <ContentPage title={name}>
+        <div className="rounded-md border p-4">
+          <div className="space-y-6">
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-24" />
+              <div className="flex flex-wrap gap-3">
+                <Skeleton className="h-12 w-[12rem] rounded-lg" />
+                <Skeleton className="h-12 w-[12rem] rounded-lg" />
+                <Skeleton className="h-12 w-[12rem] rounded-lg" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="grid gap-2">
+              <Skeleton className="h-4 w-20" />
+              <div className="flex flex-wrap gap-3">
+                <Skeleton className="h-12 w-[12rem] rounded-lg" />
+                <Skeleton className="h-12 w-[12rem] rounded-lg" />
+              </div>
+            </div>
+            <div className="pt-2">
+              <Skeleton className="h-9 w-32" />
+            </div>
+          </div>
+        </div>
+      </ContentPage>
+    )
   }
 
   return (

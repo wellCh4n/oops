@@ -179,9 +179,31 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
   return (
     <>
       {envsLoading && (
-        <div className="flex w-full flex-col gap-3">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-48 w-full" />
+        <div className="flex w-full flex-col gap-4">
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Skeleton className="h-4 w-4 rounded-sm" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <div className="flex flex-col gap-4 p-4">
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-20" />
+                <Skeleton className="h-9 w-20" />
+              </div>
+              <Skeleton className="h-48 w-full" />
+            </div>
+          </div>
+          <div className="border rounded-lg overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b">
+              <Skeleton className="h-4 w-4 rounded-sm" />
+              <Skeleton className="h-4 w-28" />
+            </div>
+            <div className="flex flex-col gap-4 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-64" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </div>
         </div>
       )}
       <div className={envsLoading ? "hidden" : "w-full"}>

@@ -65,7 +65,13 @@ export function ApplicationEnvironmentSelector({
     <Tabs value={value ?? ""} onValueChange={onValueChange} className={className}>
       <div className="flex items-center gap-2">
         <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap"><Server className="h-3.5 w-3.5" />{t("apps.envSelector.label")}</span>
-        {environments.length === 0 && !isLoading ? (
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-9 w-20 rounded-md" />
+            <Skeleton className="h-9 w-20 rounded-md" />
+            <Skeleton className="h-9 w-20 rounded-md" />
+          </div>
+        ) : environments.length === 0 ? (
           <div className="text-sm text-muted-foreground px-3 py-1.5 border rounded-md border-dashed">
             {t("apps.publish.noEnvPrefix")}
             <Link
@@ -85,11 +91,7 @@ export function ApplicationEnvironmentSelector({
                 value={env.environmentName}
                 className="px-6 cursor-pointer"
               >
-                {isLoading ? (
-                  <Skeleton className="h-4 w-16 bg-muted-foreground/20" />
-                ) : (
-                  env.environmentName
-                )}
+                {env.environmentName}
               </TabsTrigger>
             ))}
           </TabsList>

@@ -59,12 +59,125 @@ const VALID_TABS = new Set<ApplicationTab>([
   "danger-zone",
 ])
 
-function TabContentSkeleton({ rows = 3 }: { rows?: number }) {
+function CardSkeleton({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex w-full flex-col gap-6">
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-10 w-full" />
-      ))}
+    <div className="border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b">
+        <Skeleton className="h-4 w-4 rounded-sm" />
+        <Skeleton className="h-4 w-28" />
+      </div>
+      <div className="flex flex-col gap-4 p-4">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function AppInfoSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <CardSkeleton>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </CardSkeleton>
+      <CardSkeleton>
+        <Skeleton className="h-20 w-full" />
+      </CardSkeleton>
+    </div>
+  )
+}
+
+function BuildConfigSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <CardSkeleton>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+      </CardSkeleton>
+      <CardSkeleton>
+        <Skeleton className="h-10 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-48 w-full" />
+      </CardSkeleton>
+    </div>
+  )
+}
+
+function ServiceInfoSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <CardSkeleton>
+        <Skeleton className="h-10 w-full" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-32 w-full" />
+      </CardSkeleton>
+    </div>
+  )
+}
+
+function RuntimeSpecSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <CardSkeleton>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-48 w-full" />
+      </CardSkeleton>
+      <CardSkeleton>
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-24 w-full" />
+      </CardSkeleton>
+    </div>
+  )
+}
+
+function ConfigInfoSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4">
+      <CardSkeleton>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-20" />
+        </div>
+        <Skeleton className="h-48 w-full" />
+      </CardSkeleton>
+    </div>
+  )
+}
+
+function DangerZoneSkeleton() {
+  return (
+    <div className="w-full space-y-6">
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      <div className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
+        <div className="space-y-1">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+        <Skeleton className="h-9 w-20" />
+      </div>
     </div>
   )
 }
@@ -203,7 +316,7 @@ export function ApplicationForm({
         </div>
 
         <TabsContent value="app-info">
-          {loading ? <TabContentSkeleton rows={4} /> : (
+          {loading ? <AppInfoSkeleton /> : (
             <ApplicationBasicInfo
               ref={basicInfoRef}
               initialData={formState.application}
@@ -213,7 +326,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="build-config">
-          {loading ? <TabContentSkeleton rows={3} /> : (
+          {loading ? <BuildConfigSkeleton /> : (
             <ApplicationBuildInfo
               ref={buildInfoRef}
               initialBuildConfig={formState.buildConfig}
@@ -232,7 +345,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="service-info">
-          {loading ? <TabContentSkeleton rows={3} /> : (
+          {loading ? <ServiceInfoSkeleton /> : (
             <ApplicationServiceInfo
               ref={serviceInfoRef}
               initialServiceConfig={formState.serviceConfig}
@@ -244,7 +357,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="runtime-spec">
-          {loading ? <TabContentSkeleton rows={3} /> : (
+          {loading ? <RuntimeSpecSkeleton /> : (
             <ApplicationRuntimeSpec
               ref={runtimeSpecRef}
               initialRuntimeSpec={formState.runtimeSpec}
@@ -257,7 +370,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="config-info">
-          {loading ? <TabContentSkeleton rows={3} /> : (
+          {loading ? <ConfigInfoSkeleton /> : (
             <ApplicationConfigInfo
               ref={configInfoRef}
               applicationName={formState.application?.name}
@@ -267,7 +380,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
-          {loading ? <TabContentSkeleton rows={3} /> : (
+          {loading ? <DangerZoneSkeleton /> : (
             <ApplicationDangerZone
               namespace={formState.application?.namespace ?? ""}
               name={formState.application?.name ?? ""}
