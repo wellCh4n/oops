@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.DomainRequest;
+import com.github.wellch4n.oops.application.dto.UpsertDomainCommand;
 import com.github.wellch4n.oops.shared.util.PemCertificateParser;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +36,7 @@ public class DomainService {
                 .orElseThrow(() -> new BizException("Domain not found: " + id));
     }
 
-    public Domain create(DomainRequest request) {
+    public Domain create(UpsertDomainCommand request) {
         String host = domainPolicy.normalizeHost(request.getHost());
         domainPolicy.validateHost(host);
         if (domainRepository.existsByHost(host)) {
@@ -50,7 +50,7 @@ public class DomainService {
         return domainRepository.save(domain);
     }
 
-    public Domain update(String id, DomainRequest request) {
+    public Domain update(String id, UpsertDomainCommand request) {
         Optional<Domain> optional = domainRepository.findById(id);
         if (optional.isEmpty()) {
             throw new BizException("Domain not found: " + id);
@@ -74,7 +74,7 @@ public class DomainService {
         domainRepository.deleteById(id);
     }
 
-    private void applyCertFields(Domain domain, DomainRequest request) {
+    private void applyCertFields(Domain domain, UpsertDomainCommand request) {
         boolean https = Boolean.TRUE.equals(request.getHttps());
         domain.setHttps(https);
 

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConditionalOnProperty(prefix = "oops.ide", name = "enabled", havingValue = "true")
 @ConfigurationProperties(prefix = "oops.ide")
-public class IDEConfig {
+public class IdeConfig {
     private boolean enabled = false;
     private String domain;
     private boolean https = false;

@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.ide;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.wellch4n.oops.application.port.IDEGateway;
-import com.github.wellch4n.oops.infrastructure.config.IDEConfig;
+import com.github.wellch4n.oops.application.port.IdeGateway;
+import com.github.wellch4n.oops.infrastructure.config.IdeConfig;
 import com.github.wellch4n.oops.infrastructure.config.IngressConfig;
 import com.github.wellch4n.oops.infrastructure.config.PipelineImageConfig;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.CloneContainer;
@@ -15,10 +15,10 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
-import com.github.wellch4n.oops.application.dto.IDEConfigResponse;
-import com.github.wellch4n.oops.application.dto.IDECreateRequest;
-import com.github.wellch4n.oops.application.dto.IDEResponse;
-import com.github.wellch4n.oops.shared.util.IDEProxyDomainUtils;
+import com.github.wellch4n.oops.application.dto.IdeConfigDto;
+import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
+import com.github.wellch4n.oops.application.dto.IdeDto;
+import com.github.wellch4n.oops.shared.util.IdeProxyDomainUtils;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
@@ -42,15 +42,15 @@ import org.springframework.util.StreamUtils;
 
 @Slf4j
 @Component
-@ConditionalOnBean(IDEConfig.class)
-public class KubernetesIDEGateway implements IDEGateway {
+@ConditionalOnBean(IdeConfig.class)
+public class KubernetesIdeGateway implements IdeGateway {
 
     private final PipelineImageConfig pipelineImageConfig;
-    private final IDEConfig ideConfig;
+    private final IdeConfig ideConfig;
     private final IngressConfig ingressConfig;
 
-    public KubernetesIDEGateway(PipelineImageConfig pipelineImageConfig,
-                                IDEConfig ideConfig,
+    public KubernetesIdeGateway(PipelineImageConfig pipelineImageConfig,
+                                IdeConfig ideConfig,
                                 IngressConfig ingressConfig) {
         this.pipelineImageConfig = pipelineImageConfig;
         this.ideConfig = ideConfig;
@@ -58,7 +58,7 @@ public class KubernetesIDEGateway implements IDEGateway {
     }
 
     private String getProxyDomainTemplate() {
-        return IDEProxyDomainUtils.normalizeTemplate(ideConfig.getProxyDomain())
+        return IdeProxyDomainUtils.normalizeTemplate(ideConfig.getProxyDomain())
                 .orElseGet(() -> {
                     if (ideConfig.getProxyDomain() != null && !ideConfig.getProxyDomain().isBlank()) {
                         log.warn("Ignoring invalid oops.ide.proxy-domain '{}': it must include both {{port}} and {{host}}", ideConfig.getProxyDomain());
@@ -68,8 +68,8 @@ public class KubernetesIDEGateway implements IDEGateway {
     }
 
     @Override
-    public IDEConfigResponse getDefaultIDEConfig(Environment environment) {
-        IDEConfigResponse fileDefaults = loadFileDefaults();
+    public IdeConfigDto getDefaultIDEConfig(Environment environment) {
+        IdeConfigDto fileDefaults = loadFileDefaults();
 
         if (environment == null) {
             return fileDefaults;
@@ -85,7 +85,7 @@ public class KubernetesIDEGateway implements IDEGateway {
                     && configMap.getData().containsKey("settings.json")
                     && configMap.getData().containsKey(".env")
                     && configMap.getData().containsKey("extensions")) {
-                return new IDEConfigResponse(
+                return new IdeConfigDto(
                         configMap.getData().get("settings.json"),
                         configMap.getData().get(".env"),
                         configMap.getData().get("extensions"));
@@ -109,16 +109,16 @@ public class KubernetesIDEGateway implements IDEGateway {
         }
     }
 
-    private IDEConfigResponse loadFileDefaults() {
+    private IdeConfigDto loadFileDefaults() {
         try {
             String raw = StreamUtils.copyToString(
                     new ClassPathResource("ide-default-config.json").getInputStream(),
                     StandardCharsets.UTF_8);
             JsonNode root = new ObjectMapper().readTree(raw);
-            return new IDEConfigResponse(root.path("settings").toString(), root.path("env").asText(""), root.path("extensions").asText(""));
+            return new IdeConfigDto(root.path("settings").toString(), root.path("env").asText(""), root.path("extensions").asText(""));
         } catch (IOException e) {
             log.warn("Failed to load ide-default-config.json, using empty defaults", e);
-            return new IDEConfigResponse("{}", "", "");
+            return new IdeConfigDto("{}", "", "");
         }
     }
 
@@ -128,7 +128,7 @@ public class KubernetesIDEGateway implements IDEGateway {
                          Environment environment,
                          Application application,
                          ApplicationBuildConfig applicationBuildConfig,
-                         IDECreateRequest request) {
+                         CreateIdeCommand request) {
         String ideId = NanoIdUtils.generate();
 
         Map<String, String> labels = Map.of(
@@ -299,7 +299,7 @@ public class KubernetesIDEGateway implements IDEGateway {
     }
 
     @Override
-    public List<IDEResponse> list(Environment environment, String applicationName) {
+    public List<IdeDto> list(Environment environment, String applicationName) {
         if (environment == null) {
             return List.of();
         }
@@ -330,7 +330,7 @@ public class KubernetesIDEGateway implements IDEGateway {
                         boolean ready = statefulSet.getStatus() != null
                                 && statefulSet.getStatus().getReadyReplicas() != null
                                 && statefulSet.getStatus().getReadyReplicas() > 0;
-                        return new IDEResponse(id, name, host, ideConfig.isHttps(), createdAt, ready);
+                        return new IdeDto(id, name, host, ideConfig.isHttps(), createdAt, ready);
                     })
                     .toList();
         }
@@ -348,7 +348,7 @@ public class KubernetesIDEGateway implements IDEGateway {
         }
 
         String host = name + "." + ideConfig.getDomain();
-        String matchRule = IDEProxyDomainUtils.buildIngressMatch(host, proxyDomainTemplate);
+        String matchRule = IdeProxyDomainUtils.buildIngressMatch(host, proxyDomainTemplate);
 
         List<IngressRouteSpec.Middleware> middlewares = List.of();
         if (ideConfig.getMiddleware() != null && !ideConfig.getMiddleware().isBlank()) {

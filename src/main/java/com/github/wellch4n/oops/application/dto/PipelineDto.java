@@ -5,7 +5,7 @@ import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import java.time.LocalDateTime;
 
-public record PipelineResponse(
+public record PipelineDto(
         String id,
         LocalDateTime createdTime,
         String namespace,
@@ -19,8 +19,8 @@ public record PipelineResponse(
         String operatorId,
         String operatorName
 ) {
-    public static PipelineResponse from(Pipeline pipeline, String operatorName) {
-        return new PipelineResponse(
+    public static PipelineDto from(Pipeline pipeline, String operatorName) {
+        return new PipelineDto(
                 pipeline.getId(),
                 pipeline.getCreatedTime(),
                 pipeline.getNamespace(),

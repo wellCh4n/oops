@@ -15,7 +15,7 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.DeployRequest;
+import com.github.wellch4n.oops.application.dto.DeployCommand;
 import com.github.wellch4n.oops.application.dto.DeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.GitDeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.ZipDeployStrategyParam;
@@ -57,7 +57,7 @@ public class DeploymentService {
 
     public String deployApplication(String namespace,
                                     String applicationName,
-                                    DeployRequest request,
+                                    DeployCommand request,
                                     String operatorUserId) {
         if (request == null) {
             throw new BizException("Deploy request is required");

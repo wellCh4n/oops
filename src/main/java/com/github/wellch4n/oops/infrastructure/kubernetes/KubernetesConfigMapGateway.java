@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 import com.github.wellch4n.oops.application.port.ConfigMapGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ConfigMapItem;
-import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.UpdateConfigMapCommand;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReference;
@@ -43,9 +43,9 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
     public void updateConfigMap(Environment environment,
                                 String namespace,
                                 String applicationName,
-                                List<ConfigMapRequest> configMaps) {
+                                List<UpdateConfigMapCommand> configMaps) {
         Map<String, String> map = new HashMap<>();
-        for (ConfigMapRequest configMapRequest : configMaps) {
+        for (UpdateConfigMapCommand configMapRequest : configMaps) {
             map.put(configMapRequest.getKey(), configMapRequest.getValue());
         }
 

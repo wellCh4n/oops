@@ -1,8 +1,8 @@
-package com.github.wellch4n.oops.interfaces.dto;
+package com.github.wellch4n.oops.application.dto;
 
 import com.github.wellch4n.oops.domain.environment.Environment;
 
-public record EnvironmentResponse(
+public record EnvironmentDto(
         String id,
         String name,
         KubernetesApiServerView kubernetesApiServer,
@@ -17,7 +17,7 @@ public record EnvironmentResponse(
     public record ImageRepositoryView(String url, String username, String password) {
     }
 
-    public static EnvironmentResponse from(Environment environment) {
+    public static EnvironmentDto from(Environment environment) {
         Environment.KubernetesApiServer kubernetesApiServer = environment.getKubernetesApiServer();
         KubernetesApiServerView kubernetesApiServerView = kubernetesApiServer == null
                 ? null
@@ -28,7 +28,7 @@ public record EnvironmentResponse(
                 ? null
                 : new ImageRepositoryView(imageRepository.getUrl(), imageRepository.getUsername(), imageRepository.getPassword());
 
-        return new EnvironmentResponse(
+        return new EnvironmentDto(
                 environment.getId(),
                 environment.getName(),
                 kubernetesApiServerView,

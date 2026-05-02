@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.domain.shared.DomainCertMode;
 import lombok.Data;
 
 @Data
-public class DomainRequest {
+public class UpsertDomainCommand {
     private String host;
     private String description;
     private Boolean https;

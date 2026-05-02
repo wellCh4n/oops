@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.infrastructure.config.FeishuConfig;
-import com.github.wellch4n.oops.infrastructure.config.IDEConfig;
+import com.github.wellch4n.oops.infrastructure.config.IdeConfig;
 import com.github.wellch4n.oops.infrastructure.config.BuildSourceObjectStorageConfig;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import lombok.AllArgsConstructor;
@@ -19,7 +19,7 @@ public class FeaturesController {
     private FeishuConfig feishuConfig;
 
     @Autowired(required = false)
-    private IDEConfig ideConfig;
+    private IdeConfig ideConfig;
 
     @Autowired(required = false)
     private BuildSourceObjectStorageConfig objectStorageConfig;

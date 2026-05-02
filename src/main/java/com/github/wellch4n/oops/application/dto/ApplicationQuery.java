@@ -8,7 +8,7 @@ import lombok.Data;
  */
 
 @Data
-public class ApplicationQueryRequest {
+public class ApplicationQuery {
     private String name;
     private String namespace;
 }

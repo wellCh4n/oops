@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.application.dto.ConfigMapItem;
-import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.UpdateConfigMapCommand;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.ConfigMapService;
 import java.util.List;
@@ -35,7 +35,7 @@ public class ConfigMapController {
     @PreAuthorize("isAuthenticated()")
     public Result<Boolean> updateConfigMap(@PathVariable String namespace,
                                            @PathVariable String applicationName,
-                                           @RequestBody List<ConfigMapRequest> request,
+                                           @RequestBody List<UpdateConfigMapCommand> request,
                                            @Param("environment") String environment) {
         return Result.success(configMapService.updateConfigMap(namespace, applicationName, environment, request));
     }

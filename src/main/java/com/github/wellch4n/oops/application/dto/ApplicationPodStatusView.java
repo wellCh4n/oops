@@ -10,7 +10,7 @@ import lombok.Data;
 
 
 @Data
-public class ApplicationPodStatusResponse {
+public class ApplicationPodStatusView {
 
     private String name;
     private String namespace;

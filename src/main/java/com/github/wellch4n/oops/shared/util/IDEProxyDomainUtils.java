@@ -2,11 +2,11 @@ package com.github.wellch4n.oops.shared.util;
 
 import java.util.Optional;
 
-public final class IDEProxyDomainUtils {
+public final class IdeProxyDomainUtils {
 
     private static final String REGEX_META_CHARS = "\\.^$|?*+()[]{}";
 
-    private IDEProxyDomainUtils() {
+    private IdeProxyDomainUtils() {
     }
 
     public static Optional<String> normalizeTemplate(String template) {

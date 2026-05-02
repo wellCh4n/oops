@@ -17,9 +17,9 @@ import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineResponse;
+import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.Page;
-import com.github.wellch4n.oops.application.dto.PipelineResponse;
+import com.github.wellch4n.oops.application.dto.PipelineDto;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -68,7 +68,7 @@ public class PipelineService {
         this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
     }
 
-    public Page<PipelineResponse> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
+    public Page<PipelineDto> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
         int p = page == null ? 1 : page;
         int s = size == null ? 20 : size;
         var pipelinePage = pipelineRepository.findPage(namespace, applicationName, environment, p, s);
@@ -84,24 +84,24 @@ public class PipelineService {
         return pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
     }
 
-    public PipelineResponse getPipelineDetail(String namespace, String applicationName, String id) {
+    public PipelineDto getPipelineDetail(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         return toPipelineResponse(pipeline);
     }
 
-    private List<PipelineResponse> toPipelineResponses(List<Pipeline> pipelines) {
+    private List<PipelineDto> toPipelineResponses(List<Pipeline> pipelines) {
         Set<String> operatorIds = pipelines.stream()
                 .map(Pipeline::getOperatorId)
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
         Map<String, String> operatorNameMap = userService.getUsernameMapByIds(operatorIds);
         return pipelines.stream()
-                .map(pipeline -> PipelineResponse.from(pipeline,
+                .map(pipeline -> PipelineDto.from(pipeline,
                         StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null))
                 .toList();
     }
 
-    private PipelineResponse toPipelineResponse(Pipeline pipeline) {
+    private PipelineDto toPipelineResponse(Pipeline pipeline) {
         if (pipeline == null) {
             return null;
         }
@@ -111,16 +111,16 @@ public class PipelineService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        return PipelineResponse.from(pipeline, operatorName);
+        return PipelineDto.from(pipeline, operatorName);
     }
 
-    public LastSuccessfulPipelineResponse getLastSuccessfulPipeline(String namespace, String applicationName) {
+    public LastSuccessfulPipelineDto getLastSuccessfulPipeline(String namespace, String applicationName) {
         Pipeline lastSuccessfulPipeline = pipelineRepository.findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(
                 namespace, applicationName, PipelineStatus.SUCCEEDED);
         if (lastSuccessfulPipeline == null) {
             return null;
         }
-        return new LastSuccessfulPipelineResponse(
+        return new LastSuccessfulPipelineDto(
                 lastSuccessfulPipeline.getBranch(),
                 lastSuccessfulPipeline.getDeployMode(),
                 lastSuccessfulPipeline.getPublishType(),

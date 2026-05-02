@@ -14,11 +14,11 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
-import com.github.wellch4n.oops.application.dto.ApplicationResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
-import com.github.wellch4n.oops.application.dto.ClusterDomainResponse;
-import com.github.wellch4n.oops.application.dto.ServiceHostConflictResponse;
+import com.github.wellch4n.oops.application.dto.ClusterDomainView;
+import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.dto.Page;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -66,11 +66,11 @@ public class ApplicationService {
         return applicationRepository.findAggregate(namespace, name);
     }
 
-    public ApplicationResponse getApplicationResponse(String namespace, String name) {
+    public ApplicationDto getApplicationResponse(String namespace, String name) {
         return toApplicationResponse(applicationRepository.findAggregate(namespace, name));
     }
 
-    public Page<ApplicationResponse> getApplications(String namespace, String keyword, int page, int size, String currentUserId, boolean ownerOnly) {
+    public Page<ApplicationDto> getApplications(String namespace, String keyword, int page, int size, String currentUserId, boolean ownerOnly) {
         String ownerId = ownerOnly ? currentUserId : null;
         var applicationPage = applicationRepository.findPageByNamespaceAndKeywordOrderedByOwner(
                 namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, ownerId, page, size);
@@ -82,7 +82,7 @@ public class ApplicationService {
         );
     }
 
-    public List<ApplicationResponse> searchApplications(String keyword, int size) {
+    public List<ApplicationDto> searchApplications(String keyword, int size) {
         List<Application> applications = applicationRepository.findByNameContainingIgnoreCase(
                 StringUtils.defaultIfBlank(keyword, ""));
         List<Application> limitedApplications = applications.stream().limit(size).toList();
@@ -93,7 +93,7 @@ public class ApplicationService {
                 .collect(Collectors.toSet());
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
         return limitedApplications.stream()
-                .map(application -> ApplicationResponse.from(application,
+                .map(application -> ApplicationDto.from(application,
                         StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
                         sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
                 .toList();
@@ -159,7 +159,7 @@ public class ApplicationService {
         return owner;
     }
 
-    private List<ApplicationResponse> toApplicationResponses(String namespace, List<Application> applications) {
+    private List<ApplicationDto> toApplicationResponses(String namespace, List<Application> applications) {
         Set<String> ownerIds = applications.stream()
                 .map(Application::getOwner)
                 .filter(StringUtils::isNotBlank)
@@ -167,13 +167,13 @@ public class ApplicationService {
         Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
         Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(namespace, applications);
         return applications.stream()
-                .map(application -> ApplicationResponse.from(application,
+                .map(application -> ApplicationDto.from(application,
                         StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
                         sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
                 .toList();
     }
 
-    private ApplicationResponse toApplicationResponse(Application application) {
+    private ApplicationDto toApplicationResponse(Application application) {
         if (application == null) {
             return null;
         }
@@ -183,7 +183,7 @@ public class ApplicationService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        return ApplicationResponse.from(application, ownerName, application.sourceType());
+        return ApplicationDto.from(application, ownerName, application.sourceType());
     }
 
     private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(String namespace, List<Application> applications) {
@@ -356,7 +356,7 @@ public class ApplicationService {
         return application != null ? ApplicationConfigDto.ServiceConfig.from(application.getServiceConfig()) : null;
     }
 
-    public ServiceHostConflictResponse findHostConflictApplication(String namespace, String name, String host) {
+    public ServiceHostConflictView findHostConflictApplication(String namespace, String name, String host) {
         if (host == null || host.isBlank()) {
             return null;
         }
@@ -368,7 +368,7 @@ public class ApplicationService {
             }
             for (ApplicationServiceConfig.EnvironmentConfig c : conflict.getEnvironmentConfigs()) {
                 if (host.equals(c.getHost())) {
-                    return new ServiceHostConflictResponse(
+                    return new ServiceHostConflictView(
                             conflict.getNamespace(),
                             conflict.getApplicationName(),
                             c.getEnvironmentName());
@@ -386,7 +386,7 @@ public class ApplicationService {
                 if (host == null || host.isBlank()) {
                     continue;
                 }
-                ServiceHostConflictResponse conflict = findHostConflictApplication(namespace, name, host);
+                ServiceHostConflictView conflict = findHostConflictApplication(namespace, name, host);
                 if (conflict != null) {
                     throw new BizException("Host " + host + " is already used by environment "
                             + conflict.environmentName() + " / namespace " + conflict.namespace()
@@ -401,7 +401,7 @@ public class ApplicationService {
         return true;
     }
 
-    public List<ApplicationPodStatusResponse> getApplicationStatus(String namespace, String name, String environmentName) {
+    public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {
         try {
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
@@ -427,7 +427,7 @@ public class ApplicationService {
         }
     }
 
-    public ClusterDomainResponse getClusterDomain(String namespace, String name, String environmentName) {
+    public ClusterDomainView getClusterDomain(String namespace, String name, String environmentName) {
         try {
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
@@ -447,7 +447,7 @@ public class ApplicationService {
                             .toList()
                     : null;
 
-            return new ClusterDomainResponse(internalDomain, externalDomains);
+            return new ClusterDomainView(internalDomain, externalDomains);
         } catch (Exception e) {
             log.error("Failed to get cluster domain: {}", e.getMessage(), e);
         }

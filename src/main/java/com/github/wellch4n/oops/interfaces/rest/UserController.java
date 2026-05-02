@@ -2,10 +2,10 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.application.dto.CreateUserCommand;
+import com.github.wellch4n.oops.application.dto.UpdateUserCommand;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
-import com.github.wellch4n.oops.interfaces.dto.CreateUserRequest;
 import com.github.wellch4n.oops.interfaces.dto.Result;
-import com.github.wellch4n.oops.interfaces.dto.UpdateUserRequest;
 import com.github.wellch4n.oops.application.service.UserService;
 import java.util.List;
 import org.springframework.security.core.Authentication;
@@ -46,7 +46,7 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<Boolean> createUser(@RequestBody CreateUserRequest request) {
+    public Result<Boolean> createUser(@RequestBody CreateUserCommand request) {
         if (request.username() == null || request.username().isBlank()) {
             return Result.failure("Username is required");
         }
@@ -59,7 +59,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserRequest request) {
+    public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserCommand request) {
         userService.updateUser(id, request.role(), request.email(), request.password());
         return Result.success(true);
     }

@@ -4,8 +4,8 @@ import com.github.wellch4n.oops.application.port.repository.ApplicationRepositor
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
-import com.github.wellch4n.oops.application.dto.ApplicationQueryRequest;
-import com.github.wellch4n.oops.application.dto.PipelineQueryRequest;
+import com.github.wellch4n.oops.application.dto.ApplicationQuery;
+import com.github.wellch4n.oops.application.dto.PipelineQuery;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -26,11 +26,11 @@ public class IndexService {
         this.pipelineRepository = pipelineRepository;
     }
 
-    public List<Pipeline> queryPipelines(PipelineQueryRequest pipelineQueryRequest) {
+    public List<Pipeline> queryPipelines(PipelineQuery pipelineQueryRequest) {
         return pipelineRepository.query(pipelineQueryRequest.getNamespace(), pipelineQueryRequest.getApplicationName());
     }
 
-    public List<Application> queryApplications(ApplicationQueryRequest applicationQueryRequest) {
+    public List<Application> queryApplications(ApplicationQuery applicationQueryRequest) {
         return applicationRepository.query(applicationQueryRequest.getNamespace(), applicationQueryRequest.getName());
     }
 }

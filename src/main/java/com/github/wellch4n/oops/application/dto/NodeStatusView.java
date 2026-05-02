@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.application.dto;
 import lombok.Data;
 
 @Data
-public class NodeStatusResponse {
+public class NodeStatusView {
 
     private String name;
     private Boolean ready;

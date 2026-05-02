@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.application.service;
 import com.github.wellch4n.oops.application.port.ClusterNodeGateway;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.application.dto.NodeStatusResponse;
+import com.github.wellch4n.oops.application.dto.NodeStatusView;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +19,7 @@ public class NodeService {
         this.clusterNodeGateway = clusterNodeGateway;
     }
 
-    public List<NodeStatusResponse> getNodes(String environmentName) {
+    public List<NodeStatusView> getNodes(String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
             throw new IllegalArgumentException("Environment not found: " + environmentName);

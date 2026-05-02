@@ -3,7 +3,7 @@ package com.github.wellch4n.oops.application.service;
 import com.github.wellch4n.oops.application.port.ConfigMapGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ConfigMapItem;
-import com.github.wellch4n.oops.application.dto.ConfigMapRequest;
+import com.github.wellch4n.oops.application.dto.UpdateConfigMapCommand;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +29,7 @@ public class ConfigMapService {
         return configMapGateway.getConfigMaps(environment, namespace, applicationName);
     }
 
-    public Boolean updateConfigMap(String namespace, String applicationName, String environmentName, List<ConfigMapRequest> configMaps) {
+    public Boolean updateConfigMap(String namespace, String applicationName, String environmentName, List<UpdateConfigMapCommand> configMaps) {
         try {
             Environment environment = environmentService.getEnvironment(environmentName);
             configMapGateway.updateConfigMap(environment, namespace, applicationName, configMaps);

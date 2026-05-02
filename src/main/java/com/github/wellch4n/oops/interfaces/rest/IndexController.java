@@ -2,8 +2,8 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
-import com.github.wellch4n.oops.application.dto.ApplicationQueryRequest;
-import com.github.wellch4n.oops.application.dto.PipelineQueryRequest;
+import com.github.wellch4n.oops.application.dto.ApplicationQuery;
+import com.github.wellch4n.oops.application.dto.PipelineQuery;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.IndexService;
 import java.util.List;
@@ -25,12 +25,12 @@ public class IndexController {
     }
 
     @PostMapping("/pipelines")
-    public Result<List<Pipeline>> queryPipelines(@RequestBody PipelineQueryRequest pipelineQueryRequest) {
+    public Result<List<Pipeline>> queryPipelines(@RequestBody PipelineQuery pipelineQueryRequest) {
         return Result.success(indexService.queryPipelines(pipelineQueryRequest));
     }
 
     @PostMapping("/applications")
-    public Result<List<Application>> queryApplication(@RequestBody ApplicationQueryRequest applicationQueryRequest) {
+    public Result<List<Application>> queryApplication(@RequestBody ApplicationQuery applicationQueryRequest) {
         return Result.success(indexService.queryApplications(applicationQueryRequest));
     }
 }

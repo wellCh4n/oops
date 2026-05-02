@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class IDEResponse {
+public class IdeDto {
 
     private String id;
     private String name;

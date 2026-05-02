@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.application.dto.DomainRequest;
-import com.github.wellch4n.oops.interfaces.dto.DomainResponse;
+import com.github.wellch4n.oops.application.dto.UpsertDomainCommand;
+import com.github.wellch4n.oops.application.dto.DomainDto;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.DomainService;
 import java.util.List;
@@ -27,26 +27,26 @@ public class DomainController {
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
-    public Result<List<DomainResponse>> list() {
-        return Result.success(domainService.list().stream().map(DomainResponse::from).toList());
+    public Result<List<DomainDto>> list() {
+        return Result.success(domainService.list().stream().map(DomainDto::from).toList());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
-    public Result<DomainResponse> get(@PathVariable String id) {
-        return Result.success(DomainResponse.from(domainService.get(id)));
+    public Result<DomainDto> get(@PathVariable String id) {
+        return Result.success(DomainDto.from(domainService.get(id)));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<DomainResponse> create(@RequestBody DomainRequest request) {
-        return Result.success(DomainResponse.from(domainService.create(request)));
+    public Result<DomainDto> create(@RequestBody UpsertDomainCommand request) {
+        return Result.success(DomainDto.from(domainService.create(request)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<DomainResponse> update(@PathVariable String id, @RequestBody DomainRequest request) {
-        return Result.success(DomainResponse.from(domainService.update(id, request)));
+    public Result<DomainDto> update(@PathVariable String id, @RequestBody UpsertDomainCommand request) {
+        return Result.success(DomainDto.from(domainService.update(id, request)));
     }
 
     @DeleteMapping("/{id}")

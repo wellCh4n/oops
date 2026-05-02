@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import java.util.ArrayList;
@@ -74,7 +74,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     }
 
     @Override
-    public List<ApplicationPodStatusResponse> getPodStatuses(Environment environment, String namespace, String applicationName) {
+    public List<ApplicationPodStatusView> getPodStatuses(Environment environment, String namespace, String applicationName) {
         try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             var pods = client.pods()
                     .inNamespace(namespace)
@@ -82,17 +82,17 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                     .withLabel("oops.app.name", applicationName)
                     .list();
             return pods.getItems().stream().map(pod -> {
-                var status = new ApplicationPodStatusResponse();
+                var status = new ApplicationPodStatusView();
                 status.setName(pod.getMetadata().getName());
                 status.setNamespace(pod.getMetadata().getNamespace());
                 status.setPodIP(pod.getStatus().getPodIP());
                 status.setStatus(pod.getStatus().getPhase());
                 status.setNodeName(pod.getSpec().getNodeName());
                 var containerStatuses = pod.getStatus().getContainerStatuses();
-                List<ApplicationPodStatusResponse.ContainerStatus> containers = new ArrayList<>();
+                List<ApplicationPodStatusView.ContainerStatus> containers = new ArrayList<>();
                 if (containerStatuses != null) {
                     for (var containerStatus : containerStatuses) {
-                        var container = new ApplicationPodStatusResponse.ContainerStatus();
+                        var container = new ApplicationPodStatusView.ContainerStatus();
                         container.setName(containerStatus.getName());
                         container.setImage(containerStatus.getImage());
                         container.setReady(containerStatus.getReady());

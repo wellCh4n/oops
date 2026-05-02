@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ClusterNodeGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.application.dto.NodeStatusResponse;
+import com.github.wellch4n.oops.application.dto.NodeStatusView;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -18,19 +18,19 @@ import org.springframework.stereotype.Component;
 public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
 
     @Override
-    public List<NodeStatusResponse> getNodes(Environment environment) {
+    public List<NodeStatusView> getNodes(Environment environment) {
         try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             var nodes = client.nodes().list().getItems();
             return nodes.stream()
                     .filter(Objects::nonNull)
                     .map(this::toResponse)
-                    .sorted(Comparator.comparing(NodeStatusResponse::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                    .sorted(Comparator.comparing(NodeStatusView::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
                     .toList();
         }
     }
 
-    private NodeStatusResponse toResponse(Node node) {
-        NodeStatusResponse response = new NodeStatusResponse();
+    private NodeStatusView toResponse(Node node) {
+        NodeStatusView response = new NodeStatusView();
         response.setName(node.getMetadata() != null ? node.getMetadata().getName() : null);
         response.setCreationTimestamp(node.getMetadata() != null ? node.getMetadata().getCreationTimestamp() : null);
 

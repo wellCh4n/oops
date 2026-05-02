@@ -1,9 +1,9 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadRequest;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadResponse;
-import com.github.wellch4n.oops.application.dto.DeployRequest;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadCommand;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadResult;
+import com.github.wellch4n.oops.application.dto.DeployCommand;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
 import com.github.wellch4n.oops.application.service.DeploymentService;
@@ -30,9 +30,9 @@ public class DeploymentController {
 
     @PostMapping("/source-upload")
     @PreAuthorize("isAuthenticated()")
-    public Result<BuildSourceUploadResponse> createBuildSourceUpload(@PathVariable String namespace,
+    public Result<BuildSourceUploadResult> createBuildSourceUpload(@PathVariable String namespace,
                                                                      @PathVariable String name,
-                                                                     @RequestBody BuildSourceUploadRequest request) {
+                                                                     @RequestBody BuildSourceUploadCommand request) {
         return Result.success(buildSourceStorage.createUpload(namespace, name, request));
     }
 
@@ -40,7 +40,7 @@ public class DeploymentController {
     @PreAuthorize("isAuthenticated()")
     public Result<String> deployApplication(@PathVariable String namespace,
                                             @PathVariable String name,
-                                            @RequestBody DeployRequest request,
+                                            @RequestBody DeployCommand request,
                                             Authentication authentication) {
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return Result.success(deploymentService.deployApplication(namespace, name, request, principal.userId()));

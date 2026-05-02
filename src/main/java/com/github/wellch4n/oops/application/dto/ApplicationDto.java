@@ -4,7 +4,7 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import java.time.LocalDateTime;
 
-public record ApplicationResponse(
+public record ApplicationDto(
         String id,
         LocalDateTime createdTime,
         String name,
@@ -14,8 +14,8 @@ public record ApplicationResponse(
         String ownerName,
         ApplicationSourceType sourceType
 ) {
-    public static ApplicationResponse from(Application application, String ownerName, ApplicationSourceType sourceType) {
-        return new ApplicationResponse(
+    public static ApplicationDto from(Application application, String ownerName, ApplicationSourceType sourceType) {
+        return new ApplicationDto(
                 application.getId(),
                 application.getCreatedTime(),
                 application.getName(),

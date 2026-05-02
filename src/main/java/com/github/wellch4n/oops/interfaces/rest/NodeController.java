@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.application.dto.NodeStatusResponse;
+import com.github.wellch4n.oops.application.dto.NodeStatusView;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.NodeService;
 import java.util.List;
@@ -20,7 +20,7 @@ public class NodeController {
     }
 
     @GetMapping
-    public Result<List<NodeStatusResponse>> getNodes(@RequestParam String env) {
+    public Result<List<NodeStatusView>> getNodes(@RequestParam String env) {
         return Result.success(nodeService.getNodes(env));
     }
 }

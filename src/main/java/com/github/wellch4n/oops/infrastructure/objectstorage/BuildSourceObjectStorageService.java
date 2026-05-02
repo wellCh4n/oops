@@ -3,8 +3,8 @@ package com.github.wellch4n.oops.infrastructure.objectstorage;
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
 import com.github.wellch4n.oops.infrastructure.config.BuildSourceObjectStorageConfig;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadRequest;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadResponse;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadCommand;
+import com.github.wellch4n.oops.application.dto.BuildSourceUploadResult;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
@@ -33,8 +33,8 @@ public class BuildSourceObjectStorageService implements BuildSourceStorage {
         this.presignerProvider = presignerProvider;
     }
 
-    public BuildSourceUploadResponse createUpload(String namespace, String applicationName,
-                                                  BuildSourceUploadRequest request) {
+    public BuildSourceUploadResult createUpload(String namespace, String applicationName,
+                                                  BuildSourceUploadCommand request) {
         ensureEnabled();
         validateUploadRequest(request);
 
@@ -54,7 +54,7 @@ public class BuildSourceObjectStorageService implements BuildSourceStorage {
                         .putObjectRequest(putObjectRequest)
                         .build()
         );
-        return new BuildSourceUploadResponse(
+        return new BuildSourceUploadResult(
                 objectKey,
                 toObjectUrl(presignedRequest.url().toString()),
                 presignedRequest.url().toString(),
@@ -93,7 +93,7 @@ public class BuildSourceObjectStorageService implements BuildSourceStorage {
         return createDownloadUrl(repository);
     }
 
-    private void validateUploadRequest(BuildSourceUploadRequest request) {
+    private void validateUploadRequest(BuildSourceUploadCommand request) {
         if (request == null) {
             throw new BizException("Upload request is required");
         }

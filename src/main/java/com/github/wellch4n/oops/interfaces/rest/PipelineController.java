@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.application.dto.Page;
-import com.github.wellch4n.oops.application.dto.PipelineResponse;
+import com.github.wellch4n.oops.application.dto.PipelineDto;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,7 +23,7 @@ public class PipelineController {
     }
 
     @GetMapping
-    public Result<Page<PipelineResponse>> getPipelines(@PathVariable String namespace,
+    public Result<Page<PipelineDto>> getPipelines(@PathVariable String namespace,
                                                        @PathVariable String name,
                                                        @RequestParam(required = false) String environment,
                                                        @RequestParam(defaultValue = "1") int page,
@@ -32,7 +32,7 @@ public class PipelineController {
     }
 
     @GetMapping("/{id}")
-    public Result<PipelineResponse> getPipeline(@PathVariable String namespace,
+    public Result<PipelineDto> getPipeline(@PathVariable String namespace,
                                                 @PathVariable String name,
                                                 @PathVariable String id) {
         return Result.success(pipelineService.getPipelineDetail(namespace, name, id));

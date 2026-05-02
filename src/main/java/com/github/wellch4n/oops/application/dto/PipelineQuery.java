@@ -8,7 +8,7 @@ import lombok.Data;
  */
 
 @Data
-public class PipelineQueryRequest {
+public class PipelineQuery {
     private String namespace;
     private String applicationName;
 }

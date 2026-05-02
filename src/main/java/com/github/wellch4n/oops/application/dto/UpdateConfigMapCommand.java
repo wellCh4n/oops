@@ -8,7 +8,7 @@ import lombok.Data;
  */
 
 @Data
-public class ConfigMapRequest {
+public class UpdateConfigMapCommand {
     private String key;
     private String value;
 }

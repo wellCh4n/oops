@@ -2,13 +2,13 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
-import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
-import com.github.wellch4n.oops.application.dto.ApplicationResponse;
-import com.github.wellch4n.oops.application.dto.ClusterDomainResponse;
-import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.ApplicationDto;
+import com.github.wellch4n.oops.application.dto.ClusterDomainView;
+import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
-import com.github.wellch4n.oops.application.dto.ServiceHostConflictResponse;
+import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
@@ -37,12 +37,12 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}")
-    public Result<ApplicationResponse> getApplication(@PathVariable String namespace, @PathVariable String name) {
+    public Result<ApplicationDto> getApplication(@PathVariable String namespace, @PathVariable String name) {
         return Result.success(applicationService.getApplicationResponse(namespace, name));
     }
 
     @GetMapping
-    public Result<Page<ApplicationResponse>> getApplications(@PathVariable String namespace,
+    public Result<Page<ApplicationDto>> getApplications(@PathVariable String namespace,
                                                              @RequestParam(required = false) String keyword,
                                                              @RequestParam(defaultValue = "1") int page,
                                                              @RequestParam(defaultValue = "10") int size,
@@ -145,9 +145,9 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/last-successful-pipeline")
-    public Result<LastSuccessfulPipelineResponse> getLastSuccessfulPipeline(@PathVariable String namespace,
+    public Result<LastSuccessfulPipelineDto> getLastSuccessfulPipeline(@PathVariable String namespace,
                                                                             @PathVariable String name) {
-        LastSuccessfulPipelineResponse lastPipeline = pipelineService.getLastSuccessfulPipeline(namespace, name);
+        LastSuccessfulPipelineDto lastPipeline = pipelineService.getLastSuccessfulPipeline(namespace, name);
         return Result.success(lastPipeline);
     }
 
@@ -175,19 +175,19 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/service/host-check")
-    public Result<ServiceHostConflictResponse> checkServiceHost(@PathVariable String namespace, @PathVariable String name,
+    public Result<ServiceHostConflictView> checkServiceHost(@PathVariable String namespace, @PathVariable String name,
                                                                 @RequestParam String host) {
         return Result.success(applicationService.findHostConflictApplication(namespace, name, host));
     }
 
     @GetMapping("/{name}/service/cluster-domain")
-    public Result<ClusterDomainResponse> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
+    public Result<ClusterDomainView> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
                                                           @RequestParam String env) {
         return Result.success(applicationService.getClusterDomain(namespace, name, env));
     }
 
     @GetMapping("/{name}/status")
-    public Result<List<ApplicationPodStatusResponse>> getApplicationStatus(@PathVariable String namespace,
+    public Result<List<ApplicationPodStatusView>> getApplicationStatus(@PathVariable String namespace,
                                                                            @PathVariable String name,
                                                                            @RequestParam String env) {
         return Result.success(applicationService.getApplicationStatus(namespace, name, env));

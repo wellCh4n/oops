@@ -1,10 +1,10 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.application.dto.IDEConfigResponse;
-import com.github.wellch4n.oops.application.dto.IDECreateRequest;
-import com.github.wellch4n.oops.application.dto.IDEResponse;
+import com.github.wellch4n.oops.application.dto.IdeConfigDto;
+import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
+import com.github.wellch4n.oops.application.dto.IdeDto;
 import com.github.wellch4n.oops.interfaces.dto.Result;
-import com.github.wellch4n.oops.application.service.IDEService;
+import com.github.wellch4n.oops.application.service.IdeService;
 import java.util.List;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,16 +13,16 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @ConditionalOnProperty(prefix = "oops.ide", name = "enabled", havingValue = "true")
 @RequestMapping("/api/namespaces/{namespace}/applications/{application}/ides")
-public class IDEController {
+public class IdeController {
 
-    private final IDEService ideService;
+    private final IdeService ideService;
 
-    public IDEController(IDEService  ideService) {
+    public IdeController(IdeService  ideService) {
         this.ideService = ideService;
     }
 
     @GetMapping
-    public Result<List<IDEResponse>> listIDEs(@PathVariable String application, @RequestParam String env) {
+    public Result<List<IdeDto>> listIDEs(@PathVariable String application, @RequestParam String env) {
         return Result.success(ideService.list(application, env));
     }
 
@@ -37,14 +37,14 @@ public class IDEController {
     }
 
     @GetMapping("/config/default")
-    public Result<IDEConfigResponse> getDefaultIDEConfig(@RequestParam String env) {
+    public Result<IdeConfigDto> getDefaultIDEConfig(@RequestParam String env) {
         return Result.success(ideService.getDefaultIDEConfig(env));
     }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Result<String> createIDE(@PathVariable String namespace, @PathVariable String application,
-                                    @RequestParam String env, @RequestBody IDECreateRequest request) {
+                                    @RequestParam String env, @RequestBody CreateIdeCommand request) {
         return Result.success(ideService.create(namespace, application, env, request));
     }
 }

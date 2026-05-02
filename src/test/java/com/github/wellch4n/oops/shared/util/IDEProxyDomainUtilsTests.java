@@ -10,7 +10,7 @@ class IDEProxyDomainUtilsTests {
 
     @Test
     void normalizesValidTemplate() {
-        var normalized = IDEProxyDomainUtils.normalizeTemplate("  {{port}}-{{host}}  ");
+        var normalized = IdeProxyDomainUtils.normalizeTemplate("  {{port}}-{{host}}  ");
 
         assertTrue(normalized.isPresent());
         assertEquals("{{port}}-{{host}}", normalized.get());
@@ -18,14 +18,14 @@ class IDEProxyDomainUtilsTests {
 
     @Test
     void rejectsTemplateWithoutHostPlaceholder() {
-        var normalized = IDEProxyDomainUtils.normalizeTemplate("{{port}}.ide.example.com");
+        var normalized = IdeProxyDomainUtils.normalizeTemplate("{{port}}.ide.example.com");
 
         assertFalse(normalized.isPresent());
     }
 
     @Test
     void appendsPortHostRegexpWhenTemplateIsValid() {
-        String match = IDEProxyDomainUtils.buildIngressMatch(
+        String match = IdeProxyDomainUtils.buildIngressMatch(
                 "ds-website-ide-l7n0c8hegacl7iqofvunmy26.ide.ops.dsdigital.team",
                 "{{port}}-{{host}}");
 
@@ -37,7 +37,7 @@ class IDEProxyDomainUtilsTests {
 
     @Test
     void keepsSingleHostMatchWhenTemplateIsMissing() {
-        String match = IDEProxyDomainUtils.buildIngressMatch(
+        String match = IdeProxyDomainUtils.buildIngressMatch(
                 "ds-website-ide-l7n0c8hegacl7iqofvunmy26.ide.ops.dsdigital.team",
                 null);
 

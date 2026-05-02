@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.application.port;
 
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.application.dto.ApplicationPodStatusResponse;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import java.util.List;
 
 public interface ApplicationRuntimeGateway {
@@ -13,7 +13,7 @@ public interface ApplicationRuntimeGateway {
                           String applicationName,
                           ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec);
 
-    List<ApplicationPodStatusResponse> getPodStatuses(Environment environment, String namespace, String applicationName);
+    List<ApplicationPodStatusView> getPodStatuses(Environment environment, String namespace, String applicationName);
 
     void restartPod(Environment environment, String namespace, String podName);
 

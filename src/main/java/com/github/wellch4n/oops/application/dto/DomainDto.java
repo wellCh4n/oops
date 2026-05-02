@@ -1,4 +1,4 @@
-package com.github.wellch4n.oops.interfaces.dto;
+package com.github.wellch4n.oops.application.dto;
 
 import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DomainResponse {
+public class DomainDto {
     private String id;
     private String host;
     private String description;
@@ -23,8 +23,8 @@ public class DomainResponse {
     private LocalDateTime certNotAfter;
     private LocalDateTime createdTime;
 
-    public static DomainResponse from(Domain domain) {
-        return DomainResponse.builder()
+    public static DomainDto from(Domain domain) {
+        return DomainDto.builder()
                 .id(domain.getId())
                 .host(domain.getHost())
                 .description(domain.getDescription())
