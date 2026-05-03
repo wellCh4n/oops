@@ -20,7 +20,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
 
     @Override
     public void deleteWorkload(Environment environment, String namespace, String applicationName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             var statefulSet = client.apps().statefulSets()
                     .inNamespace(namespace)
                     .withName(applicationName)
@@ -39,7 +39,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                                  String namespace,
                                  String applicationName,
                                  ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             if (runtimeSpec.getReplicas() != null) {
                 client.apps().statefulSets()
                         .inNamespace(namespace)
@@ -75,7 +75,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
 
     @Override
     public List<ApplicationPodStatusView> getPodStatuses(Environment environment, String namespace, String applicationName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             var pods = client.pods()
                     .inNamespace(namespace)
                     .withLabel("oops.type", OopsTypes.APPLICATION.name())
@@ -111,14 +111,14 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
 
     @Override
     public void restartPod(Environment environment, String namespace, String podName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.pods().inNamespace(namespace).withName(podName).delete();
         }
     }
 
     @Override
     public String findInternalServiceDomain(Environment environment, String namespace, String applicationName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             var services = client.services().inNamespace(namespace).withLabel("oops.app.name", applicationName).list().getItems();
             if (services.isEmpty()) {
                 return null;

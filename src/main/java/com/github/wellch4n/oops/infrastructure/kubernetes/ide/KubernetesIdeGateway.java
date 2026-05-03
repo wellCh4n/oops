@@ -20,6 +20,7 @@ import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
 import com.github.wellch4n.oops.application.dto.IdeDto;
 import com.github.wellch4n.oops.shared.util.IdeProxyDomainUtils;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
 import io.fabric8.kubernetes.api.model.*;
@@ -75,7 +76,7 @@ public class KubernetesIdeGateway implements IdeGateway {
             return fileDefaults;
         }
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             ConfigMap configMap = client.configMaps()
                     .inNamespace(environment.getWorkNamespace())
                     .withName("ide-config")
@@ -180,7 +181,7 @@ public class KubernetesIdeGateway implements IdeGateway {
         startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
                 + proxyDomainArg + " /home/coder/" + applicationName);
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             StatefulSet statefulSet = new StatefulSetBuilder()
                     .withNewMetadata().withName(name).withLabels(labels).withAnnotations(annotations).endMetadata()
                     .withNewSpec()
@@ -233,7 +234,7 @@ public class KubernetesIdeGateway implements IdeGateway {
                     .build();
 
             // 2. 创建 Service，失败则回滚 StatefulSet
-            io.fabric8.kubernetes.api.model.Service service = new ServiceBuilder()
+            Service service = new ServiceBuilder()
                     .withNewMetadata()
                         .withName(name)
                         .withLabels(labels)
@@ -290,7 +291,7 @@ public class KubernetesIdeGateway implements IdeGateway {
             return;
         }
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.apps().statefulSets()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(name)
@@ -304,7 +305,7 @@ public class KubernetesIdeGateway implements IdeGateway {
             return List.of();
         }
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             return client.apps().statefulSets()
                     .inNamespace(environment.getWorkNamespace())
                     .withLabel("oops.type", OopsTypes.IDE.name())

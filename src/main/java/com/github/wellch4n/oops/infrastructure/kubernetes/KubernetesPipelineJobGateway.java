@@ -11,7 +11,7 @@ public class KubernetesPipelineJobGateway implements PipelineJobGateway {
 
     @Override
     public PipelineJobStatus getStatus(Environment environment, String jobName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             var job = client.batch().v1().jobs()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(jobName)
@@ -31,7 +31,7 @@ public class KubernetesPipelineJobGateway implements PipelineJobGateway {
 
     @Override
     public void stop(Environment environment, String jobName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.batch().v1().jobs()
                     .inNamespace(environment.getWorkNamespace())
                     .withName(jobName)

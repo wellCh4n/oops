@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
 import com.github.wellch4n.oops.application.port.repository.PageResult;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -66,7 +67,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     @Override
     public List<com.github.wellch4n.oops.domain.application.Application> query(String namespace, String name) {
         return PersistenceMapper.convertList(applicationRepository.findAll((root, query, criteriaBuilder) -> {
-            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             if (name != null && !name.isBlank()) {
                 predicates.add(criteriaBuilder.like(root.get("name"), "%" + name + "%"));
             }

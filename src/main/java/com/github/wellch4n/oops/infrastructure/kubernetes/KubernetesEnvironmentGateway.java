@@ -28,7 +28,7 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
         if (kubernetesApiServer == null) {
             return false;
         }
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
+        try (var client = KubernetesClients.from(kubernetesApiServer)) {
             client.namespaces().list();
             return true;
         } catch (Exception e) {
@@ -38,14 +38,14 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
 
     @Override
     public boolean namespaceExists(Environment.KubernetesApiServer kubernetesApiServer, String namespace) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
+        try (var client = KubernetesClients.from(kubernetesApiServer)) {
             return client.namespaces().withName(namespace).get() != null;
         }
     }
 
     @Override
     public void createNamespace(Environment.KubernetesApiServer kubernetesApiServer, String namespace) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
+        try (var client = KubernetesClients.from(kubernetesApiServer)) {
             client.namespaces()
                     .resource(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build())
                     .create();
@@ -117,7 +117,7 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
                 .withData(data)
                 .build();
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(kubernetesApiServer)) {
+        try (var client = KubernetesClients.from(kubernetesApiServer)) {
             client.secrets().inNamespace(workNamespace).resource(secret).patch(OopsConstants.PATCH_CONTEXT);
         }
     }

@@ -20,7 +20,7 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
 
     @Override
     public List<ConfigMapItem> getConfigMaps(Environment environment, String namespace, String applicationName) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             ConfigMap configMap = client.configMaps()
                     .inNamespace(namespace)
                     .withName(applicationName)
@@ -49,7 +49,7 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
             map.put(configMapRequest.getKey(), configMapRequest.getValue());
         }
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             StatefulSet statefulSet = client.apps().statefulSets()
                     .inNamespace(namespace)
                     .withName(applicationName)

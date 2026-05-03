@@ -19,7 +19,7 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
 
     @Override
     public List<NodeStatusView> getNodes(Environment environment) {
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             var nodes = client.nodes().list().getItems();
             return nodes.stream()
                     .filter(Objects::nonNull)

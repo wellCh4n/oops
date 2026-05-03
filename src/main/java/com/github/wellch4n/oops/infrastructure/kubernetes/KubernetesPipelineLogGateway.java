@@ -53,7 +53,7 @@ public class KubernetesPipelineLogGateway implements PipelineLogGateway {
 
         Thread.startVirtualThread(() -> {
             try {
-                KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
+                KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer());
                 resources.add(client);
 
                 String workNamespace = environment.getWorkNamespace();

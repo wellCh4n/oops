@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 import com.github.wellch4n.oops.application.port.repository.PageResult;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import io.micrometer.common.util.StringUtils;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -94,7 +95,7 @@ public class PipelinePersistenceAdapter implements com.github.wellch4n.oops.appl
     @Override
     public List<com.github.wellch4n.oops.domain.delivery.Pipeline> query(String namespace, String applicationName) {
         return PersistenceMapper.convertList(pipelineRepository.findAll((root, query, criteriaBuilder) -> {
-            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             if (StringUtils.isNotEmpty(namespace)) {
                 predicates.add(criteriaBuilder.equal(root.get("namespace"), namespace));
             }
