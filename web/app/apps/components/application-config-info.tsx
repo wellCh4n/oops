@@ -7,7 +7,6 @@ import { Plus, Trash2, Loader2, Upload, Copy, Container } from "lucide-react"
 import { toast } from "sonner"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
-import { Skeleton } from "@/components/ui/skeleton"
 import {
   Form,
   FormControl,
@@ -44,6 +43,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
+import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 function ConfigValueTextarea({
   value,
@@ -254,29 +254,24 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
   return (
     <>
-      <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+      {envsLoading && <ApplicationEditorTabSkeleton />}
+      <div className={envsLoading ? "hidden" : "w-full"}>
+        <Form {...form}>
+        <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
             <Container className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.config.title")}</span>
           </div>
           <div className="flex flex-col gap-4 p-4">
-            {envsLoading && (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-9 w-64" />
-                <Skeleton className="h-48 w-full" />
-              </div>
-            )}
-            <div className={envsLoading ? "hidden" : ""}>
-              <ApplicationEnvironmentSelector
-                namespace={namespace}
-                applicationName={applicationName}
-                value={activeTab}
-                onValueChange={setActiveTab}
-                onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                onLoadingChange={setEnvsLoading}
-              >
+            <ApplicationEnvironmentSelector
+              namespace={namespace}
+              applicationName={applicationName}
+              value={activeTab}
+              onValueChange={setActiveTab}
+              onEnvironmentsLoaded={handleEnvironmentsLoaded}
+              onLoadingChange={setEnvsLoading}
+            >
                 <div className="rounded-md border">
                 <Table>
                   <TableHeader>
@@ -357,8 +352,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                   </TableBody>
                 </Table>
               </div>
-              </ApplicationEnvironmentSelector>
-            </div>
+            </ApplicationEnvironmentSelector>
 
             <div className="flex gap-2">
               <Button
@@ -442,8 +436,9 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
             {t("common.save")}
           </Button>
         </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+      </div>
 
     <EnvImportDialog
       open={importConfirmDialogOpen}

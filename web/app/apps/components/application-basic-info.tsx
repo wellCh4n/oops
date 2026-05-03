@@ -31,9 +31,9 @@ import { fetchUsers, User } from "@/lib/api/users"
 import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon, LayoutGrid } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
-import { Skeleton } from "@/components/ui/skeleton"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
+import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -166,33 +166,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
   })
 
   if (loading) {
-    return (
-      <div className="flex w-full flex-col gap-4">
-        <div className="border rounded-lg overflow-hidden">
-          <div className="flex items-center gap-2 px-4 py-3 border-b">
-            <Skeleton className="h-4 w-4 rounded-sm" />
-            <Skeleton className="h-4 w-28" />
-          </div>
-          <div className="flex flex-col gap-4 p-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        </div>
-        {initialData && (
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b">
-              <Skeleton className="h-4 w-4 rounded-sm" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-            <div className="p-4">
-              <Skeleton className="h-20 w-full" />
-            </div>
-          </div>
-        )}
-      </div>
-    )
+    return <ApplicationEditorTabSkeleton />
   }
 
   return (

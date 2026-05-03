@@ -18,12 +18,12 @@ import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnv
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
-import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationServiceFormValues, applicationServiceSchema } from "../schema"
+import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface Props {
   initialServiceConfig?: ApplicationServiceConfig
@@ -505,8 +505,11 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   })
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+    <>
+      {envsLoading && <ApplicationEditorTabSkeleton />}
+      <div className={envsLoading ? "hidden" : "w-full"}>
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
             <Network className="h-4 w-4 text-muted-foreground" />
@@ -547,23 +550,15 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           </Label>
 
           <div className="flex flex-col gap-2">
-            {envsLoading && (
-              <div className="flex flex-col gap-3">
-                <Skeleton className="h-9 w-64" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            )}
-
-            <div className={envsLoading ? "hidden" : ""}>
-              <ApplicationEnvironmentSelector
-                namespace={namespace}
-                applicationName={applicationName}
-                value={activeTab}
-                onValueChange={setActiveTab}
-                onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                onLoadingChange={setEnvsLoading}
-                className="w-full"
-              >
+            <ApplicationEnvironmentSelector
+              namespace={namespace}
+              applicationName={applicationName}
+              value={activeTab}
+              onValueChange={setActiveTab}
+              onEnvironmentsLoaded={handleEnvironmentsLoaded}
+              onLoadingChange={setEnvsLoading}
+              className="w-full"
+            >
                 {envFields.map((field, environmentIndex) => {
                   const group = environmentConfigs[environmentIndex]
                   if (!group) {
@@ -726,8 +721,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                     </TabsContent>
                   )
                 })}
-              </ApplicationEnvironmentSelector>
-            </div>
+            </ApplicationEnvironmentSelector>
           </div>
         </div>
       </div>
@@ -752,7 +746,9 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      </form>
-    </Form>
+          </form>
+        </Form>
+      </div>
+    </>
   )
 })

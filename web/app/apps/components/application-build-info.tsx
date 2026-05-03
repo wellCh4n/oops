@@ -22,11 +22,11 @@ import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "
 import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
+import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
@@ -176,8 +176,11 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const activeEnvironmentIndex = fields.findIndex((f) => f.environmentName === activeTab)
 
   return (
-    <Form {...form}>
-      <form onSubmit={handleSubmit} className="w-full">
+    <>
+      {envsLoading && <ApplicationEditorTabSkeleton />}
+      <div className={envsLoading ? "hidden" : "w-full"}>
+        <Form {...form}>
+          <form onSubmit={handleSubmit} className="w-full">
         <div className="flex flex-col gap-4">
           {/* Global Build Config Section */}
           <div className="border rounded-lg overflow-hidden">
@@ -348,22 +351,15 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   {t("apps.build.buildCommand")}
                 </Label>
                 <div className="w-full">
-                  {envsLoading && (
-                    <div className="flex flex-col gap-3">
-                      <Skeleton className="h-9 w-64" />
-                    </div>
-                  )}
-                  <div className={envsLoading ? "hidden" : ""}>
-                    <ApplicationEnvironmentSelector
-                      namespace={namespace}
-                      applicationName={applicationName}
-                      value={activeTab}
-                      onValueChange={setActiveTab}
-                      onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                      onLoadingChange={setEnvsLoading}
-                      className="w-full"
-                    />
-                  </div>
+                  <ApplicationEnvironmentSelector
+                    namespace={namespace}
+                    applicationName={applicationName}
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                    onLoadingChange={setEnvsLoading}
+                    className="w-full"
+                  />
                 </div>
               </div>
 
@@ -410,7 +406,9 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
              </Button>
           </div>
         </div>
-      </form>
-    </Form>
+          </form>
+        </Form>
+      </div>
+    </>
   )
 })

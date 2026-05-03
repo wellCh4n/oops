@@ -12,6 +12,7 @@ import { ApplicationServiceInfo } from "./components/application-service-info"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
+import { ApplicationEditorTabSkeleton } from "./components/application-editor-skeleton"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -58,111 +59,6 @@ const VALID_TABS = new Set<ApplicationTab>([
   "config-info",
   "danger-zone",
 ])
-
-function CardSkeleton({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b">
-        <Skeleton className="h-4 w-4 rounded-sm" />
-        <Skeleton className="h-4 w-28" />
-      </div>
-      <div className="flex flex-col gap-4 p-4">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function AppInfoSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <CardSkeleton>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </CardSkeleton>
-      <CardSkeleton>
-        <Skeleton className="h-20 w-full" />
-      </CardSkeleton>
-    </div>
-  )
-}
-
-function BuildConfigSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <CardSkeleton>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-        </div>
-        <Skeleton className="h-10 w-full" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-24" />
-          <Skeleton className="h-9 w-24" />
-        </div>
-        <Skeleton className="h-32 w-full" />
-      </CardSkeleton>
-      <CardSkeleton>
-        <Skeleton className="h-10 w-full" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-        </div>
-        <Skeleton className="h-48 w-full" />
-      </CardSkeleton>
-    </div>
-  )
-}
-
-function ServiceInfoSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <CardSkeleton>
-        <Skeleton className="h-10 w-full" />
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-        </div>
-        <Skeleton className="h-32 w-full" />
-      </CardSkeleton>
-    </div>
-  )
-}
-
-function RuntimeSpecSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <CardSkeleton>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-        </div>
-        <Skeleton className="h-48 w-full" />
-      </CardSkeleton>
-      <CardSkeleton>
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-24 w-full" />
-      </CardSkeleton>
-    </div>
-  )
-}
-
-function ConfigInfoSkeleton() {
-  return (
-    <div className="flex w-full flex-col gap-4">
-      <CardSkeleton>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-20" />
-          <Skeleton className="h-9 w-20" />
-        </div>
-        <Skeleton className="h-48 w-full" />
-      </CardSkeleton>
-    </div>
-  )
-}
 
 function DangerZoneSkeleton() {
   return (
@@ -316,7 +212,7 @@ export function ApplicationForm({
         </div>
 
         <TabsContent value="app-info">
-          {loading ? <AppInfoSkeleton /> : (
+          {loading ? <ApplicationEditorTabSkeleton /> : (
             <ApplicationBasicInfo
               ref={basicInfoRef}
               initialData={formState.application}
@@ -326,7 +222,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="build-config">
-          {loading ? <BuildConfigSkeleton /> : (
+          {loading ? <ApplicationEditorTabSkeleton /> : (
             <ApplicationBuildInfo
               ref={buildInfoRef}
               initialBuildConfig={formState.buildConfig}
@@ -345,7 +241,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="service-info">
-          {loading ? <ServiceInfoSkeleton /> : (
+          {loading ? <ApplicationEditorTabSkeleton /> : (
             <ApplicationServiceInfo
               ref={serviceInfoRef}
               initialServiceConfig={formState.serviceConfig}
@@ -357,7 +253,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="runtime-spec">
-          {loading ? <RuntimeSpecSkeleton /> : (
+          {loading ? <ApplicationEditorTabSkeleton /> : (
             <ApplicationRuntimeSpec
               ref={runtimeSpecRef}
               initialRuntimeSpec={formState.runtimeSpec}
@@ -370,7 +266,7 @@ export function ApplicationForm({
         </TabsContent>
 
         <TabsContent value="config-info">
-          {loading ? <ConfigInfoSkeleton /> : (
+          {loading ? <ApplicationEditorTabSkeleton /> : (
             <ApplicationConfigInfo
               ref={configInfoRef}
               applicationName={formState.application?.name}

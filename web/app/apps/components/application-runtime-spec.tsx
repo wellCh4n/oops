@@ -20,12 +20,12 @@ import { updateApplicationRuntimeSpec } from "@/lib/api/applications"
 import { Activity, ChevronDown, Copy, Cpu, MemoryStick, Timer, RotateCcw, TimerOff, ShieldAlert, Route, Gauge } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { Switch } from "@/components/ui/switch"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface ApplicationRuntimeSpecProps {
   initialRuntimeSpec?: ApplicationRuntimeSpecType
@@ -178,34 +178,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
 
   return (
     <>
-      {envsLoading && (
-        <div className="flex w-full flex-col gap-4">
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b">
-              <Skeleton className="h-4 w-4 rounded-sm" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-            <div className="flex flex-col gap-4 p-4">
-              <div className="flex gap-2">
-                <Skeleton className="h-9 w-20" />
-                <Skeleton className="h-9 w-20" />
-              </div>
-              <Skeleton className="h-48 w-full" />
-            </div>
-          </div>
-          <div className="border rounded-lg overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b">
-              <Skeleton className="h-4 w-4 rounded-sm" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-            <div className="flex flex-col gap-4 p-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          </div>
-        </div>
-      )}
+      {envsLoading && <ApplicationEditorTabSkeleton />}
       <div className={envsLoading ? "hidden" : "w-full"}>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
