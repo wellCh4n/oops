@@ -8,7 +8,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Converter;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,8 +23,7 @@ public class ApplicationServiceConfig extends BaseDataObject {
 
     private Integer port;
 
-    @Lob
-    @Column(name = "environment_configs")
+    @Column(name = "environment_configs", columnDefinition = "TEXT")
     @Convert(converter = EnvironmentConfigsConverter.class)
     private List<EnvironmentConfig> environmentConfigs;
 

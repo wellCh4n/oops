@@ -37,8 +37,7 @@ public class ApplicationBuildConfig extends BaseDataObject {
 
     private String buildImage;
 
-    @Lob
-    @Column(name = "environment_configs")
+    @Column(name = "environment_configs", columnDefinition = "TEXT")
     @Convert(converter = EnvironmentConfigsConverter.class)
     private List<EnvironmentConfig> environmentConfigs;
 

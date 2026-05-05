@@ -23,8 +23,7 @@ public class ApplicationRuntimeSpec extends BaseDataObject {
 
     private String applicationName;
 
-    @Lob
-    @Column(name = "environment_configs")
+    @Column(name = "environment_configs", columnDefinition = "TEXT")
     @Convert(converter = EnvironmentConfigsConverter.class)
     private List<EnvironmentConfig> environmentConfigs;
 
