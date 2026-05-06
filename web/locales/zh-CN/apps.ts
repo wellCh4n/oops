@@ -88,6 +88,7 @@ const apps = {
   "apps.build.buildCommand": "构建命令",
   "apps.build.saveSuccess": "构建配置保存成功",
   "apps.build.saveError": "保存配置失败",
+  "apps.build.validationError": "请先修正构建流程中的必填项",
   "apps.build.noAppInfo": "请先保存应用基本信息",
   "apps.runtimeSpec.title": "性能配置",
   "apps.runtimeSpec.replicas": "副本数",

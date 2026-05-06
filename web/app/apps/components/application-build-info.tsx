@@ -1,6 +1,7 @@
 "use client"
 
 import { forwardRef, useCallback, useEffect, useState } from "react"
+import { FieldErrors } from "react-hook-form"
 import {
   Form,
   FormControl,
@@ -43,19 +44,29 @@ interface ApplicationBuildInfoProps {
 export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, ApplicationBuildInfoProps>(function ApplicationBuildInfo({
   initialBuildConfig,
   initialEnvConfigs = [],
-  applicationId,
   applicationName,
   namespace,
   onSaved,
 }: ApplicationBuildInfoProps, ref) {
+  const normalizedDockerFileConfig = initialBuildConfig?.dockerFileConfig
+    ? {
+        type: initialBuildConfig.dockerFileConfig.type,
+        path: initialBuildConfig.dockerFileConfig.path ?? undefined,
+        content: initialBuildConfig.dockerFileConfig.content ?? undefined,
+      }
+    : { type: "BUILTIN" as const, path: "Dockerfile" }
+
   const form = useForm<ApplicationBuildFormValues>({
     resolver: zodResolver(applicationBuildSchema),
     defaultValues: {
       sourceType: initialBuildConfig?.sourceType || "GIT",
-      repository: initialBuildConfig?.repository || "",
-      dockerFileConfig: initialBuildConfig?.dockerFileConfig || { type: "BUILTIN", path: "Dockerfile" },
-      buildImage: initialBuildConfig?.buildImage || "",
-      environmentConfigs: initialEnvConfigs,
+      repository: initialBuildConfig?.repository ?? "",
+      dockerFileConfig: normalizedDockerFileConfig,
+      buildImage: initialBuildConfig?.buildImage ?? "",
+      environmentConfigs: initialEnvConfigs.map((config) => ({
+        environmentName: config.environmentName,
+        buildCommand: config.buildCommand ?? "",
+      })),
     },
     mode: "onChange",
   })
@@ -72,6 +83,39 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const { t } = useLanguage()
   const sourceType = form.watch("sourceType")
   const dockerFileConfigValue = form.watch("dockerFileConfig")
+
+  const flattenErrors = useCallback((errors: FieldErrors<ApplicationBuildFormValues>, prefix = ""): Array<{ path: string; message: string }> => {
+    const entries: Array<{ path: string; message: string }> = []
+
+    Object.entries(errors).forEach(([key, value]) => {
+      if (!value) {
+        return
+      }
+
+      const path = prefix ? `${prefix}.${key}` : key
+      if (typeof value === "object" && "message" in value && typeof value.message === "string" && value.message) {
+        entries.push({ path, message: value.message })
+      }
+
+      if (typeof value === "object") {
+        entries.push(...flattenErrors(value as FieldErrors<ApplicationBuildFormValues>, path))
+      }
+    })
+
+    return entries
+  }, [])
+
+  const reportValidationErrors = useCallback((errors: FieldErrors<ApplicationBuildFormValues>) => {
+    const flattened = flattenErrors(errors)
+    const firstMessage = flattened[0]?.message || t("apps.build.validationError")
+    console.error("[ApplicationBuildInfo] validation failed", {
+      errors,
+      flattened,
+      values: form.getValues(),
+    })
+    toast.error(firstMessage)
+  }, [flattenErrors, form, t])
+
   const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
@@ -119,26 +163,37 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   }, [fields, activeTab])
 
   async function submitForm(data: ApplicationBuildFormValues) {
-    if (!applicationId || !applicationName || !namespace) {
+    if (!applicationName || !namespace) {
       toast.error(t("apps.build.noAppInfo"))
       return false
     }
 
     setIsSaving(true)
     try {
+      const normalizedDockerFileConfig = data.dockerFileConfig
+        ? {
+            type: data.dockerFileConfig.type,
+            path: data.dockerFileConfig.path ?? undefined,
+            content: data.dockerFileConfig.content ?? undefined,
+          }
+        : undefined
+
       // 1. Save global build config
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
-        repository: data.sourceType === "GIT" ? data.repository : undefined,
-        dockerFileConfig: data.dockerFileConfig,
-        buildImage: data.buildImage,
+        repository: data.sourceType === "GIT" ? data.repository ?? undefined : undefined,
+        dockerFileConfig: normalizedDockerFileConfig,
+        buildImage: data.buildImage ?? undefined,
         namespace,
         applicationName,
       }
       await updateApplicationBuildConfig(namespace, applicationName, buildConfigPayload)
 
       // 2. Save environment configs
-      const envConfigs = data.environmentConfigs as ApplicationBuildEnvironmentConfig[]
+      const envConfigs: ApplicationBuildEnvironmentConfig[] = data.environmentConfigs.map((config) => ({
+        environmentName: config.environmentName,
+        buildCommand: config.buildCommand ?? undefined,
+      }))
       await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
 
       toast.success(t("apps.build.saveSuccess"))
@@ -156,9 +211,14 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
   const saveCurrentTab = async () => {
     let success = false
-    await form.handleSubmit(async (data) => {
-      success = await submitForm(data)
-    })()
+    await form.handleSubmit(
+      async (data) => {
+        success = await submitForm(data)
+      },
+      (errors) => {
+        reportValidationErrors(errors)
+      }
+    )()
     return success
   }
 
@@ -169,6 +229,9 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     getSnapshot: buildSnapshot,
     onSave: saveCurrentTab,
     onSubmit: submitForm,
+    onInvalid: () => {
+      reportValidationErrors(form.formState.errors)
+    },
   })
 
   const { resolvedTheme } = useTheme()
@@ -220,7 +283,12 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />{t("apps.build.repository")}</FormLabel>
                     <FormControl>
-                      <Input autoComplete="off" placeholder={t("apps.build.repositoryPlaceholder")} {...field} />
+                      <Input
+                        autoComplete="off"
+                        placeholder={t("apps.build.repositoryPlaceholder")}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -253,6 +321,10 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                           type: value as "BUILTIN" | "USER",
                           path: value === "BUILTIN" ? (current?.path || "Dockerfile") : current?.path,
                           content: current?.content,
+                        }, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
                         })
                       }}>
                         <TabsList className="justify-start h-auto flex-wrap">
@@ -302,7 +374,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                               height="100%"
                               defaultLanguage="dockerfile"
                               theme={editorTheme}
-                              value={field.value || ""}
+                              value={field.value ?? ""}
                               onChange={field.onChange}
                               options={{
                                 minimap: { enabled: false },
@@ -338,7 +410,12 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />{t("apps.build.buildImage")}</FormLabel>
                     <FormControl>
-                      <Input autoComplete="off" placeholder={t("apps.build.buildImagePlaceholder")} {...field} />
+                      <Input
+                        autoComplete="off"
+                        placeholder={t("apps.build.buildImagePlaceholder")}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -379,7 +456,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                               height="100%"
                               defaultLanguage="shell"
                               theme={editorTheme}
-                              value={field.value}
+                              value={field.value ?? ""}
                               onChange={field.onChange}
                               options={{
                                 minimap: { enabled: false },
@@ -401,9 +478,15 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
         </div>
 
         <div className="flex">
-          <Button type="submit" disabled={isSaving}>
+          <Button
+            type="button"
+            disabled={isSaving}
+            onClick={() => {
+              void handleSubmit?.()
+            }}
+          >
                 {isSaving ? t("common.saving") : t("common.save")}
-             </Button>
+          </Button>
           </div>
         </div>
           </form>

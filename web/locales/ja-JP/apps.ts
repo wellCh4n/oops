@@ -88,6 +88,7 @@ const apps = {
   "apps.build.buildCommand": "ビルドコマンド",
   "apps.build.saveSuccess": "ビルド設定を保存しました",
   "apps.build.saveError": "設定の保存に失敗しました",
+  "apps.build.validationError": "先にビルド設定の必須項目を修正してください",
   "apps.build.noAppInfo": "先にアプリの基本情報を保存してください",
   "apps.runtimeSpec.title": "パフォーマンス設定",
   "apps.runtimeSpec.replicas": "レプリカ数",

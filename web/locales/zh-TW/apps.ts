@@ -88,6 +88,7 @@ const apps = {
   "apps.build.buildCommand": "建置命令",
   "apps.build.saveSuccess": "建置配置保存成功",
   "apps.build.saveError": "儲存配置失敗",
+  "apps.build.validationError": "請先修正建置流程中的必填欄位",
   "apps.build.noAppInfo": "請先儲存應用基本資訊",
   "apps.runtimeSpec.title": "效能配置",
   "apps.runtimeSpec.replicas": "子書數量",

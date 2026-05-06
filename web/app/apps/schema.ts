@@ -16,13 +16,13 @@ export const applicationBasicSchema = getApplicationBasicSchema()
 
 export const applicationBuildConfigSchema = z.object({
   sourceType: z.enum(["GIT", "ZIP"]),
-  repository: z.string().optional(),
+  repository: z.string().nullish(),
   dockerFileConfig: z.object({
     type: z.enum(["BUILTIN", "USER"]),
-    path: z.string().optional(),
-    content: z.string().optional(),
-  }).optional(),
-  buildImage: z.string().optional(),
+    path: z.string().nullish(),
+    content: z.string().nullish(),
+  }).nullish(),
+  buildImage: z.string().nullish(),
 }).superRefine((value, ctx) => {
   if (value.sourceType === "GIT" && !value.repository?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
@@ -45,16 +45,16 @@ export const createApplicationSchema = getCreateApplicationSchema()
 
 export const applicationBuildSchema = z.object({
   sourceType: z.enum(["GIT", "ZIP"]),
-  repository: z.string().optional(),
+  repository: z.string().nullish(),
   dockerFileConfig: z.object({
     type: z.enum(["BUILTIN", "USER"]),
-    path: z.string().optional(),
-    content: z.string().optional(),
-  }).optional(),
-  buildImage: z.string().optional(),
+    path: z.string().nullish(),
+    content: z.string().nullish(),
+  }).nullish(),
+  buildImage: z.string().nullish(),
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
-    buildCommand: z.string().optional(),
+    buildCommand: z.string().nullish(),
   })),
 }).superRefine((value, ctx) => {
   if (value.sourceType === "GIT" && !value.repository?.trim()) {

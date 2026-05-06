@@ -227,7 +227,6 @@ export function ApplicationForm({
               ref={buildInfoRef}
               initialBuildConfig={formState.buildConfig}
               initialEnvConfigs={formState.buildEnvConfigs}
-              applicationId={formState.application?.id}
               applicationName={formState.application?.name}
               namespace={formState.application?.namespace}
               onSaved={(nextBuildConfig, nextBuildEnvConfigs) => {

@@ -11,6 +11,7 @@ interface UseApplicationEditorTabOptions<TValues extends FieldValues> {
   onSave: () => Promise<boolean>
   form?: UseFormReturn<TValues>
   onSubmit?: (values: TValues) => Promise<boolean>
+  onInvalid?: () => void
   initializeBaselineWhenReady?: boolean
 }
 
@@ -21,6 +22,7 @@ export function useApplicationEditorTab<TValues extends FieldValues = never>({
   onSave,
   form,
   onSubmit,
+  onInvalid,
   initializeBaselineWhenReady = false,
 }: UseApplicationEditorTabOptions<TValues>) {
   const handleSave = async () => {
@@ -52,6 +54,8 @@ export function useApplicationEditorTab<TValues extends FieldValues = never>({
         if (saved) {
           captureBaseline()
         }
+      }, () => {
+        onInvalid?.()
       })
     : undefined
 

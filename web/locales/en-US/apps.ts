@@ -88,6 +88,7 @@ const apps = {
   "apps.build.buildCommand": "Build Command",
   "apps.build.saveSuccess": "Build config saved",
   "apps.build.saveError": "Save failed",
+  "apps.build.validationError": "Please fix the required build fields first",
   "apps.build.noAppInfo": "Please save app info first",
   "apps.runtimeSpec.title": "Performance Config",
   "apps.runtimeSpec.replicas": "Replicas",
