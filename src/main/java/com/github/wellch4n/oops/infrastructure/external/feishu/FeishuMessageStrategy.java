@@ -7,7 +7,7 @@ import com.github.wellch4n.oops.application.port.external.ExternalUserFact;
 import com.github.wellch4n.oops.application.port.external.ExternalUserMessage;
 import com.github.wellch4n.oops.application.port.repository.ExternalAccountRepository;
 import com.github.wellch4n.oops.domain.identity.ExternalAccount;
-import com.github.wellch4n.oops.infrastructure.config.FeishuConfig;
+import com.github.wellch4n.oops.infrastructure.config.FeishuProperties;
 import com.github.wellch4n.oops.domain.shared.ExternalAccountProvider;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import com.lark.oapi.Client;
@@ -27,12 +27,12 @@ import org.springframework.stereotype.Component;
 public class FeishuMessageStrategy implements ExternalMessageStrategy {
 
     private final ExternalAccountRepository externalAccountRepository;
-    private final FeishuConfig feishuConfig;
+    private final FeishuProperties feishuConfig;
     private final Client client;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public FeishuMessageStrategy(ExternalAccountRepository externalAccountRepository,
-                                 FeishuConfig feishuConfig) {
+                                 FeishuProperties feishuConfig) {
         this.externalAccountRepository = externalAccountRepository;
         this.feishuConfig = feishuConfig;
         this.client = Client.newBuilder(feishuConfig.getAppId(), feishuConfig.getAppSecret()).build();

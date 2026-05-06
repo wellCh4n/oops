@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "oops.pipeline.image")
-public class PipelineImageConfig {
+public class PipelineImageProperties {
 
     private String clone;
     private String zip;

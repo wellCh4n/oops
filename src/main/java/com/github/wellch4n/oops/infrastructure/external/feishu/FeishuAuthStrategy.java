@@ -2,7 +2,7 @@ package com.github.wellch4n.oops.infrastructure.external.feishu;
 
 import com.github.wellch4n.oops.application.port.external.ExternalAuthStrategy;
 import com.github.wellch4n.oops.application.port.repository.ExternalAccountRepository;
-import com.github.wellch4n.oops.infrastructure.config.FeishuConfig;
+import com.github.wellch4n.oops.infrastructure.config.FeishuProperties;
 import com.github.wellch4n.oops.domain.identity.ExternalAccount;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ExternalAccountProvider;
@@ -28,12 +28,12 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
     private final UserService userService;
     private final JwtUtils jwtUtils;
     private final Client client;
-    private final FeishuConfig feishuConfig;
+    private final FeishuProperties feishuConfig;
 
     public FeishuAuthStrategy(ExternalAccountRepository externalAccountRepository,
                                UserService userService,
                                JwtUtils jwtUtils,
-                               FeishuConfig feishuConfig) {
+                               FeishuProperties feishuConfig) {
         this.externalAccountRepository = externalAccountRepository;
         this.userService = userService;
         this.jwtUtils = jwtUtils;

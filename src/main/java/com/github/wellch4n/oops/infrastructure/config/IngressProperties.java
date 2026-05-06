@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "oops.ingress")
-public class IngressConfig {
+public class IngressProperties {
 
     private String certResolver;
 }

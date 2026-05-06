@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.task;
 
-import com.github.wellch4n.oops.infrastructure.config.IngressConfig;
+import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
 import com.github.wellch4n.oops.infrastructure.config.OopsConstants;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
@@ -30,7 +30,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec;
     private final ApplicationRuntimeSpec.HealthCheck healthCheck;
     private final ApplicationServiceConfig applicationServiceConfig;
-    private final IngressConfig ingressConfig;
+    private final IngressProperties ingressConfig;
 
     private static final int SERVICE_PORT = 80;
 
@@ -39,7 +39,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                               ApplicationRuntimeSpec.EnvironmentConfig environmentConfig,
                               ApplicationRuntimeSpec.HealthCheck healthCheck,
                               ApplicationServiceConfig applicationServiceConfig,
-                              IngressConfig ingressConfig) {
+                              IngressProperties ingressConfig) {
         this.pipeline = pipeline;
         this.application = application;
         this.environment = environment;

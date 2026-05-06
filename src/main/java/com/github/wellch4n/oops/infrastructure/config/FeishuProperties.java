@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "oops.feishu")
-public class FeishuConfig {
+public class FeishuProperties {
     private boolean enabled = false;
     private String appId;
     private String appSecret;

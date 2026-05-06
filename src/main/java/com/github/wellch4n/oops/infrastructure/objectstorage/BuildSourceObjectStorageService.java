@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.objectstorage;
 
 import com.github.wellch4n.oops.application.port.BuildSourceStorage;
-import com.github.wellch4n.oops.infrastructure.config.BuildSourceObjectStorageConfig;
+import com.github.wellch4n.oops.infrastructure.config.ObjectStorageProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.BuildSourceUploadCommand;
 import com.github.wellch4n.oops.application.dto.BuildSourceUploadResult;
@@ -24,10 +24,10 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @Service
 public class BuildSourceObjectStorageService implements BuildSourceStorage {
 
-    private final BuildSourceObjectStorageConfig config;
+    private final ObjectStorageProperties config;
     private final ObjectProvider<S3Presigner> presignerProvider;
 
-    public BuildSourceObjectStorageService(BuildSourceObjectStorageConfig config,
+    public BuildSourceObjectStorageService(ObjectStorageProperties config,
                                            ObjectProvider<S3Presigner> presignerProvider) {
         this.config = config;
         this.presignerProvider = presignerProvider;

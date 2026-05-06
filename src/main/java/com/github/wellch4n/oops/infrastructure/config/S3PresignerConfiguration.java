@@ -13,10 +13,10 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 @Configuration
 @ConditionalOnProperty(prefix = "oops.object-storage", name = "enabled", havingValue = "true")
-public class BuildSourceObjectStorageConfiguration {
+public class S3PresignerConfiguration {
 
     @Bean(destroyMethod = "close")
-    public S3Presigner s3Presigner(BuildSourceObjectStorageConfig config) {
+    public S3Presigner s3Presigner(ObjectStorageProperties config) {
         S3Presigner.Builder builder = S3Presigner.builder()
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(config.getAccessKey(), config.getSecretKey())

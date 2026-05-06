@@ -1,8 +1,8 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
-import com.github.wellch4n.oops.infrastructure.config.FeishuConfig;
-import com.github.wellch4n.oops.infrastructure.config.IdeConfig;
-import com.github.wellch4n.oops.infrastructure.config.BuildSourceObjectStorageConfig;
+import com.github.wellch4n.oops.infrastructure.config.FeishuProperties;
+import com.github.wellch4n.oops.infrastructure.config.IdeProperties;
+import com.github.wellch4n.oops.infrastructure.config.ObjectStorageProperties;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -16,13 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeaturesController {
 
     @Autowired(required = false)
-    private FeishuConfig feishuConfig;
+    private FeishuProperties feishuConfig;
 
     @Autowired(required = false)
-    private IdeConfig ideConfig;
+    private IdeProperties ideConfig;
 
     @Autowired(required = false)
-    private BuildSourceObjectStorageConfig objectStorageConfig;
+    private ObjectStorageProperties objectStorageConfig;
 
     @GetMapping
     public Result<FeaturesResponse> getFeatures() {

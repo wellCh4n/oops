@@ -1,7 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
-import com.github.wellch4n.oops.infrastructure.config.IngressConfig;
+import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class KubernetesArtifactDeploymentExecutor implements ArtifactDeploymentExecutor {
 
-    private final IngressConfig ingressConfig;
+    private final IngressProperties ingressConfig;
 
-    public KubernetesArtifactDeploymentExecutor(IngressConfig ingressConfig) {
+    public KubernetesArtifactDeploymentExecutor(IngressProperties ingressConfig) {
         this.ingressConfig = ingressConfig;
     }
 

@@ -20,7 +20,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 
 @Configuration
 @EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+public class WebSocketConfiguration implements WebSocketConfigurer {
 
     private final EnvironmentService environmentService;
     private final PipelineService pipelineService;
@@ -28,7 +28,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final PodLogStreamGateway podLogStreamGateway;
     private final PipelineLogStreamGateway pipelineLogStreamGateway;
 
-    public WebSocketConfig(
+    public WebSocketConfiguration(
             EnvironmentService environmentService,
             PipelineService pipelineService,
             TerminalSessionGateway terminalSessionGateway,

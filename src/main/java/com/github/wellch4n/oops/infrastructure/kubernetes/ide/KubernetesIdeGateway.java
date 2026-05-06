@@ -3,9 +3,9 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.ide;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.application.port.IdeGateway;
-import com.github.wellch4n.oops.infrastructure.config.IdeConfig;
-import com.github.wellch4n.oops.infrastructure.config.IngressConfig;
-import com.github.wellch4n.oops.infrastructure.config.PipelineImageConfig;
+import com.github.wellch4n.oops.infrastructure.config.IdeProperties;
+import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
+import com.github.wellch4n.oops.infrastructure.config.PipelineImageProperties;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.CloneContainer;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneParam;
@@ -43,16 +43,16 @@ import org.springframework.util.StreamUtils;
 
 @Slf4j
 @Component
-@ConditionalOnBean(IdeConfig.class)
+@ConditionalOnBean(IdeProperties.class)
 public class KubernetesIdeGateway implements IdeGateway {
 
-    private final PipelineImageConfig pipelineImageConfig;
-    private final IdeConfig ideConfig;
-    private final IngressConfig ingressConfig;
+    private final PipelineImageProperties pipelineImageConfig;
+    private final IdeProperties ideConfig;
+    private final IngressProperties ingressConfig;
 
-    public KubernetesIdeGateway(PipelineImageConfig pipelineImageConfig,
-                                IdeConfig ideConfig,
-                                IngressConfig ingressConfig) {
+    public KubernetesIdeGateway(PipelineImageProperties pipelineImageConfig,
+                                IdeProperties ideConfig,
+                                IngressProperties ingressConfig) {
         this.pipelineImageConfig = pipelineImageConfig;
         this.ideConfig = ideConfig;
         this.ingressConfig = ingressConfig;

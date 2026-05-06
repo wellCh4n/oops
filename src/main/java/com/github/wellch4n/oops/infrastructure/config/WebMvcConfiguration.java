@@ -10,11 +10,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 
 @Configuration
-public class WebMvcConfig implements WebMvcConfigurer {
+public class WebMvcConfiguration implements WebMvcConfigurer {
 
 //    private final KubernetesApiClientInterceptor kubernetesApiClientInterceptor;
 //
-//    public WebMvcConfig(KubernetesApiClientInterceptor kubernetesApiClientInterceptor) {
+//    public WebMvcConfiguration(KubernetesApiClientInterceptor kubernetesApiClientInterceptor) {
 //        this.kubernetesApiClientInterceptor = kubernetesApiClientInterceptor;
 //    }
 

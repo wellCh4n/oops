@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 @Configuration
 @ConfigurationProperties(prefix = "oops.object-storage")
-public class BuildSourceObjectStorageConfig {
+public class ObjectStorageProperties {
 
     private boolean enabled = false;
     private String endpoint;

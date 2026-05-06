@@ -1,6 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.task;
 
-import com.github.wellch4n.oops.infrastructure.config.PipelineImageConfig;
+import com.github.wellch4n.oops.infrastructure.config.PipelineImageProperties;
 import com.github.wellch4n.oops.infrastructure.config.SpringContext;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.*;
 import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
@@ -37,7 +37,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final Environment environment;
 
-    private final PipelineImageConfig pipelineImageConfig;
+    private final PipelineImageProperties pipelineImageConfig;
 
     private final String branch;
     private final String repositoryUrl;
@@ -59,7 +59,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         this.branch = pipeline.getBranch();
 
 
-        this.pipelineImageConfig = SpringContext.getBean(PipelineImageConfig.class);
+        this.pipelineImageConfig = SpringContext.getBean(PipelineImageProperties.class);
 
         String imageRepositoryUrl = environment.getImageRepository().getUrl();
         imageRepositoryUrl = imageRepositoryUrl.replaceAll("http://", "").replaceAll("https://", "");
