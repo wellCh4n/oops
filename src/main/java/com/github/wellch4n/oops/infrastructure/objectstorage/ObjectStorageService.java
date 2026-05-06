@@ -1,10 +1,10 @@
 package com.github.wellch4n.oops.infrastructure.objectstorage;
 
-import com.github.wellch4n.oops.application.port.BuildSourceStorage;
+import com.github.wellch4n.oops.application.port.ObjectStorage;
 import com.github.wellch4n.oops.infrastructure.config.ObjectStorageProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadCommand;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadResult;
+import com.github.wellch4n.oops.application.dto.ObjectStorageUploadCommand;
+import com.github.wellch4n.oops.application.dto.ObjectStorageUploadResult;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
@@ -22,19 +22,19 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Service
-public class BuildSourceObjectStorageService implements BuildSourceStorage {
+public class ObjectStorageService implements ObjectStorage {
 
     private final ObjectStorageProperties config;
     private final ObjectProvider<S3Presigner> presignerProvider;
 
-    public BuildSourceObjectStorageService(ObjectStorageProperties config,
+    public ObjectStorageService(ObjectStorageProperties config,
                                            ObjectProvider<S3Presigner> presignerProvider) {
         this.config = config;
         this.presignerProvider = presignerProvider;
     }
 
-    public BuildSourceUploadResult createUpload(String namespace, String applicationName,
-                                                  BuildSourceUploadCommand request) {
+    public ObjectStorageUploadResult createUpload(String namespace, String applicationName,
+                                                  ObjectStorageUploadCommand request) {
         ensureEnabled();
         validateUploadRequest(request);
 
@@ -54,7 +54,7 @@ public class BuildSourceObjectStorageService implements BuildSourceStorage {
                         .putObjectRequest(putObjectRequest)
                         .build()
         );
-        return new BuildSourceUploadResult(
+        return new ObjectStorageUploadResult(
                 objectKey,
                 toObjectUrl(presignedRequest.url().toString()),
                 presignedRequest.url().toString(),
@@ -93,7 +93,7 @@ public class BuildSourceObjectStorageService implements BuildSourceStorage {
         return createDownloadUrl(repository);
     }
 
-    private void validateUploadRequest(BuildSourceUploadCommand request) {
+    private void validateUploadRequest(ObjectStorageUploadCommand request) {
         if (request == null) {
             throw new BizException("Upload request is required");
         }

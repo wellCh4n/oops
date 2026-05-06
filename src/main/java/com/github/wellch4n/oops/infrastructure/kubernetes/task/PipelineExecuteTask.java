@@ -14,7 +14,7 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
-import com.github.wellch4n.oops.application.port.BuildSourceStorage;
+import com.github.wellch4n.oops.application.port.ObjectStorage;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
 import io.fabric8.kubernetes.api.model.Container;
@@ -126,7 +126,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                         ? applicationBuildConfig.getSourceType()
                         : ApplicationSourceType.GIT;
         if (publishType == ApplicationSourceType.ZIP) {
-            BuildSourceStorage buildSourceStorage = SpringContext.getBean(BuildSourceStorage.class);
+            ObjectStorage buildSourceStorage = SpringContext.getBean(ObjectStorage.class);
             if (StringUtils.isEmpty(pipelineImageConfig.getZip())) {
                 throw new IllegalStateException("ZIP source requires oops.pipeline.image.zip to be configured");
             }

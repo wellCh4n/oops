@@ -1,11 +1,11 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadCommand;
-import com.github.wellch4n.oops.application.dto.BuildSourceUploadResult;
+import com.github.wellch4n.oops.application.dto.ObjectStorageUploadCommand;
+import com.github.wellch4n.oops.application.dto.ObjectStorageUploadResult;
 import com.github.wellch4n.oops.application.dto.DeployCommand;
 import com.github.wellch4n.oops.interfaces.dto.Result;
-import com.github.wellch4n.oops.application.port.BuildSourceStorage;
+import com.github.wellch4n.oops.application.port.ObjectStorage;
 import com.github.wellch4n.oops.application.service.DeploymentService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -20,20 +20,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeploymentController {
 
     private final DeploymentService deploymentService;
-    private final BuildSourceStorage buildSourceStorage;
+    private final ObjectStorage objectStorage;
 
     public DeploymentController(DeploymentService deploymentService,
-                                BuildSourceStorage buildSourceStorage) {
+                                ObjectStorage objectStorage) {
         this.deploymentService = deploymentService;
-        this.buildSourceStorage = buildSourceStorage;
+        this.objectStorage = objectStorage;
     }
 
     @PostMapping("/source-upload")
     @PreAuthorize("isAuthenticated()")
-    public Result<BuildSourceUploadResult> createBuildSourceUpload(@PathVariable String namespace,
+    public Result<ObjectStorageUploadResult> createBuildSourceUpload(@PathVariable String namespace,
                                                                      @PathVariable String name,
-                                                                     @RequestBody BuildSourceUploadCommand request) {
-        return Result.success(buildSourceStorage.createUpload(namespace, name, request));
+                                                                     @RequestBody ObjectStorageUploadCommand request) {
+        return Result.success(objectStorage.createUpload(namespace, name, request));
     }
 
     @PostMapping
