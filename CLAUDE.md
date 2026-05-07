@@ -226,7 +226,9 @@ All entities extend `BaseDataObject` which auto-generates a 24-char NanoId via `
 Token claims: `sub` = username, `userId` (custom), `role` (`ADMIN` or `USER`). `JwtAuthFilter` falls back to DB lookup by username if `userId` claim is absent (backward compat). `AuthUserPrincipal` is a record `(String userId, String username)` implementing `Principal`; Spring method security uses `ROLE_ADMIN` / `ROLE_USER`.
 
 ### Kubernetes Client
-A new `KubernetesClient` is created per WebSocket connection / service call via `environment.getKubernetesApiServer().fabric8Client()`. There is no shared client pool. Clients are closed in `afterConnectionClosed`.
+The `domain` layer holds no Fabric8 dependency — `Environment.KubernetesApiServer` is just a config holder (`url`, `token`). All Fabric8 `KubernetesClient` instances are constructed in `infrastructure/kubernetes/KubernetesClients.from(apiServer)`, called only by gateway implementations and per-task helpers. There is no shared client pool — clients are created per gateway call or per WebSocket connection and closed via try-with-resources or in `afterConnectionClosed`.
+
+`application` and `interfaces` layers must NOT import `io.fabric8.*` or anything under `infrastructure.kubernetes.*`. Instead, they call K8s through `application/port/external` gateway interfaces (`ClusterNodeGateway`, `ApplicationRuntimeGateway`, `PipelineLogStreamGateway`, `TerminalSessionGateway`, etc.), each implemented by a `Kubernetes*Gateway` adapter in `infrastructure/kubernetes/`.
 
 ### Non-Bean Task Objects
 `PipelineExecuteTask` is instantiated manually (not as a Spring bean) and uses `SpringContext.getBean()` to pull repositories from the application context. Follow this pattern for other manually-instantiated task objects.
