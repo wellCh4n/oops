@@ -17,7 +17,7 @@ The backend follows a **DDD layered architecture** under `com.github.wellch4n.oo
 
 - **`interfaces/`**: REST controllers (`interfaces/rest/`) and WebSocket handlers (`interfaces/websocket/`). `GlobalExceptionHandler` lives here.
 - **`application/`**: Application services (use cases), DTOs, Spring events, and **ports** (`application/port/repository`, `application/port/external`) — interfaces that infrastructure implements.
-- **`domain/`**: Pure domain model split by aggregate (`application`, `delivery`, `environment`, `identity`, `namespace`, `routing`) plus shared value types (`domain/shared`) and repository interfaces (`domain/repository`).
+- **`domain/`**: Pure domain model split by aggregate (`application`, `delivery`, `environment`, `identity`, `namespace`, `routing`) plus shared value types (`domain/shared`). Repository interfaces are defined as application ports under `application/port/repository`, not in `domain/`.
 - **`infrastructure/`**: Adapters and integrations
   - `infrastructure/persistence/jpa/` — JPA entities, repositories, attribute converters, mappers
   - `infrastructure/kubernetes/` — Fabric8 client glue, `task/` (`ArtifactDeployTask`, `PipelineExecuteTask`), `task/processor/` (deploy processor chain), `container/`, `pod/`, `crds/`, `stream/`, `volume/`, `ide/`
