@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useParams, useSearchParams } from "next/navigation"
 import { ContentPage } from "@/components/content-page"
@@ -14,6 +14,14 @@ const TerminalView = dynamic(() => import("@/components/terminal-view"), {
   loading: () => <div className="p-4 text-white">Loading terminal...</div>
 })
 
+const PodFileTree = dynamic(() => import("@/components/pod-file-tree"), {
+  ssr: false,
+})
+
+const FILE_TREE_MIN_WIDTH = 180
+const FILE_TREE_MAX_WIDTH = 480
+const FILE_TREE_DEFAULT_WIDTH = 260
+
 export default function TerminalPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -24,7 +32,41 @@ export default function TerminalPage() {
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting")
+  const [fileTreeWidth, setFileTreeWidth] = useState<number>(FILE_TREE_DEFAULT_WIDTH)
+  const draggingRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
+
+  const handleSplitterPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    draggingRef.current = true
+    const target = e.currentTarget
+    target.setPointerCapture(e.pointerId)
+  }, [])
+
+  const handleSplitterPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || !containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const next = Math.min(
+      FILE_TREE_MAX_WIDTH,
+      Math.max(FILE_TREE_MIN_WIDTH, e.clientX - rect.left),
+    )
+    setFileTreeWidth(next)
+  }, [])
+
+  const handleSplitterPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    draggingRef.current = false
+    const target = e.currentTarget
+    if (target.hasPointerCapture(e.pointerId)) {
+      target.releasePointerCapture(e.pointerId)
+    }
+    window.dispatchEvent(new Event("resize"))
+  }, [])
+
+  useEffect(() => {
+    window.dispatchEvent(new Event("resize"))
+  }, [fileTreeWidth])
 
   if (!env) {
     return <div className="p-4">Missing env parameter</div>
@@ -68,13 +110,40 @@ export default function TerminalPage() {
             </Button>
           </div>
         )}
-        <TerminalView
-          namespace={namespace}
-          name={name}
-          pod={pod}
-          env={env}
-          onConnectionStatusChange={setConnectionStatus}
-        />
+        <div
+          ref={containerRef}
+          className="flex min-h-0 flex-1 flex-row overflow-hidden"
+        >
+          <div
+            className="shrink-0 border-r border-sidebar-border"
+            style={{ width: fileTreeWidth }}
+          >
+            <PodFileTree
+              namespace={namespace}
+              name={name}
+              pod={pod}
+              env={env}
+            />
+          </div>
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            onPointerDown={handleSplitterPointerDown}
+            onPointerMove={handleSplitterPointerMove}
+            onPointerUp={handleSplitterPointerUp}
+            onPointerCancel={handleSplitterPointerUp}
+            className="w-1 shrink-0 cursor-col-resize bg-sidebar-border hover:bg-primary/40"
+          />
+          <div className="min-w-0 flex-1">
+            <TerminalView
+              namespace={namespace}
+              name={name}
+              pod={pod}
+              env={env}
+              onConnectionStatusChange={setConnectionStatus}
+            />
+          </div>
+        </div>
       </div>
     </ContentPage>
   )

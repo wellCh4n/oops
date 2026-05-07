@@ -33,6 +33,11 @@ const common = {
   "common.delete": "刪除",
   "common.name": "名稱",
   "common.allNamespaces": "全部",
+  "terminal.files.title": "檔案",
+  "terminal.files.copyPath": "複製路徑",
+  "terminal.files.copyName": "複製名稱",
+  "terminal.files.copied": "已複製",
+  "terminal.files.download": "下載",
 }
 
 export default common

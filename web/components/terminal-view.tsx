@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
 import { WebLinksAddon } from "@xterm/addon-web-links"
+import { useTheme } from "next-themes"
 import "@xterm/xterm/css/xterm.css"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
@@ -16,10 +17,37 @@ interface TerminalViewProps {
     onConnectionStatusChange?: (status: "connecting" | "connected" | "disconnected") => void
 }
 
+const TERMINAL_THEMES = {
+    dark: {
+        background: "#000000",
+        foreground: "#e5e5e5",
+        cursor: "#e5e5e5",
+        cursorAccent: "#000000",
+        selectionBackground: "#3a3d41",
+    },
+    light: {
+        background: "#ffffff",
+        foreground: "#1f1f1f",
+        cursor: "#1f1f1f",
+        cursorAccent: "#ffffff",
+        selectionBackground: "#cfe5ff",
+    },
+} as const
+
 export default function TerminalView({ namespace, name, pod, env, onConnectionStatusChange }: TerminalViewProps) {
     const terminalRef = useRef<HTMLDivElement>(null)
     const xtermRef = useRef<Terminal | null>(null)
     const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
+    const { resolvedTheme } = useTheme()
+    const xtermTheme = resolvedTheme === "light" ? TERMINAL_THEMES.light : TERMINAL_THEMES.dark
+    const xtermThemeRef = useRef(xtermTheme)
+
+    useEffect(() => {
+        xtermThemeRef.current = xtermTheme
+        if (xtermRef.current) {
+            xtermRef.current.options.theme = xtermTheme
+        }
+    }, [xtermTheme])
 
     useEffect(() => {
         onConnectionStatusChange?.(connectionStatus)
@@ -33,9 +61,7 @@ export default function TerminalView({ namespace, name, pod, env, onConnectionSt
             cursorBlink: true,
             fontSize: 14,
             fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-            theme: {
-                background: '#000000',
-            }
+            theme: xtermThemeRef.current,
         })
         xtermRef.current = term
 
@@ -158,7 +184,10 @@ export default function TerminalView({ namespace, name, pod, env, onConnectionSt
 
     return (
         <div className="flex h-full min-h-0 flex-col">
-            <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden">
+            <div
+                className="flex-1 min-h-0 p-4 overflow-hidden"
+                style={{ backgroundColor: xtermTheme.background }}
+            >
                 <div
                     className="h-full w-full cursor-text"
                     ref={terminalRef}

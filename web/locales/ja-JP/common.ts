@@ -33,6 +33,11 @@ const common = {
   "common.delete": "削除",
   "common.name": "名前",
   "common.allNamespaces": "すべて",
+  "terminal.files.title": "ファイル",
+  "terminal.files.copyPath": "パスをコピー",
+  "terminal.files.copyName": "名前をコピー",
+  "terminal.files.copied": "コピーしました",
+  "terminal.files.download": "ダウンロード",
 }
 
 export default common

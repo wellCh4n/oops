@@ -33,6 +33,11 @@ const common = {
   "common.delete": "Delete",
   "common.name": "Name",
   "common.allNamespaces": "ALL",
+  "terminal.files.title": "Files",
+  "terminal.files.copyPath": "Copy path",
+  "terminal.files.copyName": "Copy name",
+  "terminal.files.copied": "Copied",
+  "terminal.files.download": "Download",
 }
 
 export default common

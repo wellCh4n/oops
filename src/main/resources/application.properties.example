@@ -17,6 +17,7 @@ oops.pipeline.image.clone=alpine/git:v2.49.0
 oops.pipeline.image.zip=alpine/curl:8.17.0
 oops.pipeline.image.push=quay.io/buildah/stable:v1.43.1
 oops.pipeline.image.registry-mirrors=docker.io=docker.m.daocloud.io
+oops.pod-filesystem.max-download-size-bytes=52428800
 oops.ingress.cert-resolver=letsencrypt-prod
 
 oops.object-storage.enabled=false
