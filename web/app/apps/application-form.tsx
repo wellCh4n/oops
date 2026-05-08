@@ -2,7 +2,8 @@
 
 import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { RefObject, useMemo, useRef, useState } from "react"
+import { RefObject, useEffect, useMemo, useRef, useState } from "react"
+import { getUserId, isAdmin } from "@/lib/auth"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
 import { ApplicationBuildInfo } from "./components/application-build-info"
@@ -10,7 +11,6 @@ import { ApplicationRuntimeSpec } from "./components/application-runtime-spec"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationEditorTabSkeleton } from "./components/application-editor-skeleton"
 import {
@@ -60,23 +60,6 @@ const VALID_TABS = new Set<ApplicationTab>([
   "danger-zone",
 ])
 
-function DangerZoneSkeleton() {
-  return (
-    <div className="w-full space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-      <div className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
-        <div className="space-y-1">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-3 w-48" />
-        </div>
-        <Skeleton className="h-9 w-20" />
-      </div>
-    </div>
-  )
-}
 
 export function ApplicationForm({
   loading,
@@ -94,6 +77,11 @@ export function ApplicationForm({
     ? rawTab as ApplicationTab
     : DEFAULT_TAB
   const { t } = useLanguage()
+
+  const canSeeDangerZone = !loading && (
+    isAdmin() || (!!initialData?.owner && initialData.owner === getUserId())
+  )
+
   const [pendingTab, setPendingTab] = useState<ApplicationTab | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [savingBeforeLeave, setSavingBeforeLeave] = useState(false)
@@ -141,6 +129,13 @@ export function ApplicationForm({
     params.set("tab", value)
     router.push(`${pathname}?${params.toString()}`)
   }
+
+  useEffect(() => {
+    if (!loading && currentTab === "danger-zone" && !canSeeDangerZone) {
+      navigateToTab(DEFAULT_TAB)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, canSeeDangerZone])
 
   const resetPendingNavigation = () => {
     setPendingTab(null)
@@ -207,7 +202,9 @@ export function ApplicationForm({
             <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
             <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
             <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
-            <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
+            {canSeeDangerZone && (
+              <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -274,14 +271,14 @@ export function ApplicationForm({
           )}
         </TabsContent>
 
-        <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
-          {loading ? <DangerZoneSkeleton /> : (
+        {canSeeDangerZone && (
+          <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
             <ApplicationDangerZone
               namespace={formState.application?.namespace ?? ""}
               name={formState.application?.name ?? ""}
             />
-          )}
-        </TabsContent>
+          </TabsContent>
+        )}
       </Tabs>
 
       <AlertDialog

@@ -72,8 +72,10 @@ public class ApplicationController {
 
     @DeleteMapping("/{name}")
     @PreAuthorize("isAuthenticated()")
-    public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name) {
-        return Result.success(applicationService.deleteApplication(namespace, name));
+    public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name,
+                                             Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(applicationService.deleteApplication(namespace, name, principal.userId()));
     }
 
     @GetMapping("/{name}/build/config")

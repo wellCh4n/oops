@@ -13,6 +13,7 @@ import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
@@ -121,10 +122,17 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Boolean deleteApplication(String namespace, String name) {
+    public Boolean deleteApplication(String namespace, String name, String currentUserId) {
         Application exist = applicationRepository.findAggregate(namespace, name);
         if (exist == null) {
             throw new BizException("Application not found");
+        }
+
+        boolean isAdmin = userService.findById(currentUserId)
+                .filter(user -> user.getRole() == UserRole.ADMIN)
+                .isPresent();
+        if (!isAdmin && !currentUserId.equals(exist.getOwner())) {
+            throw new BizException("Permission denied");
         }
 
         List<ApplicationEnvironment> environments = exist.getEnvironments() != null
