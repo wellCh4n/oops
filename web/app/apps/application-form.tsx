@@ -11,6 +11,7 @@ import { ApplicationRuntimeSpec } from "./components/application-runtime-spec"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationEditorTabSkeleton } from "./components/application-editor-skeleton"
 import {
@@ -196,16 +197,27 @@ export function ApplicationForm({
     <div className="space-y-6 w-full">
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="app-info" className="px-6 cursor-pointer">{t("apps.tab.appInfo")}</TabsTrigger>
-            <TabsTrigger value="build-config" className="px-6 cursor-pointer">{t("apps.tab.buildConfig")}</TabsTrigger>
-            <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
-            <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
-            <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
-            {canSeeDangerZone && (
-              <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
-            )}
-          </TabsList>
+          {loading ? (
+            <TabsList>
+              <Skeleton className="h-7 w-16 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+            </TabsList>
+          ) : (
+            <TabsList>
+              <TabsTrigger value="app-info" className="px-6 cursor-pointer">{t("apps.tab.appInfo")}</TabsTrigger>
+              <TabsTrigger value="build-config" className="px-6 cursor-pointer">{t("apps.tab.buildConfig")}</TabsTrigger>
+              <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
+              <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
+              <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
+              {canSeeDangerZone && (
+                <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
+              )}
+            </TabsList>
+          )}
         </div>
 
         <TabsContent value="app-info">
