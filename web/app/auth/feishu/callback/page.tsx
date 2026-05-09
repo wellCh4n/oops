@@ -20,14 +20,13 @@ export default function FeishuCallbackPage() {
 
     feishuCallback(code)
       .then((token) => {
-        document.cookie = `auth_token=${token}; path=/; max-age=${7 * 24 * 3600}; SameSite=Lax`
-        return getCurrentUser().then((user) => ({ token, user }))
+        setAuth(token)
+        return getCurrentUser()
       })
-      .then(({ token, user }) => {
+      .then((user) => {
         if (!user) {
           throw new Error(t("login.error"))
         }
-        setAuth(token, user.id, user.username, user.role)
         window.location.href = "/"
       })
       .catch((err: Error) => {

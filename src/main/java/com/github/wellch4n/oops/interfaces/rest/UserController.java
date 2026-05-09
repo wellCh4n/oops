@@ -2,7 +2,9 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.application.dto.ChangePasswordCommand;
 import com.github.wellch4n.oops.application.dto.CreateUserCommand;
+import com.github.wellch4n.oops.application.dto.UpdateMyProfileCommand;
 import com.github.wellch4n.oops.application.dto.UpdateUserCommand;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
@@ -61,6 +63,24 @@ public class UserController {
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserCommand request) {
         userService.updateUser(id, request.role(), request.email(), request.password());
+        return Result.success(true);
+    }
+
+    @PutMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Boolean> updateMyProfile(@RequestBody UpdateMyProfileCommand request,
+                                           Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        userService.updateMyProfile(principal.userId(), request.email());
+        return Result.success(true);
+    }
+
+    @PutMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Boolean> changeMyPassword(@RequestBody ChangePasswordCommand request,
+                                            Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        userService.changeMyPassword(principal.userId(), request.oldPassword(), request.newPassword());
         return Result.success(true);
     }
 

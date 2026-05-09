@@ -10,6 +10,7 @@ import nav from "./nav"
 import nodes from "./nodes"
 import ns from "./ns"
 import pipelines from "./pipelines"
+import profile from "./profile"
 import sidebar from "./sidebar"
 import users from "./users"
 import validation from "./validation"
@@ -27,6 +28,7 @@ const translations: Record<string, string> = {
   ...nodes,
   ...ns,
   ...pipelines,
+  ...profile,
   ...sidebar,
   ...users,
   ...validation,

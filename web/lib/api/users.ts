@@ -61,3 +61,27 @@ export async function deleteUser(userId: string): Promise<void> {
     throw new Error(data.message || "Failed to delete user")
   }
 }
+
+export async function updateMyProfile(email: string | null): Promise<void> {
+  const res = await apiFetch("/api/users/me", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json() as ApiResponse<boolean>
+  if (!data.success) {
+    throw new Error(data.message || "Failed to update profile")
+  }
+}
+
+export async function changeMyPassword(oldPassword: string, newPassword: string): Promise<void> {
+  const res = await apiFetch("/api/users/me/password", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ oldPassword, newPassword }),
+  })
+  const data = await res.json() as ApiResponse<boolean>
+  if (!data.success) {
+    throw new Error(data.message || "Failed to change password")
+  }
+}

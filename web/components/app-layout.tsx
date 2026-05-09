@@ -5,11 +5,12 @@ import { useEffect, useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/sonner"
-import { getToken } from "@/lib/auth"
+import { getToken, isAdmin } from "@/lib/auth"
 import { LanguageProvider } from "@/contexts/language-context"
 import { Locale } from "@/lib/i18n"
 import { useFeaturesStore } from "@/store/features"
 import { CommandPalette } from "@/components/command-palette"
+import { isAdminOnlyPath } from "@/lib/nav-config"
 
 export function AppLayout({
   children,
@@ -26,6 +27,12 @@ export function AppLayout({
   const isPublicPage = pathname === "/auth/feishu/callback"
   const loadFeatures = useFeaturesStore((s) => s.load)
   const [cmdOpen, setCmdOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!isLoginPage && !isPublicPage && !getToken()) {
@@ -34,8 +41,20 @@ export function AppLayout({
   }, [isLoginPage, isPublicPage, router])
 
   useEffect(() => {
+    if (!isLoginPage && !isPublicPage && getToken() && isAdminOnlyPath(pathname) && !isAdmin()) {
+      router.replace("/apps")
+    }
+  }, [isLoginPage, isPublicPage, pathname, router])
+
+  useEffect(() => {
     loadFeatures()
   }, [loadFeatures])
+
+  const adminBlocked = mounted
+    && !isLoginPage
+    && !isPublicPage
+    && isAdminOnlyPath(pathname)
+    && !isAdmin()
 
   const layout = (
     <LanguageProvider initialLocale={initialLocale}>
@@ -54,7 +73,7 @@ export function AppLayout({
         <AppSidebar onOpenCommandPalette={() => setCmdOpen(true)} />
         <SidebarInset className="overflow-x-auto overflow-y-auto overscroll-y-none">
           <div className="flex min-h-full flex-col gap-4 p-4 min-w-[720px]">
-            {children}
+            {adminBlocked ? null : children}
           </div>
         </SidebarInset>
         <Toaster position="top-right" />

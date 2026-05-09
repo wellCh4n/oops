@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Keyboard } from "lucide-react"
+import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Keyboard, UserCog } from "lucide-react"
 
 import {
   Sidebar,
@@ -43,7 +43,7 @@ import { useFeaturesStore } from "@/store/features"
 import { useNamespaceStore } from "@/store/namespace"
 import { usePathname, useSearchParams } from "next/navigation"
 import React, { useState, useEffect } from "react"
-import { clearAuth } from "@/lib/auth"
+import { clearAuth, isAdmin } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
@@ -55,6 +55,7 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const router = useRouter()
   const { open, toggleSidebar } = useSidebar()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [isAdminUser, setIsAdminUser] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const { theme, setTheme } = useTheme()
   const { locale, setLocale, t } = useLanguage()
@@ -63,6 +64,8 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsAdminUser(isAdmin())
   }, [])
 
   function handleLogout() {
@@ -115,7 +118,9 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
       </SidebarHeader>
       <SidebarContent className="gap-0">
         {navConfig.map((group) => {
+          if (group.adminOnly && !isAdminUser) return null
           const filteredGroups = group.items.filter((item) => {
+            if (item.adminOnly && !isAdminUser) return false
             if (item.url === "/ides" && !ideEnabled) return false
             return true
           })
@@ -180,13 +185,18 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           </SidebarMenuItem>
           <SidebarMenuItem>
             {open ? (
-              <div className="flex items-center justify-between px-2 py-1">
-                <div className="flex flex-col min-w-0">
+              <div className="flex items-center justify-between gap-1 pr-1">
+                <button
+                  type="button"
+                  onClick={() => router.push("/settings/profile")}
+                  className="flex flex-col min-w-0 flex-1 text-left rounded-md px-2 py-1 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                  title={t("sidebar.profile")}
+                >
                   <span className="text-sm text-muted-foreground truncate">{currentUser?.username}</span>
                   {currentUser?.email && (
                     <span className="text-xs text-muted-foreground/70 truncate">{currentUser.email}</span>
                   )}
-                </div>
+                </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
@@ -217,6 +227,10 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
+                      <UserCog className="size-4" />
+                      {t("sidebar.profile")}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                       <LogOut className="size-4 text-destructive" />
                       {t("sidebar.logout")}
@@ -255,6 +269,10 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
+                    <UserCog className="size-4" />
+                    {t("sidebar.profile")}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                     <LogOut className="size-4 text-destructive" />
                     {t("sidebar.logout")}

@@ -67,7 +67,7 @@ export async function login(username: string, password: string): Promise<LoginRe
   if (!data.success) {
     throw new Error(data.message || "登录失败")
   }
-  setAuth(data.data.token, data.data.id, data.data.username, data.data.role)
+  setAuth(data.data.token)
   return data.data
 }
 

@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.application.service;
 import com.github.wellch4n.oops.application.port.repository.UserRepository;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,26 @@ public class UserService {
 
     public void deleteUser(String id) {
         userRepository.deleteById(id);
+    }
+
+    public void updateMyProfile(String userId, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        user.setEmail(email == null || email.isBlank() ? null : email.trim());
+        userRepository.save(user);
+    }
+
+    public void changeMyPassword(String userId, String oldPassword, String newPassword) {
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new BizException("New password is required");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        if (!checkPassword(user, oldPassword)) {
+            throw new BizException("Old password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     public void updateUser(String id, UserRole role, String email, String rawPassword) {

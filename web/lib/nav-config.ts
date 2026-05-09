@@ -5,17 +5,20 @@ export interface NavItem {
   url: string
   icon: LucideIcon
   match?: (pathname: string) => boolean
+  adminOnly?: boolean
 }
 
 export interface NavGroup {
   title: string
   url?: string
   items: NavItem[]
+  adminOnly?: boolean
 }
 
 export const navConfig: NavGroup[] = [
   {
     title: "nav.clusters",
+    adminOnly: true,
     items: [
       {
         title: "nav.nodes",
@@ -26,6 +29,7 @@ export const navConfig: NavGroup[] = [
   },
   {
     title: "nav.network",
+    adminOnly: true,
     items: [
       {
         title: "nav.domains",
@@ -60,6 +64,7 @@ export const navConfig: NavGroup[] = [
   {
     title: "nav.systemSettings",
     url: "/settings",
+    adminOnly: true,
     items: [
       {
         title: "nav.users",
@@ -79,3 +84,15 @@ export const navConfig: NavGroup[] = [
     ],
   },
 ]
+
+export const adminOnlyPrefixes: string[] = navConfig.flatMap((group) =>
+  group.items
+    .filter((item) => group.adminOnly || item.adminOnly)
+    .map((item) => item.url)
+)
+
+export function isAdminOnlyPath(pathname: string): boolean {
+  return adminOnlyPrefixes.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+  )
+}
