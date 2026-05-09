@@ -60,6 +60,13 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 - External account linking for notification routing
 - Namespace-based resource isolation
 - Application ownership — users are assigned as owners of their applications
+- Application collaborators — owners can grant other users access to their applications
+- Danger zone (cascade delete) restricted to application owner and admins
+
+### Sandbox Execution API
+- Run arbitrary commands in isolated Kubernetes Jobs via `/openapi/sandbox/executions`
+- Runtime image is configured per environment; supports streaming (SSE) and non-streaming modes
+- Configurable resource limits (CPU, memory), timeout, and TTL after completion
 
 ### Localization
 - Four languages: Chinese (Simplified/Traditional), English, Japanese
