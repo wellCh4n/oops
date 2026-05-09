@@ -49,5 +49,5 @@ oops.ide.image=codercom/code-server:4.112.0-39
 oops.ide.middleware=code-server-csp-fix,code-server-oss-redirect
 oops.ide.proxy-domain={{port}}-{{host}}
 
-oops.sandbox.image-template=oops-sandbox-{runtime}
-oops.sandbox.runtime-whitelist=python,node
+oops.sandbox.images.python=python:3.12-slim
+oops.sandbox.images.node=node:20-slim

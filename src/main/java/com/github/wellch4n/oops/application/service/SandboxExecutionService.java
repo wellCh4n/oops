@@ -58,8 +58,8 @@ public class SandboxExecutionService {
             throw new BizException("commands must contain at least one non-blank command");
         }
 
-        List<String> whitelist = sandboxProperties.getRuntimeWhitelist();
-        if (whitelist == null || whitelist.isEmpty() || !whitelist.contains(runtime)) {
+        String image = sandboxProperties.getImages().get(runtime);
+        if (image == null || image.isBlank()) {
             throw new BizException("Unsupported runtime: " + runtime);
         }
 
@@ -68,7 +68,6 @@ public class SandboxExecutionService {
             throw new BizException("Environment not found: " + environmentName);
         }
 
-        String image = sandboxProperties.getImageTemplate().replace("{runtime}", runtime);
         String script = String.join("\n", trimmedCommands);
         SandboxExecutionRequest.ResourceSpec cpu = request.cpu();
         SandboxExecutionRequest.ResourceSpec memory = request.memory();
