@@ -45,58 +45,88 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     }
 
     @Override
-    public SseEmitter execute(Environment environment, SandboxJobSpec spec) {
+    public SseEmitter stream(Environment environment, SandboxJobSpec spec) {
         SseEmitter emitter = new SseEmitter((spec.timeoutSeconds() + 30L) * 1000L);
         String sandboxId = NanoIdUtils.generate();
         String jobName = "oops-sandbox-" + sandboxId;
         String workNamespace = environment.getWorkNamespace();
 
-        Thread.startVirtualThread(() -> runSandbox(environment, spec, jobName, sandboxId, workNamespace, emitter));
+        Thread.startVirtualThread(() -> {
+            try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
+                String podName = launchJobAndWaitForPod(client, spec, jobName, sandboxId, workNamespace);
+                try (LogWatch logWatch = client.pods().inNamespace(workNamespace).withName(podName).watchLog()) {
+                    closeLogWatchOnTermination(client, workNamespace, podName, logWatch, spec.timeoutSeconds());
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        emitter.send(SseEmitter.event().name("log").data(line));
+                    }
+                } catch (Exception _) {
+                }
+                Pod terminated = client.pods().inNamespace(workNamespace).withName(podName)
+                        .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerTerminated, 1, TimeUnit.MINUTES);
+                emitter.send(SseEmitter.event().name("exit").data(readExitCode(terminated)));
+                emitter.complete();
+            } catch (Exception exception) {
+                log.warn("Sandbox stream {} ended abnormally: {}", jobName, exception.getMessage());
+                emitter.completeWithError(exception);
+            }
+        });
         return emitter;
     }
 
-    private void runSandbox(Environment environment, SandboxJobSpec spec,
-                            String jobName, String sandboxId, String workNamespace, SseEmitter emitter) {
+    @Override
+    public SandboxExecutionResult execute(Environment environment, SandboxJobSpec spec) {
+        String sandboxId = NanoIdUtils.generate();
+        String jobName = "oops-sandbox-" + sandboxId;
+        String workNamespace = environment.getWorkNamespace();
+
         try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            client.batch().v1().jobs().inNamespace(workNamespace)
-                    .resource(buildJob(spec, jobName, sandboxId, workNamespace)).create();
-
-            Pod pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
-                    .waitUntilCondition(Objects::nonNull, 2, TimeUnit.MINUTES);
-            String podName = pod.getMetadata().getName();
-            client.pods().inNamespace(workNamespace).withName(podName)
-                    .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerRunningOrTerminated, 2, TimeUnit.MINUTES);
-
+            String podName = launchJobAndWaitForPod(client, spec, jobName, sandboxId, workNamespace);
+            StringBuilder output = new StringBuilder();
             try (LogWatch logWatch = client.pods().inNamespace(workNamespace).withName(podName).watchLog()) {
-                // Force EOF when the container terminates: K8s sometimes leaves /log?follow=true
-                // open after the pod exits, leaving readLine() blocked forever.
-                Thread.startVirtualThread(() -> {
-                    try {
-                        client.pods().inNamespace(workNamespace).withName(podName)
-                                .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerTerminated, 10, TimeUnit.MINUTES);
-                    } catch (Exception _) {
-                    } finally {
-                        logWatch.close();
-                    }
-                });
-
+                closeLogWatchOnTermination(client, workNamespace, podName, logWatch, spec.timeoutSeconds());
                 BufferedReader reader = new BufferedReader(new InputStreamReader(logWatch.getOutput(), StandardCharsets.UTF_8));
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    emitter.send(SseEmitter.event().name("log").data(line));
+                    output.append(line).append("\n");
                 }
             } catch (Exception _) {
-                // log stream closed (either by the terminator above or by a client disconnect) — fall through
             }
-
             Pod terminated = client.pods().inNamespace(workNamespace).withName(podName)
                     .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerTerminated, 1, TimeUnit.MINUTES);
-            emitter.send(SseEmitter.event().name("exit").data(readExitCode(terminated)));
-            emitter.complete();
+            return new SandboxExecutionResult(readExitCode(terminated), output.toString());
         } catch (Exception exception) {
             log.warn("Sandbox execution {} ended abnormally: {}", jobName, exception.getMessage());
-            emitter.completeWithError(exception);
+            throw new RuntimeException("Sandbox execution failed: " + exception.getMessage(), exception);
         }
+    }
+
+    private String launchJobAndWaitForPod(KubernetesClient client, SandboxJobSpec spec,
+                                          String jobName, String sandboxId, String workNamespace) {
+        client.batch().v1().jobs().inNamespace(workNamespace)
+                .resource(buildJob(spec, jobName, sandboxId, workNamespace)).create();
+        Pod pod = client.pods().inNamespace(workNamespace).withLabel("job-name", jobName)
+                .waitUntilCondition(Objects::nonNull, 2, TimeUnit.MINUTES);
+        String podName = pod.getMetadata().getName();
+        client.pods().inNamespace(workNamespace).withName(podName)
+                .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerRunningOrTerminated, 2, TimeUnit.MINUTES);
+        return podName;
+    }
+
+    private void closeLogWatchOnTermination(KubernetesClient client, String workNamespace,
+                                            String podName, LogWatch logWatch, int timeoutSeconds) {
+        // Force EOF when the container terminates: K8s sometimes leaves /log?follow=true
+        // open after the pod exits, leaving readLine() blocked forever.
+        Thread.startVirtualThread(() -> {
+            try {
+                client.pods().inNamespace(workNamespace).withName(podName)
+                        .waitUntilCondition(KubernetesSandboxExecutionGateway::isContainerTerminated, timeoutSeconds, TimeUnit.SECONDS);
+            } catch (Exception _) {
+            } finally {
+                logWatch.close();
+            }
+        });
     }
 
     private Job buildJob(SandboxJobSpec spec, String jobName, String sandboxId, String workNamespace) {

@@ -9,7 +9,8 @@ public record SandboxExecutionRequest(
         Integer timeoutSeconds,
         Integer ttlSecondsAfterFinished,
         ResourceSpec cpu,
-        ResourceSpec memory
+        ResourceSpec memory,
+        Boolean stream
 ) {
     public record ResourceSpec(String request, String limit) {
     }

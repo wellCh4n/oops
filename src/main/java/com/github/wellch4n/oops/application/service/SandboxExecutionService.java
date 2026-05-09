@@ -2,6 +2,8 @@ package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.dto.SandboxExecutionRequest;
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway;
+import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxExecutionResult;
+import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxJobSpec;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.config.SandboxProperties;
@@ -33,7 +35,17 @@ public class SandboxExecutionService {
         this.sandboxProperties = sandboxProperties;
     }
 
-    public SseEmitter execute(SandboxExecutionRequest request, String callerUserId) {
+    public SseEmitter stream(SandboxExecutionRequest request, String callerUserId) {
+        PreparedExecution prepared = prepare(request, callerUserId);
+        return sandboxExecutionGateway.stream(prepared.environment(), prepared.spec());
+    }
+
+    public SandboxExecutionResult execute(SandboxExecutionRequest request, String callerUserId) {
+        PreparedExecution prepared = prepare(request, callerUserId);
+        return sandboxExecutionGateway.execute(prepared.environment(), prepared.spec());
+    }
+
+    private PreparedExecution prepare(SandboxExecutionRequest request, String callerUserId) {
         if (request == null) {
             throw new BizException("Request body is required");
         }
@@ -71,7 +83,7 @@ public class SandboxExecutionService {
         String script = String.join("\n", trimmedCommands);
         SandboxExecutionRequest.ResourceSpec cpu = request.cpu();
         SandboxExecutionRequest.ResourceSpec memory = request.memory();
-        SandboxExecutionGateway.SandboxJobSpec spec = new SandboxExecutionGateway.SandboxJobSpec(
+        SandboxJobSpec spec = new SandboxJobSpec(
                 image,
                 script,
                 positiveOrDefault(request.timeoutSeconds(), DEFAULT_TIMEOUT_SECONDS, "timeoutSeconds"),
@@ -82,8 +94,10 @@ public class SandboxExecutionService {
                 firstNonBlank(memory != null ? memory.limit() : null, DEFAULT_MEMORY_LIMIT),
                 callerUserId
         );
+        return new PreparedExecution(environment, spec);
+    }
 
-        return sandboxExecutionGateway.execute(environment, spec);
+    private record PreparedExecution(Environment environment, SandboxJobSpec spec) {
     }
 
     private static String trimToNull(String value) {

@@ -5,7 +5,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 public interface SandboxExecutionGateway {
 
-    SseEmitter execute(Environment environment, SandboxJobSpec spec);
+    SseEmitter stream(Environment environment, SandboxJobSpec spec);
+
+    SandboxExecutionResult execute(Environment environment, SandboxJobSpec spec);
+
+    record SandboxExecutionResult(int exitCode, String output) {
+    }
 
     record SandboxJobSpec(
             String image,
