@@ -18,6 +18,16 @@ const profile = {
   "profile.emailInvalid": "Please enter a valid email address",
   "profile.updateSuccess": "Profile updated",
   "profile.updateError": "Update failed",
+  "profile.accessToken": "Access Token",
+  "profile.accessToken.empty": "Not generated",
+  "profile.accessToken.reset": "Reset Token",
+  "profile.accessToken.generate": "Generate Token",
+  "profile.accessToken.confirmReset": "The previous token will be invalidated immediately. Continue?",
+  "profile.accessToken.resetSuccess": "Token updated",
+  "profile.accessToken.resetError": "Reset failed",
+  "profile.accessToken.copy": "Copy",
+  "profile.accessToken.copied": "Copied to clipboard",
+  "profile.accessToken.hint": "Use as Authorization: Bearer <token> for OpenAPI calls",
   "sidebar.profile": "Profile",
 }
 

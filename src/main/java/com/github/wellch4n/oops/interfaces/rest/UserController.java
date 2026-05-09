@@ -84,6 +84,13 @@ public class UserController {
         return Result.success(true);
     }
 
+    @PostMapping("/me/access-token/reset")
+    @PreAuthorize("isAuthenticated()")
+    public Result<String> resetMyAccessToken(Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(userService.resetMyAccessToken(principal.userId()));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> deleteUser(@PathVariable String id) {

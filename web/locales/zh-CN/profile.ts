@@ -18,6 +18,16 @@ const profile = {
   "profile.emailInvalid": "请输入有效的邮箱地址",
   "profile.updateSuccess": "个人信息已更新",
   "profile.updateError": "更新失败",
+  "profile.accessToken": "访问令牌",
+  "profile.accessToken.empty": "尚未生成",
+  "profile.accessToken.reset": "重置令牌",
+  "profile.accessToken.generate": "生成令牌",
+  "profile.accessToken.confirmReset": "重置后旧令牌将立即失效，确认重置？",
+  "profile.accessToken.resetSuccess": "令牌已更新",
+  "profile.accessToken.resetError": "重置失败",
+  "profile.accessToken.copy": "复制",
+  "profile.accessToken.copied": "已复制到剪贴板",
+  "profile.accessToken.hint": "用于以 Authorization: Bearer <token> 调用 OpenAPI",
   "sidebar.profile": "个人设置",
 }
 

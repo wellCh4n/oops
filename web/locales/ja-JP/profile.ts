@@ -18,6 +18,16 @@ const profile = {
   "profile.emailInvalid": "有効なメールアドレスを入力してください",
   "profile.updateSuccess": "プロフィールを更新しました",
   "profile.updateError": "更新に失敗しました",
+  "profile.accessToken": "アクセストークン",
+  "profile.accessToken.empty": "未生成",
+  "profile.accessToken.reset": "トークンをリセット",
+  "profile.accessToken.generate": "トークンを生成",
+  "profile.accessToken.confirmReset": "リセットすると以前のトークンは即座に無効になります。続行しますか？",
+  "profile.accessToken.resetSuccess": "トークンを更新しました",
+  "profile.accessToken.resetError": "リセットに失敗しました",
+  "profile.accessToken.copy": "コピー",
+  "profile.accessToken.copied": "クリップボードにコピーしました",
+  "profile.accessToken.hint": "Authorization: Bearer <token> として OpenAPI 呼び出しに使用",
   "sidebar.profile": "プロフィール",
 }
 

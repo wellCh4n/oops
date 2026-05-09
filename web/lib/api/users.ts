@@ -85,3 +85,12 @@ export async function changeMyPassword(oldPassword: string, newPassword: string)
     throw new Error(data.message || "Failed to change password")
   }
 }
+
+export async function resetMyAccessToken(): Promise<string> {
+  const res = await apiFetch("/api/users/me/access-token/reset", { method: "POST" })
+  const data = await res.json() as ApiResponse<string>
+  if (!data.success || !data.data) {
+    throw new Error(data.message || "Failed to reset access token")
+  }
+  return data.data
+}

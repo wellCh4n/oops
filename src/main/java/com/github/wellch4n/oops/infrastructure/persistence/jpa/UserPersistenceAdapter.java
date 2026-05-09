@@ -30,6 +30,11 @@ public class UserPersistenceAdapter implements com.github.wellch4n.oops.applicat
     }
 
     @Override
+    public Optional<com.github.wellch4n.oops.domain.identity.User> findByAccessToken(String accessToken) {
+        return userRepository.findByAccessToken(accessToken).map(PersistenceMapper::toDomain);
+    }
+
+    @Override
     public List<com.github.wellch4n.oops.domain.identity.User> findAllById(Collection<String> ids) {
         return PersistenceMapper.convertList(userRepository.findAllById(ids), PersistenceMapper::toDomain);
     }

@@ -24,4 +24,7 @@ public class User extends BaseDataObject {
 
     @Enumerated(EnumType.STRING)
     private UserRole role;
+
+    @Column(name = "access_token", unique = true)
+    private String accessToken;
 }

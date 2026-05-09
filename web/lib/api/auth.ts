@@ -15,6 +15,7 @@ export interface CurrentUser {
   username: string
   email: string | null
   role: string
+  accessToken: string | null
 }
 
 export async function getEnabledProviders(): Promise<string[]> {

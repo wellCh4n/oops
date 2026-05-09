@@ -4,14 +4,24 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Eye, EyeOff, Info, KeyRound, Loader2 } from "lucide-react"
+import { Copy, Eye, EyeOff, Info, KeyRound, Loader2, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { ContentPage } from "@/components/content-page"
 import { useLanguage } from "@/contexts/language-context"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
-import { changeMyPassword, updateMyProfile } from "@/lib/api/users"
+import { changeMyPassword, resetMyAccessToken, updateMyProfile } from "@/lib/api/users"
 import { toast } from "sonner"
 
 type ProfileFormValues = {
@@ -33,6 +43,9 @@ export default function ProfilePage() {
   const [showOld, setShowOld] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [showToken, setShowToken] = useState(false)
+  const [resetTokenOpen, setResetTokenOpen] = useState(false)
+  const [resettingToken, setResettingToken] = useState(false)
 
   const profileSchema = z.object({
     email: z
@@ -109,6 +122,31 @@ export default function ProfilePage() {
     }
   }
 
+  async function onResetAccessToken() {
+    setResettingToken(true)
+    try {
+      const token = await resetMyAccessToken()
+      setUser((prev) => (prev ? { ...prev, accessToken: token } : prev))
+      setShowToken(true)
+      toast.success(t("profile.accessToken.resetSuccess"))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("profile.accessToken.resetError"))
+    } finally {
+      setResettingToken(false)
+      setResetTokenOpen(false)
+    }
+  }
+
+  async function onCopyAccessToken() {
+    if (!user?.accessToken) return
+    try {
+      await navigator.clipboard.writeText(user.accessToken)
+      toast.success(t("profile.accessToken.copied"))
+    } catch {
+      toast.error(t("profile.accessToken.resetError"))
+    }
+  }
+
   if (loading) {
     return (
       <ContentPage title={t("profile.title")}>
@@ -121,7 +159,7 @@ export default function ProfilePage() {
 
   return (
     <ContentPage title={t("profile.title")}>
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6">
         <Form {...profileForm}>
           <form onSubmit={profileForm.handleSubmit(onSaveProfile)} className="flex w-full flex-col gap-4">
             <div className="border rounded-lg overflow-hidden">
@@ -265,7 +303,83 @@ export default function ProfilePage() {
             </div>
           </form>
         </Form>
+
+        <div className="border rounded-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">{t("profile.accessToken")}</span>
+          </div>
+          <div className="flex flex-col gap-3 p-4">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Input
+                  readOnly
+                  value={user?.accessToken ?? ""}
+                  type={showToken ? "text" : "password"}
+                  placeholder={t("profile.accessToken.empty")}
+                  className="pr-20 font-mono"
+                  autoComplete="off"
+                />
+                <div className="absolute right-0 top-0 flex">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:bg-transparent"
+                    onClick={() => setShowToken((prev) => !prev)}
+                    disabled={!user?.accessToken}
+                    tabIndex={-1}
+                  >
+                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:bg-transparent"
+                    onClick={onCopyAccessToken}
+                    disabled={!user?.accessToken}
+                    tabIndex={-1}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (user?.accessToken) {
+                    setResetTokenOpen(true)
+                  } else {
+                    onResetAccessToken()
+                  }
+                }}
+                disabled={resettingToken}
+              >
+                {resettingToken && <Loader2 className="h-4 w-4 animate-spin" />}
+                {user?.accessToken ? t("profile.accessToken.reset") : t("profile.accessToken.generate")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("profile.accessToken.hint")}</p>
+          </div>
+        </div>
       </div>
+
+      <AlertDialog open={resetTokenOpen} onOpenChange={setResetTokenOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("profile.accessToken.reset")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("profile.accessToken.confirmReset")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={resettingToken}>{t("sidebar.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={onResetAccessToken} disabled={resettingToken}>
+              {t("profile.accessToken.reset")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ContentPage>
   )
 }
