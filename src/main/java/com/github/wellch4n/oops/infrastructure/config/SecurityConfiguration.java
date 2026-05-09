@@ -23,9 +23,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfiguration {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final OpenApiAuthFilter openApiAuthFilter;
 
-    public SecurityConfiguration(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfiguration(JwtAuthFilter jwtAuthFilter, OpenApiAuthFilter openApiAuthFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.openApiAuthFilter = openApiAuthFilter;
     }
 
     @Bean
@@ -46,9 +48,11 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/health").permitAll()
                         .requestMatchers("/api/features").permitAll()
                         .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/openapi/**").authenticated()
                         .anyRequest().permitAll()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(openApiAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -13,6 +13,8 @@ public interface UserRepository {
 
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByAccessToken(String accessToken);
+
     List<User> findAllById(Collection<String> ids);
 
     Optional<User> findByUsernameOrEmail(String identifier);
