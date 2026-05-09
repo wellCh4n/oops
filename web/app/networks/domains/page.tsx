@@ -5,22 +5,12 @@ import { Plus, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { isAdmin } from "@/lib/auth"
-import { Domain, deleteDomain, fetchDomains } from "@/lib/api/domains"
+import { Domain, fetchDomains } from "@/lib/api/domains"
 import { getColumns } from "./columns"
 import { DomainFormDialog } from "./domain-form-dialog"
 
@@ -33,7 +23,6 @@ export default function DomainsPage() {
   const [appliedSearch, setAppliedSearch] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Domain | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<Domain | null>(null)
   const columns = useMemo(() => getColumns(t), [t])
 
   useEffect(() => {
@@ -62,19 +51,6 @@ export default function DomainsPage() {
         (d.description ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
       )
     : domains
-
-  async function confirmDelete() {
-    if (!deleteTarget) return
-    try {
-      await deleteDomain(deleteTarget.id)
-      toast.success(t("domains.deleteSuccess"))
-      load()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error")
-    } finally {
-      setDeleteTarget(null)
-    }
-  }
 
   return (
     <ContentPage title={t("domains.title")}>
@@ -115,7 +91,6 @@ export default function DomainsPage() {
             loading={loading}
             meta={{
               onEdit: (d: Domain) => { setEditTarget(d); setFormOpen(true) },
-              onDelete: (d: Domain) => setDeleteTarget(d),
               isAdmin: admin,
             }}
             getRowId={(row) => row.id}
@@ -128,24 +103,8 @@ export default function DomainsPage() {
         onOpenChange={setFormOpen}
         target={editTarget}
         onSaved={load}
+        onDeleted={load}
       />
-
-      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("domains.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("domains.deleteDescPrefix")}<strong>{deleteTarget?.host}</strong>{t("domains.deleteDescSuffix")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={confirmDelete}>
-              {t("domains.confirmDelete")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </ContentPage>
   )
 }

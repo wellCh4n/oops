@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Upload } from "lucide-react"
+import { Upload, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,8 +16,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { Domain, DomainCertMode, DomainRequest, createDomain, updateDomain } from "@/lib/api/domains"
+import { Domain, DomainCertMode, DomainRequest, createDomain, deleteDomain, updateDomain } from "@/lib/api/domains"
 import { useLanguage } from "@/contexts/language-context"
 
 interface Props {
@@ -25,9 +35,10 @@ interface Props {
   onOpenChange: (open: boolean) => void
   target: Domain | null
   onSaved: () => void
+  onDeleted?: () => void
 }
 
-export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props) {
+export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDeleted }: Props) {
   const { t } = useLanguage()
   const isEdit = !!target
 
@@ -39,6 +50,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props)
   const [keyPem, setKeyPem] = useState("")
   const [replaceCert, setReplaceCert] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -96,7 +108,24 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props)
     }
   }
 
+  async function handleDelete() {
+    if (!target) return
+    setSubmitting(true)
+    try {
+      await deleteDomain(target.id)
+      toast.success(t("domains.deleteSuccess"))
+      onDeleted?.()
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error")
+    } finally {
+      setSubmitting(false)
+      setDeleteConfirmOpen(false)
+    }
+  }
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 pt-6 pb-4">
@@ -206,6 +235,18 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props)
           </div>
 
           <DialogFooter className="border-t px-6 py-4">
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={submitting}
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4" />
+                {t("common.delete")}
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               {t("common.cancel")}
             </Button>
@@ -216,6 +257,24 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved }: Props)
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("domains.deleteTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("domains.deleteDescPrefix")}<strong>{target?.host}</strong>{t("domains.deleteDescSuffix")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={handleDelete}>
+            {t("domains.confirmDelete")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }
 

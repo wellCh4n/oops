@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
@@ -9,7 +9,6 @@ import { Domain } from "@/lib/api/domains"
 
 interface TableMeta {
   onEdit: (domain: Domain) => void
-  onDelete: (domain: Domain) => void
   isAdmin: boolean
 }
 
@@ -75,10 +74,6 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
           <Button variant="outline" size="sm" onClick={() => meta?.onEdit(domain)}>
             <Pencil className="h-4 w-4" />
             {t("common.edit")}
-          </Button>
-          <Button variant="destructive" size="sm" onClick={() => meta?.onDelete(domain)}>
-            <Trash2 className="h-4 w-4" />
-            {t("common.delete")}
           </Button>
         </div>
       )
