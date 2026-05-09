@@ -319,6 +319,7 @@ export default function ProfilePage() {
                   placeholder={t("profile.accessToken.empty")}
                   className="pr-20 font-mono"
                   autoComplete="off"
+                  onBlur={() => setShowToken(false)}
                 />
                 <div className="absolute right-0 top-0 flex">
                   <Button
