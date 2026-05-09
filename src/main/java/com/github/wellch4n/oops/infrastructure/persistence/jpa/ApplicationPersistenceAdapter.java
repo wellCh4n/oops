@@ -15,19 +15,22 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     private final ApplicationRuntimeSpecRepository runtimeSpecRepository;
     private final ApplicationEnvironmentRepository environmentRepository;
     private final ApplicationServiceConfigRepository serviceConfigRepository;
+    private final ApplicationCollaboratorRepository collaboratorRepository;
 
     public ApplicationPersistenceAdapter(
             ApplicationRepository applicationRepository,
             ApplicationBuildConfigRepository buildConfigRepository,
             ApplicationRuntimeSpecRepository runtimeSpecRepository,
             ApplicationEnvironmentRepository environmentRepository,
-            ApplicationServiceConfigRepository serviceConfigRepository
+            ApplicationServiceConfigRepository serviceConfigRepository,
+            ApplicationCollaboratorRepository collaboratorRepository
     ) {
         this.applicationRepository = applicationRepository;
         this.buildConfigRepository = buildConfigRepository;
         this.runtimeSpecRepository = runtimeSpecRepository;
         this.environmentRepository = environmentRepository;
         this.serviceConfigRepository = serviceConfigRepository;
+        this.collaboratorRepository = collaboratorRepository;
     }
 
     @Override
@@ -97,6 +100,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         buildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         runtimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, name);
         serviceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        collaboratorRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationRepository.deleteByNamespaceAndName(namespace, name);
     }
 
@@ -132,6 +136,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         application.setRuntimeSpec(findRuntimeSpec(namespace, name).orElse(null));
         application.setServiceConfig(findServiceConfig(namespace, name).orElse(null));
         application.setEnvironments(findEnvironments(namespace, name));
+        application.setCollaborators(findCollaborators(namespace, name));
     }
 
     private void saveChildren(com.github.wellch4n.oops.domain.application.Application application) {
@@ -160,6 +165,15 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
             });
             environmentRepository.saveAll(PersistenceMapper.convertList(application.getEnvironments(), PersistenceMapper::toEntity));
         }
+        if (application.getCollaborators() != null) {
+            collaboratorRepository.deleteByNamespaceAndApplicationName(namespace, name);
+            application.getCollaborators().forEach(collaborator -> {
+                collaborator.setId(null);
+                collaborator.setNamespace(namespace);
+                collaborator.setApplicationName(name);
+            });
+            collaboratorRepository.saveAll(PersistenceMapper.convertList(application.getCollaborators(), PersistenceMapper::toEntity));
+        }
     }
 
     private com.github.wellch4n.oops.domain.application.Application findByNamespaceAndName(String namespace, String name) {
@@ -177,6 +191,12 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     private List<com.github.wellch4n.oops.domain.application.ApplicationEnvironment> findEnvironments(String namespace, String applicationName) {
         return PersistenceMapper.convertList(
                 environmentRepository.findByNamespaceAndApplicationName(namespace, applicationName),
+                PersistenceMapper::toDomain);
+    }
+
+    private List<com.github.wellch4n.oops.domain.application.ApplicationCollaborator> findCollaborators(String namespace, String applicationName) {
+        return PersistenceMapper.convertList(
+                collaboratorRepository.findByNamespaceAndApplicationName(namespace, applicationName),
                 PersistenceMapper::toDomain);
     }
 

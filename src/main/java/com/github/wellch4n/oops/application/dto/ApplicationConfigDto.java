@@ -21,7 +21,8 @@ public final class ApplicationConfigDto {
             String name,
             String description,
             String namespace,
-            String owner
+            String owner,
+            List<String> collaborators
     ) {
         public Application toDomain() {
             Application application = new Application();

@@ -69,6 +69,8 @@ export interface Application {
   namespace: string
   owner?: string
   ownerName?: string
+  collaborators?: string[]
+  collaboratorNames?: Record<string, string>
   sourceType?: ApplicationSourceType
   createdTime?: string
 }

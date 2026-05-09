@@ -44,6 +44,14 @@ final class PersistenceMapper {
         return convert(domain, ApplicationEnvironment.class);
     }
 
+    static com.github.wellch4n.oops.domain.application.ApplicationCollaborator toDomain(ApplicationCollaborator entity) {
+        return convert(entity, com.github.wellch4n.oops.domain.application.ApplicationCollaborator.class);
+    }
+
+    static ApplicationCollaborator toEntity(com.github.wellch4n.oops.domain.application.ApplicationCollaborator domain) {
+        return convert(domain, ApplicationCollaborator.class);
+    }
+
     static com.github.wellch4n.oops.domain.application.ApplicationServiceConfig toDomain(ApplicationServiceConfig entity) {
         return convert(entity, com.github.wellch4n.oops.domain.application.ApplicationServiceConfig.class);
     }

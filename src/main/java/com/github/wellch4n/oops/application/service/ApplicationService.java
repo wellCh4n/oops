@@ -96,6 +96,8 @@ public class ApplicationService {
         return limitedApplications.stream()
                 .map(application -> ApplicationDto.from(application,
                         StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        List.of(),
+                        Map.of(),
                         sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
                 .toList();
     }
@@ -117,6 +119,7 @@ public class ApplicationService {
     public Boolean updateApplication(String namespace, String name, ApplicationConfigDto.Profile request) {
         Application exist = requireAggregate(namespace, name);
         exist.changeProfile(request.description(), normalizeOwner(request.owner()));
+        exist.changeCollaborators(normalizeCollaborators(request.collaborators(), exist.getOwner()));
         applicationRepository.saveAggregate(exist);
         return true;
     }
@@ -167,6 +170,28 @@ public class ApplicationService {
         return owner;
     }
 
+    private List<String> normalizeCollaborators(List<String> collaborators, String owner) {
+        if (collaborators == null || collaborators.isEmpty()) {
+            return List.of();
+        }
+        List<String> distinct = collaborators.stream()
+                .filter(StringUtils::isNotBlank)
+                .filter(userId -> !userId.equals(owner))
+                .distinct()
+                .toList();
+        if (distinct.isEmpty()) {
+            return List.of();
+        }
+        Map<String, String> usernameMap = userService.getUsernameMapByIds(distinct);
+        List<String> missing = distinct.stream()
+                .filter(userId -> !usernameMap.containsKey(userId))
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new BizException("Collaborator user not found: " + String.join(", ", missing));
+        }
+        return distinct;
+    }
+
     private List<ApplicationDto> toApplicationResponses(String namespace, List<Application> applications) {
         Set<String> ownerIds = applications.stream()
                 .map(Application::getOwner)
@@ -177,6 +202,8 @@ public class ApplicationService {
         return applications.stream()
                 .map(application -> ApplicationDto.from(application,
                         StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        List.of(),
+                        Map.of(),
                         sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
                 .toList();
     }
@@ -191,7 +218,11 @@ public class ApplicationService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        return ApplicationDto.from(application, ownerName, application.sourceType());
+        List<String> collaboratorIds = application.collaboratorUserIds();
+        Map<String, String> collaboratorNames = collaboratorIds.isEmpty()
+                ? Map.of()
+                : userService.getUsernameMapByIds(collaboratorIds);
+        return ApplicationDto.from(application, ownerName, collaboratorIds, collaboratorNames, application.sourceType());
     }
 
     private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(String namespace, List<Application> applications) {

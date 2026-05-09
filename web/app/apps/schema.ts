@@ -10,6 +10,7 @@ export const getApplicationBasicSchema = (t?: (key: string) => string) => z.obje
   namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
   owner: z.string().optional(),
+  collaborators: z.array(z.string()).optional(),
 })
 
 export const applicationBasicSchema = getApplicationBasicSchema()

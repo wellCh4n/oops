@@ -28,12 +28,13 @@ import { updateApplication, getApplicationEnvironments, updateApplicationEnviron
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
-import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon, LayoutGrid } from "lucide-react"
+import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon, LayoutGrid, Users as UsersIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
+import { MultiSelectWithSearch } from "@/components/ui/multi-select-with-search"
 
 interface ApplicationBasicInfoProps {
   initialData?: Application
@@ -83,11 +84,13 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
       namespace: initialData.namespace,
       description: initialData.description,
       owner: initialData.owner ?? "",
+      collaborators: initialData.collaborators ?? [],
     } : {
       name: "",
       namespace: "",
       description: "",
       owner: "",
+      collaborators: [],
     },
     mode: "onChange",
   })
@@ -101,6 +104,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
     values: {
       ...values,
       owner: values.owner ?? "",
+      collaborators: [...(values.collaborators ?? [])].sort(),
     },
     selectedEnvNames: [...envNames].sort(),
   }), [form, selectedEnvNames])
@@ -246,6 +250,33 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+              control={form.control}
+              name="collaborators"
+              render={({ field }) => {
+                const ownerId = form.watch("owner")
+                const collaboratorOptions = users
+                  .filter((user) => user.id !== ownerId)
+                  .map((user) => ({ value: user.id, label: `${user.username} (${user.id})` }))
+                return (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><UsersIcon className="h-3.5 w-3.5" />{t("common.collaborators")}</FormLabel>
+                    <FormControl>
+                      <MultiSelectWithSearch
+                        values={field.value ?? []}
+                        onValuesChange={field.onChange}
+                        options={collaboratorOptions}
+                        placeholder={t("common.selectCollaborators")}
+                        searchPlaceholder={t("common.searchCollaborators")}
+                        emptyText={t("common.noUsersFound")}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
             />
 
             <FormField

@@ -18,6 +18,7 @@ public class Application extends BaseAggregateRoot {
     private ApplicationRuntimeSpec runtimeSpec;
     private ApplicationServiceConfig serviceConfig;
     private List<ApplicationEnvironment> environments;
+    private List<ApplicationCollaborator> collaborators;
 
     public void placeInNamespace(String namespace) {
         this.namespace = namespace;
@@ -86,6 +87,31 @@ public class Application extends BaseAggregateRoot {
             config.setNamespace(namespace);
             config.setApplicationName(name);
         });
+    }
+
+    public void changeCollaborators(List<String> userIds) {
+        List<String> normalized = userIds == null ? Collections.emptyList() : userIds.stream()
+                .filter(userId -> userId != null && !userId.isBlank())
+                .filter(userId -> !userId.equals(owner))
+                .distinct()
+                .toList();
+        this.collaborators = normalized.stream().map(userId -> {
+            ApplicationCollaborator collaborator = new ApplicationCollaborator();
+            collaborator.setNamespace(namespace);
+            collaborator.setApplicationName(name);
+            collaborator.setUserId(userId);
+            return collaborator;
+        }).toList();
+    }
+
+    public List<String> collaboratorUserIds() {
+        if (collaborators == null) {
+            return Collections.emptyList();
+        }
+        return collaborators.stream()
+                .map(ApplicationCollaborator::getUserId)
+                .filter(userId -> userId != null && !userId.isBlank())
+                .toList();
     }
 
     public void updateServiceConfig(ApplicationServiceConfig request) {
