@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.port.repository.UserRepository;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
+
+    private static final String ACCESS_TOKEN_PREFIX = "sk-oops-";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -105,5 +108,14 @@ public class UserService {
 
     public boolean hasAdmin() {
         return userRepository.existsByRole(UserRole.ADMIN);
+    }
+
+    public String resetMyAccessToken(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        String token = ACCESS_TOKEN_PREFIX + NanoIdUtils.generate();
+        user.setAccessToken(token);
+        userRepository.save(user);
+        return token;
     }
 }

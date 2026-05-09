@@ -18,6 +18,16 @@ const profile = {
   "profile.emailInvalid": "請輸入有效的電子郵件",
   "profile.updateSuccess": "個人資訊已更新",
   "profile.updateError": "更新失敗",
+  "profile.accessToken": "存取權杖",
+  "profile.accessToken.empty": "尚未產生",
+  "profile.accessToken.reset": "重設權杖",
+  "profile.accessToken.generate": "產生權杖",
+  "profile.accessToken.confirmReset": "重設後舊權杖將立即失效，確認重設？",
+  "profile.accessToken.resetSuccess": "權杖已更新",
+  "profile.accessToken.resetError": "重設失敗",
+  "profile.accessToken.copy": "複製",
+  "profile.accessToken.copied": "已複製到剪貼簿",
+  "profile.accessToken.hint": "用於以 Authorization: Bearer <token> 呼叫 OpenAPI",
   "sidebar.profile": "個人設定",
 }
 
