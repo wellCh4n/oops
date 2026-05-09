@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { setAuth } from "@/lib/auth"
 import { getCurrentUser, feishuCallback } from "@/lib/api/auth"
 import { useLanguage } from "@/contexts/language-context"
@@ -9,6 +10,7 @@ import { useLanguage } from "@/contexts/language-context"
 export default function FeishuCallbackPage() {
   const searchParams = useSearchParams()
   const { t } = useLanguage()
+  const exchangedRef = useRef(false)
 
   useEffect(() => {
     const code = searchParams.get("code")
@@ -17,6 +19,11 @@ export default function FeishuCallbackPage() {
       window.location.href = "/login"
       return
     }
+
+    if (exchangedRef.current) {
+      return
+    }
+    exchangedRef.current = true
 
     feishuCallback(code)
       .then((token) => {
@@ -36,8 +43,9 @@ export default function FeishuCallbackPage() {
   }, [searchParams, t])
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-      <p>{t("login.callback.processing")}</p>
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">{t("login.callback.processing")}</p>
     </div>
   )
 }

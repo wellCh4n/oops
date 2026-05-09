@@ -6,10 +6,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ExternalAccountService {
+
+    private static final Logger log = LoggerFactory.getLogger(ExternalAccountService.class);
 
     private final Map<String, ExternalAuthStrategy> strategies;
 
@@ -36,7 +40,12 @@ public class ExternalAccountService {
         try {
             return getEnabledStrategy(provider).authenticate(code);
         } catch (IOException e) {
-            throw new BizException("Authentication failed", e);
+            log.error("External authentication failed for provider {}", provider, e);
+            String detail = e.getMessage();
+            String message = (detail == null || detail.isBlank())
+                    ? "Authentication failed"
+                    : "Authentication failed: " + detail;
+            throw new BizException(message, e);
         }
     }
 
