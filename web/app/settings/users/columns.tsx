@@ -1,7 +1,7 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { KeyRound, Pencil, Trash2 } from "lucide-react"
+import { KeyRound, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { User } from "@/lib/api/users"
@@ -9,7 +9,6 @@ import { User } from "@/lib/api/users"
 interface TableMeta {
   onEdit: (user: User) => void
   onChangePassword: (user: User) => void
-  onDelete: (user: User) => void
   isAdmin: boolean
 }
 
@@ -78,16 +77,6 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
             <KeyRound className="h-4 w-4" />
             {t("users.col.changePassword")}
           </Button>
-          {user.role !== "ADMIN" && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => meta?.onDelete(user)}
-            >
-              <Trash2 className="h-4 w-4" />
-              {t("users.col.delete")}
-            </Button>
-          )}
         </div>
       )
     },

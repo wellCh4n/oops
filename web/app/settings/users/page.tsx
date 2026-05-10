@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Plus, Eye, EyeOff, Search } from "lucide-react"
+import { Plus, Eye, EyeOff, Search, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -143,6 +143,7 @@ export default function UsersPage() {
     try {
       await deleteUser(deleteTarget.id)
       toast.success(t("users.deleteSuccess"))
+      setEditTarget(null)
       loadUsers()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("users.deleteError"))
@@ -270,7 +271,7 @@ export default function UsersPage() {
               (u.email ?? "").toLowerCase().includes(appliedSearch.toLowerCase())
             ) : users}
             loading={tableLoading}
-            meta={{ onEdit: handleEdit, onChangePassword: handleChangePassword, onDelete: handleDelete, isAdmin: admin }}
+            meta={{ onEdit: handleEdit, onChangePassword: handleChangePassword, isAdmin: admin }}
           />
         }
       />
@@ -309,6 +310,17 @@ export default function UsersPage() {
               </Select>
             </div>
             <div className="flex justify-end gap-2">
+              {editTarget?.role !== "ADMIN" && (
+                <Button
+                  variant="destructive"
+                  className="mr-auto"
+                  onClick={() => setDeleteTarget(editTarget)}
+                  disabled={editLoading}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {t("users.col.delete")}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setEditTarget(null)}>{t("common.cancel")}</Button>
               <Button onClick={confirmEdit} disabled={editLoading}>
                 {editLoading ? t("common.saving") : t("common.save")}
