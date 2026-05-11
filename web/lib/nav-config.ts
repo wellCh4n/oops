@@ -1,4 +1,4 @@
-import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, Globe, type LucideIcon } from "lucide-react"
+import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, Globe, Box, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   title: string
@@ -48,16 +48,22 @@ export const navConfig: NavGroup[] = [
         match: (pathname) => pathname === "/apps" || (pathname.startsWith("/apps/") && !pathname.includes("/pipelines/")),
       },
       {
+        title: "nav.pipelines",
+        url: "/pipelines",
+        icon: GitBranch,
+        match: (pathname) => pathname === "/pipelines" || pathname.startsWith("/pipelines/") || pathname.includes("/pipelines/"),
+      },
+      {
         title: "nav.ide",
         url: "/ides",
         icon: SquareCode,
         match: (pathname) => pathname === "/ides" || pathname.startsWith("/ides/"),
       },
       {
-        title: "nav.pipelines",
-        url: "/pipelines",
-        icon: GitBranch,
-        match: (pathname) => pathname === "/pipelines" || pathname.startsWith("/pipelines/") || pathname.includes("/pipelines/"),
+        title: "nav.sandboxes",
+        url: "/sandboxes",
+        icon: Box,
+        match: (pathname) => pathname === "/sandboxes" || pathname.startsWith("/sandboxes/"),
       },
     ],
   },

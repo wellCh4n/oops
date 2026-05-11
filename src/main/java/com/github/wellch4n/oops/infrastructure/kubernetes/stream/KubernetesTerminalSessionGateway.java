@@ -41,7 +41,7 @@ public class KubernetesTerminalSessionGateway implements TerminalSessionGateway 
                             closeSinkWithError(sink);
                         }
                     })
-                    .exec("sh", "-c", "export TERM=xterm-256color; exec /bin/sh");
+                    .exec("sh", "-c", "export TERM=xterm-256color; if command -v bash >/dev/null 2>&1; then exec bash; else exec /bin/sh; fi");
         } catch (RuntimeException e) {
             handle.close();
             throw e;

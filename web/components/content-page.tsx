@@ -3,7 +3,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
 interface ContentPageProps {
-  title: string
+  title: ReactNode
   actions?: ReactNode
   children: ReactNode
   className?: string

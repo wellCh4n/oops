@@ -11,6 +11,7 @@ import nodes from "./nodes"
 import ns from "./ns"
 import pipelines from "./pipelines"
 import profile from "./profile"
+import sandbox from "./sandbox"
 import sidebar from "./sidebar"
 import users from "./users"
 import validation from "./validation"
@@ -29,6 +30,7 @@ const translations: Record<string, string> = {
   ...ns,
   ...pipelines,
   ...profile,
+  ...sandbox,
   ...sidebar,
   ...users,
   ...validation,

@@ -1,0 +1,560 @@
+"use client"
+
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search } from "lucide-react"
+import { toast } from "sonner"
+import { ColumnDef } from "@tanstack/react-table"
+
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
+import { Copyable } from "@/components/ui/copyable"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { ContentPage } from "@/components/content-page"
+import { TableForm } from "@/components/ui/table-form"
+import { DataTable } from "@/components/ui/data-table"
+import { SelectWithSearch } from "@/components/ui/select-with-search"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { cn } from "@/lib/utils"
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { ChevronDown } from "lucide-react"
+import { useLanguage } from "@/contexts/language-context"
+
+import { fetchEnvironments } from "@/lib/api/environments"
+import { Environment } from "@/lib/api/types"
+import {
+  createSandbox, deleteSandbox, listSandboxes, listSandboxRuntimes,
+  SandboxInstance, SandboxInstanceStatus, SandboxRuntime,
+} from "@/lib/api/sandbox"
+
+const CUSTOM_RUNTIME = "__custom__"
+
+export default function SandboxesPage() {
+  return (
+    <Suspense>
+      <SandboxesContent />
+    </Suspense>
+  )
+}
+
+function SandboxesContent() {
+  const { t } = useLanguage()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const [environments, setEnvironments] = useState<Environment[]>([])
+  const [sandboxes, setSandboxes] = useState<SandboxInstance[]>([])
+  const [loading, setLoading] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(true)
+  const envFilter = searchParams.get("env") ?? ""
+  const [nameFilter, setNameFilter] = useState<string>("")
+  const [nameFilterInput, setNameFilterInput] = useState<string>("")
+
+  const updateParams = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value)
+      else params.delete(key)
+    })
+    router.replace(`/sandboxes?${params.toString()}`)
+  }, [router, searchParams])
+
+  const [createOpen, setCreateOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createEnv, setCreateEnv] = useState("")
+  const [createName, setCreateName] = useState("")
+  const [runtimes, setRuntimes] = useState<SandboxRuntime[]>([])
+  const [selectedRuntime, setSelectedRuntime] = useState<string>("")
+  const [customImage, setCustomImage] = useState("")
+  const [cpuRequest, setCpuRequest] = useState("")
+  const [cpuLimit, setCpuLimit] = useState("")
+  const [memoryRequest, setMemoryRequest] = useState("")
+  const [memoryLimit, setMemoryLimit] = useState("")
+
+  const [deleteTarget, setDeleteTarget] = useState<SandboxInstance | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    listSandboxRuntimes()
+      .then((res) => setRuntimes(res.data ?? []))
+      .catch(() => setRuntimes([]))
+  }, [])
+
+  useEffect(() => {
+    fetchEnvironments()
+      .then((res) => {
+        const envs = res.data ?? []
+        setEnvironments(envs)
+        if (envs.length > 0 && !searchParams.get("env")) {
+          updateParams({ env: envs[0].name })
+        }
+      })
+      .catch(() => setEnvironments([]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const fetchSandboxes = useCallback(async () => {
+    if (!envFilter) return
+    setLoading(true)
+    try {
+      const res = await listSandboxes(envFilter)
+      setSandboxes(res.data ?? [])
+    } catch {
+      toast.error(t("sandbox.fetchError"))
+    } finally {
+      setLoading(false)
+      setInitialLoad(false)
+    }
+  }, [envFilter, t])
+
+  useEffect(() => {
+    fetchSandboxes()
+  }, [fetchSandboxes])
+
+  useEffect(() => {
+    const hasPending = sandboxes.some((sandbox) => sandbox.status === "PENDING" || sandbox.status === "TERMINATING")
+    if (!hasPending) return
+    const timer = setInterval(fetchSandboxes, 5000)
+    return () => clearInterval(timer)
+  }, [sandboxes, fetchSandboxes])
+
+  const filteredSandboxes = useMemo(() => {
+    const keyword = nameFilter.trim().toLowerCase()
+    if (!keyword) return sandboxes
+    return sandboxes.filter((sandbox) => sandbox.name.toLowerCase().includes(keyword))
+  }, [sandboxes, nameFilter])
+
+  const resetCreateForm = () => {
+    setCreateEnv("")
+    setCreateName("")
+    setSelectedRuntime("")
+    setCustomImage("")
+    setCpuRequest("")
+    setCpuLimit("")
+    setMemoryRequest("")
+    setMemoryLimit("")
+  }
+
+  const openCreateDialog = () => {
+    if (!createEnv && environments.length > 0) {
+      setCreateEnv(environments[0].name)
+    }
+    if (!selectedRuntime && runtimes.length > 0) {
+      setSelectedRuntime(runtimes[0].runtime)
+    }
+    setCreateOpen(true)
+  }
+
+  const handleCreate = async () => {
+    const useCustom = selectedRuntime === CUSTOM_RUNTIME
+    const trimmedImage = customImage.trim()
+    if (!createEnv) {
+      toast.error(t("sandbox.createError"))
+      return
+    }
+    if (useCustom && !trimmedImage) {
+      toast.error(t("sandbox.createError"))
+      return
+    }
+    if (!useCustom && !selectedRuntime) {
+      toast.error(t("sandbox.createError"))
+      return
+    }
+    setCreating(true)
+    try {
+      const cpu = (cpuRequest || cpuLimit) ? { request: cpuRequest || undefined, limit: cpuLimit || undefined } : undefined
+      const memory = (memoryRequest || memoryLimit) ? { request: memoryRequest || undefined, limit: memoryLimit || undefined } : undefined
+      const trimmedName = createName.trim()
+      await createSandbox({
+        environment: createEnv,
+        name: trimmedName ? trimmedName : undefined,
+        runtime: useCustom ? undefined : selectedRuntime,
+        image: useCustom ? trimmedImage : undefined,
+        cpu,
+        memory,
+      })
+      toast.success(t("sandbox.createSuccess"))
+      setCreateOpen(false)
+      resetCreateForm()
+      fetchSandboxes()
+    } catch {
+      toast.error(t("sandbox.createError"))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteSandbox(deleteTarget.id)
+      toast.success(t("sandbox.deleteSuccess"))
+      setDeleteTarget(null)
+      setDeleteConfirmText("")
+      fetchSandboxes()
+    } catch {
+      toast.error(t("sandbox.deleteError"))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const columns: ColumnDef<SandboxInstance>[] = [
+    {
+      accessorKey: "name",
+      header: t("sandbox.col.name"),
+      cell: ({ row }) => {
+        const hasName = row.original.name && row.original.name !== row.original.id
+        return (
+          <div className="flex flex-col gap-0.5 items-start">
+            {hasName && <span className="font-mono text-sm">{row.original.name}</span>}
+            <Copyable
+              value={row.original.id}
+              maxLength={Infinity}
+              className={hasName ? "text-muted-foreground" : undefined}
+            />
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "environment",
+      header: t("sandbox.col.environment"),
+      size: 90,
+    },
+    {
+      accessorKey: "runtime",
+      header: t("sandbox.col.runtime"),
+      size: 90,
+      cell: ({ row }) => (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-default">{row.original.runtime}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="font-mono text-xs">{row.original.image}</span>
+          </TooltipContent>
+        </Tooltip>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: t("sandbox.col.status"),
+      size: 90,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+    {
+      accessorKey: "createdAt",
+      header: t("sandbox.col.createdAt"),
+      size: 150,
+      cell: ({ row }) => {
+        if (!row.original.createdAt) return "-"
+        return new Date(row.original.createdAt).toLocaleString(undefined, {
+          year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+        })
+      },
+    },
+    {
+      id: "actions",
+      size: 180,
+      cell: ({ row }) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 gap-1"
+            onClick={() => window.open(`/sandboxes/${row.original.id}`, "_blank", "noopener,noreferrer")}
+          >
+            <SquareTerminal className="h-4 w-4" />
+            {t("sandbox.terminal")}
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-8 px-2 gap-1"
+            onClick={() => { setDeleteTarget(row.original); setDeleteConfirmText("") }}
+          >
+            <Trash2 className="h-4 w-4" />
+            {t("sandbox.delete")}
+          </Button>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <ContentPage title={t("sandbox.title")}>
+      <TableForm
+        options={
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
+                  <Server className="w-4 h-4" />{t("sandbox.envFilter")}
+                </span>
+                <SelectWithSearch
+                  value={envFilter}
+                  onValueChange={(value) => updateParams({ env: value })}
+                  options={environments.map((env) => ({ value: env.name, label: env.name }))}
+                  placeholder={t("sandbox.envPlaceholder")}
+                  className="w-[200px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
+                  <Search className="w-4 h-4" />{t("sandbox.nameFilter")}
+                </span>
+                <Input
+                  value={nameFilterInput}
+                  onChange={(event) => setNameFilterInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      setNameFilter(nameFilterInput)
+                    }
+                  }}
+                  placeholder={t("sandbox.nameSearchPlaceholder")}
+                  className="w-[200px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">&nbsp;</span>
+                <Button variant="outline" onClick={() => setNameFilter(nameFilterInput)} className="h-9">
+                  <Search className="h-4 w-4" />
+                  {t("sandbox.searchBtn")}
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchSandboxes} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                {t("sandbox.refresh")}
+              </Button>
+              <Button size="sm" onClick={openCreateDialog}>
+                <Plus className="h-4 w-4" />
+                {t("sandbox.create")}
+              </Button>
+            </div>
+          </div>
+        }
+        table={
+          filteredSandboxes.length === 0 && !initialLoad ? (
+            <div className="py-16 text-center text-muted-foreground text-sm border rounded-md border-dashed flex flex-col items-center gap-2">
+              <Box className="h-6 w-6" />
+              {t("sandbox.empty")}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <DataTable columns={columns} data={filteredSandboxes} loading={initialLoad} />
+            </div>
+          )
+        }
+      />
+
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetCreateForm() }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("sandbox.create")}</DialogTitle>
+            <DialogDescription />
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="sandbox-create-env">{t("sandbox.col.environment")}</Label>
+              <SelectWithSearch
+                value={createEnv}
+                onValueChange={setCreateEnv}
+                options={environments.map((env) => ({ value: env.name, label: env.name }))}
+                placeholder={t("sandbox.envPlaceholder")}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="sandbox-create-name">{t("sandbox.col.name")} <span className="text-muted-foreground text-xs">({t("sandbox.nameOptional")})</span></Label>
+              <Input
+                id="sandbox-create-name"
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("sandbox.col.runtime")}</Label>
+              <div className="flex flex-wrap gap-2">
+                {runtimes.map((rt) => {
+                  const selected = selectedRuntime === rt.runtime
+                  return (
+                    <div
+                      key={rt.runtime}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedRuntime(rt.runtime)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          setSelectedRuntime(rt.runtime)
+                        }
+                      }}
+                      className={cn(
+                        "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[10rem]",
+                        selected
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border hover:bg-accent/50"
+                      )}
+                    >
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span className="text-sm font-medium">{rt.runtime}</span>
+                        <span className="text-xs text-muted-foreground font-mono truncate">{rt.image}</span>
+                      </div>
+                      {selected ? (
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-3 w-3" />
+                        </div>
+                      ) : (
+                        <div className="h-5 w-5 shrink-0 rounded-full border border-muted-foreground/30" />
+                      )}
+                    </div>
+                  )
+                })}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedRuntime(CUSTOM_RUNTIME)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault()
+                      setSelectedRuntime(CUSTOM_RUNTIME)
+                    }
+                  }}
+                  className={cn(
+                    "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[10rem]",
+                    selectedRuntime === CUSTOM_RUNTIME
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border hover:bg-accent/50"
+                  )}
+                >
+                  <span className="text-sm font-medium">{t("sandbox.runtimeCustom")}</span>
+                  {selectedRuntime === CUSTOM_RUNTIME ? (
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="h-3 w-3" />
+                    </div>
+                  ) : (
+                    <div className="h-5 w-5 shrink-0 rounded-full border border-muted-foreground/30" />
+                  )}
+                </div>
+              </div>
+              {selectedRuntime === CUSTOM_RUNTIME && (
+                <Input
+                  value={customImage}
+                  onChange={(event) => setCustomImage(event.target.value)}
+                  placeholder={t("sandbox.customImagePlaceholder")}
+                  className="mt-2 font-mono text-sm"
+                />
+              )}
+            </div>
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground [&[data-state=open]>svg]:rotate-180">
+                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                {t("sandbox.advancedConfig")}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sandbox-cpu-request">{t("sandbox.cpuRequest")}</Label>
+                    <Input
+                      id="sandbox-cpu-request"
+                      value={cpuRequest}
+                      onChange={(event) => setCpuRequest(event.target.value)}
+                      placeholder="100m"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sandbox-cpu-limit">{t("sandbox.cpuLimit")}</Label>
+                    <Input
+                      id="sandbox-cpu-limit"
+                      value={cpuLimit}
+                      onChange={(event) => setCpuLimit(event.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sandbox-mem-request">{t("sandbox.memoryRequest")}</Label>
+                    <Input
+                      id="sandbox-mem-request"
+                      value={memoryRequest}
+                      onChange={(event) => setMemoryRequest(event.target.value)}
+                      placeholder="128Mi"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="sandbox-mem-limit">{t("sandbox.memoryLimit")}</Label>
+                    <Input
+                      id="sandbox-mem-limit"
+                      value={memoryLimit}
+                      onChange={(event) => setMemoryLimit(event.target.value)}
+                      placeholder="512Mi"
+                    />
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? t("sandbox.creating") : t("sandbox.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open && !deleting) { setDeleteTarget(null); setDeleteConfirmText("") } }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("sandbox.deleteConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("sandbox.deleteConfirmDesc")}
+              <br />
+              {t("sandbox.deleteConfirmHint")}
+              <span className="font-mono text-foreground"> {deleteTarget?.name}</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmText}
+            onChange={(event) => setDeleteConfirmText(event.target.value)}
+            placeholder={deleteTarget?.name}
+            className="mt-2"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting || deleteConfirmText !== (deleteTarget?.name ?? "")}
+              className="!bg-destructive !text-destructive-foreground hover:!bg-destructive/90"
+            >
+              {deleting ? t("sandbox.deleting") : t("sandbox.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ContentPage>
+  )
+}
+
+function StatusBadge({ status }: { status: SandboxInstanceStatus }) {
+  const { t } = useLanguage()
+  let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
+  if (status === "RUNNING") variant = "default"
+  if (status === "PENDING" || status === "TERMINATING") variant = "secondary"
+  if (status === "FAILED") variant = "destructive"
+  return <Badge variant={variant}>{t(`sandbox.status.${status}`)}</Badge>
+}
