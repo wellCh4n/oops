@@ -132,7 +132,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
             }
             String sourceImage = pipelineImageConfig.getZip();
             String sourceDownloadUrl = buildSourceStorage.resolveDownloadUrl(pipeline.getPublishRepository());
-            return new ZipCloneParam(sourceImage, sourceDownloadUrl);
+            return new ZipCloneParam(sourceImage, sourceDownloadUrl, pipelineImageConfig.getUnzipExcludes());
         }
         return new GitCloneParam(
                 pipelineImageConfig.getClone(),

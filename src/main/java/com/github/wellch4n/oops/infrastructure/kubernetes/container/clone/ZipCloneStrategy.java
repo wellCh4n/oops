@@ -1,18 +1,10 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.container.clone;
 
 import com.github.wellch4n.oops.domain.application.Application;
-import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
-
-    private static final List<String> UNZIP_EXCLUDES = List.of(
-            ".git/*",
-            "*/.git/*",
-            "node_modules/*",
-            "*/node_modules/*"
-    );
 
     @Override
     public boolean supports(CloneStrategyParam param) {
@@ -59,6 +51,6 @@ public class ZipCloneStrategy implements CloneStrategy<ZipCloneParam> {
                   rm -rf /workspace/__MACOSX /workspace/.DS_Store
                 fi
                 """.formatted(param.sourceDownloadUrl(),
-                        UNZIP_EXCLUDES.stream().map(e -> "'" + e + "'").collect(Collectors.joining(" ")));
+                        param.unzipExcludes().stream().map(e -> "'" + e + "'").collect(Collectors.joining(" ")));
     }
 }

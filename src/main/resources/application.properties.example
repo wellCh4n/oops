@@ -15,6 +15,7 @@ spring.flyway.baseline-version=1
 
 oops.pipeline.image.clone=alpine/git:v2.49.0
 oops.pipeline.image.zip=alpine/curl:8.17.0
+oops.pipeline.image.unzip-excludes=.git/*,*/.git/*,node_modules/*,*/node_modules/*,__MACOSX,__MACOSX/*,*/__MACOSX,*/__MACOSX/*,.DS_Store,*/.DS_Store
 oops.pipeline.image.push=quay.io/buildah/stable:v1.43.1
 oops.pipeline.image.registry-mirrors=docker.io=docker.m.daocloud.io
 oops.pod-filesystem.max-download-size-bytes=52428800

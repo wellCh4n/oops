@@ -16,13 +16,12 @@ import java.util.List;
 
 public class CloneContainer extends BaseContainer {
 
-    private static final List<CloneStrategy<? extends CloneStrategyParam>> STRATEGIES = List.of(
-            new GitCloneStrategy(),
-            new ZipCloneStrategy()
-    );
-
     public CloneContainer(Application application, CloneStrategyParam strategyParam) {
-        String command = buildCommand(application, strategyParam);
+        List<CloneStrategy<? extends CloneStrategyParam>> strategies = List.of(
+                new GitCloneStrategy(),
+                new ZipCloneStrategy()
+        );
+        String command = buildCommand(strategies, application, strategyParam);
 
         Container container = new ContainerBuilder()
                 .withName("fetch")
@@ -41,8 +40,8 @@ public class CloneContainer extends BaseContainer {
     }
 
     @SuppressWarnings("unchecked")
-    private static String buildCommand(Application application, CloneStrategyParam strategyParam) {
-        return STRATEGIES.stream()
+    private static String buildCommand(List<CloneStrategy<? extends CloneStrategyParam>> strategies, Application application, CloneStrategyParam strategyParam) {
+        return strategies.stream()
                 .filter(strategy -> strategy.supports(strategyParam))
                 .findFirst()
                 .map(strategy -> ((CloneStrategy<CloneStrategyParam>) strategy).buildCommand(application, strategyParam))
