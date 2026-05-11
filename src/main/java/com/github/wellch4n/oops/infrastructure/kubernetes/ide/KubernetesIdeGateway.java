@@ -20,7 +20,7 @@ import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
 import com.github.wellch4n.oops.application.dto.IdeDto;
 import com.github.wellch4n.oops.shared.util.IdeProxyDomainUtils;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
-import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClientPool;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
 import io.fabric8.kubernetes.api.model.*;
@@ -49,13 +49,16 @@ public class KubernetesIdeGateway implements IdeGateway {
     private final PipelineImageProperties pipelineImageConfig;
     private final IdeProperties ideConfig;
     private final IngressProperties ingressConfig;
+    private final KubernetesClientPool clientPool;
 
     public KubernetesIdeGateway(PipelineImageProperties pipelineImageConfig,
                                 IdeProperties ideConfig,
-                                IngressProperties ingressConfig) {
+                                IngressProperties ingressConfig,
+                                KubernetesClientPool clientPool) {
         this.pipelineImageConfig = pipelineImageConfig;
         this.ideConfig = ideConfig;
         this.ingressConfig = ingressConfig;
+        this.clientPool = clientPool;
     }
 
     private String getProxyDomainTemplate() {
@@ -76,38 +79,37 @@ public class KubernetesIdeGateway implements IdeGateway {
             return fileDefaults;
         }
 
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            ConfigMap configMap = client.configMaps()
-                    .inNamespace(environment.getWorkNamespace())
-                    .withName("ide-config")
-                    .get();
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        ConfigMap configMap = client.configMaps()
+                .inNamespace(environment.getWorkNamespace())
+                .withName("ide-config")
+                .get();
 
-            if (configMap != null && configMap.getData() != null
-                    && configMap.getData().containsKey("settings.json")
-                    && configMap.getData().containsKey(".env")
-                    && configMap.getData().containsKey("extensions")) {
-                return new IdeConfigDto(
-                        configMap.getData().get("settings.json"),
-                        configMap.getData().get(".env"),
-                        configMap.getData().get("extensions"));
-            }
-
-            Map<String, String> data = new HashMap<>();
-            if (configMap != null && configMap.getData() != null) {
-                data.putAll(configMap.getData());
-            }
-            data.put("settings.json", fileDefaults.getSettings());
-            data.put(".env", fileDefaults.getEnv());
-            data.put("extensions", fileDefaults.getExtensions());
-
-            ConfigMap newConfigMap = new ConfigMapBuilder()
-                    .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
-                    .withData(data)
-                    .build();
-            client.configMaps().inNamespace(environment.getWorkNamespace()).resource(newConfigMap).serverSideApply();
-
-            return fileDefaults;
+        if (configMap != null && configMap.getData() != null
+                && configMap.getData().containsKey("settings.json")
+                && configMap.getData().containsKey(".env")
+                && configMap.getData().containsKey("extensions")) {
+            return new IdeConfigDto(
+                    configMap.getData().get("settings.json"),
+                    configMap.getData().get(".env"),
+                    configMap.getData().get("extensions"));
         }
+
+        Map<String, String> data = new HashMap<>();
+        if (configMap != null && configMap.getData() != null) {
+            data.putAll(configMap.getData());
+        }
+        data.put("settings.json", fileDefaults.getSettings());
+        data.put(".env", fileDefaults.getEnv());
+        data.put("extensions", fileDefaults.getExtensions());
+
+        ConfigMap newConfigMap = new ConfigMapBuilder()
+                .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
+                .withData(data)
+                .build();
+        client.configMaps().inNamespace(environment.getWorkNamespace()).resource(newConfigMap).serverSideApply();
+
+        return fileDefaults;
     }
 
     private IdeConfigDto loadFileDefaults() {
@@ -181,8 +183,8 @@ public class KubernetesIdeGateway implements IdeGateway {
         startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
                 + proxyDomainArg + " /home/coder/" + applicationName);
 
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            StatefulSet statefulSet = new StatefulSetBuilder()
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        StatefulSet statefulSet = new StatefulSetBuilder()
                     .withNewMetadata().withName(name).withLabels(labels).withAnnotations(annotations).endMetadata()
                     .withNewSpec()
                         .withServiceName(name)
@@ -268,7 +270,6 @@ public class KubernetesIdeGateway implements IdeGateway {
                 client.apps().statefulSets().inNamespace(environment.getWorkNamespace()).withName(name).delete();
                 throw new RuntimeException("IDE creation failed at IngressRoute, rolled back", e);
             }
-        }
 
         return ideId;
     }
@@ -291,12 +292,11 @@ public class KubernetesIdeGateway implements IdeGateway {
             return;
         }
 
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            client.apps().statefulSets()
-                    .inNamespace(environment.getWorkNamespace())
-                    .withName(name)
-                    .delete();
-        }
+        clientPool.get(environment.getKubernetesApiServer())
+                .apps().statefulSets()
+                .inNamespace(environment.getWorkNamespace())
+                .withName(name)
+                .delete();
     }
 
     @Override
@@ -305,36 +305,35 @@ public class KubernetesIdeGateway implements IdeGateway {
             return List.of();
         }
 
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            return client.apps().statefulSets()
-                    .inNamespace(environment.getWorkNamespace())
-                    .withLabel("oops.type", OopsTypes.IDE.name())
-                    .withLabel("oops.app", applicationName)
-                    .list()
-                    .getItems()
-                    .stream()
-                    .sorted((left, right) -> {
-                        String leftTimestamp = left.getMetadata().getCreationTimestamp();
-                        String rightTimestamp = right.getMetadata().getCreationTimestamp();
-                        if (leftTimestamp == null && rightTimestamp == null) return 0;
-                        if (leftTimestamp == null) return 1;
-                        if (rightTimestamp == null) return -1;
-                        return rightTimestamp.compareTo(leftTimestamp);
-                    })
-                    .map(statefulSet -> {
-                        String id = statefulSet.getMetadata().getName();
-                        String annotationName = statefulSet.getMetadata().getAnnotations() != null
-                                ? statefulSet.getMetadata().getAnnotations().get("oops.ide.name") : null;
-                        String name = (annotationName != null && !annotationName.isBlank()) ? annotationName : id;
-                        String host = id + "." + ideConfig.getDomain();
-                        String createdAt = statefulSet.getMetadata().getCreationTimestamp();
-                        boolean ready = statefulSet.getStatus() != null
-                                && statefulSet.getStatus().getReadyReplicas() != null
-                                && statefulSet.getStatus().getReadyReplicas() > 0;
-                        return new IdeDto(id, name, host, ideConfig.isHttps(), createdAt, ready);
-                    })
-                    .toList();
-        }
+        return clientPool.get(environment.getKubernetesApiServer())
+                .apps().statefulSets()
+                .inNamespace(environment.getWorkNamespace())
+                .withLabel("oops.type", OopsTypes.IDE.name())
+                .withLabel("oops.app", applicationName)
+                .list()
+                .getItems()
+                .stream()
+                .sorted((left, right) -> {
+                    String leftTimestamp = left.getMetadata().getCreationTimestamp();
+                    String rightTimestamp = right.getMetadata().getCreationTimestamp();
+                    if (leftTimestamp == null && rightTimestamp == null) return 0;
+                    if (leftTimestamp == null) return 1;
+                    if (rightTimestamp == null) return -1;
+                    return rightTimestamp.compareTo(leftTimestamp);
+                })
+                .map(statefulSet -> {
+                    String id = statefulSet.getMetadata().getName();
+                    String annotationName = statefulSet.getMetadata().getAnnotations() != null
+                            ? statefulSet.getMetadata().getAnnotations().get("oops.ide.name") : null;
+                    String name = (annotationName != null && !annotationName.isBlank()) ? annotationName : id;
+                    String host = id + "." + ideConfig.getDomain();
+                    String createdAt = statefulSet.getMetadata().getCreationTimestamp();
+                    boolean ready = statefulSet.getStatus() != null
+                            && statefulSet.getStatus().getReadyReplicas() != null
+                            && statefulSet.getStatus().getReadyReplicas() > 0;
+                    return new IdeDto(id, name, host, ideConfig.isHttps(), createdAt, ready);
+                })
+                .toList();
     }
 
     private void createIngressRoute(KubernetesClient client, String namespace, String name,

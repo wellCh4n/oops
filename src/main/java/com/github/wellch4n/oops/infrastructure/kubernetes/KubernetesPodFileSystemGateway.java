@@ -3,7 +3,6 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 import com.github.wellch4n.oops.application.port.PodFileSystemGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.shared.exception.BizException;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import java.io.ByteArrayOutputStream;
@@ -62,6 +61,12 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
             cat "$target"
             """;
 
+    private final KubernetesClientPool clientPool;
+
+    public KubernetesPodFileSystemGateway(KubernetesClientPool clientPool) {
+        this.clientPool = clientPool;
+    }
+
     @Override
     public List<PodFileEntry> listDirectory(Environment environment, String namespace, String podName, String container, String path) {
         String normalizedPath = (path == null || path.isBlank()) ? "/" : path;
@@ -73,28 +78,27 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         CountDownLatch finished = new CountDownLatch(1);
 
-        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            try (ExecWatch _ = client.pods().inNamespace(namespace).withName(podName)
-                    .inContainer(container)
-                    .writingOutput(stdout)
-                    .writingError(stderr)
-                    .usingListener(new ExecListener() {
-                        @Override
-                        public void onClose(int code, String reason) {
-                            finished.countDown();
-                        }
+        try (ExecWatch _ = clientPool.get(environment.getKubernetesApiServer())
+                .pods().inNamespace(namespace).withName(podName)
+                .inContainer(container)
+                .writingOutput(stdout)
+                .writingError(stderr)
+                .usingListener(new ExecListener() {
+                    @Override
+                    public void onClose(int code, String reason) {
+                        finished.countDown();
+                    }
 
-                        @Override
-                        public void onFailure(Throwable throwable, Response response) {
-                            log.warn("List directory failed for {}/{}:{}: {}", namespace, podName, normalizedPath, throwable.getMessage());
-                            finished.countDown();
-                        }
-                    })
-                    .exec("sh", "-c", LIST_SCRIPT + "\n", "sh", normalizedPath)) {
+                    @Override
+                    public void onFailure(Throwable throwable, Response response) {
+                        log.warn("List directory failed for {}/{}:{}: {}", namespace, podName, normalizedPath, throwable.getMessage());
+                        finished.countDown();
+                    }
+                })
+                .exec("sh", "-c", LIST_SCRIPT + "\n", "sh", normalizedPath)) {
 
-                if (!finished.await(EXEC_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new BizException("Listing directory timed out");
-                }
+            if (!finished.await(EXEC_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new BizException("Listing directory timed out");
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -118,29 +122,28 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
         CountDownLatch finished = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();
 
-        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            try (ExecWatch _ = client.pods().inNamespace(namespace).withName(podName)
-                    .inContainer(container)
-                    .writingOutput(stdout)
-                    .writingError(stderr)
-                    .usingListener(new ExecListener() {
-                        @Override
-                        public void onClose(int code, String reason) {
-                            finished.countDown();
-                        }
+        try (ExecWatch _ = clientPool.get(environment.getKubernetesApiServer())
+                .pods().inNamespace(namespace).withName(podName)
+                .inContainer(container)
+                .writingOutput(stdout)
+                .writingError(stderr)
+                .usingListener(new ExecListener() {
+                    @Override
+                    public void onClose(int code, String reason) {
+                        finished.countDown();
+                    }
 
-                        @Override
-                        public void onFailure(Throwable throwable, Response response) {
-                            log.warn("Get file size failed for {}/{}:{}: {}", namespace, podName, path, throwable.getMessage());
-                            failure.set(throwable);
-                            finished.countDown();
-                        }
-                    })
-                    .exec("sh", "-c", FILE_SIZE_SCRIPT + "\n", "sh", path)) {
+                    @Override
+                    public void onFailure(Throwable throwable, Response response) {
+                        log.warn("Get file size failed for {}/{}:{}: {}", namespace, podName, path, throwable.getMessage());
+                        failure.set(throwable);
+                        finished.countDown();
+                    }
+                })
+                .exec("sh", "-c", FILE_SIZE_SCRIPT + "\n", "sh", path)) {
 
-                if (!finished.await(EXEC_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new BizException("Get file size timed out");
-                }
+            if (!finished.await(EXEC_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new BizException("Get file size timed out");
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
@@ -173,29 +176,28 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
         AtomicReference<Throwable> failure = new AtomicReference<>();
 
-        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            try (ExecWatch _ = client.pods().inNamespace(namespace).withName(podName)
-                    .inContainer(container)
-                    .writingOutput(outputStream)
-                    .writingError(stderr)
-                    .usingListener(new ExecListener() {
-                        @Override
-                        public void onClose(int code, String reason) {
-                            finished.countDown();
-                        }
+        try (ExecWatch _ = clientPool.get(environment.getKubernetesApiServer())
+                .pods().inNamespace(namespace).withName(podName)
+                .inContainer(container)
+                .writingOutput(outputStream)
+                .writingError(stderr)
+                .usingListener(new ExecListener() {
+                    @Override
+                    public void onClose(int code, String reason) {
+                        finished.countDown();
+                    }
 
-                        @Override
-                        public void onFailure(Throwable throwable, Response response) {
-                            log.warn("Stream file failed for {}/{}:{}: {}", namespace, podName, path, throwable.getMessage());
-                            failure.set(throwable);
-                            finished.countDown();
-                        }
-                    })
-                    .exec("sh", "-c", CAT_FILE_SCRIPT + "\n", "sh", path)) {
+                    @Override
+                    public void onFailure(Throwable throwable, Response response) {
+                        log.warn("Stream file failed for {}/{}:{}: {}", namespace, podName, path, throwable.getMessage());
+                        failure.set(throwable);
+                        finished.countDown();
+                    }
+                })
+                .exec("sh", "-c", CAT_FILE_SCRIPT + "\n", "sh", path)) {
 
-                if (!finished.await(DOWNLOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                    throw new BizException("Download timed out");
-                }
+            if (!finished.await(DOWNLOAD_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new BizException("Download timed out");
             }
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();

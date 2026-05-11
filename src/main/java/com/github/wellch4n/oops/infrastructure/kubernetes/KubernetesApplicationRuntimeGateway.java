@@ -18,19 +18,24 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     private static final String CLUSTER_SUFFIX = "cluster.local";
     private static final String CLUSTER_DOMAIN_FORMAT = "%s.%s.svc.%s";
 
+    private final KubernetesClientPool clientPool;
+
+    public KubernetesApplicationRuntimeGateway(KubernetesClientPool clientPool) {
+        this.clientPool = clientPool;
+    }
+
     @Override
     public void deleteWorkload(Environment environment, String namespace, String applicationName) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            var statefulSet = client.apps().statefulSets()
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var statefulSet = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(applicationName)
+                .get();
+        if (statefulSet != null) {
+            client.apps().statefulSets()
                     .inNamespace(namespace)
                     .withName(applicationName)
-                    .get();
-            if (statefulSet != null) {
-                client.apps().statefulSets()
-                        .inNamespace(namespace)
-                        .withName(applicationName)
-                        .delete();
-            }
+                    .delete();
         }
     }
 
@@ -39,96 +44,92 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                                  String namespace,
                                  String applicationName,
                                  ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            if (runtimeSpec.getReplicas() != null) {
-                client.apps().statefulSets()
-                        .inNamespace(namespace)
-                        .withName(applicationName)
-                        .scale(runtimeSpec.getReplicas());
-            }
-
-            if (!hasResource(runtimeSpec)) {
-                return;
-            }
-            var resourcesBuilder = new ResourceRequirementsBuilder();
-            if (StringUtils.isNotBlank(runtimeSpec.getCpuRequest())) {
-                resourcesBuilder.addToRequests("cpu", new Quantity(runtimeSpec.getCpuRequest()));
-            }
-            if (StringUtils.isNotBlank(runtimeSpec.getCpuLimit())) {
-                resourcesBuilder.addToLimits("cpu", new Quantity(runtimeSpec.getCpuLimit()));
-            }
-            if (StringUtils.isNotBlank(runtimeSpec.getMemoryRequest())) {
-                resourcesBuilder.addToRequests("memory", new Quantity(runtimeSpec.getMemoryRequest() + "Mi"));
-            }
-            if (StringUtils.isNotBlank(runtimeSpec.getMemoryLimit())) {
-                resourcesBuilder.addToLimits("memory", new Quantity(runtimeSpec.getMemoryLimit() + "Mi"));
-            }
-            var resources = resourcesBuilder.build();
-            client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
-                    .edit(statefulSet -> {
-                        statefulSet.getSpec().getTemplate().getSpec().getContainers()
-                                .forEach(container -> container.setResources(resources));
-                        return statefulSet;
-                    });
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        if (runtimeSpec.getReplicas() != null) {
+            client.apps().statefulSets()
+                    .inNamespace(namespace)
+                    .withName(applicationName)
+                    .scale(runtimeSpec.getReplicas());
         }
+
+        if (!hasResource(runtimeSpec)) {
+            return;
+        }
+        var resourcesBuilder = new ResourceRequirementsBuilder();
+        if (StringUtils.isNotBlank(runtimeSpec.getCpuRequest())) {
+            resourcesBuilder.addToRequests("cpu", new Quantity(runtimeSpec.getCpuRequest()));
+        }
+        if (StringUtils.isNotBlank(runtimeSpec.getCpuLimit())) {
+            resourcesBuilder.addToLimits("cpu", new Quantity(runtimeSpec.getCpuLimit()));
+        }
+        if (StringUtils.isNotBlank(runtimeSpec.getMemoryRequest())) {
+            resourcesBuilder.addToRequests("memory", new Quantity(runtimeSpec.getMemoryRequest() + "Mi"));
+        }
+        if (StringUtils.isNotBlank(runtimeSpec.getMemoryLimit())) {
+            resourcesBuilder.addToLimits("memory", new Quantity(runtimeSpec.getMemoryLimit() + "Mi"));
+        }
+        var resources = resourcesBuilder.build();
+        client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
+                .edit(statefulSet -> {
+                    statefulSet.getSpec().getTemplate().getSpec().getContainers()
+                            .forEach(container -> container.setResources(resources));
+                    return statefulSet;
+                });
     }
 
     @Override
     public List<ApplicationPodStatusView> getPodStatuses(Environment environment, String namespace, String applicationName) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            var pods = client.pods()
-                    .inNamespace(namespace)
-                    .withLabel("oops.type", OopsTypes.APPLICATION.name())
-                    .withLabel("oops.app.name", applicationName)
-                    .list();
-            return pods.getItems().stream().map(pod -> {
-                var status = new ApplicationPodStatusView();
-                status.setName(pod.getMetadata().getName());
-                status.setNamespace(pod.getMetadata().getNamespace());
-                status.setPodIP(pod.getStatus().getPodIP());
-                status.setStatus(pod.getStatus().getPhase());
-                status.setNodeName(pod.getSpec().getNodeName());
-                var containerStatuses = pod.getStatus().getContainerStatuses();
-                List<ApplicationPodStatusView.ContainerStatus> containers = new ArrayList<>();
-                if (containerStatuses != null) {
-                    for (var containerStatus : containerStatuses) {
-                        var container = new ApplicationPodStatusView.ContainerStatus();
-                        container.setName(containerStatus.getName());
-                        container.setImage(containerStatus.getImage());
-                        container.setReady(containerStatus.getReady());
-                        container.setRestartCount(containerStatus.getRestartCount());
-                        if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
-                            container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
-                        }
-                        containers.add(container);
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var pods = client.pods()
+                .inNamespace(namespace)
+                .withLabel("oops.type", OopsTypes.APPLICATION.name())
+                .withLabel("oops.app.name", applicationName)
+                .list();
+        return pods.getItems().stream().map(pod -> {
+            var status = new ApplicationPodStatusView();
+            status.setName(pod.getMetadata().getName());
+            status.setNamespace(pod.getMetadata().getNamespace());
+            status.setPodIP(pod.getStatus().getPodIP());
+            status.setStatus(pod.getStatus().getPhase());
+            status.setNodeName(pod.getSpec().getNodeName());
+            var containerStatuses = pod.getStatus().getContainerStatuses();
+            List<ApplicationPodStatusView.ContainerStatus> containers = new ArrayList<>();
+            if (containerStatuses != null) {
+                for (var containerStatus : containerStatuses) {
+                    var container = new ApplicationPodStatusView.ContainerStatus();
+                    container.setName(containerStatus.getName());
+                    container.setImage(containerStatus.getImage());
+                    container.setReady(containerStatus.getReady());
+                    container.setRestartCount(containerStatus.getRestartCount());
+                    if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
+                        container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
                     }
+                    containers.add(container);
                 }
-                status.setContainers(containers);
-                return status;
-            }).toList();
-        }
+            }
+            status.setContainers(containers);
+            return status;
+        }).toList();
     }
 
     @Override
     public void restartPod(Environment environment, String namespace, String podName) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            client.pods().inNamespace(namespace).withName(podName).delete();
-        }
+        clientPool.get(environment.getKubernetesApiServer())
+                .pods().inNamespace(namespace).withName(podName).delete();
     }
 
     @Override
     public String findInternalServiceDomain(Environment environment, String namespace, String applicationName) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            var services = client.services().inNamespace(namespace).withLabel("oops.app.name", applicationName).list().getItems();
-            if (services.isEmpty()) {
-                return null;
-            }
-            var service = services.getFirst();
-            return String.format(CLUSTER_DOMAIN_FORMAT,
-                    service.getMetadata().getName(),
-                    service.getMetadata().getNamespace(),
-                    CLUSTER_SUFFIX);
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var services = client.services().inNamespace(namespace).withLabel("oops.app.name", applicationName).list().getItems();
+        if (services.isEmpty()) {
+            return null;
         }
+        var service = services.getFirst();
+        return String.format(CLUSTER_DOMAIN_FORMAT,
+                service.getMetadata().getName(),
+                service.getMetadata().getNamespace(),
+                CLUSTER_SUFFIX);
     }
 
     private boolean hasResource(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {

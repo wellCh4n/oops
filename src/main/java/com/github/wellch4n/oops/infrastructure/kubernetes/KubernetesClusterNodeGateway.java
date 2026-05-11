@@ -17,16 +17,21 @@ import org.springframework.stereotype.Component;
 @Component
 public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
 
+    private final KubernetesClientPool clientPool;
+
+    public KubernetesClusterNodeGateway(KubernetesClientPool clientPool) {
+        this.clientPool = clientPool;
+    }
+
     @Override
     public List<NodeStatusView> getNodes(Environment environment) {
-        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
-            var nodes = client.nodes().list().getItems();
-            return nodes.stream()
-                    .filter(Objects::nonNull)
-                    .map(this::toResponse)
-                    .sorted(Comparator.comparing(NodeStatusView::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
-                    .toList();
-        }
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var nodes = client.nodes().list().getItems();
+        return nodes.stream()
+                .filter(Objects::nonNull)
+                .map(this::toResponse)
+                .sorted(Comparator.comparing(NodeStatusView::getName, Comparator.nullsLast(String::compareToIgnoreCase)))
+                .toList();
     }
 
     private NodeStatusView toResponse(Node node) {
