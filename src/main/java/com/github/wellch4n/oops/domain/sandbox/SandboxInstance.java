@@ -18,6 +18,7 @@ public class SandboxInstance {
     private String image;
     private SandboxInstanceStatus status;
     private String createdBy;
+    private String createdByName;
     private Instant createdAt;
     private String cpuRequest;
     private String cpuLimit;

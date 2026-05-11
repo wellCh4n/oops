@@ -254,6 +254,12 @@ function SandboxesContent() {
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
+      accessorKey: "createdByName",
+      header: t("sandbox.col.createdBy"),
+      size: 100,
+      cell: ({ row }) => row.original.createdByName || row.original.createdBy || <span className="text-muted-foreground">-</span>,
+    },
+    {
       accessorKey: "createdAt",
       header: t("sandbox.col.createdAt"),
       size: 150,

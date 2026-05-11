@@ -37,6 +37,7 @@ const sandbox = {
   "sandbox.col.runtime": "執行時",
   "sandbox.col.image": "鏡像",
   "sandbox.col.status": "狀態",
+  "sandbox.col.createdBy": "建立者",
   "sandbox.col.createdAt": "建立時間",
   "sandbox.status.PENDING": "啟動中",
   "sandbox.status.RUNNING": "執行中",

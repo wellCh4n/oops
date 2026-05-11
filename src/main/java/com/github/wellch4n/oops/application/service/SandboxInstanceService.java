@@ -22,7 +22,9 @@ import com.github.wellch4n.oops.infrastructure.config.SandboxProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -32,13 +34,16 @@ public class SandboxInstanceService {
     private final EnvironmentRepository environmentRepository;
     private final SandboxExecutionGateway sandboxExecutionGateway;
     private final SandboxProperties sandboxProperties;
+    private final UserService userService;
 
     public SandboxInstanceService(EnvironmentRepository environmentRepository,
                                   SandboxExecutionGateway sandboxExecutionGateway,
-                                  SandboxProperties sandboxProperties) {
+                                  SandboxProperties sandboxProperties,
+                                  UserService userService) {
         this.environmentRepository = environmentRepository;
         this.sandboxExecutionGateway = sandboxExecutionGateway;
         this.sandboxProperties = sandboxProperties;
+        this.userService = userService;
     }
 
     public SandboxInstance create(SandboxInstanceCreateRequest request, String callerUserId) {
@@ -110,6 +115,7 @@ public class SandboxInstanceService {
     public List<SandboxInstance> list(String callerUserId, String environmentName, String runtime) {
         String resolvedEnvironmentName = trimToNull(environmentName);
         String resolvedRuntime = trimToNull(runtime);
+        List<SandboxInstance> items;
         if (resolvedEnvironmentName != null) {
             Environment environment = environmentRepository.findFirstByName(resolvedEnvironmentName);
             if (environment == null) {
@@ -118,21 +124,43 @@ public class SandboxInstanceService {
             if (trimToNull(environment.getWorkNamespace()) == null) {
                 return List.of();
             }
-            return sandboxExecutionGateway.listPersistent(environment, callerUserId, resolvedRuntime);
+            items = sandboxExecutionGateway.listPersistent(environment, null, resolvedRuntime);
+        } else {
+            items = environmentRepository.findAll().stream()
+                    .filter(env -> trimToNull(env.getWorkNamespace()) != null)
+                    .flatMap(env -> sandboxExecutionGateway.listPersistent(env, null, resolvedRuntime).stream())
+                    .toList();
         }
-        return environmentRepository.findAll().stream()
-                .filter(env -> trimToNull(env.getWorkNamespace()) != null)
-                .flatMap(env -> sandboxExecutionGateway.listPersistent(env, callerUserId, resolvedRuntime).stream())
-                .toList();
+        return resolveCreatorNames(items);
     }
 
     public SandboxInstance get(String sandboxId, String callerUserId) {
-        return findOwned(sandboxId, callerUserId).instance();
+        SandboxInstance instance = findOwned(sandboxId, callerUserId).instance();
+        return resolveCreatorNames(List.of(instance)).get(0);
     }
 
     public void delete(String sandboxId, String callerUserId) {
         Owned owned = findOwned(sandboxId, callerUserId);
         sandboxExecutionGateway.deletePersistent(owned.environment(), sandboxId);
+    }
+
+    private List<SandboxInstance> resolveCreatorNames(List<SandboxInstance> items) {
+        List<String> userIds = items.stream()
+                .map(SandboxInstance::getCreatedBy)
+                .filter(value -> value != null && !value.isBlank())
+                .distinct()
+                .collect(Collectors.toList());
+        if (userIds.isEmpty()) {
+            return items;
+        }
+        Map<String, String> nameMap = userService.getUsernameMapByIds(userIds);
+        items.forEach(instance -> {
+            String createdBy = instance.getCreatedBy();
+            if (createdBy != null && nameMap.containsKey(createdBy)) {
+                instance.setCreatedByName(nameMap.get(createdBy));
+            }
+        });
+        return items;
     }
 
     public SandboxExecutionResult exec(String sandboxId, SandboxInstanceExecRequest request, String callerUserId) {
@@ -173,9 +201,6 @@ public class SandboxInstanceService {
             SandboxInstance instance = sandboxExecutionGateway.findPersistent(environment, sandboxId).orElse(null);
             if (instance == null) {
                 continue;
-            }
-            if (callerUserId != null && !Objects.equals(instance.getCreatedBy(), callerUserId)) {
-                throw new BizException("Sandbox not found: " + sandboxId);
             }
             return new Owned(environment, instance);
         }

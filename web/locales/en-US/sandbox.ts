@@ -37,6 +37,7 @@ const sandbox = {
   "sandbox.col.runtime": "Runtime",
   "sandbox.col.image": "Image",
   "sandbox.col.status": "Status",
+  "sandbox.col.createdBy": "Created by",
   "sandbox.col.createdAt": "Created",
   "sandbox.status.PENDING": "Pending",
   "sandbox.status.RUNNING": "Running",

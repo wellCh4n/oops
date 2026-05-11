@@ -11,6 +11,7 @@ export interface SandboxInstance {
   image: string
   status: SandboxInstanceStatus
   createdBy: string | null
+  createdByName: string | null
   createdAt: string | null
   cpuRequest: string
   cpuLimit: string
