@@ -15,7 +15,10 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @RestController
-@RequestMapping("/api/namespaces/{namespace}/applications/{applicationName}/configmaps")
+@RequestMapping({
+        "/api/namespaces/{namespace}/applications/{applicationName}/configmaps",
+        "/openapi/namespaces/{namespace}/applications/{applicationName}/configmaps"
+})
 public class ConfigMapController {
 
     private final ConfigMapService configMapService;

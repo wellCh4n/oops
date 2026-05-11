@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/namespaces/{namespace}/applications/{name}/deployments")
+@RequestMapping({
+        "/api/namespaces/{namespace}/applications/{name}/deployments",
+        "/openapi/namespaces/{namespace}/applications/{name}/deployments"
+})
 public class DeploymentController {
 
     private final DeploymentService deploymentService;

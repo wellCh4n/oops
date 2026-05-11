@@ -57,6 +57,10 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
+        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
+            response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
+            return;
+        }
         AuthUserPrincipal principal = new AuthUserPrincipal(user.getId(), user.getUsername());
         String role = user.getRole() != null ? user.getRole().name() : "USER";
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(

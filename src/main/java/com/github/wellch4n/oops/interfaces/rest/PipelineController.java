@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @RestController
-@RequestMapping("/api/namespaces/{namespace}/applications/{name}/pipelines")
+@RequestMapping({
+        "/api/namespaces/{namespace}/applications/{name}/pipelines",
+        "/openapi/namespaces/{namespace}/applications/{name}/pipelines"
+})
 public class PipelineController {
 
     private final PipelineService pipelineService;
