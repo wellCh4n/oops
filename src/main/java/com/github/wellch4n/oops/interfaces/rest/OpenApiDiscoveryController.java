@@ -1,6 +1,8 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
+import com.github.wellch4n.oops.application.dto.DomainDto;
 import com.github.wellch4n.oops.application.dto.EnvironmentDto;
+import com.github.wellch4n.oops.application.service.DomainService;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.application.service.NamespaceService;
 import com.github.wellch4n.oops.domain.namespace.Namespace;
@@ -16,11 +18,14 @@ public class OpenApiDiscoveryController {
 
     private final NamespaceService namespaceService;
     private final EnvironmentService environmentService;
+    private final DomainService domainService;
 
     public OpenApiDiscoveryController(NamespaceService namespaceService,
-                                      EnvironmentService environmentService) {
+                                      EnvironmentService environmentService,
+                                      DomainService domainService) {
         this.namespaceService = namespaceService;
         this.environmentService = environmentService;
+        this.domainService = domainService;
     }
 
     @GetMapping("/namespaces")
@@ -34,5 +39,13 @@ public class OpenApiDiscoveryController {
                 .map(EnvironmentDto::fromRedacted)
                 .toList();
         return Result.success(environments);
+    }
+
+    @GetMapping("/domains")
+    public Result<List<DomainDto>> listDomains() {
+        List<DomainDto> domains = domainService.list().stream()
+                .map(DomainDto::from)
+                .toList();
+        return Result.success(domains);
     }
 }
