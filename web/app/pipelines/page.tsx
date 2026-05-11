@@ -52,6 +52,7 @@ function PipelinesContent() {
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
+  const [initialLoad, setInitialLoad] = useState(true)
   const [totalPages, setTotalPages] = useState(0)
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
   const [stopTarget, setStopTarget] = useState<Pipeline | null>(null)
@@ -158,6 +159,7 @@ function PipelinesContent() {
   const fetchPipelines = useCallback(async () => {
     if (!activeNamespace || !selectedApp) {
       setPipelines([])
+      setInitialLoad(false)
       return
     }
     setLoading(true)
@@ -171,6 +173,7 @@ function PipelinesContent() {
       toast.error(t("pipelines.fetchError"))
     } finally {
       setLoading(false)
+      setInitialLoad(false)
     }
   }, [activeNamespace, selectedApp, selectedEnv, page, size, t])
 
@@ -308,7 +311,7 @@ function PipelinesContent() {
         table={
           <>
             <div className="overflow-x-auto">
-              <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={loading} />
+              <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={initialLoad} />
             </div>
             {selectedApp && (
               <div className="flex items-center justify-end gap-4 mt-2">

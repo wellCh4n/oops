@@ -1,5 +1,16 @@
 package com.github.wellch4n.oops.application.service;
 
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_CPU_LIMIT;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_CPU_REQUEST;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_MEMORY_LIMIT;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_MEMORY_REQUEST;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_TIMEOUT_SECONDS;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_TTL_SECONDS_AFTER_FINISHED;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.firstNonBlank;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.nonNegativeOrDefault;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.positiveOrDefault;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.trimToNull;
+
 import com.github.wellch4n.oops.application.dto.SandboxExecutionRequest;
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway;
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxExecutionResult;
@@ -15,13 +26,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class SandboxExecutionService {
-
-    private static final int DEFAULT_TIMEOUT_SECONDS = 300;
-    private static final int DEFAULT_TTL_SECONDS_AFTER_FINISHED = 60;
-    private static final String DEFAULT_CPU_REQUEST = "100m";
-    private static final String DEFAULT_CPU_LIMIT = "1";
-    private static final String DEFAULT_MEMORY_REQUEST = "128Mi";
-    private static final String DEFAULT_MEMORY_LIMIT = "512Mi";
 
     private final EnvironmentRepository environmentRepository;
     private final SandboxExecutionGateway sandboxExecutionGateway;
@@ -98,38 +102,5 @@ public class SandboxExecutionService {
     }
 
     private record PreparedExecution(Environment environment, SandboxJobSpec spec) {
-    }
-
-    private static String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String firstNonBlank(String requested, String fallback) {
-        String trimmed = trimToNull(requested);
-        return trimmed != null ? trimmed : fallback;
-    }
-
-    private static int positiveOrDefault(Integer requested, int fallback, String fieldName) {
-        if (requested == null) {
-            return fallback;
-        }
-        if (requested <= 0) {
-            throw new BizException(fieldName + " must be positive");
-        }
-        return requested;
-    }
-
-    private static int nonNegativeOrDefault(Integer requested, int fallback, String fieldName) {
-        if (requested == null) {
-            return fallback;
-        }
-        if (requested < 0) {
-            throw new BizException(fieldName + " must be non-negative");
-        }
-        return requested;
     }
 }
