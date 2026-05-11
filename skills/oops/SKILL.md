@@ -12,9 +12,11 @@ trigger pipeline → wait for rollout.
 
 ## Confirmation policy
 
-**This is a production deployment system. Confirm with the user before executing every step.**
+**This is a production deployment system. Confirm with the user before executing every write step.**
 
-Before running any command, show the user exactly what you are about to do (the full command and its effect) and wait for explicit approval. Do not batch multiple steps into a single confirmation — confirm each step individually. Only proceed after the user says yes.
+Before running any write command (create, set, deploy, stop), use the `AskUserQuestion` tool to show the user exactly what you are about to do and wait for explicit approval. Do not batch multiple steps into a single confirmation — confirm each step individually. Only proceed after the user approves.
+
+Example confirmation question: "Run the following command?" with the full command as the option label.
 
 Read-only commands (`ls`, `get`, `status`) do not require confirmation.
 
