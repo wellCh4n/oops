@@ -79,9 +79,13 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 
 ## Requirements
 
-- Kubernetes cluster
-- SQLite (default) or MySQL database
-- Traefik (optional, for ingress/HTTPS)
+| Component | Required | Purpose |
+|---|---|---|
+| Kubernetes cluster (1.22+) | Yes | Runtime for applications, pipelines, and IDEs |
+| SQLite (default) or MySQL | Yes | Persistence for OOPS metadata |
+| Container image registry | Yes | Pipeline image push / pull |
+| Traefik v3 | No | Ingress and HTTPS routing |
+| S3-compatible object storage | No | ZIP source uploads |
 
 ## Database Migrations
 
