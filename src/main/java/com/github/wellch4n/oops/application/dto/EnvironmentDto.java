@@ -37,4 +37,25 @@ public record EnvironmentDto(
                 imageRepositoryView
         );
     }
+
+    public static EnvironmentDto fromRedacted(Environment environment) {
+        Environment.KubernetesApiServer kubernetesApiServer = environment.getKubernetesApiServer();
+        KubernetesApiServerView kubernetesApiServerView = kubernetesApiServer == null
+                ? null
+                : new KubernetesApiServerView(kubernetesApiServer.getUrl(), null);
+
+        Environment.ImageRepository imageRepository = environment.getImageRepository();
+        ImageRepositoryView imageRepositoryView = imageRepository == null
+                ? null
+                : new ImageRepositoryView(imageRepository.getUrl(), imageRepository.getUsername(), null);
+
+        return new EnvironmentDto(
+                environment.getId(),
+                environment.getName(),
+                kubernetesApiServerView,
+                environment.getWorkNamespace(),
+                environment.getBuildStorageClass(),
+                imageRepositoryView
+        );
+    }
 }

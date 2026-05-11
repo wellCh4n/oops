@@ -24,7 +24,10 @@ import org.springframework.web.bind.annotation.*;
  */
 
 @RestController
-@RequestMapping("/api/namespaces/{namespace}/applications")
+@RequestMapping({
+        "/api/namespaces/{namespace}/applications",
+        "/openapi/namespaces/{namespace}/applications"
+})
 public class ApplicationController {
 
     private final ApplicationService applicationService;
