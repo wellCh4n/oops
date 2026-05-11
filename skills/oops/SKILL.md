@@ -10,6 +10,14 @@ repo-vendored Python script `skills/oops/scripts/oops.py` to drive the end-to-en
 loop: create app → configure build → bind env → set service → set runtime →
 trigger pipeline → wait for rollout.
 
+## Confirmation policy
+
+**This is a production deployment system. Confirm with the user before executing every step.**
+
+Before running any command, show the user exactly what you are about to do (the full command and its effect) and wait for explicit approval. Do not batch multiple steps into a single confirmation — confirm each step individually. Only proceed after the user says yes.
+
+Read-only commands (`ls`, `get`, `status`) do not require confirmation.
+
 ## When to use
 
 The user says things like "deploy X to oops", "create a new app on oops",
