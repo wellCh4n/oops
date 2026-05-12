@@ -41,6 +41,7 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 ### Pod Operations
 - Live pod log streaming
 - In-browser terminal access (full TTY support via xterm.js)
+- In-browser file browser — list and download files from a running pod
 - Pod lifecycle management
 
 ### IDE Integration (Optional)
@@ -67,6 +68,11 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 - Run arbitrary commands in isolated Kubernetes Jobs via `/openapi/sandbox/executions`
 - Runtime image is configured per environment; supports streaming (SSE) and non-streaming modes
 - Configurable resource limits (CPU, memory), timeout, and TTL after completion
+
+### Programmatic API & CLI
+- Parallel `/openapi/**` REST surface authenticated by API key (separate from the UI's `/api/**` JWT surface)
+- Bundled Python CLI at [`skills/oops/scripts/oops.py`](skills/oops/scripts/oops.py) drives end-to-end deploys: create app → configure build → bind environment → set service/runtime → trigger pipeline → wait for rollout
+- Ships as an agent skill ([`skills/oops/SKILL.md`](skills/oops/SKILL.md)) for AI-assisted deployments
 
 ### Localization
 - Four languages: Chinese (Simplified/Traditional), English, Japanese

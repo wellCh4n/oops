@@ -10,22 +10,21 @@ OOPS is a Kubernetes-based PaaS (Platform as a Service) for deploying applicatio
 
 ### Backend (Spring Boot)
 
-**Java version:** 21  
+**Java version:** 25  
 **Spring Boot:** 3.5.3
 
 The backend follows a **DDD layered architecture** under `com.github.wellch4n.oops`:
 
 - **`interfaces/`**: REST controllers (`interfaces/rest/`) and WebSocket handlers (`interfaces/websocket/`). `GlobalExceptionHandler` lives here.
 - **`application/`**: Application services (use cases), DTOs, Spring events, and **ports** (`application/port/repository`, `application/port/external`) — interfaces that infrastructure implements.
-- **`domain/`**: Pure domain model split by aggregate (`application`, `delivery`, `environment`, `identity`, `namespace`, `routing`) plus shared value types (`domain/shared`). Repository interfaces are defined as application ports under `application/port/repository`, not in `domain/`.
+- **`domain/`**: Pure domain model split by aggregate (`application`, `delivery`, `environment`, `identity`, `namespace`, `routing`, `sandbox`) plus shared value types (`domain/shared`). Repository interfaces are defined as application ports under `application/port/repository`, not in `domain/`.
 - **`infrastructure/`**: Adapters and integrations
   - `infrastructure/persistence/jpa/` — JPA entities, repositories, attribute converters, mappers
   - `infrastructure/kubernetes/` — Fabric8 client glue, `task/` (`ArtifactDeployTask`, `PipelineExecuteTask`), `task/processor/` (deploy processor chain), `container/`, `pod/`, `crds/`, `stream/`, `volume/`, `ide/`
   - `infrastructure/external/feishu/` — Feishu (Lark) OAuth + messaging
   - `infrastructure/objectstorage/` — S3-compatible storage for ZIP source uploads
   - `infrastructure/scheduler/` — `@Scheduled` jobs (e.g. `PipelineInstanceScanJob`)
-  - `infrastructure/config/` — Spring config beans, `SpringContext` static accessor
-  - `infrastructure/bootstrap/` — startup initializers (e.g. seed admin user)
+  - `infrastructure/config/` — Spring config beans, `@ConfigurationProperties` classes, `SpringContext` static accessor, security filters (`JwtAuthFilter`, `OpenApiAuthFilter`), and startup initializers (`UserInitializer` seeds the default admin)
 - **`shared/`**: Cross-cutting utilities and exceptions (`BizException`).
 
 **Multi-host support**: Environment entity stores K8s API server credentials, allowing management of multiple clusters.
@@ -177,8 +176,10 @@ IDE StatefulSet name: `{applicationName}-ide-{ideId}`. On delete, only the State
 
 Default IDE config (extensions, settings) is stored at `src/main/resources/ide-default-config.json`. An environment-scoped `ide-config` ConfigMap in the work namespace overrides it and is auto-created on first `getDefaultIDEConfig()` call.
 
-### Application Ownership
-`Application` has an `owner` field (User NanoId). `createApplication` stamps the caller's `userId` automatically. `ApplicationResponse` includes both `owner` (ID) and `ownerName` (resolved via `UserService.getUsernameMapByIds()`).
+### Application Ownership & Collaborators
+`Application` has an `owner` field (User NanoId) and a `List<ApplicationCollaborator> collaborators`. `createApplication` stamps the caller's `userId` as `owner` automatically. `ApplicationResponse` includes both `owner` (ID) and `ownerName` (resolved via `UserService.getUsernameMapByIds()`).
+
+Owners can grant other users access to their applications via collaborators (`Application.setCollaboratorUserIds()` de-duplicates and excludes the owner). The Danger Zone (cascade delete) is restricted to the owner and admins; collaborators have read/operate access but cannot delete.
 
 ### External Accounts
 `ExternalAccount` entity stores linked OAuth accounts (`email`, `provider`, `providerUserId`). Used by the notification system to route pipeline status messages to the user's linked provider (e.g., Feishu).
@@ -195,6 +196,12 @@ HTTPS applications automatically get an HTTP→HTTPS redirect Middleware (`oops-
 ### Pipeline Deploy Modes
 `Pipeline.deployMode` is either `IMMEDIATE` (default) or `MANUAL`. With `MANUAL`, `PipelineInstanceScanJob` transitions the pipeline to `BUILD_SUCCEEDED` after the K8s Job completes but does **not** automatically deploy — a separate `deployPipeline()` call is required. With `IMMEDIATE`, it continues to `DEPLOYING → SUCCEEDED` inline.
 
+### Sandbox Execution
+The `domain/sandbox` aggregate plus `SandboxController` (`/api/sandbox`, `/openapi/sandbox`) run arbitrary commands inside isolated Kubernetes Jobs. Each execution selects a per-environment runtime image and supports configurable CPU/memory limits, timeout, and TTL after completion. Two response modes: non-streaming (poll) and streaming via SSE. Configured via `SandboxProperties` (`oops.sandbox.*`).
+
+### Pod Filesystem Browser
+`PodFileSystemController` at `/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files` lists and downloads files inside a pod. Backed by `PodFileSystemProperties` (`oops.pod-filesystem.*`) — typically constrained to a base path.
+
 ## API Patterns
 
 ### Response Envelope
@@ -202,6 +209,10 @@ All REST endpoints return `Result<T>` — a record with `boolean success`, `Stri
 
 ### URL Convention
 All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. Applications are keyed by `name` in URLs (not numeric id).
+
+**Two parallel API surfaces:**
+- `/api/**` — UI-facing, authenticated by `JwtAuthFilter` (Bearer JWT or `?token=` query param for WebSocket).
+- `/openapi/**` — Machine/CLI-facing, authenticated by `OpenApiAuthFilter`. `SandboxController` is dual-mapped at `/api/sandbox` and `/openapi/sandbox`; `OpenApiDiscoveryController` serves discovery under `/openapi`. The repo-vendored deploy CLI (`skills/oops/scripts/oops.py`) targets this surface.
 
 **Exceptions to namespacing:**
 - `GET /api/health` — health check, no auth required (explicitly permitted in `SecurityConfig`)
@@ -326,6 +337,10 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 - Tailwind CSS for styling
 - Component imports use `@/components/` path alias
 - Try shadcn/ui components first. Use the auto-install feature: `npx shadcn add <component>`
+
+## Repo-Vendored Deploy CLI
+
+`skills/oops/SKILL.md` ships a Python CLI (`skills/oops/scripts/oops.py`) that wraps the OOPS REST API for end-to-end deploys: create app → configure build → bind env → set service → set runtime → trigger pipeline → wait for rollout. It targets the `/openapi/**` surface and is the preferred entry point when an agent needs to drive OOPS programmatically — prefer it over hand-rolled curl chains. The skill enforces a per-step confirmation policy for write actions.
 
 ## Collaboration
 
