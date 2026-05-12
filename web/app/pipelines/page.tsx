@@ -33,6 +33,7 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 import { useRecentAppStore } from "@/store/recent-app"
+import { appColor } from "@/lib/app-color"
 
 export default function PipelinesPage() {
   return (
@@ -69,9 +70,13 @@ function PipelinesContent() {
   const selectedEnv = searchParams.get("env") ?? "all"
   const page = Number(searchParams.get("page") ?? "1")
   const size = Number(searchParams.get("size") ?? "10")
-  const activeNamespace = selectedNamespace === "all" ? "" : selectedNamespace
   const selectedApplication = applications.find(app => app.name === selectedApp)
   const selectedAppValue = selectedApplication?.id ?? selectedApp
+  // In "all" mode we still need a concrete namespace to fetch pipelines for the
+  // chosen app — derive it from the selected app instead of rewriting the URL.
+  const activeNamespace = selectedNamespace === "all"
+    ? (selectedApplication?.namespace ?? "")
+    : selectedNamespace
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -112,10 +117,14 @@ function PipelinesContent() {
             ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
             : undefined
           const targetApp = recent ?? apps[0]
-          updateParams({
-            namespace: targetApp.namespace,
-            app: targetApp.name,
-          })
+          if (selectedNamespace === "all") {
+            updateParams({ app: targetApp.name })
+          } else {
+            updateParams({
+              namespace: targetApp.namespace,
+              app: targetApp.name,
+            })
+          }
         }
       } catch {
         toast.error(t("pipelines.fetchAppsError"))
@@ -125,16 +134,6 @@ function PipelinesContent() {
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace])
-
-  useEffect(() => {
-    if (selectedNamespace !== "all" || !selectedApp || applications.length === 0) {
-      return
-    }
-    if (selectedApplication) {
-      updateParams({ namespace: selectedApplication.namespace })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, selectedApp, selectedApplication])
 
   // Load environments when app changes
   useEffect(() => {
@@ -271,6 +270,7 @@ function PipelinesContent() {
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
+                    dotColor: appColor(app.name),
                   }))}
                   onSearch={selectedNamespace ? async (query) => {
                     const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
@@ -279,6 +279,7 @@ function PipelinesContent() {
                       label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                       namespace: app.namespace,
                       name: app.name,
+                      dotColor: appColor(app.name),
                     }))
                   } : undefined}
                   placeholder={t("pipelines.selectApp")}

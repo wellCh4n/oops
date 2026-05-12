@@ -30,6 +30,7 @@ import { useRecentAppStore } from "@/store/recent-app"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment, ApplicationSourceType } from "@/lib/api/types"
+import { appColor } from "@/lib/app-color"
 
 export default function IDEPage() {
   return (
@@ -57,9 +58,13 @@ function IDEPageContent() {
 
   const selectedApp = searchParams.get("app") ?? ""
   const selectedEnv = searchParams.get("env") ?? ""
-  const activeNamespace = selectedNamespace === "all" ? "" : selectedNamespace
   const selectedApplication = applications.find(app => app.name === selectedApp)
   const selectedAppValue = selectedApplication?.id ?? selectedApp
+  // In "all" mode we still need a concrete namespace to fetch IDEs for the
+  // chosen app — derive it from the selected app instead of rewriting the URL.
+  const activeNamespace = selectedNamespace === "all"
+    ? (selectedApplication?.namespace ?? "")
+    : selectedNamespace
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -113,11 +118,15 @@ function IDEPageContent() {
             ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
             : undefined
           const targetApp = recent ?? apps[0]
-          updateParams({
-            namespace: targetApp.namespace,
-            app: targetApp.name,
-            env: "",
-          })
+          if (selectedNamespace === "all") {
+            updateParams({ app: targetApp.name, env: "" })
+          } else {
+            updateParams({
+              namespace: targetApp.namespace,
+              app: targetApp.name,
+              env: "",
+            })
+          }
         }
       } catch {
         toast.error(t("apps.fetchError"))
@@ -126,16 +135,6 @@ function IDEPageContent() {
     loadApps()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace])
-
-  useEffect(() => {
-    if (selectedNamespace !== "all" || !selectedApp || applications.length === 0) {
-      return
-    }
-    if (selectedApplication) {
-      updateParams({ namespace: selectedApplication.namespace })
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, selectedApp, selectedApplication])
 
   useEffect(() => {
     if (selectedApp && !selectedEnv && environments.length > 0) {
@@ -303,6 +302,7 @@ function IDEPageContent() {
                   label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                   namespace: app.namespace,
                   name: app.name,
+                  dotColor: appColor(app.name),
                 }))}
                 onSearch={selectedNamespace ? async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
@@ -311,6 +311,7 @@ function IDEPageContent() {
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
+                    dotColor: appColor(app.name),
                   }))
                 } : undefined}
                 placeholder={t("ide.page.selectApp")}

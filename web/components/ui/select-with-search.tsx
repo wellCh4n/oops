@@ -23,6 +23,7 @@ interface Option {
   label: string
   namespace?: string
   name?: string
+  dotColor?: string
 }
 
 interface SelectWithSearchProps {
@@ -108,9 +109,16 @@ export function SelectWithSearch({
           )}
         >
           <span
-            className={cn("truncate", !value && "text-muted-foreground")}
+            className={cn("truncate flex items-center gap-2 min-w-0", !value && "text-muted-foreground")}
           >
-            {selectedOption?.label || value || placeholder}
+            {selectedOption?.dotColor && (
+              <span
+                aria-hidden
+                className="inline-block size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: selectedOption.dotColor }}
+              />
+            )}
+            <span className="truncate">{selectedOption?.label || value || placeholder}</span>
           </span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -151,6 +159,13 @@ export function SelectWithSearch({
                           : "opacity-0"
                       )}
                     />
+                    {option.dotColor && (
+                      <span
+                        aria-hidden
+                        className="inline-block size-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: option.dotColor }}
+                      />
+                    )}
                     <span className="flex-1 truncate">{option.label}</span>
                   </CommandItem>
                 ))}

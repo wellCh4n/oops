@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Application } from "@/lib/api/types"
+import { appColor } from "@/lib/app-color"
 
 // Define the shape of our table meta to include handlers
 interface TableMeta {
@@ -19,7 +20,16 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
   {
     accessorKey: "name",
     header: t("apps.col.name"),
-    cell: ({ row }) => <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />,
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="inline-block size-2 shrink-0 rounded-full"
+          style={{ backgroundColor: appColor(row.original.name) }}
+        />
+        <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />
+      </div>
+    ),
   },
   {
     accessorKey: "description",
