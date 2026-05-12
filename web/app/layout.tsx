@@ -16,8 +16,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// `title` is intentionally omitted. ContentPage renders a declarative
+// React 19 `<title>` so per-page titles can win cleanly. Pages without
+// ContentPage (e.g. /login) render their own `<title>`.
 export const metadata: Metadata = {
-  title: "OOPS",
   description: "OOPS: Kubernetes Is All You Need.",
 };
 

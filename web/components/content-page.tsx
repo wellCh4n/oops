@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 
 interface ContentPageProps {
   title: ReactNode
+  // Plain-text override for the browser tab title — use when `title` is JSX.
+  documentTitle?: string
   actions?: ReactNode
   children: ReactNode
   className?: string
@@ -14,6 +16,7 @@ interface ContentPageProps {
 
 export function ContentPage({
   title,
+  documentTitle,
   actions,
   children,
   className,
@@ -21,6 +24,8 @@ export function ContentPage({
   disableGutter = false,
   fullHeight = false,
 }: ContentPageProps) {
+  const effectiveDocTitle = documentTitle ?? (typeof title === "string" ? title : undefined)
+
   return (
     <div
       className={cn(
@@ -29,6 +34,7 @@ export function ContentPage({
         className
       )}
     >
+      {effectiveDocTitle && <title>{`${effectiveDocTitle} - OOPS`}</title>}
       <div
         className={cn(
           "sticky top-0 z-10 shrink-0 h-10 bg-sidebar/95 border-b border-sidebar-border px-4 flex items-center justify-between backdrop-blur supports-[backdrop-filter]:bg-sidebar/85",

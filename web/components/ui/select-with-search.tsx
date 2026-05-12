@@ -123,7 +123,10 @@ export function SelectWithSearch({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0" align="start">
+      <PopoverContent
+        className="w-auto min-w-[var(--radix-popover-trigger-width)] max-w-[min(480px,calc(var(--radix-popover-content-available-width)-8px))] p-0"
+        align="start"
+      >
         <Command filter={onSearch ? () => 1 : undefined}>
           <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />

@@ -101,6 +101,7 @@ export default function SandboxDetailPage() {
 
   return (
     <ContentPage
+      documentTitle={sandbox.name}
       title={
         <span className="flex items-center gap-2">
           <span className="font-mono">{sandbox.name}</span>

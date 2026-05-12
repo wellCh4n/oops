@@ -134,10 +134,6 @@ export default function UsersPage() {
     }
   }
 
-  async function handleDelete(user: User) {
-    setDeleteTarget(user)
-  }
-
   async function confirmDelete() {
     if (!deleteTarget) return
     try {
