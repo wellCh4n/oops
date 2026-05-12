@@ -40,6 +40,8 @@ public class Pipeline extends BaseDataObject {
 
     private String operatorId;
 
+    private String message;
+
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, getId());
     }

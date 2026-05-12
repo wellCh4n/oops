@@ -242,6 +242,7 @@ const apps = {
   "apps.pipeline.createdAt": "作成日時:",
   "apps.pipeline.deployMode": "公開方法:",
   "apps.pipeline.operator": "実行者:",
+  "apps.pipeline.message": "エラーメッセージ",
   "apps.pipeline.modeImmediate": "即時公開",
   "apps.pipeline.modeManual": "手動公開",
 }

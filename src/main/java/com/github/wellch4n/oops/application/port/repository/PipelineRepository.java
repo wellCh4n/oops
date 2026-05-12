@@ -31,5 +31,7 @@ public interface PipelineRepository {
 
     int updateStatusIfMatch(String id, PipelineStatus expected, PipelineStatus target);
 
+    int updateStatusAndMessageIfMatch(String id, PipelineStatus expected, PipelineStatus target, String message);
+
     List<Pipeline> query(String namespace, String applicationName);
 }

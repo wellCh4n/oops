@@ -8,6 +8,9 @@ import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.ArtifactDeployTask;
+import io.fabric8.kubernetes.api.model.Status;
+import io.fabric8.kubernetes.client.KubernetesClientException;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,6 +39,10 @@ public class KubernetesArtifactDeploymentExecutor implements ArtifactDeploymentE
                     serviceConfig,
                     ingressConfig
             ).call();
+        } catch (KubernetesClientException e) {
+            Status status = e.getStatus();
+            String message = status == null ? e.getMessage() : status.getMessage();
+            throw new IllegalStateException(StringUtils.defaultIfBlank(message, e.getMessage()), e);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to deploy artifact: " + e.getMessage(), e);
         }

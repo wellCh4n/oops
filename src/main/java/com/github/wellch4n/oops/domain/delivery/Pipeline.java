@@ -22,6 +22,7 @@ public class Pipeline extends BaseAggregateRoot {
     private String publishRepository;
     private DeployMode deployMode;
     private String operatorId;
+    private String message;
 
     public static Pipeline initialize(
             String namespace,
@@ -63,7 +64,8 @@ public class Pipeline extends BaseAggregateRoot {
         transitionTo(PipelineStatus.SUCCEEDED);
     }
 
-    public void markFailed() {
+    public void markFailed(String message) {
+        this.message = message;
         transitionTo(PipelineStatus.ERROR);
     }
 

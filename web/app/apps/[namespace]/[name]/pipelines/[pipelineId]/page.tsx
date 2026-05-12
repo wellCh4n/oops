@@ -24,7 +24,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, WifiOff } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, WifiOff } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
@@ -352,6 +352,19 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <RefreshCw className="size-3" />
               {t("common.refresh")}
             </Button>
+          </div>
+        )}
+
+        {pipeline?.status === "ERROR" && pipeline.message && (
+          <div
+            role="alert"
+            className="flex shrink-0 items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <div className="min-w-0">
+              <div className="font-medium">{t("apps.pipeline.message")}</div>
+              <div className="mt-1 whitespace-pre-wrap break-words">{pipeline.message}</div>
+            </div>
           </div>
         )}
 

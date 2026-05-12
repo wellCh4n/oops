@@ -179,10 +179,12 @@ public class PipelineService {
             ));
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            pipeline.markFailed();
+            String message = StringUtils.defaultIfBlank(e.getMessage(), "发布任务执行失败，请查看日志。");
+            pipelineRepository.updateStatusAndMessageIfMatch(
+                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
+            pipeline.markFailed(message);
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
+                    pipeline, PipelineNotificationType.FAILED, message
             ));
             throw new RuntimeException("Deploy failed: " + e.getMessage(), e);
         }

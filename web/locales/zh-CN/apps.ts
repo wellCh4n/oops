@@ -242,6 +242,7 @@ const apps = {
   "apps.pipeline.createdAt": "创建时间:",
   "apps.pipeline.deployMode": "发布方式:",
   "apps.pipeline.operator": "操作人:",
+  "apps.pipeline.message": "错误信息",
   "apps.pipeline.modeImmediate": "立即发布",
   "apps.pipeline.modeManual": "手动发布",
 }

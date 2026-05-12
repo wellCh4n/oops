@@ -191,6 +191,7 @@ export interface Pipeline {
   deployMode?: DeployMode
   operatorId?: string
   operatorName?: string
+  message?: string | null
 }
 
 export interface ConfigMap {

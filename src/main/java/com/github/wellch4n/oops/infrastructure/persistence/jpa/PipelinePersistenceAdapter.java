@@ -93,6 +93,11 @@ public class PipelinePersistenceAdapter implements com.github.wellch4n.oops.appl
     }
 
     @Override
+    public int updateStatusAndMessageIfMatch(String id, PipelineStatus expected, PipelineStatus target, String message) {
+        return pipelineRepository.updateStatusAndMessageIfMatch(id, expected, target, message);
+    }
+
+    @Override
     public List<com.github.wellch4n.oops.domain.delivery.Pipeline> query(String namespace, String applicationName) {
         return PersistenceMapper.convertList(pipelineRepository.findAll((root, query, criteriaBuilder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();

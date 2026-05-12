@@ -242,6 +242,7 @@ const apps = {
   "apps.pipeline.createdAt": "Created:",
   "apps.pipeline.deployMode": "Mode:",
   "apps.pipeline.operator": "Operator:",
+  "apps.pipeline.message": "Error Message",
   "apps.pipeline.modeImmediate": "Immediate",
   "apps.pipeline.modeManual": "Manual",
 }

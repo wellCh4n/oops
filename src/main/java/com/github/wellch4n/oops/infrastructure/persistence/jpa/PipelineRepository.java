@@ -50,4 +50,12 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
     int updateStatusIfMatch(@Param("id") String id,
                             @Param("expected") PipelineStatus expected,
                             @Param("target") PipelineStatus target);
+
+    @Modifying
+    @Transactional
+    @Query("update Pipeline p set p.status = :target, p.message = :message where p.id = :id and p.status = :expected")
+    int updateStatusAndMessageIfMatch(@Param("id") String id,
+                                      @Param("expected") PipelineStatus expected,
+                                      @Param("target") PipelineStatus target,
+                                      @Param("message") String message);
 }

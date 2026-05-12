@@ -16,6 +16,7 @@ import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import java.util.List;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -121,28 +122,30 @@ public class PipelineInstanceScanJob {
                     } else if (jobStatus == PipelineJobStatus.FAILED) {
                         System.err.println("Error processing succeeded pipeline " + pipeline.getId());
                         pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
-                        int updated = pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
+                        String message = "镜像构建失败，请查看流水线日志。";
+                        int updated = pipelineRepository.updateStatusAndMessageIfMatch(
+                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
                         );
                         if (updated > 0) {
-                            pipeline.markFailed();
+                            pipeline.markFailed(message);
                             eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                    pipeline, PipelineNotificationType.FAILED, "镜像构建失败，请查看流水线日志。"
+                                    pipeline, PipelineNotificationType.FAILED, message
                             ));
                         }
                     }
             } catch (Exception e) {
                 System.out.println("Error scanning pipeline instance: " + e.getMessage());
-                int deployingUpdated = pipelineRepository.updateStatusIfMatch(
-                        pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR
+                String message = StringUtils.defaultIfBlank(e.getMessage(), "发布任务执行失败，请查看日志。");
+                int deployingUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
+                        pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message
                 );
-                int runningUpdated = pipelineRepository.updateStatusIfMatch(
-                        pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR
+                int runningUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
+                        pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
                 );
                 if (deployingUpdated > 0 || runningUpdated > 0) {
-                    pipeline.markFailed();
+                    pipeline.markFailed(message);
                     eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                            pipeline, PipelineNotificationType.FAILED, "发布任务执行失败，请查看日志。原因：" + e.getMessage()
+                            pipeline, PipelineNotificationType.FAILED, message
                     ));
                 }
             }

@@ -17,7 +17,8 @@ public record PipelineDto(
         String branch,
         DeployMode deployMode,
         String operatorId,
-        String operatorName
+        String operatorName,
+        String message
 ) {
     public static PipelineDto from(Pipeline pipeline, String operatorName) {
         return new PipelineDto(
@@ -32,7 +33,8 @@ public record PipelineDto(
                 pipeline.getBranch(),
                 pipeline.getDeployMode(),
                 pipeline.getOperatorId(),
-                operatorName
+                operatorName,
+                pipeline.getMessage()
         );
     }
 }
