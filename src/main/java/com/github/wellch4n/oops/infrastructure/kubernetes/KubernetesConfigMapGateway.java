@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.application.dto.ConfigMapItem;
 import com.github.wellch4n.oops.application.dto.UpdateConfigMapCommand;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ConfigMapBuilder;
+import io.fabric8.kubernetes.api.model.NamespaceBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
@@ -55,6 +56,10 @@ public class KubernetesConfigMapGateway implements ConfigMapGateway {
         }
 
         var client = clientPool.get(environment.getKubernetesApiServer());
+        client.namespaces()
+                .resource(new NamespaceBuilder().withNewMetadata().withName(namespace).endMetadata().build())
+                .serverSideApply();
+
         StatefulSet statefulSet = client.apps().statefulSets()
                 .inNamespace(namespace)
                 .withName(applicationName)
