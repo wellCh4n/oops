@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { ApiResponse } from "./types"
+import { ApiResponse, Page } from "./types"
 
 export interface User {
   id: string
@@ -24,6 +24,19 @@ export interface UpdateUserRequest {
 export async function fetchUsers(): Promise<User[]> {
   const res = await apiFetch("/api/users")
   const data = await res.json() as ApiResponse<User[]>
+  if (!data.success) {
+    throw new Error(data.message || "Failed to fetch users")
+  }
+  return data.data
+}
+
+export async function fetchUsersPage(keyword?: string, page = 1, size = 10): Promise<Page<User>> {
+  const params = new URLSearchParams()
+  if (keyword) params.set("keyword", keyword)
+  params.set("page", String(page))
+  params.set("size", String(size))
+  const res = await apiFetch(`/api/users/page?${params.toString()}`)
+  const data = await res.json() as ApiResponse<Page<User>>
   if (!data.success) {
     throw new Error(data.message || "Failed to fetch users")
   }

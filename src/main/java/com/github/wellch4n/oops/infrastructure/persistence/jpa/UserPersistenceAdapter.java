@@ -1,9 +1,11 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import com.github.wellch4n.oops.application.port.repository.PageResult;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,6 +58,19 @@ public class UserPersistenceAdapter implements com.github.wellch4n.oops.applicat
     @Override
     public List<com.github.wellch4n.oops.domain.identity.User> findAll() {
         return PersistenceMapper.convertList(userRepository.findAll(), PersistenceMapper::toDomain);
+    }
+
+    @Override
+    public PageResult<com.github.wellch4n.oops.domain.identity.User> findPage(String keyword, int page, int size) {
+        var result = userRepository.searchPage(
+                keyword == null ? "" : keyword,
+                PageRequest.of(Math.max(page - 1, 0), size));
+        return new PageResult<>(
+                result.getTotalElements(),
+                PersistenceMapper.convertList(result.getContent(), PersistenceMapper::toDomain),
+                result.getSize(),
+                result.getTotalPages()
+        );
     }
 
     @Override

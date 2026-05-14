@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.application.dto.ChangePasswordCommand;
 import com.github.wellch4n.oops.application.dto.CreateUserCommand;
+import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.UpdateMyProfileCommand;
 import com.github.wellch4n.oops.application.dto.UpdateUserCommand;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -35,6 +37,14 @@ public class UserController {
     @PreAuthorize("isAuthenticated()")
     public Result<List<User>> listUsers() {
         return Result.success(userService.listUsers());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Page<User>> listUsersPage(@RequestParam(required = false) String keyword,
+                                            @RequestParam(defaultValue = "1") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(userService.listUsers(keyword, page, size));
     }
 
     @GetMapping("/me")

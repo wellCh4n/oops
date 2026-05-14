@@ -1,5 +1,7 @@
 package com.github.wellch4n.oops.application.service;
 
+import com.github.wellch4n.oops.application.dto.Page;
+import com.github.wellch4n.oops.application.port.repository.PageResult;
 import com.github.wellch4n.oops.application.port.repository.UserRepository;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.UserRole;
@@ -69,6 +71,11 @@ public class UserService {
 
     public List<User> listUsers() {
         return userRepository.findAll();
+    }
+
+    public Page<User> listUsers(String keyword, int page, int size) {
+        PageResult<User> result = userRepository.findPage(keyword, page, size);
+        return new Page<>(result.totalElements(), result.content(), result.size(), result.totalPages());
     }
 
     public void deleteUser(String id) {

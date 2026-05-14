@@ -23,6 +23,8 @@ public interface UserRepository {
 
     List<User> findAll();
 
+    PageResult<User> findPage(String keyword, int page, int size);
+
     void deleteById(String id);
 
     boolean existsByRole(UserRole role);
