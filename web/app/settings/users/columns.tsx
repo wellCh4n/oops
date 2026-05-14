@@ -26,13 +26,14 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
   {
     accessorKey: "username",
     header: t("users.col.username"),
+    size: 120,
     cell: ({ row }) => <Copyable value={row.original.username} maxLength={20} />,
   },
   {
     accessorKey: "email",
     header: t("users.col.email"),
     cell: ({ row }) => row.original.email
-      ? <Copyable value={row.original.email} maxLength={30} />
+      ? <Copyable value={row.original.email} maxLength={Infinity} />
       : <span className="text-muted-foreground">-</span>,
   },
   {
