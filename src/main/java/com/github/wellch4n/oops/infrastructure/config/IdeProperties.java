@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
+import java.util.List;
 import lombok.Data;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -14,6 +15,6 @@ public class IdeProperties {
     private String domain;
     private boolean https = false;
     private String image;
-    private String middleware;
+    private List<String> middlewares = List.of();
     private String proxyDomain = "{{port}}-{{host}}";
 }

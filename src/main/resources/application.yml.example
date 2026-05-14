@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: oops
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  datasource:
+    url: jdbc:sqlite:oops.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/sqlite
+    baseline-on-migrate: true
+    baseline-version: 1
+
+oops:
+  pipeline:
+    image:
+      clone: alpine/git:v2.49.0
+      zip: alpine/curl:8.17.0
+      push: quay.io/buildah/stable:v1.43.1
+      registry-mirrors:
+        docker.io: docker.m.daocloud.io
+      unzip-excludes:
+        - .git/*
+        - "*/.git/*"
+        - node_modules/*
+        - "*/node_modules/*"
+        - __MACOSX
+        - __MACOSX/*
+        - "*/__MACOSX"
+        - "*/__MACOSX/*"
+        - .DS_Store
+        - "*/.DS_Store"
+  pod-filesystem:
+    max-download-size-bytes: 52428800
+  ingress:
+    cert-resolver: letsencrypt-prod
+  crypto:
+    secret-key: oops-crypto-secret-key-please-change-in-production
+  jwt:
+    secret: oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
+    expiration: 604800000
+  feishu:
+    enabled: false
+    app-id: cli_xxx
+    app-secret: xxx
+    redirect-uri: http://localhost:3000/auth/feishu/callback
+  ide:
+    enabled: false
+    https: false
+    domain: ide.k8s.orb.local
+    image: codercom/code-server:4.112.0-39
+    middlewares:
+      - code-server-csp-fix
+      - code-server-oss-redirect
+    proxy-domain: "{{port}}-{{host}}"
+  object-storage:
+    enabled: false
+    endpoint: https://s3.oss-cn-hangzhou.aliyuncs.com
+    region: cn-hangzhou
+    bucket: oops-build-sources
+    access-key:
+    secret-key:
+    path-style-access: false
+    key-prefix: build-sources
+    upload-url-expiration-seconds: 900
+    download-url-expiration-seconds: 1800
+    max-file-size-bytes: 524288000
+  sandbox:
+    images:
+      - python:3.12-slim
+      - node:20-slim

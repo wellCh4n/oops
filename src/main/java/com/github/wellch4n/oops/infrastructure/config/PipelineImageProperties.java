@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +14,7 @@ public class PipelineImageProperties {
     private String clone;
     private String zip;
     private String push;
-    private String registryMirrors = "docker.io=docker.m.daocloud.io";
+    private Map<String, String> registryMirrors = Map.of("docker.io", "docker.m.daocloud.io");
     private List<String> unzipExcludes = List.of(
             ".git/*",
             "*/.git/*",

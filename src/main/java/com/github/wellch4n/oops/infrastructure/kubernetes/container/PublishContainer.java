@@ -9,6 +9,7 @@ import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
@@ -30,7 +31,7 @@ public class PublishContainer extends BaseContainer {
                          Pipeline pipeline,
                          String repositoryUrl,
                          String image,
-                         String registryMirrors) {
+                         Map<String, String> registryMirrors) {
         this.artifact = repositoryUrl + "/" + application.getName() + ":" + pipeline.getId();
         String dockerFile;
         if (applicationBuildConfig != null) {
@@ -84,19 +85,15 @@ public class PublishContainer extends BaseContainer {
      * Convert Kaniko-style registry mirror mapping ({@code source=mirror,source=mirror}) to
      * Buildah registries.conf TOML format.
      */
-    private static String buildRegistriesConf(String registryMirrors) {
+    private static String buildRegistriesConf(Map<String, String> registryMirrors) {
         StringBuilder conf = new StringBuilder();
         conf.append("unqualified-search-registries = [\"docker.io\"]\n\n");
-        if (StringUtils.isBlank(registryMirrors)) {
+        if (registryMirrors == null || registryMirrors.isEmpty()) {
             return conf.toString();
         }
-        for (String pair : registryMirrors.split(",")) {
-            String[] parts = pair.split("=", 2);
-            if (parts.length != 2) {
-                continue;
-            }
-            String prefix = parts[0].trim();
-            String mirror = parts[1].trim();
+        for (Map.Entry<String, String> entry : registryMirrors.entrySet()) {
+            String prefix = entry.getKey().trim();
+            String mirror = entry.getValue().trim();
             if (prefix.isEmpty() || mirror.isEmpty()) {
                 continue;
             }

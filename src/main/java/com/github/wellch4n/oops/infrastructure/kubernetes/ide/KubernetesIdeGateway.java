@@ -350,14 +350,9 @@ public class KubernetesIdeGateway implements IdeGateway {
         String host = name + "." + ideConfig.getDomain();
         String matchRule = IdeProxyDomainUtils.buildIngressMatch(host, proxyDomainTemplate);
 
-        List<IngressRouteSpec.Middleware> middlewares = List.of();
-        if (ideConfig.getMiddleware() != null && !ideConfig.getMiddleware().isBlank()) {
-            middlewares = Arrays.stream(ideConfig.getMiddleware().split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isBlank())
-                    .map(s -> IngressRouteSpec.Middleware.builder().name(s).build())
-                    .toList();
-        }
+        List<IngressRouteSpec.Middleware> middlewares = ideConfig.getMiddlewares().stream()
+                .map(middlewareName -> IngressRouteSpec.Middleware.builder().name(middlewareName).build())
+                .toList();
 
         IngressRouteSpec.IngressRouteSpecBuilder specBuilder = IngressRouteSpec.builder()
                 .entryPoints(List.of(ideConfig.isHttps() ? "websecure" : "web"))

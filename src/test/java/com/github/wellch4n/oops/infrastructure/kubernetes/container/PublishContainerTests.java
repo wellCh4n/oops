@@ -10,6 +10,7 @@ import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class PublishContainerTests {
@@ -55,7 +56,7 @@ class PublishContainerTests {
                 pipeline("pipe"),
                 "registry.example.com/team",
                 "quay.io/buildah/stable:v1.43.1",
-                "index.docker.io=docker.m.daocloud.io,evil\"prefix=mirror,quay.io=bad\nmirror");
+                Map.of("index.docker.io", "docker.m.daocloud.io", "evil\"prefix", "mirror", "quay.io", "bad\nmirror"));
 
         String registriesConf = new String(
                 Base64.getDecoder().decode(container.getCommand().get(7)),
