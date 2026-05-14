@@ -3,15 +3,24 @@ package com.github.wellch4n.oops.interfaces.rest;
 import com.github.wellch4n.oops.application.dto.SandboxExecutionRequest;
 import com.github.wellch4n.oops.application.dto.SandboxInstanceCreateRequest;
 import com.github.wellch4n.oops.application.dto.SandboxInstanceExecRequest;
+import com.github.wellch4n.oops.application.port.PodFileSystemGateway.PodFileEntry;
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxExecutionResult;
+import com.github.wellch4n.oops.application.service.PodFileSystemService;
 import com.github.wellch4n.oops.application.service.SandboxExecutionService;
 import com.github.wellch4n.oops.application.service.SandboxInstanceService;
+import com.github.wellch4n.oops.application.service.SandboxInstanceService.SandboxTerminalTarget;
 import com.github.wellch4n.oops.application.service.SandboxRuntimeService;
 import com.github.wellch4n.oops.application.service.SandboxRuntimeService.SandboxRuntimeView;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
+import com.github.wellch4n.oops.shared.exception.BizException;
+import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,16 +35,21 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping({"/api/sandbox", "/openapi/sandbox"})
 public class SandboxController {
 
+    private static final String SANDBOX_CONTAINER = "sandbox";
+
     private final SandboxExecutionService sandboxExecutionService;
     private final SandboxInstanceService sandboxInstanceService;
     private final SandboxRuntimeService sandboxRuntimeService;
+    private final PodFileSystemService podFileSystemService;
 
     public SandboxController(SandboxExecutionService sandboxExecutionService,
                              SandboxInstanceService sandboxInstanceService,
-                             SandboxRuntimeService sandboxRuntimeService) {
+                             SandboxRuntimeService sandboxRuntimeService,
+                             PodFileSystemService podFileSystemService) {
         this.sandboxExecutionService = sandboxExecutionService;
         this.sandboxInstanceService = sandboxInstanceService;
         this.sandboxRuntimeService = sandboxRuntimeService;
+        this.podFileSystemService = podFileSystemService;
     }
 
     @GetMapping("/runtimes")
@@ -96,5 +110,38 @@ public class SandboxController {
         }
         SandboxExecutionResult result = sandboxInstanceService.exec(id, request, callerUserId);
         return Result.success(result);
+    }
+
+    @GetMapping("/instances/{id}/files")
+    public Result<List<PodFileEntry>> listFiles(@PathVariable("id") String id,
+                                                @RequestParam(value = "path", required = false) String path,
+                                                @AuthenticationPrincipal AuthUserPrincipal principal) {
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        String resolvedPath = (path == null || path.isBlank()) ? "/" : path;
+        return Result.success(podFileSystemService.listDirectory(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, resolvedPath));
+    }
+
+    @GetMapping("/instances/{id}/files/download")
+    public void downloadFile(@PathVariable("id") String id,
+                             @RequestParam(value = "path") String path,
+                             @AuthenticationPrincipal AuthUserPrincipal principal,
+                             HttpServletResponse response) throws Exception {
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        String fileName = path.substring(path.lastIndexOf('/') + 1);
+        long fileSize = podFileSystemService.getFileSize(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, path);
+        long maxDownloadSizeBytes = podFileSystemService.getMaxDownloadSizeBytes();
+        if (fileSize > maxDownloadSizeBytes) {
+            long maxMB = maxDownloadSizeBytes / (1024 * 1024);
+            throw new BizException("File too large: " + fileSize + " bytes (max " + maxMB + " MB)");
+        }
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build();
+        response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
+        response.setContentLengthLong(fileSize);
+        podFileSystemService.streamFile(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, path, response.getOutputStream());
     }
 }

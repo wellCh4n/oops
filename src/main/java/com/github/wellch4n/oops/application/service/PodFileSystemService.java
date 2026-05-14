@@ -30,6 +30,10 @@ public class PodFileSystemService {
         if (environment == null) {
             throw new BizException("Environment not found: " + environmentName);
         }
+        return listDirectory(environment, namespace, podName, container, path);
+    }
+
+    public List<PodFileEntry> listDirectory(Environment environment, String namespace, String podName, String container, String path) {
         return podFileSystemGateway.listDirectory(environment, namespace, podName, container, path);
     }
 
@@ -38,6 +42,10 @@ public class PodFileSystemService {
         if (environment == null) {
             throw new BizException("Environment not found: " + environmentName);
         }
+        return getFileSize(environment, namespace, podName, container, path);
+    }
+
+    public long getFileSize(Environment environment, String namespace, String podName, String container, String path) {
         return podFileSystemGateway.getFileSize(environment, namespace, podName, container, path);
     }
 
@@ -46,6 +54,10 @@ public class PodFileSystemService {
         if (environment == null) {
             throw new BizException("Environment not found: " + environmentName);
         }
+        streamFile(environment, namespace, podName, container, path, outputStream);
+    }
+
+    public void streamFile(Environment environment, String namespace, String podName, String container, String path, OutputStream outputStream) {
         podFileSystemGateway.streamFile(environment, namespace, podName, container, path, outputStream);
     }
 

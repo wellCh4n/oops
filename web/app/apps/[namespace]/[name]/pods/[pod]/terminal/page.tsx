@@ -8,13 +8,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, WifiOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
+import { getPodFileDownloadUrl, listPodDirectory } from "@/lib/api/pod-files"
 
 const TerminalView = dynamic(() => import("@/components/terminal-view"), {
   ssr: false,
   loading: () => <div className="p-4 text-white">Loading terminal...</div>
 })
 
-const PodFileTree = dynamic(() => import("@/components/pod-file-tree"), {
+const FileTree = dynamic(() => import("@/components/file-tree"), {
   ssr: false,
 })
 
@@ -36,6 +37,16 @@ export default function TerminalPage() {
   const draggingRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
+
+  const listDirectory = useCallback(
+    (path: string) => listPodDirectory({ namespace, name, pod, env: env!, path }),
+    [namespace, name, pod, env],
+  )
+
+  const getDownloadUrl = useCallback(
+    (path: string) => getPodFileDownloadUrl({ namespace, name, pod, env: env!, path }),
+    [namespace, name, pod, env],
+  )
 
   const handleSplitterPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -118,11 +129,9 @@ export default function TerminalPage() {
             className="shrink-0 border-r border-sidebar-border"
             style={{ width: fileTreeWidth }}
           >
-            <PodFileTree
-              namespace={namespace}
-              name={name}
-              pod={pod}
-              env={env}
+            <FileTree
+              listDirectory={listDirectory}
+              getDownloadUrl={getDownloadUrl}
             />
           </div>
           <div

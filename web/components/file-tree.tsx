@@ -9,7 +9,7 @@ import {
   Loader2,
   RefreshCw,
 } from "lucide-react"
-import { getPodFileDownloadUrl, listPodDirectory, PodFileEntry } from "@/lib/api/pod-files"
+import { PodFileEntry } from "@/lib/api/pod-files"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { toast } from "sonner"
@@ -26,11 +26,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-interface PodFileTreeProps {
-  namespace: string
-  name: string
-  pod: string
-  env: string
+export interface FileTreeProps {
+  listDirectory: (path: string) => Promise<PodFileEntry[]>
+  getDownloadUrl: (path: string) => string
   rootPath?: string
 }
 
@@ -41,13 +39,11 @@ interface NodeState {
   expanded: boolean
 }
 
-export default function PodFileTree({
-  namespace,
-  name,
-  pod,
-  env,
+export default function FileTree({
+  listDirectory,
+  getDownloadUrl,
   rootPath = "/",
-}: PodFileTreeProps) {
+}: FileTreeProps) {
   const { t } = useLanguage()
   const [nodes, setNodes] = useState<Record<string, NodeState>>({})
 
@@ -63,21 +59,10 @@ export default function PodFileTree({
         },
       }))
       try {
-        const entries = await listPodDirectory({
-          namespace,
-          name,
-          pod,
-          env,
-          path,
-        })
+        const entries = await listDirectory(path)
         setNodes((prev) => ({
           ...prev,
-          [path]: {
-            entries,
-            loading: false,
-            error: null,
-            expanded: true,
-          },
+          [path]: { entries, loading: false, error: null, expanded: true },
         }))
       } catch (err) {
         setNodes((prev) => ({
@@ -91,7 +76,7 @@ export default function PodFileTree({
         }))
       }
     },
-    [namespace, name, pod, env],
+    [listDirectory],
   )
 
   useEffect(() => {
@@ -103,15 +88,9 @@ export default function PodFileTree({
       if (entry.type !== "DIRECTORY") return
       const existing = nodes[entry.path]
       if (existing?.expanded) {
-        setNodes((prev) => ({
-          ...prev,
-          [entry.path]: { ...existing, expanded: false },
-        }))
+        setNodes((prev) => ({ ...prev, [entry.path]: { ...existing, expanded: false } }))
       } else if (existing?.entries) {
-        setNodes((prev) => ({
-          ...prev,
-          [entry.path]: { ...existing, expanded: true },
-        }))
+        setNodes((prev) => ({ ...prev, [entry.path]: { ...existing, expanded: true } }))
       } else {
         loadDirectory(entry.path)
       }
@@ -154,10 +133,7 @@ export default function PodFileTree({
             depth={0}
             nodes={nodes}
             onToggle={toggle}
-            namespace={namespace}
-            name={name}
-            pod={pod}
-            env={env}
+            getDownloadUrl={getDownloadUrl}
           />
         )}
       </div>
@@ -170,19 +146,13 @@ interface TreeLevelProps {
   depth: number
   nodes: Record<string, NodeState>
   onToggle: (entry: PodFileEntry) => void
-  namespace: string
-  name: string
-  pod: string
-  env: string
+  getDownloadUrl: (path: string) => string
 }
 
-function TreeLevel({ entries, depth, nodes, onToggle, namespace, name, pod, env }: TreeLevelProps) {
+function TreeLevel({ entries, depth, nodes, onToggle, getDownloadUrl }: TreeLevelProps) {
   if (entries.length === 0) {
     return (
-      <div
-        className="px-3 py-1 italic text-muted-foreground"
-        style={{ paddingLeft: 12 + depth * 12 }}
-      >
+      <div className="px-3 py-1 italic text-muted-foreground" style={{ paddingLeft: 12 + depth * 12 }}>
         (empty)
       </div>
     )
@@ -196,10 +166,7 @@ function TreeLevel({ entries, depth, nodes, onToggle, namespace, name, pod, env 
           depth={depth}
           nodes={nodes}
           onToggle={onToggle}
-          namespace={namespace}
-          name={name}
-          pod={pod}
-          env={env}
+          getDownloadUrl={getDownloadUrl}
         />
       ))}
     </ul>
@@ -211,10 +178,7 @@ interface TreeRowProps {
   depth: number
   nodes: Record<string, NodeState>
   onToggle: (entry: PodFileEntry) => void
-  namespace: string
-  name: string
-  pod: string
-  env: string
+  getDownloadUrl: (path: string) => string
 }
 
 function formatBytes(bytes: number): string {
@@ -229,7 +193,7 @@ function formatBytes(bytes: number): string {
   return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unitIndex]}`
 }
 
-function TreeRow({ entry, depth, nodes, onToggle, namespace, name, pod, env }: TreeRowProps) {
+function TreeRow({ entry, depth, nodes, onToggle, getDownloadUrl }: TreeRowProps) {
   const { t } = useLanguage()
   const isDir = entry.type === "DIRECTORY"
   const state = nodes[entry.path]
@@ -248,7 +212,7 @@ function TreeRow({ entry, depth, nodes, onToggle, namespace, name, pod, env }: T
 
   const handleDownload = () => {
     try {
-      const url = getPodFileDownloadUrl({ namespace, name, pod, env, path: entry.path })
+      const url = getDownloadUrl(entry.path)
       const a = Object.assign(document.createElement("a"), { href: url, download: entry.name })
       document.body.appendChild(a)
       a.click()
@@ -335,10 +299,7 @@ function TreeRow({ entry, depth, nodes, onToggle, namespace, name, pod, env }: T
       </ContextMenu>
       {isDir && expanded ? (
         state?.error ? (
-          <div
-            className="px-3 py-1 text-destructive"
-            style={{ paddingLeft: indent + 16 }}
-          >
+          <div className="px-3 py-1 text-destructive" style={{ paddingLeft: indent + 16 }}>
             {state.error}
           </div>
         ) : state?.entries ? (
@@ -347,10 +308,7 @@ function TreeRow({ entry, depth, nodes, onToggle, namespace, name, pod, env }: T
             depth={depth + 1}
             nodes={nodes}
             onToggle={onToggle}
-            namespace={namespace}
-            name={name}
-            pod={pod}
-            env={env}
+            getDownloadUrl={getDownloadUrl}
           />
         ) : null
       ) : null}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useParams } from "next/navigation"
@@ -15,10 +15,19 @@ import { ContentPage } from "@/components/content-page"
 import { useLanguage } from "@/contexts/language-context"
 
 import { getSandbox, SandboxInstance, SandboxInstanceStatus } from "@/lib/api/sandbox"
+import { getSandboxFileDownloadUrl, listSandboxDirectory } from "@/lib/api/sandbox-files"
 
 const SandboxTerminalView = dynamic(() => import("@/components/sandbox-terminal-view"), {
   ssr: false,
 })
+
+const FileTree = dynamic(() => import("@/components/file-tree"), {
+  ssr: false,
+})
+
+const FILE_TREE_MIN_WIDTH = 180
+const FILE_TREE_MAX_WIDTH = 480
+const FILE_TREE_DEFAULT_WIDTH = 260
 
 export default function SandboxDetailPage() {
   const { t } = useLanguage()
@@ -29,6 +38,9 @@ export default function SandboxDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
+  const [fileTreeWidth, setFileTreeWidth] = useState<number>(FILE_TREE_DEFAULT_WIDTH)
+  const draggingRef = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const fetchSandbox = useCallback(async () => {
     if (!sandboxId) return
@@ -57,6 +69,41 @@ export default function SandboxDetailPage() {
     const timer = setInterval(fetchSandbox, 5000)
     return () => clearInterval(timer)
   }, [sandbox, fetchSandbox])
+
+  const listDirectory = useCallback(
+    (path: string) => listSandboxDirectory({ id: sandboxId, path }),
+    [sandboxId],
+  )
+  const getDownloadUrl = useCallback(
+    (path: string) => getSandboxFileDownloadUrl({ id: sandboxId, path }),
+    [sandboxId],
+  )
+
+  const handleSplitterPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    draggingRef.current = true
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }, [])
+
+  const handleSplitterPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || !containerRef.current) return
+    const rect = containerRef.current.getBoundingClientRect()
+    const next = Math.min(FILE_TREE_MAX_WIDTH, Math.max(FILE_TREE_MIN_WIDTH, e.clientX - rect.left))
+    setFileTreeWidth(next)
+  }, [])
+
+  const handleSplitterPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    draggingRef.current = false
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+    window.dispatchEvent(new Event("resize"))
+  }, [])
+
+  useEffect(() => {
+    window.dispatchEvent(new Event("resize"))
+  }, [fileTreeWidth])
 
   if (loading) {
     return (
@@ -155,8 +202,25 @@ export default function SandboxDetailPage() {
           </div>
         )}
         {sandbox.status === "RUNNING" ? (
-          <div className="min-w-0 flex-1">
-            <SandboxTerminalView sandboxId={sandbox.id} onConnectionStatusChange={setConnectionStatus} />
+          <div ref={containerRef} className="flex min-h-0 flex-1 flex-row overflow-hidden">
+            <div
+              className="shrink-0 border-r border-sidebar-border"
+              style={{ width: fileTreeWidth }}
+            >
+              <FileTree listDirectory={listDirectory} getDownloadUrl={getDownloadUrl} />
+            </div>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              onPointerDown={handleSplitterPointerDown}
+              onPointerMove={handleSplitterPointerMove}
+              onPointerUp={handleSplitterPointerUp}
+              onPointerCancel={handleSplitterPointerUp}
+              className="w-1 shrink-0 cursor-col-resize bg-sidebar-border hover:bg-primary/40"
+            />
+            <div className="min-w-0 flex-1">
+              <SandboxTerminalView sandboxId={sandbox.id} onConnectionStatusChange={setConnectionStatus} />
+            </div>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
