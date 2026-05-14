@@ -5,16 +5,14 @@ import java.util.Optional;
 
 public enum BuiltinSandboxRuntime {
 
-    ALPINE_MATE("alpine-mate", "linuxserver/webtop:alpine-mate", "/sandbox/builtin/alpine-mate.yaml");
+    ALPINE_MATE("alpine-mate", "linuxserver/webtop:alpine-mate");
 
     private final String key;
     private final String image;
-    private final String resourcePath;
 
-    BuiltinSandboxRuntime(String key, String image, String resourcePath) {
+    BuiltinSandboxRuntime(String key, String image) {
         this.key = key;
         this.image = image;
-        this.resourcePath = resourcePath;
     }
 
     public String getKey() {
@@ -23,10 +21,6 @@ public enum BuiltinSandboxRuntime {
 
     public String getImage() {
         return image;
-    }
-
-    public String getResourcePath() {
-        return resourcePath;
     }
 
     public static Optional<BuiltinSandboxRuntime> from(String runtime) {

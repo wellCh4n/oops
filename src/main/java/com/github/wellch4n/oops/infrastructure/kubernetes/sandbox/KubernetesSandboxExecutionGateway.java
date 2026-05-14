@@ -12,9 +12,13 @@ import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.OwnerReference;
+import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
+import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -25,10 +29,7 @@ import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import jakarta.annotation.PostConstruct;
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -157,31 +158,70 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         String statefulSetName = SANDBOX_NAME_PREFIX + spec.sandboxId();
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
 
-        String yaml = loadBuiltinTemplate(builtin.getResourcePath())
-                .replace("{{sandboxName}}", statefulSetName)
-                .replace("{{namespace}}", workNamespace)
-                .replace("{{sandboxId}}", spec.sandboxId())
-                .replace("{{name}}", spec.name())
-                .replace("{{createdBy}}", spec.createdByUserId() != null ? spec.createdByUserId() : "")
-                .replace("{{cpuRequest}}", spec.cpuRequest())
-                .replace("{{cpuLimit}}", spec.cpuLimit())
-                .replace("{{memoryRequest}}", spec.memoryRequest())
-                .replace("{{memoryLimit}}", spec.memoryLimit());
+        Map<String, String> labels = buildPersistentLabels(spec, builtin.getKey());
+        Map<String, String> annotations = buildPersistentAnnotations(spec);
+        StatefulSet statefulSet = switch (builtin) {
+            case ALPINE_MATE -> AlpineMateTemplate.buildStatefulSet(spec, statefulSetName, workNamespace, labels, annotations);
+        };
+        Service service = switch (builtin) {
+            case ALPINE_MATE -> AlpineMateTemplate.buildService(statefulSetName, workNamespace, spec.sandboxId());
+        };
 
+        StatefulSet created;
         try {
-            client.load(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)))
-                    .inNamespace(workNamespace)
-                    .create();
+            created = client.apps().statefulSets().inNamespace(workNamespace).resource(statefulSet).create();
         } catch (Exception exception) {
             log.warn("Failed to create builtin sandbox {}: {}", statefulSetName, exception.getMessage());
             throw new BizException("Failed to create sandbox: " + exception.getMessage());
         }
 
-        StatefulSet statefulSet = client.apps().statefulSets()
-                .inNamespace(workNamespace)
+        OwnerReference ownerReference = new OwnerReferenceBuilder()
+                .withApiVersion("apps/v1")
+                .withKind("StatefulSet")
                 .withName(statefulSetName)
-                .get();
-        return toSandboxInstance(environment, statefulSet, findPod(client, workNamespace, spec.sandboxId()));
+                .withUid(created.getMetadata().getUid())
+                .withBlockOwnerDeletion(true)
+                .build();
+        service.getMetadata().setOwnerReferences(List.of(ownerReference));
+        try {
+            client.services().inNamespace(workNamespace).resource(service).create();
+        } catch (Exception exception) {
+            log.warn("Failed to create builtin sandbox service {}: {}", statefulSetName, exception.getMessage());
+            throw new BizException("Failed to create sandbox: " + exception.getMessage());
+        }
+
+        return toSandboxInstance(environment, created, findPod(client, workNamespace, spec.sandboxId()));
+    }
+
+    private Map<String, String> buildPersistentLabels(PersistentSandboxSpec spec, String imageLabel) {
+        Map<String, String> labels = new HashMap<>();
+        labels.put(LABEL_TYPE, LABEL_TYPE_VALUE);
+        labels.put(LABEL_KIND, LABEL_KIND_PERSISTENT);
+        labels.put(LABEL_SANDBOX_ID, spec.sandboxId());
+        labels.put(LABEL_IMAGE, imageLabel);
+        if (spec.createdByUserId() != null && !spec.createdByUserId().isBlank()) {
+            labels.put(LABEL_CREATED_BY, spec.createdByUserId());
+        }
+        return labels;
+    }
+
+    private Map<String, String> buildPersistentAnnotations(PersistentSandboxSpec spec) {
+        Map<String, String> annotations = new HashMap<>();
+        annotations.put(ANNOTATION_NAME, spec.name());
+        annotations.put(ANNOTATION_IMAGE, spec.image());
+        if (spec.cpuRequest() != null) {
+            annotations.put(ANNOTATION_CPU_REQUEST, spec.cpuRequest());
+        }
+        if (spec.cpuLimit() != null) {
+            annotations.put(ANNOTATION_CPU_LIMIT, spec.cpuLimit());
+        }
+        if (spec.memoryRequest() != null) {
+            annotations.put(ANNOTATION_MEMORY_REQUEST, spec.memoryRequest());
+        }
+        if (spec.memoryLimit() != null) {
+            annotations.put(ANNOTATION_MEMORY_LIMIT, spec.memoryLimit());
+        }
+        return annotations;
     }
 
     private SandboxInstance createCustomPersistent(Environment environment, PersistentSandboxSpec spec) {
@@ -201,17 +241,6 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
             throw new BizException("Failed to create sandbox: " + exception.getMessage());
         }
         return toSandboxInstance(environment, created, findPod(client, workNamespace, spec.sandboxId()));
-    }
-
-    private String loadBuiltinTemplate(String resourcePath) {
-        try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Builtin sandbox template not found: " + resourcePath);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to load builtin sandbox template: " + resourcePath, exception);
-        }
     }
 
     @Override
@@ -270,7 +299,6 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         String sandboxName = SANDBOX_NAME_PREFIX + sandboxId;
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
         client.apps().statefulSets().inNamespace(workNamespace).withName(sandboxName).delete();
-        client.services().inNamespace(workNamespace).withName(sandboxName).delete();
     }
 
     @Override
@@ -439,26 +467,23 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     }
 
     private StatefulSet buildPersistentStatefulSet(PersistentSandboxSpec spec, String statefulSetName, String workNamespace) {
-        Map<String, String> labels = new HashMap<>();
-        labels.put(LABEL_TYPE, LABEL_TYPE_VALUE);
-        labels.put(LABEL_KIND, LABEL_KIND_PERSISTENT);
-        labels.put(LABEL_SANDBOX_ID, spec.sandboxId());
-        labels.put(LABEL_IMAGE, spec.image());
-        if (spec.createdByUserId() != null && !spec.createdByUserId().isBlank()) {
-            labels.put(LABEL_CREATED_BY, spec.createdByUserId());
+        Map<String, String> labels = buildPersistentLabels(spec, spec.image());
+        Map<String, String> annotations = buildPersistentAnnotations(spec);
+
+        ResourceRequirementsBuilder resourcesBuilder = new ResourceRequirementsBuilder();
+        if (isNotBlank(spec.cpuRequest())) {
+            resourcesBuilder.addToRequests("cpu", new Quantity(spec.cpuRequest()));
         }
-
-        Map<String, String> annotations = new HashMap<>();
-        annotations.put(ANNOTATION_NAME, spec.name());
-        annotations.put(ANNOTATION_IMAGE, spec.image());
-        annotations.put(ANNOTATION_CPU_REQUEST, spec.cpuRequest());
-        annotations.put(ANNOTATION_CPU_LIMIT, spec.cpuLimit());
-        annotations.put(ANNOTATION_MEMORY_REQUEST, spec.memoryRequest());
-        annotations.put(ANNOTATION_MEMORY_LIMIT, spec.memoryLimit());
-
-        ResourceRequirements resources = new ResourceRequirements();
-        resources.setRequests(Map.of("cpu", new Quantity(spec.cpuRequest()), "memory", new Quantity(spec.memoryRequest())));
-        resources.setLimits(Map.of("cpu", new Quantity(spec.cpuLimit()), "memory", new Quantity(spec.memoryLimit())));
+        if (isNotBlank(spec.memoryRequest())) {
+            resourcesBuilder.addToRequests("memory", new Quantity(withMemoryUnit(spec.memoryRequest())));
+        }
+        if (isNotBlank(spec.cpuLimit())) {
+            resourcesBuilder.addToLimits("cpu", new Quantity(spec.cpuLimit()));
+        }
+        if (isNotBlank(spec.memoryLimit())) {
+            resourcesBuilder.addToLimits("memory", new Quantity(withMemoryUnit(spec.memoryLimit())));
+        }
+        ResourceRequirements resources = resourcesBuilder.build();
 
         return new StatefulSetBuilder()
                 .withApiVersion("apps/v1").withKind("StatefulSet")
@@ -492,6 +517,14 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                     .endTemplate()
                 .endSpec()
                 .build();
+    }
+
+    private static boolean isNotBlank(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private static String withMemoryUnit(String value) {
+        return value + "Mi";
     }
 
     private Pod findPod(KubernetesClient client, String workNamespace, String sandboxId) {

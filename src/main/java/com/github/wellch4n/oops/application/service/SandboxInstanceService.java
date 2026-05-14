@@ -1,11 +1,6 @@
 package com.github.wellch4n.oops.application.service;
 
-import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_CPU_LIMIT;
-import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_CPU_REQUEST;
-import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_MEMORY_LIMIT;
-import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_MEMORY_REQUEST;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_TIMEOUT_SECONDS;
-import static com.github.wellch4n.oops.application.service.SandboxDefaults.firstNonBlank;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.positiveOrDefault;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.trimToNull;
 
@@ -89,10 +84,10 @@ public class SandboxInstanceService {
                 sandboxId,
                 resolvedName,
                 resolveImage(image),
-                firstNonBlank(cpu != null ? cpu.request() : null, DEFAULT_CPU_REQUEST),
-                firstNonBlank(cpu != null ? cpu.limit() : null, DEFAULT_CPU_LIMIT),
-                firstNonBlank(memory != null ? memory.request() : null, DEFAULT_MEMORY_REQUEST),
-                firstNonBlank(memory != null ? memory.limit() : null, DEFAULT_MEMORY_LIMIT),
+                cpu != null ? trimToNull(cpu.request()) : null,
+                cpu != null ? trimToNull(cpu.limit()) : null,
+                memory != null ? trimToNull(memory.request()) : null,
+                memory != null ? trimToNull(memory.limit()) : null,
                 callerUserId
         );
         return sandboxExecutionGateway.createPersistent(environment, spec);

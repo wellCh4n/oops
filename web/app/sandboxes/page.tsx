@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search } from "lucide-react"
+import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick } from "lucide-react"
 import { toast } from "sonner"
 import { ColumnDef } from "@tanstack/react-table"
 
@@ -453,43 +453,67 @@ function SandboxesContent() {
                 <ChevronDown className="h-4 w-4 transition-transform duration-200" />
                 {t("sandbox.advancedConfig")}
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
+              <CollapsibleContent className="mt-3">
+                <div className="inline-grid grid-cols-2 gap-x-8 gap-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="sandbox-cpu-request">{t("sandbox.cpuRequest")}</Label>
-                    <Input
-                      id="sandbox-cpu-request"
-                      value={cpuRequest}
-                      onChange={(event) => setCpuRequest(event.target.value)}
-                      placeholder="100m"
-                    />
+                    <Label htmlFor="sandbox-cpu-request" className="flex items-center gap-1">
+                      <Cpu className="h-3.5 w-3.5" />{t("sandbox.cpuRequest")}
+                    </Label>
+                    <div className="relative w-24">
+                      <Input
+                        id="sandbox-cpu-request"
+                        value={cpuRequest}
+                        onChange={(event) => setCpuRequest(event.target.value)}
+                        autoComplete="off"
+                        className="pr-10"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sandbox-cpu-limit">{t("sandbox.cpuLimit")}</Label>
-                    <Input
-                      id="sandbox-cpu-limit"
-                      value={cpuLimit}
-                      onChange={(event) => setCpuLimit(event.target.value)}
-                      placeholder="1"
-                    />
+                    <Label htmlFor="sandbox-cpu-limit" className="flex items-center gap-1">
+                      <Cpu className="h-3.5 w-3.5" />{t("sandbox.cpuLimit")}
+                    </Label>
+                    <div className="relative w-24">
+                      <Input
+                        id="sandbox-cpu-limit"
+                        value={cpuLimit}
+                        onChange={(event) => setCpuLimit(event.target.value)}
+                        autoComplete="off"
+                        className="pr-10"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">core</span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sandbox-mem-request">{t("sandbox.memoryRequest")}</Label>
-                    <Input
-                      id="sandbox-mem-request"
-                      value={memoryRequest}
-                      onChange={(event) => setMemoryRequest(event.target.value)}
-                      placeholder="128Mi"
-                    />
+                    <Label htmlFor="sandbox-mem-request" className="flex items-center gap-1">
+                      <MemoryStick className="h-3.5 w-3.5" />{t("sandbox.memoryRequest")}
+                    </Label>
+                    <div className="relative w-24">
+                      <Input
+                        id="sandbox-mem-request"
+                        value={memoryRequest}
+                        onChange={(event) => setMemoryRequest(event.target.value)}
+                        autoComplete="off"
+                        className="pr-8"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="sandbox-mem-limit">{t("sandbox.memoryLimit")}</Label>
-                    <Input
-                      id="sandbox-mem-limit"
-                      value={memoryLimit}
-                      onChange={(event) => setMemoryLimit(event.target.value)}
-                      placeholder="512Mi"
-                    />
+                    <Label htmlFor="sandbox-mem-limit" className="flex items-center gap-1">
+                      <MemoryStick className="h-3.5 w-3.5" />{t("sandbox.memoryLimit")}
+                    </Label>
+                    <div className="relative w-24">
+                      <Input
+                        id="sandbox-mem-limit"
+                        value={memoryLimit}
+                        onChange={(event) => setMemoryLimit(event.target.value)}
+                        autoComplete="off"
+                        className="pr-8"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
+                    </div>
                   </div>
                 </div>
               </CollapsibleContent>
