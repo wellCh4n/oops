@@ -34,7 +34,6 @@ const sandbox = {
   "sandbox.memoryLimit": "Memory limit",
   "sandbox.col.name": "Name",
   "sandbox.col.environment": "Environment",
-  "sandbox.col.runtime": "Runtime",
   "sandbox.col.image": "Image",
   "sandbox.col.status": "Status",
   "sandbox.col.createdBy": "Created by",

@@ -10,7 +10,6 @@ import com.github.wellch4n.oops.application.service.SandboxExecutionService;
 import com.github.wellch4n.oops.application.service.SandboxInstanceService;
 import com.github.wellch4n.oops.application.service.SandboxInstanceService.SandboxTerminalTarget;
 import com.github.wellch4n.oops.application.service.SandboxRuntimeService;
-import com.github.wellch4n.oops.application.service.SandboxRuntimeService.SandboxRuntimeView;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
@@ -52,8 +51,8 @@ public class SandboxController {
         this.podFileSystemService = podFileSystemService;
     }
 
-    @GetMapping("/runtimes")
-    public Result<List<SandboxRuntimeView>> listRuntimes() {
+    @GetMapping("/images")
+    public Result<List<String>> listImages() {
         return Result.success(sandboxRuntimeService.list());
     }
 
@@ -78,10 +77,10 @@ public class SandboxController {
 
     @GetMapping("/instances")
     public Result<List<SandboxInstance>> list(@RequestParam(value = "environment", required = false) String environment,
-                                              @RequestParam(value = "runtime", required = false) String runtime,
+                                              @RequestParam(value = "image", required = false) String image,
                                               @AuthenticationPrincipal AuthUserPrincipal principal) {
         String callerUserId = principal != null ? principal.userId() : null;
-        return Result.success(sandboxInstanceService.list(callerUserId, environment, runtime));
+        return Result.success(sandboxInstanceService.list(callerUserId, environment, image));
     }
 
     @GetMapping("/instances/{id}")

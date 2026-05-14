@@ -161,7 +161,6 @@ export default function SandboxDetailPage() {
             </TooltipTrigger>
             <TooltipContent className="text-xs font-mono space-y-0.5">
               <div>{t("sandbox.col.environment")}: {sandbox.environment}</div>
-              <div>{t("sandbox.col.runtime")}: {sandbox.runtime}</div>
               <div>{t("sandbox.col.image")}: {sandbox.image}</div>
               <div>CPU: {sandbox.cpuRequest} / {sandbox.cpuLimit}</div>
               <div>MEM: {sandbox.memoryRequest} / {sandbox.memoryLimit}</div>

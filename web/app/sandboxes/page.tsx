@@ -31,11 +31,11 @@ import { useLanguage } from "@/contexts/language-context"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { Environment } from "@/lib/api/types"
 import {
-  createSandbox, deleteSandbox, listSandboxes, listSandboxRuntimes,
-  SandboxInstance, SandboxInstanceStatus, SandboxRuntime,
+  createSandbox, deleteSandbox, listSandboxes, listSandboxImages,
+  SandboxInstance, SandboxInstanceStatus,
 } from "@/lib/api/sandbox"
 
-const CUSTOM_RUNTIME = "__custom__"
+const CUSTOM_IMAGE = "__custom__"
 
 export default function SandboxesPage() {
   return (
@@ -71,8 +71,8 @@ function SandboxesContent() {
   const [creating, setCreating] = useState(false)
   const [createEnv, setCreateEnv] = useState("")
   const [createName, setCreateName] = useState("")
-  const [runtimes, setRuntimes] = useState<SandboxRuntime[]>([])
-  const [selectedRuntime, setSelectedRuntime] = useState<string>("")
+  const [images, setImages] = useState<string[]>([])
+  const [selectedImage, setSelectedImage] = useState<string>("")
   const [customImage, setCustomImage] = useState("")
   const [cpuRequest, setCpuRequest] = useState("")
   const [cpuLimit, setCpuLimit] = useState("")
@@ -84,9 +84,9 @@ function SandboxesContent() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    listSandboxRuntimes()
-      .then((res) => setRuntimes(res.data ?? []))
-      .catch(() => setRuntimes([]))
+    listSandboxImages()
+      .then((res) => setImages(res.data ?? []))
+      .catch(() => setImages([]))
   }, [])
 
   useEffect(() => {
@@ -136,7 +136,7 @@ function SandboxesContent() {
   const resetCreateForm = () => {
     setCreateEnv("")
     setCreateName("")
-    setSelectedRuntime("")
+    setSelectedImage("")
     setCustomImage("")
     setCpuRequest("")
     setCpuLimit("")
@@ -148,24 +148,20 @@ function SandboxesContent() {
     if (!createEnv && environments.length > 0) {
       setCreateEnv(environments[0].name)
     }
-    if (!selectedRuntime && runtimes.length > 0) {
-      setSelectedRuntime(runtimes[0].runtime)
+    if (!selectedImage && images.length > 0) {
+      setSelectedImage(images[0])
     }
     setCreateOpen(true)
   }
 
   const handleCreate = async () => {
-    const useCustom = selectedRuntime === CUSTOM_RUNTIME
-    const trimmedImage = customImage.trim()
+    const useCustom = selectedImage === CUSTOM_IMAGE
+    const image = useCustom ? customImage.trim() : selectedImage
     if (!createEnv) {
       toast.error(t("sandbox.createError"))
       return
     }
-    if (useCustom && !trimmedImage) {
-      toast.error(t("sandbox.createError"))
-      return
-    }
-    if (!useCustom && !selectedRuntime) {
+    if (!image) {
       toast.error(t("sandbox.createError"))
       return
     }
@@ -177,8 +173,7 @@ function SandboxesContent() {
       await createSandbox({
         environment: createEnv,
         name: trimmedName ? trimmedName : undefined,
-        runtime: useCustom ? undefined : selectedRuntime,
-        image: useCustom ? trimmedImage : undefined,
+        image,
         cpu,
         memory,
       })
@@ -233,19 +228,10 @@ function SandboxesContent() {
       size: 90,
     },
     {
-      accessorKey: "runtime",
-      header: t("sandbox.col.runtime"),
-      size: 90,
-      cell: ({ row }) => (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-default">{row.original.runtime}</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <span className="font-mono text-xs">{row.original.image}</span>
-          </TooltipContent>
-        </Tooltip>
-      ),
+      accessorKey: "image",
+      header: t("sandbox.col.image"),
+      size: 120,
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.image}</span>,
     },
     {
       accessorKey: "status",
@@ -392,20 +378,20 @@ function SandboxesContent() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label>{t("sandbox.col.runtime")}</Label>
+              <Label>{t("sandbox.col.image")}</Label>
               <div className="flex flex-wrap gap-2">
-                {runtimes.map((rt) => {
-                  const selected = selectedRuntime === rt.runtime
+                {images.map((img) => {
+                  const selected = selectedImage === img
                   return (
                     <div
-                      key={rt.runtime}
+                      key={img}
                       role="button"
                       tabIndex={0}
-                      onClick={() => setSelectedRuntime(rt.runtime)}
+                      onClick={() => setSelectedImage(img)}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault()
-                          setSelectedRuntime(rt.runtime)
+                          setSelectedImage(img)
                         }
                       }}
                       className={cn(
@@ -415,10 +401,7 @@ function SandboxesContent() {
                           : "border-border hover:bg-accent/50"
                       )}
                     >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-sm font-medium">{rt.runtime}</span>
-                        <span className="text-xs text-muted-foreground font-mono truncate">{rt.image}</span>
-                      </div>
+                      <span className="text-sm font-medium font-mono">{img}</span>
                       {selected ? (
                         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                           <Check className="h-3 w-3" />
@@ -432,22 +415,22 @@ function SandboxesContent() {
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={() => setSelectedRuntime(CUSTOM_RUNTIME)}
+                  onClick={() => setSelectedImage(CUSTOM_IMAGE)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault()
-                      setSelectedRuntime(CUSTOM_RUNTIME)
+                      setSelectedImage(CUSTOM_IMAGE)
                     }
                   }}
                   className={cn(
                     "rounded-lg border p-3 flex items-center justify-between cursor-pointer transition-colors select-none gap-3 min-w-[10rem]",
-                    selectedRuntime === CUSTOM_RUNTIME
+                    selectedImage === CUSTOM_IMAGE
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-border hover:bg-accent/50"
                   )}
                 >
                   <span className="text-sm font-medium">{t("sandbox.runtimeCustom")}</span>
-                  {selectedRuntime === CUSTOM_RUNTIME ? (
+                  {selectedImage === CUSTOM_IMAGE ? (
                     <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                       <Check className="h-3 w-3" />
                     </div>
@@ -456,7 +439,7 @@ function SandboxesContent() {
                   )}
                 </div>
               </div>
-              {selectedRuntime === CUSTOM_RUNTIME && (
+              {selectedImage === CUSTOM_IMAGE && (
                 <Input
                   value={customImage}
                   onChange={(event) => setCustomImage(event.target.value)}

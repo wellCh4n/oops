@@ -14,7 +14,6 @@ public class SandboxInstance {
     private String id;
     private String name;
     private String environment;
-    private String runtime;
     private String image;
     private SandboxInstanceStatus status;
     private String createdBy;

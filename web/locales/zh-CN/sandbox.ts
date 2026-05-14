@@ -34,7 +34,6 @@ const sandbox = {
   "sandbox.memoryLimit": "内存上限",
   "sandbox.col.name": "名称",
   "sandbox.col.environment": "环境",
-  "sandbox.col.runtime": "运行时",
   "sandbox.col.image": "镜像",
   "sandbox.col.status": "状态",
   "sandbox.col.createdBy": "创建者",

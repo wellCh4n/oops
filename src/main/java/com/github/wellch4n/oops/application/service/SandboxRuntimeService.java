@@ -1,8 +1,10 @@
 package com.github.wellch4n.oops.application.service;
 
+import com.github.wellch4n.oops.domain.sandbox.BuiltinSandboxRuntime;
 import com.github.wellch4n.oops.infrastructure.config.SandboxProperties;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,14 +16,12 @@ public class SandboxRuntimeService {
         this.sandboxProperties = sandboxProperties;
     }
 
-    public List<SandboxRuntimeView> list() {
-        Map<String, String> images = sandboxProperties.getImages();
-        return images.entrySet().stream()
-                .map(entry -> new SandboxRuntimeView(entry.getKey(), entry.getValue()))
-                .sorted((a, b) -> a.runtime().compareTo(b.runtime()))
-                .toList();
-    }
+    public List<String> list() {
+        Stream<String> builtins = Arrays.stream(BuiltinSandboxRuntime.values())
+                .map(BuiltinSandboxRuntime::getKey);
 
-    public record SandboxRuntimeView(String runtime, String image) {
+        Stream<String> customs = sandboxProperties.getImages().stream();
+
+        return Stream.concat(builtins, customs).sorted().toList();
     }
 }

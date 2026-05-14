@@ -14,7 +14,7 @@ public interface SandboxExecutionGateway {
 
     SandboxInstance createPersistent(Environment environment, PersistentSandboxSpec spec);
 
-    List<SandboxInstance> listPersistent(Environment environment, String createdByUserId, String runtime);
+    List<SandboxInstance> listPersistent(Environment environment, String createdByUserId, String image);
 
     Optional<SandboxInstance> findPersistent(Environment environment, String sandboxId);
 
@@ -44,7 +44,6 @@ public interface SandboxExecutionGateway {
             String sandboxId,
             String name,
             String image,
-            String runtime,
             String cpuRequest,
             String cpuLimit,
             String memoryRequest,

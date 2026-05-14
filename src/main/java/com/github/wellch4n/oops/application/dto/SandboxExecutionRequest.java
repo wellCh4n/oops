@@ -4,7 +4,7 @@ import java.util.List;
 
 public record SandboxExecutionRequest(
         String environment,
-        String runtime,
+        String image,
         List<String> commands,
         Integer timeoutSeconds,
         Integer ttlSecondsAfterFinished,

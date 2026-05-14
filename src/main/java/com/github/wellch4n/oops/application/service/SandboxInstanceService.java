@@ -16,6 +16,7 @@ import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.Persist
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxExecutionResult;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.sandbox.BuiltinSandboxRuntime;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstanceStatus;
 import com.github.wellch4n.oops.infrastructure.config.SandboxProperties;
@@ -51,27 +52,13 @@ public class SandboxInstanceService {
             throw new BizException("Request body is required");
         }
         String environmentName = trimToNull(request.environment());
-        String runtime = trimToNull(request.runtime());
+        String image = trimToNull(request.image());
         String name = trimToNull(request.name());
-        String customImage = trimToNull(request.image());
         if (environmentName == null) {
             throw new BizException("environment is required");
         }
-        if (runtime == null && customImage == null) {
-            throw new BizException("runtime or image is required");
-        }
-
-        String image;
-        String resolvedRuntime;
-        if (customImage != null) {
-            image = customImage;
-            resolvedRuntime = runtime != null ? runtime : "custom";
-        } else {
-            image = sandboxProperties.getImages().get(runtime);
-            if (image == null || image.isBlank()) {
-                throw new BizException("Unsupported runtime: " + runtime);
-            }
-            resolvedRuntime = runtime;
+        if (image == null) {
+            throw new BizException("image is required");
         }
 
         Environment environment = environmentRepository.findFirstByName(environmentName);
@@ -101,8 +88,7 @@ public class SandboxInstanceService {
         PersistentSandboxSpec spec = new PersistentSandboxSpec(
                 sandboxId,
                 resolvedName,
-                image,
-                resolvedRuntime,
+                resolveImage(image),
                 firstNonBlank(cpu != null ? cpu.request() : null, DEFAULT_CPU_REQUEST),
                 firstNonBlank(cpu != null ? cpu.limit() : null, DEFAULT_CPU_LIMIT),
                 firstNonBlank(memory != null ? memory.request() : null, DEFAULT_MEMORY_REQUEST),
@@ -112,9 +98,16 @@ public class SandboxInstanceService {
         return sandboxExecutionGateway.createPersistent(environment, spec);
     }
 
-    public List<SandboxInstance> list(String callerUserId, String environmentName, String runtime) {
+    private String resolveImage(String image) {
+        if (BuiltinSandboxRuntime.from(image).isPresent()) {
+            return image;
+        }
+        return image;
+    }
+
+    public List<SandboxInstance> list(String callerUserId, String environmentName, String image) {
         String resolvedEnvironmentName = trimToNull(environmentName);
-        String resolvedRuntime = trimToNull(runtime);
+        String resolvedImage = trimToNull(image);
         List<SandboxInstance> items;
         if (resolvedEnvironmentName != null) {
             Environment environment = environmentRepository.findFirstByName(resolvedEnvironmentName);
@@ -124,11 +117,11 @@ public class SandboxInstanceService {
             if (trimToNull(environment.getWorkNamespace()) == null) {
                 return List.of();
             }
-            items = sandboxExecutionGateway.listPersistent(environment, null, resolvedRuntime);
+            items = sandboxExecutionGateway.listPersistent(environment, null, resolvedImage);
         } else {
             items = environmentRepository.findAll().stream()
                     .filter(env -> trimToNull(env.getWorkNamespace()) != null)
-                    .flatMap(env -> sandboxExecutionGateway.listPersistent(env, null, resolvedRuntime).stream())
+                    .flatMap(env -> sandboxExecutionGateway.listPersistent(env, null, resolvedImage).stream())
                     .toList();
         }
         return resolveCreatorNames(items);

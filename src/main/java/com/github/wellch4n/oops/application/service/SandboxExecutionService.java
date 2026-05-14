@@ -17,7 +17,6 @@ import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.Sandbox
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.SandboxJobSpec;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.environment.Environment;
-import com.github.wellch4n.oops.infrastructure.config.SandboxProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.List;
 import java.util.Objects;
@@ -29,14 +28,11 @@ public class SandboxExecutionService {
 
     private final EnvironmentRepository environmentRepository;
     private final SandboxExecutionGateway sandboxExecutionGateway;
-    private final SandboxProperties sandboxProperties;
 
     public SandboxExecutionService(EnvironmentRepository environmentRepository,
-                                   SandboxExecutionGateway sandboxExecutionGateway,
-                                   SandboxProperties sandboxProperties) {
+                                   SandboxExecutionGateway sandboxExecutionGateway) {
         this.environmentRepository = environmentRepository;
         this.sandboxExecutionGateway = sandboxExecutionGateway;
-        this.sandboxProperties = sandboxProperties;
     }
 
     public SseEmitter stream(SandboxExecutionRequest request, String callerUserId) {
@@ -54,13 +50,13 @@ public class SandboxExecutionService {
             throw new BizException("Request body is required");
         }
         String environmentName = trimToNull(request.environment());
-        String runtime = trimToNull(request.runtime());
+        String image = trimToNull(request.image());
         List<String> commands = request.commands();
         if (environmentName == null) {
             throw new BizException("environment is required");
         }
-        if (runtime == null) {
-            throw new BizException("runtime is required");
+        if (image == null) {
+            throw new BizException("image is required");
         }
         if (commands == null || commands.isEmpty()) {
             throw new BizException("commands is required and must contain at least one command");
@@ -74,10 +70,6 @@ public class SandboxExecutionService {
             throw new BizException("commands must contain at least one non-blank command");
         }
 
-        String image = sandboxProperties.getImages().get(runtime);
-        if (image == null || image.isBlank()) {
-            throw new BizException("Unsupported runtime: " + runtime);
-        }
 
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {

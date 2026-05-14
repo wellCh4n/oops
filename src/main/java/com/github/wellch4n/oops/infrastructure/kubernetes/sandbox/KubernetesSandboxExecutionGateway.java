@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.sandbox;
 
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.sandbox.BuiltinSandboxRuntime;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstanceStatus;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClientPool;
@@ -24,7 +25,10 @@ import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import jakarta.annotation.PostConstruct;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -56,7 +60,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     private static final String LABEL_KIND_EPHEMERAL = "ephemeral";
     private static final String LABEL_KIND_PERSISTENT = "persistent";
     private static final String LABEL_CREATED_BY = "oops.sandbox.created-by";
-    private static final String LABEL_RUNTIME = "oops.sandbox.runtime";
+    private static final String LABEL_IMAGE = "oops.sandbox.image";
 
     private static final String ANNOTATION_NAME = "oops.sandbox.name";
     private static final String ANNOTATION_IMAGE = "oops.sandbox.image";
@@ -142,6 +146,45 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
 
     @Override
     public SandboxInstance createPersistent(Environment environment, PersistentSandboxSpec spec) {
+        return BuiltinSandboxRuntime.from(spec.image())
+                .map(builtin -> createBuiltinPersistent(environment, spec, builtin))
+                .orElseGet(() -> createCustomPersistent(environment, spec));
+    }
+
+    private SandboxInstance createBuiltinPersistent(Environment environment, PersistentSandboxSpec spec,
+                                                    BuiltinSandboxRuntime builtin) {
+        String workNamespace = environment.getWorkNamespace();
+        String statefulSetName = SANDBOX_NAME_PREFIX + spec.sandboxId();
+        KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
+
+        String yaml = loadBuiltinTemplate(builtin.getResourcePath())
+                .replace("{{sandboxName}}", statefulSetName)
+                .replace("{{namespace}}", workNamespace)
+                .replace("{{sandboxId}}", spec.sandboxId())
+                .replace("{{name}}", spec.name())
+                .replace("{{createdBy}}", spec.createdByUserId() != null ? spec.createdByUserId() : "")
+                .replace("{{cpuRequest}}", spec.cpuRequest())
+                .replace("{{cpuLimit}}", spec.cpuLimit())
+                .replace("{{memoryRequest}}", spec.memoryRequest())
+                .replace("{{memoryLimit}}", spec.memoryLimit());
+
+        try {
+            client.load(new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)))
+                    .inNamespace(workNamespace)
+                    .create();
+        } catch (Exception exception) {
+            log.warn("Failed to create builtin sandbox {}: {}", statefulSetName, exception.getMessage());
+            throw new BizException("Failed to create sandbox: " + exception.getMessage());
+        }
+
+        StatefulSet statefulSet = client.apps().statefulSets()
+                .inNamespace(workNamespace)
+                .withName(statefulSetName)
+                .get();
+        return toSandboxInstance(environment, statefulSet, findPod(client, workNamespace, spec.sandboxId()));
+    }
+
+    private SandboxInstance createCustomPersistent(Environment environment, PersistentSandboxSpec spec) {
         String workNamespace = environment.getWorkNamespace();
         String statefulSetName = SANDBOX_NAME_PREFIX + spec.sandboxId();
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
@@ -160,8 +203,19 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         return toSandboxInstance(environment, created, findPod(client, workNamespace, spec.sandboxId()));
     }
 
+    private String loadBuiltinTemplate(String resourcePath) {
+        try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Builtin sandbox template not found: " + resourcePath);
+            }
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to load builtin sandbox template: " + resourcePath, exception);
+        }
+    }
+
     @Override
-    public List<SandboxInstance> listPersistent(Environment environment, String createdByUserId, String runtime) {
+    public List<SandboxInstance> listPersistent(Environment environment, String createdByUserId, String image) {
         String workNamespace = environment.getWorkNamespace();
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
         Map<String, String> selector = new HashMap<>();
@@ -170,8 +224,8 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         if (createdByUserId != null && !createdByUserId.isBlank()) {
             selector.put(LABEL_CREATED_BY, createdByUserId);
         }
-        if (runtime != null && !runtime.isBlank()) {
-            selector.put(LABEL_RUNTIME, runtime);
+        if (image != null && !image.isBlank()) {
+            selector.put(LABEL_IMAGE, image);
         }
         List<StatefulSet> statefulSets = client.apps().statefulSets()
                 .inNamespace(workNamespace)
@@ -213,11 +267,10 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     @Override
     public void deletePersistent(Environment environment, String sandboxId) {
         String workNamespace = environment.getWorkNamespace();
+        String sandboxName = SANDBOX_NAME_PREFIX + sandboxId;
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
-        client.apps().statefulSets()
-                .inNamespace(workNamespace)
-                .withName(SANDBOX_NAME_PREFIX + sandboxId)
-                .delete();
+        client.apps().statefulSets().inNamespace(workNamespace).withName(sandboxName).delete();
+        client.services().inNamespace(workNamespace).withName(sandboxName).delete();
     }
 
     @Override
@@ -390,7 +443,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         labels.put(LABEL_TYPE, LABEL_TYPE_VALUE);
         labels.put(LABEL_KIND, LABEL_KIND_PERSISTENT);
         labels.put(LABEL_SANDBOX_ID, spec.sandboxId());
-        labels.put(LABEL_RUNTIME, spec.runtime());
+        labels.put(LABEL_IMAGE, spec.image());
         if (spec.createdByUserId() != null && !spec.createdByUserId().isBlank()) {
             labels.put(LABEL_CREATED_BY, spec.createdByUserId());
         }
@@ -454,7 +507,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                 .id(labels.get(LABEL_SANDBOX_ID))
                 .name(annotations.get(ANNOTATION_NAME))
                 .environment(environment.getName())
-                .runtime(labels.get(LABEL_RUNTIME))
+                .image(labels.get(LABEL_IMAGE))
                 .image(annotations.get(ANNOTATION_IMAGE))
                 .status(deriveStatus(statefulSet, pod))
                 .createdBy(labels.get(LABEL_CREATED_BY))

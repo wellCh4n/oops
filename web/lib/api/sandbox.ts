@@ -7,7 +7,6 @@ export interface SandboxInstance {
   id: string
   name: string
   environment: string
-  runtime: string
   image: string
   status: SandboxInstanceStatus
   createdBy: string | null
@@ -22,15 +21,9 @@ export interface SandboxInstance {
 export interface SandboxInstanceCreatePayload {
   environment: string
   name?: string
-  runtime?: string
-  image?: string
+  image: string
   cpu?: { request?: string; limit?: string }
   memory?: { request?: string; limit?: string }
-}
-
-export interface SandboxRuntime {
-  runtime: string
-  image: string
 }
 
 export interface SandboxExecutionResult {
@@ -44,18 +37,18 @@ export interface SandboxExecPayload {
   stream?: boolean
 }
 
-export async function listSandboxRuntimes(): Promise<ApiResponse<SandboxRuntime[]>> {
-  const response = await apiFetch(`/api/sandbox/runtimes`)
+export async function listSandboxImages(): Promise<ApiResponse<string[]>> {
+  const response = await apiFetch(`/api/sandbox/images`)
   if (!response.ok) {
-    throw new Error("Failed to fetch sandbox runtimes")
+    throw new Error("Failed to fetch sandbox images")
   }
-  return response.json() as Promise<ApiResponse<SandboxRuntime[]>>
+  return response.json() as Promise<ApiResponse<string[]>>
 }
 
-export async function listSandboxes(environment?: string, runtime?: string): Promise<ApiResponse<SandboxInstance[]>> {
+export async function listSandboxes(environment?: string, image?: string): Promise<ApiResponse<SandboxInstance[]>> {
   const params = new URLSearchParams()
   if (environment) params.set("environment", environment)
-  if (runtime) params.set("runtime", runtime)
+  if (image) params.set("image", image)
   const query = params.toString()
   const response = await apiFetch(`/api/sandbox/instances${query ? `?${query}` : ""}`)
   if (!response.ok) {
