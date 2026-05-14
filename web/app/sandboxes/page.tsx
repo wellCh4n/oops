@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Copyable } from "@/components/ui/copyable"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { DataTable } from "@/components/ui/data-table"
@@ -379,7 +378,7 @@ function SandboxesContent() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("sandbox.col.image")}</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {images.map((img) => {
                   const selected = selectedImage === img
                   return (
