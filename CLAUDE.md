@@ -31,7 +31,7 @@ The backend follows a **DDD layered architecture** under `com.github.wellch4n.oo
 
 Key technologies:
 - Fabric8 Kubernetes client for K8s operations
-- SQLite (default) or MySQL for persistence
+- MySQL for persistence (external)
 - JWT-based authentication with Feishu (Lark) external auth support
 - WebSocket for real-time logs (pipelines, pod logs, terminals)
 - Spring Data JPA with Hibernate
@@ -107,18 +107,18 @@ Two layouts live under `docker/`:
   ```bash
   docker compose -f docker/docker-compose.yml up -d
   ```
-  Four services on a shared bridge network: `mysql` (8.4) + `backend` (Spring Boot, JRE-only image) + `frontend` (Next.js standalone) + `nginx` (1.27-alpine reverse proxy on host port 8080). Build files are [docker/Dockerfile.backend](docker/Dockerfile.backend) and [docker/Dockerfile.frontend](docker/Dockerfile.frontend); the proxy config is [docker/nginx.conf](docker/nginx.conf). Backend datasource is wired to MySQL via env vars (`SPRING_DATASOURCE_URL`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration/mysql`, etc.) — no config-file mount.
+  Four services on a shared bridge network: `mysql` (8.4) + `backend` (Spring Boot, JRE-only image) + `frontend` (Next.js standalone) + `nginx` (1.27-alpine reverse proxy on host port 8080). Build files are [docker/Dockerfile.backend](docker/Dockerfile.backend) and [docker/Dockerfile.frontend](docker/Dockerfile.frontend); the proxy config is [docker/nginx.conf](docker/nginx.conf). Backend datasource is wired to MySQL via env vars (`SPRING_DATASOURCE_URL`, etc.) — no config-file mount.
 - **All-in-one image** (single container, three processes):
   ```bash
   docker build -f docker/all-in-one/Dockerfile -t oops .
   ```
-  Uses [docker/all-in-one/Dockerfile](docker/all-in-one/Dockerfile), [docker/all-in-one/nginx.conf](docker/all-in-one/nginx.conf), and [docker/all-in-one/entrypoint.sh](docker/all-in-one/entrypoint.sh). SQLite-backed by default; useful for quick demos.
+  Uses [docker/all-in-one/Dockerfile](docker/all-in-one/Dockerfile), [docker/all-in-one/nginx.conf](docker/all-in-one/nginx.conf), and [docker/all-in-one/entrypoint.sh](docker/all-in-one/entrypoint.sh). Requires an external MySQL — pass `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` at `docker run` time.
 
 ## Configuration
 
 Copy `src/main/resources/application.properties.example` to `application.properties` and configure:
 
-- `spring.datasource.url`: SQLite (default) or MySQL connection
+- `spring.datasource.url`: MySQL JDBC URL (e.g. `jdbc:mysql://host:3306/oops?...`)
 - `oops.jwt.secret`: JWT signing key (min 32 chars)
 - `oops.pipeline.image.*`: Clone, Buildah, and ZIP (curl) images for builds
 - `oops.ingress.cert-resolver`: Traefik certificate resolver name
@@ -306,8 +306,7 @@ Triggered by pressing `/` (outside input/textarea). Two-stage: select command (S
 
 OOPS uses Flyway to apply schema and data migrations automatically during application startup.
 
-- SQLite migrations live in `src/main/resources/db/migration/sqlite`
-- MySQL migrations live in `src/main/resources/db/migration/mysql`
+- MySQL migrations live in `src/main/resources/db/migration/`
 - Migration files must be append-only and named like `V2__add_pipeline_index.sql`
 - Existing databases without Flyway history are baselined at version `1`; new databases run `V1__baseline_schema.sql`
 - Hibernate DDL generation is disabled with `spring.jpa.hibernate.ddl-auto=none`
@@ -316,7 +315,7 @@ OOPS uses Flyway to apply schema and data migrations automatically during applic
 
 Default admin credentials: `admin` / password from env `ADMIN_PASSWORD` (defaults to `admin123`), created by `UserInitializer` on first startup if no admin exists.
 
-MySQL is wired via Spring env vars (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`, `SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration/mysql`). The multi-service compose stack does this for you; for the all-in-one image, set the same vars at `docker run` time. Custom `application.properties` can also be injected at `/app/config/application.properties`.
+MySQL is wired via Spring env vars (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`, `SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect`). The multi-service compose stack does this for you; for the all-in-one image, set the same vars at `docker run` time. Custom `application.properties` can also be injected at `/app/config/application.properties`.
 
 **All-in-one container** (`docker/all-in-one/`): Nginx (port 80) reverse-proxies `/api/` to Spring Boot (port 8080) and `/` to Next.js (port 3000). Runtime image is `node:20-slim` (not a JVM base image) — the JDK is copied from the Maven builder stage. `TZ=Asia/Shanghai` is set. The entrypoint monitors all three PIDs (Java, Node, Nginx); if any process dies it kills the others and exits non-zero.
 

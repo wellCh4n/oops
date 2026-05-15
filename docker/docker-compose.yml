@@ -33,7 +33,6 @@ services:
       SPRING_DATASOURCE_PASSWORD: oops
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
-      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/mysql
     restart: unless-stopped
 
   frontend:

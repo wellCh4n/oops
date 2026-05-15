@@ -41,7 +41,7 @@ Manage multiple domains from a single console. Configure automatic HTTPS via cer
 | Component | Required | Purpose |
 |---|---|---|
 | Kubernetes cluster (1.22+) | Yes | Runtime for applications, pipelines, and IDEs |
-| SQLite (default) or MySQL | Yes | Persistence for OOPS metadata |
+| MySQL 8.x | Yes | Persistence for OOPS metadata |
 | Container image registry | Yes | Pipeline image push / pull |
 | Traefik v3 | No | Ingress and HTTPS routing |
 | S3-compatible object storage | No | ZIP source uploads |

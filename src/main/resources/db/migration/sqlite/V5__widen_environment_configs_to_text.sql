@@ -1,1 +1,0 @@
--- SQLite TEXT has no size limit, no column alteration needed
