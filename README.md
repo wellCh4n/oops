@@ -7,6 +7,8 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 
 [中文](docs/README.zh.md)
 
+[![React Doctor](https://www.react.doctor/share/badge?p=oops&s=84&w=232&f=60)](https://www.react.doctor/share?p=oops&s=84&w=232&f=60)
+
 ## Features
 
 ### Application Management
