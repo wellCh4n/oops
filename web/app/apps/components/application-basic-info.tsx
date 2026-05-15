@@ -257,9 +257,10 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
               name="collaborators"
               render={({ field }) => {
                 const ownerId = form.watch("owner")
-                const collaboratorOptions = users
-                  .filter((user) => user.id !== ownerId)
-                  .map((user) => ({ value: user.id, label: `${user.username} (${user.id})` }))
+                const collaboratorOptions = users.reduce<{ value: string; label: string }[]>((acc, user) => {
+                  if (user.id !== ownerId) acc.push({ value: user.id, label: `${user.username} (${user.id})` })
+                  return acc
+                }, [])
                 return (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><UsersIcon className="size-3.5" />{t("common.collaborators")}</FormLabel>

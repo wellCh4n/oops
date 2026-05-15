@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { Terminal } from "@xterm/xterm"
 import { FitAddon } from "@xterm/addon-fit"
 import { WebLinksAddon } from "@xterm/addon-web-links"
@@ -34,10 +34,18 @@ const TERMINAL_THEMES = {
 export default function SandboxTerminalView({ sandboxId, onConnectionStatusChange }: SandboxTerminalViewProps) {
     const terminalRef = useRef<HTMLDivElement>(null)
     const xtermRef = useRef<Terminal | null>(null)
-    const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected">("connecting")
+    const onConnectionStatusChangeRef = useRef(onConnectionStatusChange)
     const { resolvedTheme } = useTheme()
     const xtermTheme = resolvedTheme === "light" ? TERMINAL_THEMES.light : TERMINAL_THEMES.dark
     const xtermThemeRef = useRef(xtermTheme)
+
+    useEffect(() => {
+        onConnectionStatusChangeRef.current = onConnectionStatusChange
+    }, [onConnectionStatusChange])
+
+    const updateStatus = (status: "connecting" | "connected" | "disconnected") => {
+        onConnectionStatusChangeRef.current?.(status)
+    }
 
     useEffect(() => {
         xtermThemeRef.current = xtermTheme
@@ -45,10 +53,6 @@ export default function SandboxTerminalView({ sandboxId, onConnectionStatusChang
             xtermRef.current.options.theme = xtermTheme
         }
     }, [xtermTheme])
-
-    useEffect(() => {
-        onConnectionStatusChange?.(connectionStatus)
-    }, [connectionStatus, onConnectionStatusChange])
 
     useEffect(() => {
         if (!terminalRef.current) return
@@ -106,7 +110,7 @@ export default function SandboxTerminalView({ sandboxId, onConnectionStatusChang
 
             ws.onopen = () => {
                 if (!xtermRef.current) return
-                setConnectionStatus("connected")
+                updateStatus("connected")
                 term.focus()
                 try {
                     fitAddon.fit()
@@ -127,7 +131,7 @@ export default function SandboxTerminalView({ sandboxId, onConnectionStatusChang
             }
 
             ws.onclose = () => {
-                setConnectionStatus("disconnected")
+                updateStatus("disconnected")
                 if (xtermRef.current) {
                     try {
                         term.write('\r\n\x1b[31mConnection closed\x1b[0m\r\n')
@@ -178,6 +182,7 @@ export default function SandboxTerminalView({ sandboxId, onConnectionStatusChang
                 <div
                     className="h-full w-full cursor-text"
                     ref={terminalRef}
+                    role="presentation"
                     onClick={handleContainerClick}
                 />
             </div>

@@ -145,7 +145,10 @@ function PipelinesContent() {
       try {
         const res = await getApplicationBuildEnvConfigs(activeNamespace, selectedApp)
         if (res.data) {
-          setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
+          setEnvironments(res.data.reduce<string[]>((acc, c) => {
+            if (c.environmentName) acc.push(c.environmentName)
+            return acc
+          }, []))
         }
       } catch {
         setEnvironments([])
