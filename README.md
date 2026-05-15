@@ -3,7 +3,7 @@
 
 <img src="web/public/icon.png" width="120" alt="OOPS logo">
 
-OOPS is a Kubernetes PaaS where **humans and AI Agents are equal first-class operators**. It ships with a [Claude Code Skill](skills/oops/SKILL.md) that lets Agents drive end-to-end deploys — create app, upload source, configure build, deploy, stream logs, get notified on success or failure — without `kubectl` or YAML.
+OOPS is a Kubernetes PaaS where **humans and AI Agents are equal first-class operators**. Deploy applications, manage multiple clusters, run sandboxed commands, and configure domains — all from a clean web UI, or driven programmatically through the bundled [Claude Code Skill](skills/oops/SKILL.md).
 
 [中文](docs/README.zh.md)
 

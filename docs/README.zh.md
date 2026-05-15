@@ -3,7 +3,7 @@
 
 <img src="../web/public/icon.png" width="120" alt="OOPS logo">
 
-OOPS 是一个 Kubernetes PaaS，**人和 AI Agent 都是平等的操作者**。内置一个 [Claude Code Skill](../skills/oops/SKILL.md)，让 Agent 端到端完成部署——建应用、上传源码、配置构建、部署、流式日志、成功/失败推送通知——全程无需 `kubectl` 或 YAML。
+OOPS 是一个 Kubernetes PaaS，**人和 AI Agent 都是平等的操作者**。部署应用、管理多集群、运行沙箱命令、配置域名——既能在简洁的 Web UI 中完成，也可以通过内置的 [Claude Code Skill](../skills/oops/SKILL.md) 由程序驱动。
 
 [English](../README.md)
 
