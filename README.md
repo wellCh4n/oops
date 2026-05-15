@@ -67,11 +67,10 @@ cp docker/.env.example docker/.env
 ```
 
 ```ini
-DB_HOST=host.docker.internal  # use host.docker.internal to reach your local machine from inside Docker
-DB_PORT=3306
-DB_NAME=oops
-DB_USERNAME=root
-DB_PASSWORD=your_password_here
+# Use host.docker.internal to reach your local MySQL from inside Docker
+SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=your_password_here
 ```
 
 2. Start the stack:
