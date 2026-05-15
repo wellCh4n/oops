@@ -48,7 +48,12 @@ Manage multiple domains from a single console. Configure automatic HTTPS via cer
 
 ## Quick Start
 
-### Docker Compose (includes MySQL)
+```bash
+cp docker/application.yml.example docker/application.yml
+# edit docker/application.yml — change secrets, datasource, and any optional features
+```
+
+### Docker Compose
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
@@ -58,40 +63,24 @@ Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
 
 ### Docker Compose (existing MySQL)
 
-If you already have a MySQL instance, use `docker-compose.local.yml` which skips the bundled MySQL and connects to your own.
-
-1. Copy `docker/.env.example` to `docker/.env` and fill in your database details:
-
-```bash
-cp docker/.env.example docker/.env
-```
-
-```ini
-# Use host.docker.internal to reach your local MySQL from inside Docker
-SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
-SPRING_DATASOURCE_USERNAME=root
-SPRING_DATASOURCE_PASSWORD=your_password_here
-```
-
-2. Start the stack:
+Edit the `spring.datasource` section in `docker/application.yml` with your connection info.
 
 ```bash
 docker compose -f docker/docker-compose.local.yml up -d --build
 ```
 
-Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
-
 ### Build from source
 
 ```bash
 # Backend
+cp src/main/resources/application.yml.example src/main/resources/application.yml
 ./mvnw spring-boot:run
 
-# Frontend (dev) — automatically proxies /api to localhost:8080
+# Frontend
 cd web && pnpm install && pnpm dev
 ```
 
-Default admin credentials: `admin` / `admin123` (override via `ADMIN_PASSWORD` env)
+Default admin credentials: `admin` / `admin123` (override `oops.admin.password` in `application.yml`).
 
 ## How it works
 

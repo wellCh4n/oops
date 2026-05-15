@@ -6,13 +6,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.backend
     container_name: backend
-    environment:
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQLDialect
+    volumes:
+      - ./application.yml:/app/config/application.yml:ro
     restart: unless-stopped
 
   frontend:

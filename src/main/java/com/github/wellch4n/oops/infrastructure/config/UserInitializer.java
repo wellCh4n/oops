@@ -12,7 +12,7 @@ public class UserInitializer implements ApplicationRunner {
 
     private final UserService userService;
 
-    @Value("${ADMIN_PASSWORD:admin123}")
+    @Value("${oops.admin.password:admin123}")
     private String adminPassword;
 
     public UserInitializer(UserService userService) {

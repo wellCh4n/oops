@@ -65,7 +65,7 @@ Key technologies:
 ### Backend
 
 ```bash
-# Run the application (requires application.properties)
+# Run the application (requires src/main/resources/application.yml — cp from application.yml.example)
 ./mvnw spring-boot:run
 
 # Build JAR
@@ -107,19 +107,26 @@ Two layouts live under `docker/`:
   ```bash
   docker compose -f docker/docker-compose.yml up -d
   ```
-  Four services on a shared bridge network: `mysql` (8.4) + `backend` (Spring Boot, JRE-only image) + `frontend` (Next.js standalone) + `nginx` (1.27-alpine reverse proxy on host port 8080). Build files are [docker/Dockerfile.backend](docker/Dockerfile.backend) and [docker/Dockerfile.frontend](docker/Dockerfile.frontend); the proxy config is [docker/nginx.conf](docker/nginx.conf). Backend datasource is wired to MySQL via env vars (`SPRING_DATASOURCE_URL`, etc.) — no config-file mount.
+  Four services on a shared bridge network: `mysql` (8.4) + `backend` (Spring Boot, JRE-only image) + `frontend` (Next.js standalone) + `nginx` (1.27-alpine reverse proxy on host port 8080). Build files are [docker/Dockerfile.backend](docker/Dockerfile.backend) and [docker/Dockerfile.frontend](docker/Dockerfile.frontend); the proxy config is [docker/nginx.conf](docker/nginx.conf). Backend config is injected by bind-mounting `docker/application.yml` to `/app/config/application.yml` (Spring Boot's default external-config search path). `docker-compose.local.yml` does the same for an external MySQL — the difference is the datasource block inside that mounted file.
 - **All-in-one image** (single container, three processes):
   ```bash
   docker build -f docker/all-in-one/Dockerfile -t oops .
   ```
-  Uses [docker/all-in-one/Dockerfile](docker/all-in-one/Dockerfile), [docker/all-in-one/nginx.conf](docker/all-in-one/nginx.conf), and [docker/all-in-one/entrypoint.sh](docker/all-in-one/entrypoint.sh). Requires an external MySQL — pass `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` at `docker run` time.
+  Uses [docker/all-in-one/Dockerfile](docker/all-in-one/Dockerfile), [docker/all-in-one/nginx.conf](docker/all-in-one/nginx.conf), and [docker/all-in-one/entrypoint.sh](docker/all-in-one/entrypoint.sh). Mount your `application.yml` at `/app/config/application.yml` (or set `SPRING_CONFIG_LOCATION`); the entrypoint auto-detects either path. Requires an external MySQL — configure it in the mounted yml.
 
 ## Configuration
 
-Copy `src/main/resources/application.properties.example` to `application.properties` and configure:
+OOPS uses a single `application.yml` for all configuration. There are two checked-in templates:
 
-- `spring.datasource.url`: MySQL JDBC URL (e.g. `jdbc:mysql://host:3306/oops?...`)
+- `src/main/resources/application.yml.example` → cp to `src/main/resources/application.yml` for local dev (`./mvnw spring-boot:run`). The runtime file is gitignored AND excluded from the packaged JAR via `pom.xml`'s `<resources><excludes>application.yml</excludes></resources>`, so dev secrets never leak into the build artifact.
+- `docker/application.yml.example` → cp to `docker/application.yml` for either docker-compose stack. Both `docker-compose.yml` and `docker-compose.local.yml` bind-mount `./application.yml` to `/app/config/application.yml`; the template's datasource block carries commented "scenario A / scenario B" alternatives for bundled vs external MySQL.
+
+Key properties to configure:
+
+- `spring.datasource.*`: MySQL JDBC URL / username / password
+- `oops.admin.password`: default admin password (replaces the legacy `ADMIN_PASSWORD` env var)
 - `oops.jwt.secret`: JWT signing key (min 32 chars)
+- `oops.crypto.secret-key`: encryption key for environment K8s tokens
 - `oops.pipeline.image.*`: Clone, Buildah, and ZIP (curl) images for builds
 - `oops.ingress.cert-resolver`: Traefik certificate resolver name
 - `oops.object-storage.*`: S3-compatible object storage for ZIP source uploads (`enabled`, `endpoint`, `region`, `bucket`, `access-key`, `secret-key`, `path-style-access`, `key-prefix`, URL expiration, max file size)
@@ -313,15 +320,15 @@ OOPS uses Flyway to apply schema and data migrations automatically during applic
 
 ## Configuration Notes
 
-Default admin credentials: `admin` / password from env `ADMIN_PASSWORD` (defaults to `admin123`), created by `UserInitializer` on first startup if no admin exists.
+Default admin credentials: `admin` / `oops.admin.password` from `application.yml` (defaults to `admin123` if unset), created by `UserInitializer` on first startup if no admin exists.
 
-MySQL is wired via Spring env vars (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`, `SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect`). The multi-service compose stack does this for you; for the all-in-one image, set the same vars at `docker run` time. Custom `application.properties` can also be injected at `/app/config/application.properties`.
+MySQL and all other OOPS settings are provided in `application.yml`. Both compose stacks bind-mount `docker/application.yml` to `/app/config/application.yml`; the multi-service stack expects scenario A (bundled `mysql` service hostname), the local stack expects scenario B (external MySQL via `host.docker.internal` or any reachable host). There is no `.env` file in this project — `OOPS_*` / `SPRING_*` env vars are no longer used.
 
 **All-in-one container** (`docker/all-in-one/`): Nginx (port 80) reverse-proxies `/api/` to Spring Boot (port 8080) and `/` to Next.js (port 3000). Runtime image is `node:20-slim` (not a JVM base image) — the JDK is copied from the Maven builder stage. `TZ=Asia/Shanghai` is set. The entrypoint monitors all three PIDs (Java, Node, Nginx); if any process dies it kills the others and exits non-zero.
 
 **Multi-service stack** (`docker/docker-compose.yml`): backend uses `eclipse-temurin:25-jre-alpine`; frontend uses `node:20-slim`; nginx uses `nginx:1.27-alpine` with [docker/nginx.conf](docker/nginx.conf) bind-mounted to `/etc/nginx/conf.d/default.conf`. Upstreams use Docker DNS service names (`backend:8080`, `frontend:3000`).
 
-**Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.properties` → `/app/application.properties` → built-in defaults.
+**Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.yml` (compose mount point — Spring Boot's default external-config path when `WORKDIR=/app`) → classpath defaults. Note: `src/main/resources/application.yml` is excluded from the packaged JAR via `pom.xml`'s `<resources><excludes>`, so dev secrets never end up in classpath defaults.
 
 **Nginx**: `client_max_body_size 50m`. `proxy_read_timeout 1h` and `add_header X-Accel-Buffering no` on `/api/` for streaming/WebSocket. Both `nginx.conf` files share these settings.
 

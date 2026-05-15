@@ -4,9 +4,14 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
-    url: jdbc:mysql://localhost:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+    # ----- Scenario A: docker-compose.yml (bundled mysql via compose network) -----
+    url: jdbc:mysql://mysql:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
     username: oops
     password: oops
+    # ----- Scenario B: docker-compose.local.yml (external mysql on host) -----
+    # url: jdbc:mysql://host.docker.internal:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+    # username: <your_user>
+    # password: <your_password>
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
@@ -22,6 +27,13 @@ spring:
 oops:
   admin:
     password: admin123
+  jwt:
+    secret: oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
+    expiration: 604800000
+  crypto:
+    secret-key: oops-crypto-secret-key-please-change-in-production
+  ingress:
+    cert-resolver: letsencrypt-prod
   pipeline:
     image:
       clone: alpine/git:v2.49.0
@@ -42,13 +54,6 @@ oops:
         - "*/.DS_Store"
   pod-filesystem:
     max-download-size-bytes: 52428800
-  ingress:
-    cert-resolver: letsencrypt-prod
-  crypto:
-    secret-key: oops-crypto-secret-key-please-change-in-production
-  jwt:
-    secret: oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
-    expiration: 604800000
   feishu:
     enabled: false
     app-id: cli_xxx
@@ -57,7 +62,7 @@ oops:
   ide:
     enabled: false
     https: false
-    domain: ide.k8s.orb.local
+    domain: ide.k8s.example.com
     image: codercom/code-server:4.112.0-39
     middlewares:
       - code-server-csp-fix
