@@ -14,7 +14,8 @@ public final class KubernetesClients {
         Config config = new ConfigBuilder()
                 .withMasterUrl(apiServer.getUrl())
                 .withOauthToken(apiServer.getToken())
-                .withTrustCerts(false)
+                .withTrustCerts(true)
+                .withDisableHostnameVerification(true)
                 .build();
         return new KubernetesClientBuilder()
                 .withConfig(config)

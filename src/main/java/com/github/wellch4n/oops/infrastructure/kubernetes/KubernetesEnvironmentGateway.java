@@ -15,8 +15,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 public class KubernetesEnvironmentGateway implements EnvironmentGateway {
     private static final OkHttpClient HTTP_CLIENT = new OkHttpClient.Builder()
@@ -29,9 +31,10 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
             return false;
         }
         try (var client = KubernetesClients.from(kubernetesApiServer)) {
-            client.namespaces().list();
+            client.getKubernetesVersion();
             return true;
         } catch (Exception e) {
+            log.warn("Failed to connect to Kubernetes API Server {}", kubernetesApiServer.getUrl(), e);
             return false;
         }
     }
