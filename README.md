@@ -48,10 +48,36 @@ Manage multiple domains from a single console. Configure automatic HTTPS via cer
 
 ## Quick Start
 
-### Docker Compose
+### Docker Compose (includes MySQL)
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
+```
+
+Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
+
+### Docker Compose (existing MySQL)
+
+If you already have a MySQL instance, use `docker-compose.local.yml` which skips the bundled MySQL and connects to your own.
+
+1. Copy `.env.example` to `.env` and fill in your database details:
+
+```bash
+cp .env.example .env
+```
+
+```ini
+DB_HOST=host.docker.internal  # use host.docker.internal to reach your local machine from inside Docker
+DB_PORT=3306
+DB_NAME=oops
+DB_USERNAME=root
+DB_PASSWORD=your_password_here
+```
+
+2. Start the stack:
+
+```bash
+docker compose -f docker/docker-compose.local.yml --env-file .env up -d --build
 ```
 
 Then open <http://localhost:8080> and sign in with `admin` / `admin123`.

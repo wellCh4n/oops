@@ -9,6 +9,8 @@ services:
       MYSQL_USER: oops
       MYSQL_PASSWORD: oops
       MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
     volumes:
       - oops-mysql:/var/lib/mysql
     healthcheck:

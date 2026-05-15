@@ -59,6 +59,7 @@ web/.pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 web/.env*
+.env
 
 # vercel
 web/.vercel
