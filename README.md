@@ -51,7 +51,7 @@ Manage multiple domains from a single console. Configure automatic HTTPS via cer
 ### Docker Compose
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d
+docker compose -f docker/docker-compose.yml up -d --build
 ```
 
 Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
