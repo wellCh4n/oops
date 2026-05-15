@@ -2,7 +2,7 @@
 
 import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { RefObject, useEffect, useMemo, useRef, useState } from "react"
+import { RefObject, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { getUserId, isAdmin } from "@/lib/auth"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBasicInfo } from "./components/application-basic-info"
@@ -62,7 +62,15 @@ const VALID_TABS = new Set<ApplicationTab>([
 ])
 
 
-export function ApplicationForm({
+export function ApplicationForm(props: ApplicationFormProps) {
+  return (
+    <Suspense fallback={null}>
+      <ApplicationFormContent {...props} />
+    </Suspense>
+  )
+}
+
+function ApplicationFormContent({
   loading,
   initialData,
   initialBuildConfig,

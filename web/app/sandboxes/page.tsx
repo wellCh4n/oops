@@ -266,7 +266,7 @@ function SandboxesContent() {
             className="h-8 px-2 gap-1"
             onClick={() => window.open(`/sandboxes/${row.original.id}`, "_blank", "noopener,noreferrer")}
           >
-            <SquareTerminal className="h-4 w-4" />
+            <SquareTerminal className="size-4" />
             {t("sandbox.terminal")}
           </Button>
           <Button
@@ -275,7 +275,7 @@ function SandboxesContent() {
             className="h-8 px-2 gap-1"
             onClick={() => { setDeleteTarget(row.original); setDeleteConfirmText("") }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="size-4" />
             {t("sandbox.delete")}
           </Button>
         </div>
@@ -291,7 +291,7 @@ function SandboxesContent() {
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
-                  <Server className="w-4 h-4" />{t("sandbox.envFilter")}
+                  <Server className="size-4" />{t("sandbox.envFilter")}
                 </span>
                 <SelectWithSearch
                   value={envFilter}
@@ -303,7 +303,7 @@ function SandboxesContent() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
-                  <Search className="w-4 h-4" />{t("sandbox.nameFilter")}
+                  <Search className="size-4" />{t("sandbox.nameFilter")}
                 </span>
                 <Input
                   value={nameFilterInput}
@@ -320,18 +320,18 @@ function SandboxesContent() {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">&nbsp;</span>
                 <Button variant="outline" onClick={() => setNameFilter(nameFilterInput)} className="h-9">
-                  <Search className="h-4 w-4" />
+                  <Search className="size-4" />
                   {t("sandbox.searchBtn")}
                 </Button>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={fetchSandboxes} disabled={loading}>
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
                 {t("sandbox.refresh")}
               </Button>
               <Button size="sm" onClick={openCreateDialog}>
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 {t("sandbox.create")}
               </Button>
             </div>
@@ -340,7 +340,7 @@ function SandboxesContent() {
         table={
           filteredSandboxes.length === 0 && !initialLoad ? (
             <div className="py-16 text-center text-muted-foreground text-sm border rounded-md border-dashed flex flex-col items-center gap-2">
-              <Box className="h-6 w-6" />
+              <Box className="size-6" />
               {t("sandbox.empty")}
             </div>
           ) : (
@@ -402,11 +402,11 @@ function SandboxesContent() {
                     >
                       <span className="text-sm font-medium font-mono">{img}</span>
                       {selected ? (
-                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                          <Check className="h-3 w-3" />
+                        <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="size-3" />
                         </div>
                       ) : (
-                        <div className="h-5 w-5 shrink-0 rounded-full border border-muted-foreground/30" />
+                        <div className="size-5 shrink-0 rounded-full border border-muted-foreground/30" />
                       )}
                     </div>
                   )
@@ -430,11 +430,11 @@ function SandboxesContent() {
                 >
                   <span className="text-sm font-medium">{t("sandbox.runtimeCustom")}</span>
                   {selectedImage === CUSTOM_IMAGE ? (
-                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <Check className="h-3 w-3" />
+                    <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3" />
                     </div>
                   ) : (
-                    <div className="h-5 w-5 shrink-0 rounded-full border border-muted-foreground/30" />
+                    <div className="size-5 shrink-0 rounded-full border border-muted-foreground/30" />
                   )}
                 </div>
               </div>
@@ -449,14 +449,14 @@ function SandboxesContent() {
             </div>
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground [&[data-state=open]>svg]:rotate-180">
-                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                <ChevronDown className="size-4 transition-transform duration-200" />
                 {t("sandbox.advancedConfig")}
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3">
                 <div className="inline-grid grid-cols-2 gap-x-8 gap-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-cpu-request" className="flex items-center gap-1">
-                      <Cpu className="h-3.5 w-3.5" />{t("sandbox.cpuRequest")}
+                      <Cpu className="size-3.5" />{t("sandbox.cpuRequest")}
                     </Label>
                     <div className="relative w-24">
                       <Input
@@ -471,7 +471,7 @@ function SandboxesContent() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-cpu-limit" className="flex items-center gap-1">
-                      <Cpu className="h-3.5 w-3.5" />{t("sandbox.cpuLimit")}
+                      <Cpu className="size-3.5" />{t("sandbox.cpuLimit")}
                     </Label>
                     <div className="relative w-24">
                       <Input
@@ -486,7 +486,7 @@ function SandboxesContent() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-mem-request" className="flex items-center gap-1">
-                      <MemoryStick className="h-3.5 w-3.5" />{t("sandbox.memoryRequest")}
+                      <MemoryStick className="size-3.5" />{t("sandbox.memoryRequest")}
                     </Label>
                     <div className="relative w-24">
                       <Input
@@ -501,7 +501,7 @@ function SandboxesContent() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-mem-limit" className="flex items-center gap-1">
-                      <MemoryStick className="h-3.5 w-3.5" />{t("sandbox.memoryLimit")}
+                      <MemoryStick className="size-3.5" />{t("sandbox.memoryLimit")}
                     </Label>
                     <div className="relative w-24">
                       <Input

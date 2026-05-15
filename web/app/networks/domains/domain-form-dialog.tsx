@@ -243,7 +243,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
                 disabled={submitting}
                 className="mr-auto"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
                 {t("common.delete")}
               </Button>
             )}
@@ -308,7 +308,7 @@ function PemField({ id, label, placeholder, uploadLabel, value, onChange }: PemF
           size="sm"
           onClick={() => inputRef.current?.click()}
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="size-4" />
           {uploadLabel}
         </Button>
         <input

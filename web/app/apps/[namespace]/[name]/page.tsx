@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { ApplicationForm } from "../../application-form"
 import { 
@@ -93,15 +93,17 @@ export default function EditAppPage() {
 
   return (
     <ContentPage title={application?.name ?? name}>
-      <ApplicationForm
-        key={`${namespace}/${name}`}
-        loading={loading}
-        initialData={application ?? undefined}
-        initialBuildConfig={buildConfig}
-        initialBuildEnvConfigs={buildEnvConfigs}
-        initialRuntimeSpec={runtimeSpec}
-        initialServiceConfig={serviceConfig}
-      />
+      <Suspense fallback={null}>
+        <ApplicationForm
+          key={`${namespace}/${name}`}
+          loading={loading}
+          initialData={application ?? undefined}
+          initialBuildConfig={buildConfig}
+          initialBuildEnvConfigs={buildEnvConfigs}
+          initialRuntimeSpec={runtimeSpec}
+          initialServiceConfig={serviceConfig}
+        />
+      </Suspense>
     </ContentPage>
   )
 }

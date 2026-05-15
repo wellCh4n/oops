@@ -72,7 +72,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
       return (
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => meta?.onEdit(domain)}>
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("common.edit")}
           </Button>
         </div>

@@ -247,7 +247,7 @@ export default function EnvironmentEditPage() {
   }
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin h-8 w-8" /></div>
+    return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin size-8" /></div>
   }
 
   return (
@@ -260,7 +260,7 @@ export default function EnvironmentEditPage() {
                   {/* Basic Info Block */}
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-                      <Info className="h-4 w-4 text-muted-foreground" />
+                      <Info className="size-4 text-muted-foreground" />
                       <span className="text-sm font-semibold">{t("env.basicInfo")}</span>
                     </div>
                     <div className="flex flex-col gap-4 p-4">
@@ -284,7 +284,7 @@ export default function EnvironmentEditPage() {
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b">
                       <div className="flex items-center gap-2">
-                        <Server className="h-4 w-4 text-muted-foreground" />
+                        <Server className="size-4 text-muted-foreground" />
                         <span className="text-sm font-semibold">{t("env.k8sConfig")}</span>
                       </div>
                       <Button
@@ -295,10 +295,10 @@ export default function EnvironmentEditPage() {
                         disabled={isValidatingK8s || isK8sValidated}
                         className={isK8sValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
                       >
-                        {isValidatingK8s && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {isValidatingK8s && <Loader2 className="size-3 animate-spin" />}
                         {isK8sValidated ? (
                           <>
-                            <Check className="h-3 w-3" />
+                            <Check className="size-3" />
                             {t("env.validated")}
                           </>
                         ) : t("env.validate")}
@@ -340,13 +340,13 @@ export default function EnvironmentEditPage() {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                                    className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
                                     onClick={() => setShowToken(!showToken)}
                                   >
                                     {showToken ? (
-                                      <EyeOff className="h-4 w-4" />
+                                      <EyeOff className="size-4" />
                                     ) : (
-                                      <Eye className="h-4 w-4" />
+                                      <Eye className="size-4" />
                                     )}
                                   </Button>
                                 </div>
@@ -389,7 +389,7 @@ export default function EnvironmentEditPage() {
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b">
                       <div className="flex items-center gap-2">
-                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <Package className="size-4 text-muted-foreground" />
                         <span className="text-sm font-semibold">{t("env.imageRepoConfig")}</span>
                       </div>
                       <Button
@@ -400,10 +400,10 @@ export default function EnvironmentEditPage() {
                         disabled={isValidatingRepo || isRepoValidated}
                         className={isRepoValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
                       >
-                        {isValidatingRepo && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {isValidatingRepo && <Loader2 className="size-3 animate-spin" />}
                         {isRepoValidated ? (
                           <>
-                            <Check className="h-3 w-3" />
+                            <Check className="size-3" />
                             {t("env.validated")}
                           </>
                         ) : t("env.validate")}
@@ -455,13 +455,13 @@ export default function EnvironmentEditPage() {
                                     type="button"
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                                    className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
                                     onClick={() => setShowRepoPassword(!showRepoPassword)}
                                   >
                                     {showRepoPassword ? (
-                                      <EyeOff className="h-4 w-4" />
+                                      <EyeOff className="size-4" />
                                     ) : (
-                                      <Eye className="h-4 w-4" />
+                                      <Eye className="size-4" />
                                     )}
                                   </Button>
                                 </div>
@@ -481,7 +481,7 @@ export default function EnvironmentEditPage() {
                   {/* Danger Zone Block */}
                   <div className="border border-red-200 dark:border-red-900 rounded-lg overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900">
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <AlertTriangle className="size-4 text-red-500" />
                       <span className="text-sm font-semibold text-red-500">{t("env.dangerZone")}</span>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-red-50/50 dark:bg-red-950/20">
@@ -557,7 +557,7 @@ export default function EnvironmentEditPage() {
                 handleDelete()
               }}
             >
-              {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="size-4 animate-spin" />}
               {t("env.deleteConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -73,21 +73,21 @@ export default function LoginPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="text-muted-foreground px-2">
-                    {theme === "dark" ? <Moon className="h-4 w-4" /> : theme === "light" ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+                    {theme === "dark" ? <Moon className="size-4" /> : theme === "light" ? <Sun className="size-4" /> : <Monitor className="size-4" />}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
-                    <DropdownMenuRadioItem value="system"><Monitor className="h-4 w-4" />{t("sidebar.themeSystem")}</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="light"><Sun className="h-4 w-4" />{t("sidebar.themeLight")}</DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="dark"><Moon className="h-4 w-4" />{t("sidebar.themeDark")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="system"><Monitor className="size-4" />{t("sidebar.themeSystem")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="light"><Sun className="size-4" />{t("sidebar.themeLight")}</DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="dark"><Moon className="size-4" />{t("sidebar.themeDark")}</DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                    <Languages className="h-4 w-4" />
+                    <Languages className="size-4" />
                     {localeLabels[locale]}
                   </Button>
                 </DropdownMenuTrigger>
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                   tabIndex={-1}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>

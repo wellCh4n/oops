@@ -55,6 +55,7 @@ export function SelectWithSearch({
   const [query, setQuery] = React.useState("")
   const [options, setOptions] = React.useState<Option[]>(initialOptions)
   const searchIdRef = React.useRef(0)
+  const listboxId = React.useId()
 
   const selectedOption =
     options.find((o) => o.value === value) ??
@@ -102,6 +103,7 @@ export function SelectWithSearch({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           disabled={disabled}
           className={cn(
             "w-[200px] justify-between bg-transparent border-input hover:bg-transparent hover:border-input font-normal",
@@ -120,7 +122,7 @@ export function SelectWithSearch({
             )}
             <span className="truncate">{selectedOption?.label || value || placeholder}</span>
           </span>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -129,7 +131,7 @@ export function SelectWithSearch({
       >
         <Command filter={onSearch ? () => 1 : undefined}>
           <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <Search className="mr-2 size-4 shrink-0 opacity-50" />
             <CommandInput
               placeholder={searchPlaceholder}
               value={query}
@@ -137,7 +139,7 @@ export function SelectWithSearch({
               className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus:ring-0"
             />
           </div>
-          <CommandList>
+          <CommandList id={listboxId}>
             {options.length === 0 ? (
               <CommandEmpty>{emptyText}</CommandEmpty>
             ) : (
@@ -156,7 +158,7 @@ export function SelectWithSearch({
                   >
                     <Check
                       className={cn(
-                        "h-4 w-4 shrink-0",
+                        "size-4 shrink-0",
                         value === option.value
                           ? "opacity-100"
                           : "opacity-0"

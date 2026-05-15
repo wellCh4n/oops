@@ -1,4 +1,4 @@
-export interface JwtClaims {
+interface JwtClaims {
   sub: string
   userId: string
   role: string
@@ -28,7 +28,7 @@ export function getToken(): string | null {
   return null
 }
 
-export function getClaims(): JwtClaims | null {
+function getClaims(): JwtClaims | null {
   const token = getToken()
   return token ? decodeJwt(token) : null
 }
@@ -61,14 +61,6 @@ export function getUserId(): string | null {
   return getClaims()?.userId ?? null
 }
 
-export function getUsername(): string | null {
-  return getClaims()?.sub ?? null
-}
-
-export function getRole(): string | null {
-  return getClaims()?.role ?? null
-}
-
 export function isAdmin(): boolean {
-  return getRole() === "ADMIN"
+  return getClaims()?.role === "ADMIN"
 }

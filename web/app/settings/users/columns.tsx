@@ -67,7 +67,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
             size="sm"
             onClick={() => meta?.onEdit(user)}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("users.col.edit")}
           </Button>
           <Button
@@ -75,7 +75,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
             size="sm"
             onClick={() => meta?.onChangePassword(user)}
           >
-            <KeyRound className="h-4 w-4" />
+            <KeyRound className="size-4" />
             {t("users.col.changePassword")}
           </Button>
         </div>

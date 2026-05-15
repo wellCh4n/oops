@@ -104,9 +104,9 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
     values: {
       ...values,
       owner: values.owner ?? "",
-      collaborators: [...(values.collaborators ?? [])].sort(),
+      collaborators: (values.collaborators ?? []).toSorted(),
     },
-    selectedEnvNames: [...envNames].sort(),
+    selectedEnvNames: envNames.toSorted(),
   }), [form, selectedEnvNames])
 
   const toggleEnv = (envName: string) => {
@@ -179,7 +179,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
         {/* App Info Section */}
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-            <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+            <LayoutGrid className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.basic.appInfoSection")}</span>
           </div>
           <div className="flex flex-col gap-4 p-4">
@@ -188,7 +188,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><AppWindow className="h-3.5 w-3.5" />{t("common.appName")}</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><AppWindow className="size-3.5" />{t("common.appName")}</FormLabel>
                   <FormControl>
                     <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
                   </FormControl>
@@ -202,7 +202,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
               name="namespace"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" />{t("common.namespace")}</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><Layers className="size-3.5" />{t("common.namespace")}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value} disabled={!!initialData}>
                     <FormControl>
                       <SelectTrigger>
@@ -227,7 +227,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
               name="owner"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><UserIcon className="h-3.5 w-3.5" />{t("common.owner")}</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><UserIcon className="size-3.5" />{t("common.owner")}</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}
                     defaultValue={field.value || "__none__"}
@@ -262,7 +262,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
                   .map((user) => ({ value: user.id, label: `${user.username} (${user.id})` }))
                 return (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1"><UsersIcon className="h-3.5 w-3.5" />{t("common.collaborators")}</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><UsersIcon className="size-3.5" />{t("common.collaborators")}</FormLabel>
                     <FormControl>
                       <MultiSelectWithSearch
                         values={field.value ?? []}
@@ -284,7 +284,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><AlignLeft className="h-3.5 w-3.5" />{t("common.description")}</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><AlignLeft className="size-3.5" />{t("common.description")}</FormLabel>
                   <FormControl>
                     <Textarea autoComplete="off" placeholder={t("apps.basic.descPlaceholder")} {...field} />
                   </FormControl>
@@ -299,7 +299,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
         {initialData && (
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-              <Server className="h-4 w-4 text-muted-foreground" />
+              <Server className="size-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.basic.envInfoSection")}</span>
             </div>
             <div className="flex flex-wrap gap-3 p-4">
@@ -326,11 +326,11 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
                   >
                     <span className="text-sm font-medium">{env.name}</span>
                     {selected ? (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                        <Check className="h-3 w-3" />
+                      <div className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="size-3" />
                       </div>
                     ) : (
-                      <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                      <div className="size-5 rounded-full border border-muted-foreground/30" />
                     )}
                   </div>
                 )

@@ -184,7 +184,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-                <Gauge className="h-4 w-4 text-muted-foreground" />
+                <Gauge className="size-4 text-muted-foreground" />
                 <span className="text-sm font-semibold">{t("apps.runtimeSpec.title")}</span>
               </div>
               <div className="flex flex-col gap-4 p-4">
@@ -209,7 +209,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
             </div>
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b">
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <Activity className="size-4 text-muted-foreground" />
                 <span className="text-sm font-semibold">{t("apps.runtimeSpec.healthCheck")}</span>
                 <FormField
                   control={form.control}
@@ -260,7 +260,7 @@ function ReplicasInput({ value, onChange }: { value: number | undefined, onChang
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8 shrink-0"
+        className="size-8 shrink-0"
         onClick={() => {
           const next = Math.max(0, (parseInt(text, 10) || 0) - 1)
           update(String(next))
@@ -279,7 +279,7 @@ function ReplicasInput({ value, onChange }: { value: number | undefined, onChang
         type="button"
         variant="outline"
         size="icon"
-        className="h-8 w-8 shrink-0"
+        className="size-8 shrink-0"
         onClick={() => {
           const next = (parseInt(text, 10) || 0) + 1
           update(String(next))
@@ -322,7 +322,7 @@ function HealthCheckConfig() {
             name="healthCheck.path"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="flex items-center gap-1"><Route className="h-3.5 w-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
+                <FormLabel className="flex items-center gap-1"><Route className="size-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
                 <FormControl>
                   <Input
                     placeholder="/"
@@ -339,7 +339,7 @@ function HealthCheckConfig() {
           <Collapsible className="contents">
             <CollapsibleTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="w-fit px-0">
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="size-4" />
                 {t("apps.runtimeSpec.advanced")}
               </Button>
             </CollapsibleTrigger>
@@ -350,7 +350,7 @@ function HealthCheckConfig() {
                   name="healthCheck.initialDelaySeconds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" />{t("apps.runtimeSpec.initialDelay")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><Timer className="size-3.5" />{t("apps.runtimeSpec.initialDelay")}</FormLabel>
                       <FormControl>
                         <NumberInput value={field.value} onChange={field.onChange} min={0} />
                       </FormControl>
@@ -363,7 +363,7 @@ function HealthCheckConfig() {
                   name="healthCheck.periodSeconds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><RotateCcw className="h-3.5 w-3.5" />{t("apps.runtimeSpec.period")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><RotateCcw className="size-3.5" />{t("apps.runtimeSpec.period")}</FormLabel>
                       <FormControl>
                         <NumberInput value={field.value} onChange={field.onChange} min={1} />
                       </FormControl>
@@ -376,7 +376,7 @@ function HealthCheckConfig() {
                   name="healthCheck.timeoutSeconds"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><TimerOff className="h-3.5 w-3.5" />{t("apps.runtimeSpec.timeout")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><TimerOff className="size-3.5" />{t("apps.runtimeSpec.timeout")}</FormLabel>
                       <FormControl>
                         <NumberInput value={field.value} onChange={field.onChange} min={1} />
                       </FormControl>
@@ -389,7 +389,7 @@ function HealthCheckConfig() {
                   name="healthCheck.failureThreshold"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><ShieldAlert className="h-3.5 w-3.5" />{t("apps.runtimeSpec.failureThreshold")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><ShieldAlert className="size-3.5" />{t("apps.runtimeSpec.failureThreshold")}</FormLabel>
                       <FormControl>
                         <NumberInput value={field.value} onChange={field.onChange} min={1} />
                       </FormControl>
@@ -417,7 +417,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
         name={`environmentConfigs.${index}.replicas`}
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" />{t("apps.runtimeSpec.replicas")}</FormLabel>
+            <FormLabel className="flex items-center gap-1"><Copy className="size-3.5" />{t("apps.runtimeSpec.replicas")}</FormLabel>
             <FormControl>
               <ReplicasInput value={field.value} onChange={field.onChange} />
             </FormControl>
@@ -431,7 +431,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.cpuRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.runtimeSpec.cpuRequest")}</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="size-3.5" />{t("apps.runtimeSpec.cpuRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input {...field} autoComplete="off" className="pr-10" />
@@ -447,7 +447,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.cpuLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><Cpu className="h-3.5 w-3.5" />{t("apps.runtimeSpec.cpuLimit")}</FormLabel>
+              <FormLabel className="flex items-center gap-1"><Cpu className="size-3.5" />{t("apps.runtimeSpec.cpuLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input {...field} autoComplete="off" className="pr-10" />
@@ -463,7 +463,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.memoryRequest`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.runtimeSpec.memRequest")}</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="size-3.5" />{t("apps.runtimeSpec.memRequest")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input {...field} autoComplete="off" className="pr-8" />
@@ -479,7 +479,7 @@ function SingleEnvironmentConfig({ index }: SingleEnvironmentConfigProps) {
           name={`environmentConfigs.${index}.memoryLimit`}
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="flex items-center gap-1"><MemoryStick className="h-3.5 w-3.5" />{t("apps.runtimeSpec.memLimit")}</FormLabel>
+              <FormLabel className="flex items-center gap-1"><MemoryStick className="size-3.5" />{t("apps.runtimeSpec.memLimit")}</FormLabel>
               <FormControl>
                 <div className="relative w-24">
                   <Input {...field} autoComplete="off" className="pr-8" />

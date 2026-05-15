@@ -57,7 +57,7 @@ export default function NodesPage() {
       <TableForm
         options={
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("common.environment")}</span>
+            <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="size-4" />{t("common.environment")}</span>
             <SelectWithSearch
               value={selectedEnv}
               onValueChange={setSelectedEnv}

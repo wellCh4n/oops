@@ -8,24 +8,6 @@ import { Environment } from "@/lib/api/types"
 import { NAME_MAX_LENGTH, NAME_REGEX } from "@/lib/utils"
 
 // Define Schema and Types here to avoid circular dependencies or multiple files
-export const environmentSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1),
-  kubernetesApiServer: z.object({
-    url: z.string().optional(),
-    token: z.string().optional(),
-  }).optional(),
-  workNamespace: z.string().optional(),
-  imageRepository: z.object({
-    url: z.string().optional(),
-    username: z.string().optional(),
-    password: z.string().optional(),
-  }).optional(),
-  buildStorageClass: z.string().optional(),
-})
-
-export type EnvironmentFormValues = z.infer<typeof environmentSchema>
-
 export const getEnvironmentSchema = (t: (key: string) => string) => z.object({
   id: z.string().optional(),
   name: z.string()
@@ -44,6 +26,8 @@ export const getEnvironmentSchema = (t: (key: string) => string) => z.object({
   }).optional(),
   buildStorageClass: z.string().optional(),
 })
+
+export type EnvironmentFormValues = z.infer<ReturnType<typeof getEnvironmentSchema>>
 
 // Define the shape of our table meta to include handlers
 interface TableMeta {
@@ -95,7 +79,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[]
             size="sm"
             onClick={() => meta?.onView(environment)}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("common.edit")}
           </Button>
         </div>

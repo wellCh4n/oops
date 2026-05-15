@@ -260,7 +260,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
         <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-            <Container className="h-4 w-4 text-muted-foreground" />
+            <Container className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.config.title")}</span>
           </div>
           <div className="flex flex-col gap-4 p-4">
@@ -323,7 +323,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                             size="icon"
                             onClick={() => remove(index)}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="size-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -344,7 +344,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                           onClick={() => append({ key: "", value: "" })}
                           disabled={isLoadingConfig}
                         >
-                          <Plus className="h-4 w-4" />
+                          <Plus className="size-4" />
                           {t("apps.config.addItem")}
                         </Button>
                       </TableCell>
@@ -361,7 +361,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                 onClick={handleExportAll}
                 disabled={isLoadingConfig}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="size-4" />
                 {t("apps.config.copyAll")}
               </Button>
               <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
@@ -371,7 +371,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                     variant="outline"
                     disabled={isLoadingConfig}
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="size-4" />
                     {t("apps.config.import")}
                   </Button>
                 </DialogTrigger>
@@ -432,7 +432,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
         <div className="flex">
           <Button type="submit" disabled={isSaving || isLoadingConfig}>
-            {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isSaving && <Loader2 className="size-4 animate-spin" />}
             {t("common.save")}
           </Button>
         </div>

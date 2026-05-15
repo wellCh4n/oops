@@ -45,7 +45,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <svg className="absolute w-0 h-0" aria-hidden="true">
+        <svg className="absolute size-0" aria-hidden="true">
           <defs>
             <filter id="white-stroke" x="-20%" y="-20%" width="140%" height="140%">
               <feMorphology in="SourceAlpha" result="DILATED" operator="dilate" radius="0.5" />

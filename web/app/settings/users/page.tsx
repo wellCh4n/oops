@@ -158,7 +158,7 @@ export default function UsersPage() {
         options={
           <div className="flex items-end justify-between gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="w-4 h-4" />{t("users.searchLabel")}</span>
+              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="size-4" />{t("users.searchLabel")}</span>
               <div className="flex items-center space-x-2">
                 <Input
                   value={search}
@@ -168,7 +168,7 @@ export default function UsersPage() {
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => { setPage(1); setAppliedSearch(search) }}>
-                  <Search className="h-4 w-4" />
+                  <Search className="size-4" />
                   {t("common.search")}
                 </Button>
               </div>
@@ -177,7 +177,7 @@ export default function UsersPage() {
               <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setUsername(""); setEmail(""); setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirm(false) } }}>
                 <DialogTrigger asChild>
                   <Button>
-                    <Plus className="h-4 w-4" />
+                    <Plus className="size-4" />
                     {t("users.createBtn")}
                   </Button>
                 </DialogTrigger>
@@ -224,7 +224,7 @@ export default function UsersPage() {
                           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                           tabIndex={-1}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
                     </div>
@@ -245,7 +245,7 @@ export default function UsersPage() {
                           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                           tabIndex={-1}
                         >
-                          {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                         </button>
                       </div>
                     </div>
@@ -295,9 +295,9 @@ export default function UsersPage() {
                   variant="outline"
                   size="sm"
                   disabled={page === 1 || tableLoading}
-                  onClick={() => setPage(page - 1)}
+                  onClick={() => setPage(p => p - 1)}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="size-4" />
                   {t("common.prevPage")}
                 </Button>
                 <span className="text-sm text-muted-foreground">
@@ -307,10 +307,10 @@ export default function UsersPage() {
                   variant="outline"
                   size="sm"
                   disabled={page >= totalPages || tableLoading}
-                  onClick={() => setPage(page + 1)}
+                  onClick={() => setPage(p => p + 1)}
                 >
                   {t("common.nextPage")}
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                  <ChevronRight className="ml-2 size-4" />
                 </Button>
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function UsersPage() {
                   onClick={() => setDeleteTarget(editTarget)}
                   disabled={editLoading}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="size-4" />
                   {t("users.col.delete")}
                 </Button>
               )}
@@ -394,7 +394,7 @@ export default function UsersPage() {
                   className="pr-9"
                 />
                 <button type="button" onClick={() => setPwdShow(!pwdShow)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer" tabIndex={-1}>
-                  {pwdShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {pwdShow ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>
@@ -409,7 +409,7 @@ export default function UsersPage() {
                   className="pr-9"
                 />
                 <button type="button" onClick={() => setPwdConfirmShow(!pwdConfirmShow)} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer" tabIndex={-1}>
-                  {pwdConfirmShow ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {pwdConfirmShow ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
             </div>

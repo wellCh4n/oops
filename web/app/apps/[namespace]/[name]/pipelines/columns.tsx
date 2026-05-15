@@ -21,10 +21,10 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
   const tag = firstImage.includes(":") ? firstImage.split(":").pop()! : ""
   const versionMached = tag === pipelineId
   const icon = !tag ? null : versionMached ? (
-    <Check className="h-4 w-4 text-green-500" />
+    <Check className="size-4 text-green-500" />
   ) : (
     <Link href={`/apps/${namespace}/${appName}/pipelines/${tag}`}>
-      <X className="h-4 w-4 text-red-500 cursor-pointer" />
+      <X className="size-4 text-red-500 cursor-pointer" />
     </Link>
   )
   return (
@@ -38,8 +38,8 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
           </TooltipTrigger>
           <TooltipContent className="w-fit max-w-160 break-all">
             <div className="flex flex-col gap-1">
-              {images.map((img, i) => (
-                <span key={i}>{img}</span>
+              {images.map((img) => (
+                <span key={img}>{img}</span>
               ))}
             </div>
           </TooltipContent>

@@ -64,7 +64,7 @@ export function ApplicationEnvironmentSelector({
   return (
     <Tabs value={value ?? ""} onValueChange={onValueChange} className={className}>
       <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap"><Server className="h-3.5 w-3.5" />{t("apps.envSelector.label")}</span>
+        <span className="flex items-center gap-1 text-sm text-muted-foreground whitespace-nowrap"><Server className="size-3.5" />{t("apps.envSelector.label")}</span>
         {isLoading ? null : environments.length === 0 ? (
           <div className="text-sm text-muted-foreground px-3 py-1.5 border rounded-md border-dashed">
             {t("apps.publish.noEnvPrefix")}
@@ -73,7 +73,7 @@ export function ApplicationEnvironmentSelector({
               className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
             >
               <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>
-              <ExternalLink className="h-3 w-3" />
+              <ExternalLink className="size-3" />
             </Link>
             {t("apps.publish.noEnvSuffix")}
           </div>

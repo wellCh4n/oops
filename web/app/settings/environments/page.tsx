@@ -125,7 +125,7 @@ export default function EnvironmentsPage() {
         options={
           <div className="flex items-end justify-between gap-4">
             <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="w-4 h-4" />{t("env.searchLabel")}</span>
+              <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="size-4" />{t("env.searchLabel")}</span>
               <div className="flex items-center space-x-2">
                 <Input
                   placeholder={t("env.searchPlaceholder")}
@@ -135,13 +135,13 @@ export default function EnvironmentsPage() {
                   className="w-56"
                 />
                 <Button variant="outline" onClick={() => setAppliedSearch(search)}>
-                  <Search className="h-4 w-4" />
+                  <Search className="size-4" />
                   {t("common.search")}
                 </Button>
               </div>
             </div>
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
               {t("env.createBtn")}
             </Button>
           </div>

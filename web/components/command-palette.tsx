@@ -55,31 +55,31 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       id: "status",
       name: "Status",
       description: t("cmd.statusDesc"),
-      icon: <Activity className="w-4 h-4" />,
+      icon: <Activity className="size-4" />,
     },
     {
       id: "deploy",
       name: "Deploy",
       description: t("cmd.deployDesc"),
-      icon: <Rocket className="w-4 h-4" />,
+      icon: <Rocket className="size-4" />,
     },
     {
       id: "ide",
       name: "IDEs",
       description: t("cmd.ideDesc"),
-      icon: <Terminal className="w-4 h-4" />,
+      icon: <Terminal className="size-4" />,
     },
     {
       id: "pipeline",
       name: "Pipeline",
       description: t("cmd.pipelineDesc"),
-      icon: <GitBranch className="w-4 h-4" />,
+      icon: <GitBranch className="size-4" />,
     },
     {
       id: "app",
       name: "App",
       description: t("cmd.appDesc"),
-      icon: <LayoutGrid className="w-4 h-4" />,
+      icon: <LayoutGrid className="size-4" />,
     },
   ]
 
@@ -112,9 +112,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // Focus input when opened
   useEffect(() => {
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
+    if (!open || !inputRef.current) return
+    const timeoutId = setTimeout(() => inputRef.current?.focus(), 100)
+    return () => clearTimeout(timeoutId)
   }, [open])
 
   // Reset state when closed
@@ -280,7 +280,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 className="flex-1 h-12"
               />
               {loading && (
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
               )}
             </div>
             <CommandList className="max-h-[400px]">
@@ -388,7 +388,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   {/* Searching state */}
                   {inputValue.trim() !== searchQuery && (
                     <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                       {t("cmd.searching")}
                     </div>
                   )}

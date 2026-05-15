@@ -56,11 +56,6 @@ function AppsContent() {
 
   // URL has priority; fallback to store on first load
   const ownerOnly = ownerOnlyUrl !== null ? ownerOnlyUrl !== "false" : ownerOnlyStore
-  const [ownerFilter, setOwnerFilter] = useState(ownerOnly)
-
-  useEffect(() => {
-    setOwnerFilter(ownerOnly)
-  }, [ownerOnly])
 
   // Sync store value to URL on first load when URL param is absent
   useEffect(() => {
@@ -147,7 +142,7 @@ function AppsContent() {
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div className="flex items-end gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("apps.namespaceFilter")}</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="size-4" />{t("apps.namespaceFilter")}</span>
                 <SelectWithSearch
                   value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
@@ -159,17 +154,16 @@ function AppsContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="w-4 h-4" />{t("common.owner")}:</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="size-4" />{t("common.owner")}:</span>
                 <div className="inline-flex rounded-lg border bg-muted p-0.5 h-9">
                   <button
                     type="button"
                     onClick={() => {
-                      setOwnerFilter(false)
                       setOwnerOnly(false)
                       updateParams({ ownerOnly: "false", page: "1" })
                     }}
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
-                      !ownerFilter
+                      !ownerOnly
                         ? "bg-background shadow-sm text-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -179,12 +173,11 @@ function AppsContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      setOwnerFilter(true)
                       setOwnerOnly(true)
                       updateParams({ ownerOnly: "true", page: "1" })
                     }}
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
-                      ownerFilter
+                      ownerOnly
                         ? "bg-background shadow-sm text-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
@@ -194,7 +187,7 @@ function AppsContent() {
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="size-4" />{t("apps.appNameFilter")}</span>
                 <Input
                   className="w-[200px]"
                   placeholder={t("apps.searchPlaceholder")}
@@ -210,13 +203,13 @@ function AppsContent() {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">&nbsp;</span>
                 <Button variant="outline" onClick={handleSearch} className="h-9">
-                  <Search className="h-4 w-4" />
+                  <Search className="size-4" />
                   {t("apps.searchBtn")}
                 </Button>
               </div>
             </div>
             <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" />
               {t("apps.createBtn")}
             </Button>
           </div>
@@ -260,7 +253,7 @@ function AppsContent() {
                   disabled={page === 1 || loading}
                   onClick={() => updateParams({ page: String(page - 1) })}
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="size-4" />
                   {t("common.prevPage")}
                 </Button>
                 <span className="text-sm text-muted-foreground">
@@ -273,7 +266,7 @@ function AppsContent() {
                   onClick={() => updateParams({ page: String(page + 1) })}
                 >
                   {t("common.nextPage")}
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                  <ChevronRight className="ml-2 size-4" />
                 </Button>
               </div>
             </div>

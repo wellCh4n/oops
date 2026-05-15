@@ -75,7 +75,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             onClick={() => meta?.onEdit(application)}
             title={t("apps.col.edit")}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("apps.col.edit")}
           </Button>
           <Button
@@ -84,7 +84,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             onClick={() => meta?.onPublish(application)}
             title={t("apps.col.publish")}
           >
-            <Rocket className="h-4 w-4" />
+            <Rocket className="size-4" />
             {t("apps.col.publish")}
           </Button>
           <Button
@@ -93,7 +93,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             onClick={() => meta?.onStatus(application)}
             title={t("apps.col.status")}
           >
-            <Activity className="h-4 w-4" />
+            <Activity className="size-4" />
             {t("apps.col.status")}
           </Button>
           <Button
@@ -102,7 +102,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
             onClick={() => meta?.onPipelines(application)}
             title={t("apps.col.pipelines")}
           >
-            <GitBranch className="h-4 w-4" />
+            <GitBranch className="size-4" />
             {t("apps.col.pipelines")}
           </Button>
         </div>
