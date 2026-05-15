@@ -26,6 +26,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class FeishuMessageStrategy implements ExternalMessageStrategy {
 
+    private static final String CARD_TAG = "tag";
+
     private final ExternalAccountRepository externalAccountRepository;
     private final FeishuProperties feishuConfig;
     private final Client client;
@@ -87,22 +89,22 @@ public class FeishuMessageStrategy implements ExternalMessageStrategy {
         Map<String, Object> card = new LinkedHashMap<>();
         card.put("header", Map.of(
                 "template", resolveTemplate(message.level()),
-                "title", Map.of("tag", "plain_text", "content", message.title())
+                "title", Map.of(CARD_TAG, "plain_text", "content", message.title())
         ));
 
         List<Map<String, Object>> elements = new ArrayList<>();
-        elements.add(Map.of("tag", "div", "fields", buildFactFields(message.facts())));
+        elements.add(Map.of(CARD_TAG, "div", "fields", buildFactFields(message.facts())));
 
         if (message.artifact() != null && !message.artifact().isBlank()) {
             elements.add(Map.of(
-                    "tag", "div",
+                    CARD_TAG, "div",
                     "text", markdown("**制品**\n" + message.artifact())
             ));
         }
 
         if (message.detail() != null && !message.detail().isBlank()) {
             elements.add(Map.of(
-                    "tag", "div",
+                    CARD_TAG, "div",
                     "text", markdown("**说明**\n" + message.detail())
             ));
         }
@@ -129,7 +131,7 @@ public class FeishuMessageStrategy implements ExternalMessageStrategy {
     }
 
     private Map<String, Object> markdown(String content) {
-        return Map.of("tag", "lark_md", "content", content);
+        return Map.of(CARD_TAG, "lark_md", "content", content);
     }
 
     private String resolveTemplate(ExternalMessageLevel level) {

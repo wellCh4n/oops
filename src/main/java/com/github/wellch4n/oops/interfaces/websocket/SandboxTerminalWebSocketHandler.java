@@ -17,6 +17,7 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 public class SandboxTerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     private static final String CONTAINER_NAME = "sandbox";
+    private static final String SESSION_KEY_TERMINAL = "terminalSession";
 
     private final SandboxInstanceService sandboxInstanceService;
     private final TerminalSessionGateway terminalSessionGateway;
@@ -48,12 +49,12 @@ public class SandboxTerminalWebSocketHandler extends AbstractWebSocketHandler {
                 CONTAINER_NAME,
                 new WebSocketStreamSink(session)
         );
-        session.getAttributes().put("terminalSession", terminalSession);
+        session.getAttributes().put(SESSION_KEY_TERMINAL, terminalSession);
     }
 
     @Override
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws IOException {
-        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get("terminalSession");
+        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get(SESSION_KEY_TERMINAL);
         if (terminalSession != null) {
             ByteBuffer buffer = message.getPayload();
             byte[] bytes = new byte[buffer.remaining()];
@@ -64,7 +65,7 @@ public class SandboxTerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
-        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get("terminalSession");
+        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get(SESSION_KEY_TERMINAL);
         if (terminalSession != null) {
             terminalSession.write(message.asBytes());
         }
@@ -72,7 +73,7 @@ public class SandboxTerminalWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get("terminalSession");
+        TerminalSession terminalSession = (TerminalSession) session.getAttributes().get(SESSION_KEY_TERMINAL);
         if (terminalSession != null) {
             terminalSession.close();
         }

@@ -33,6 +33,7 @@ public class ObjectStorageService implements ObjectStorage {
         this.presignerProvider = presignerProvider;
     }
 
+    @Override
     public ObjectStorageUploadResult createUpload(String namespace, String applicationName,
                                                   ObjectStorageUploadCommand request) {
         ensureEnabled();
@@ -62,6 +63,7 @@ public class ObjectStorageService implements ObjectStorage {
         );
     }
 
+    @Override
     public String createDownloadUrl(String objectKey) {
         ensureEnabled();
         if (StringUtils.isBlank(objectKey)) {
@@ -83,6 +85,7 @@ public class ObjectStorageService implements ObjectStorage {
         return presignedRequest.url().toString();
     }
 
+    @Override
     public String resolveDownloadUrl(String repository) {
         if (StringUtils.isBlank(repository)) {
             throw new BizException("Build source repository is required");

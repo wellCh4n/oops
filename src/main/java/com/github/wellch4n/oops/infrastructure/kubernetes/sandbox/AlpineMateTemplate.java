@@ -27,6 +27,7 @@ final class AlpineMateTemplate {
     private static final String LABEL_SANDBOX_ID = "oops.sandbox.id";
     private static final int HTTP_PORT = 3000;
     private static final int HTTPS_PORT = 3001;
+    private static final String PROTOCOL_TCP = "TCP";
 
     private AlpineMateTemplate() {
     }
@@ -71,9 +72,9 @@ final class AlpineMateTemplate {
                                             new EnvVarBuilder().withName("TITLE").withValue(spec.name()).build())
                                     .withPorts(
                                             new ContainerPortBuilder().withName("http")
-                                                    .withContainerPort(HTTP_PORT).withProtocol("TCP").build(),
+                                                    .withContainerPort(HTTP_PORT).withProtocol(PROTOCOL_TCP).build(),
                                             new ContainerPortBuilder().withName("https")
-                                                    .withContainerPort(HTTPS_PORT).withProtocol("TCP").build())
+                                                    .withContainerPort(HTTPS_PORT).withProtocol(PROTOCOL_TCP).build())
                                     .withResources(buildResources(spec))
                                     .withVolumeMounts(
                                             new VolumeMountBuilder().withName("config").withMountPath("/config").build(),
@@ -108,9 +109,9 @@ final class AlpineMateTemplate {
                     .withSessionAffinity("None")
                     .withSelector(selectorLabels)
                     .withPorts(
-                            new ServicePortBuilder().withName("http").withProtocol("TCP")
+                            new ServicePortBuilder().withName("http").withProtocol(PROTOCOL_TCP)
                                     .withPort(HTTP_PORT).withTargetPort(new IntOrString(HTTP_PORT)).build(),
-                            new ServicePortBuilder().withName("https").withProtocol("TCP")
+                            new ServicePortBuilder().withName("https").withProtocol(PROTOCOL_TCP)
                                     .withPort(HTTPS_PORT).withTargetPort(new IntOrString(HTTPS_PORT)).build())
                 .endSpec()
                 .build();

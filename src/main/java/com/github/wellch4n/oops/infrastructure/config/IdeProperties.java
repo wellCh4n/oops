@@ -16,5 +16,4 @@ public class IdeProperties {
     private boolean https = false;
     private String image;
     private List<String> middlewares = List.of();
-    private String proxyDomain = "{{port}}-{{host}}";
 }

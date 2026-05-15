@@ -18,7 +18,6 @@ import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.application.dto.IdeConfigDto;
 import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
 import com.github.wellch4n.oops.application.dto.IdeDto;
-import com.github.wellch4n.oops.shared.util.IdeProxyDomainUtils;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClientPool;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
@@ -31,7 +30,6 @@ import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +44,8 @@ import org.springframework.util.StreamUtils;
 @ConditionalOnBean(IdeProperties.class)
 public class KubernetesIdeGateway implements IdeGateway {
 
+    private static final String IDE_CONFIG_EXTENSIONS_KEY = "extensions";
+
     private final PipelineImageProperties pipelineImageConfig;
     private final IdeProperties ideConfig;
     private final IngressProperties ingressConfig;
@@ -59,16 +59,6 @@ public class KubernetesIdeGateway implements IdeGateway {
         this.ideConfig = ideConfig;
         this.ingressConfig = ingressConfig;
         this.clientPool = clientPool;
-    }
-
-    private String getProxyDomainTemplate() {
-        return IdeProxyDomainUtils.normalizeTemplate(ideConfig.getProxyDomain())
-                .orElseGet(() -> {
-                    if (ideConfig.getProxyDomain() != null && !ideConfig.getProxyDomain().isBlank()) {
-                        log.warn("Ignoring invalid oops.ide.proxy-domain '{}': it must include both {{port}} and {{host}}", ideConfig.getProxyDomain());
-                    }
-                    return null;
-                });
     }
 
     @Override
@@ -88,11 +78,11 @@ public class KubernetesIdeGateway implements IdeGateway {
         if (configMap != null && configMap.getData() != null
                 && configMap.getData().containsKey("settings.json")
                 && configMap.getData().containsKey(".env")
-                && configMap.getData().containsKey("extensions")) {
+                && configMap.getData().containsKey(IDE_CONFIG_EXTENSIONS_KEY)) {
             return new IdeConfigDto(
                     configMap.getData().get("settings.json"),
                     configMap.getData().get(".env"),
-                    configMap.getData().get("extensions"));
+                    configMap.getData().get(IDE_CONFIG_EXTENSIONS_KEY));
         }
 
         Map<String, String> data = new HashMap<>();
@@ -101,7 +91,7 @@ public class KubernetesIdeGateway implements IdeGateway {
         }
         data.put("settings.json", fileDefaults.getSettings());
         data.put(".env", fileDefaults.getEnv());
-        data.put("extensions", fileDefaults.getExtensions());
+        data.put(IDE_CONFIG_EXTENSIONS_KEY, fileDefaults.getExtensions());
 
         ConfigMap newConfigMap = new ConfigMapBuilder()
                 .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
@@ -118,7 +108,7 @@ public class KubernetesIdeGateway implements IdeGateway {
                     new ClassPathResource("ide-default-config.json").getInputStream(),
                     StandardCharsets.UTF_8);
             JsonNode root = new ObjectMapper().readTree(raw);
-            return new IdeConfigDto(root.path("settings").toString(), root.path("env").asText(""), root.path("extensions").asText(""));
+            return new IdeConfigDto(root.path("settings").toString(), root.path("env").asText(""), root.path(IDE_CONFIG_EXTENSIONS_KEY).asText(""));
         } catch (IOException e) {
             log.warn("Failed to load ide-default-config.json, using empty defaults", e);
             return new IdeConfigDto("{}", "", "");
@@ -170,18 +160,13 @@ public class KubernetesIdeGateway implements IdeGateway {
                 .map(ext -> "code-server --install-extension " + ext)
                 .toList() : List.of();
 
-        String proxyDomainTemplate = getProxyDomainTemplate();
-
         List<String> startupCmds = new ArrayList<>();
         startupCmds.add("cp -r /workspace /home/coder/" + applicationName);
         startupCmds.add("mkdir -p /home/coder/.local/share/code-server/User");
         startupCmds.add("echo '" + ideSettings + "' > /home/coder/.local/share/code-server/User/settings.json");
         startupCmds.addAll(installCmds);
-        String proxyDomainArg = proxyDomainTemplate != null
-                ? " --proxy-domain '" + proxyDomainTemplate + "'"
-                : "";
         startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
-                + proxyDomainArg + " /home/coder/" + applicationName);
+                + " --proxy-domain '{{port}}-{{host}}'" + " /home/coder/" + applicationName);
 
         var client = clientPool.get(environment.getKubernetesApiServer());
         StatefulSet statefulSet = new StatefulSetBuilder()
@@ -264,7 +249,7 @@ public class KubernetesIdeGateway implements IdeGateway {
 
             // 3. 创建 IngressRoute，失败则回滚 StatefulSet（Service 通过 ownerReference 级联删除）
             try {
-                createIngressRoute(client, environment.getWorkNamespace(), name, ownerRef, proxyDomainTemplate);
+                createIngressRoute(client, environment.getWorkNamespace(), name, ownerRef);
             } catch (Exception e) {
                 log.error("Failed to create IDE IngressRoute, rolling back StatefulSet: {}", name, e);
                 client.apps().statefulSets().inNamespace(environment.getWorkNamespace()).withName(name).delete();
@@ -337,7 +322,7 @@ public class KubernetesIdeGateway implements IdeGateway {
     }
 
     private void createIngressRoute(KubernetesClient client, String namespace, String name,
-                                    OwnerReference ownerRef, String proxyDomainTemplate) {
+                                    OwnerReference ownerRef) {
         var ingressRouteCrd = client.apiextensions().v1().customResourceDefinitions()
                 .withName(CustomResourceDefinitionContext.fromCustomResourceType(IngressRoute.class).getName())
                 .get();
@@ -348,7 +333,7 @@ public class KubernetesIdeGateway implements IdeGateway {
         }
 
         String host = name + "." + ideConfig.getDomain();
-        String matchRule = IdeProxyDomainUtils.buildIngressMatch(host, proxyDomainTemplate);
+        String matchRule = "Host(`" + host + "`) || HostRegexp(`^[0-9]+-" + host.replace(".", "\\.") + "$`)";
 
         List<IngressRouteSpec.Middleware> middlewares = ideConfig.getMiddlewares().stream()
                 .map(middlewareName -> IngressRouteSpec.Middleware.builder().name(middlewareName).build())

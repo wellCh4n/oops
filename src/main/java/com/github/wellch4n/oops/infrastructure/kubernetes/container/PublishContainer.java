@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class PublishContainer extends BaseContainer {
 
+    private static final String DEFAULT_DOCKERFILE = "Dockerfile";
     private static final Pattern REGISTRY_LOCATION = Pattern.compile(
             "[a-zA-Z0-9][a-zA-Z0-9._:-]*(/[a-zA-Z0-9][a-zA-Z0-9._-]*)*");
 
@@ -37,14 +38,14 @@ public class PublishContainer extends BaseContainer {
         if (applicationBuildConfig != null) {
             DockerFileConfig dockerFileConfig = applicationBuildConfig.getDockerFileConfig();
             if (dockerFileConfig != null && dockerFileConfig.getType() == DockerFileType.USER) {
-                dockerFile = "Dockerfile";
+                dockerFile = DEFAULT_DOCKERFILE;
             } else if (dockerFileConfig != null) {
-                dockerFile = StringUtils.defaultIfBlank(dockerFileConfig.getPath(), "Dockerfile");
+                dockerFile = StringUtils.defaultIfBlank(dockerFileConfig.getPath(), DEFAULT_DOCKERFILE);
             } else {
-                dockerFile = "Dockerfile";
+                dockerFile = DEFAULT_DOCKERFILE;
             }
         } else {
-            dockerFile = "Dockerfile";
+            dockerFile = DEFAULT_DOCKERFILE;
         }
 
         String registriesConf = buildRegistriesConf(registryMirrors);

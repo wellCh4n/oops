@@ -73,6 +73,9 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     private static final String SANDBOX_NAME_PREFIX = "oops-sandbox-";
     private static final String CONTAINER_NAME = "sandbox";
     private static final String PERSISTENT_KEEPALIVE_COMMAND = "trap : TERM INT; sleep infinity & wait";
+    private static final String BIN_SH = "/bin/sh";
+    private static final String RESOURCE_CPU = "cpu";
+    private static final String RESOURCE_MEMORY = "memory";
 
     private final KubernetesClientPool clientPool;
 
@@ -331,7 +334,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                         finished.countDown();
                     }
                 })
-                .exec("/bin/sh", "-c", command)) {
+                .exec(BIN_SH, "-c", command)) {
 
             if (!finished.await(timeoutSeconds, TimeUnit.SECONDS)) {
                 throw new BizException("Sandbox exec timed out");
@@ -380,7 +383,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                             finished.countDown();
                         }
                     })
-                    .exec("/bin/sh", "-c", command)) {
+                    .exec(BIN_SH, "-c", command)) {
 
                 if (!finished.await(timeoutSeconds, TimeUnit.SECONDS)) {
                     emitter.completeWithError(new BizException("Sandbox exec timed out"));
@@ -439,8 +442,8 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         }
 
         ResourceRequirements resources = new ResourceRequirements();
-        resources.setRequests(Map.of("cpu", new Quantity(spec.cpuRequest()), "memory", new Quantity(spec.memoryRequest())));
-        resources.setLimits(Map.of("cpu", new Quantity(spec.cpuLimit()), "memory", new Quantity(spec.memoryLimit())));
+        resources.setRequests(Map.of(RESOURCE_CPU, new Quantity(spec.cpuRequest()), RESOURCE_MEMORY, new Quantity(spec.memoryRequest())));
+        resources.setLimits(Map.of(RESOURCE_CPU, new Quantity(spec.cpuLimit()), RESOURCE_MEMORY, new Quantity(spec.memoryLimit())));
 
         return new JobBuilder()
                 .withApiVersion("batch/v1").withKind("Job")
@@ -457,7 +460,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                         .withName(CONTAINER_NAME)
                         .withImage(spec.image())
                         .withImagePullPolicy("IfNotPresent")
-                        .withCommand("/bin/sh", "-c", spec.command())
+                        .withCommand(BIN_SH, "-c", spec.command())
                         .withResources(resources)
                         .build())
                 .endSpec()
@@ -472,16 +475,16 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
 
         ResourceRequirementsBuilder resourcesBuilder = new ResourceRequirementsBuilder();
         if (isNotBlank(spec.cpuRequest())) {
-            resourcesBuilder.addToRequests("cpu", new Quantity(spec.cpuRequest()));
+            resourcesBuilder.addToRequests(RESOURCE_CPU, new Quantity(spec.cpuRequest()));
         }
         if (isNotBlank(spec.memoryRequest())) {
-            resourcesBuilder.addToRequests("memory", new Quantity(withMemoryUnit(spec.memoryRequest())));
+            resourcesBuilder.addToRequests(RESOURCE_MEMORY, new Quantity(withMemoryUnit(spec.memoryRequest())));
         }
         if (isNotBlank(spec.cpuLimit())) {
-            resourcesBuilder.addToLimits("cpu", new Quantity(spec.cpuLimit()));
+            resourcesBuilder.addToLimits(RESOURCE_CPU, new Quantity(spec.cpuLimit()));
         }
         if (isNotBlank(spec.memoryLimit())) {
-            resourcesBuilder.addToLimits("memory", new Quantity(withMemoryUnit(spec.memoryLimit())));
+            resourcesBuilder.addToLimits(RESOURCE_MEMORY, new Quantity(withMemoryUnit(spec.memoryLimit())));
         }
         ResourceRequirements resources = resourcesBuilder.build();
 
@@ -510,7 +513,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                                     .withName(CONTAINER_NAME)
                                     .withImage(spec.image())
                                     .withImagePullPolicy("IfNotPresent")
-                                    .withCommand("/bin/sh", "-c", PERSISTENT_KEEPALIVE_COMMAND)
+                                    .withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND)
                                     .withResources(resources)
                                     .build())
                         .endSpec()

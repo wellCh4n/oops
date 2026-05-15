@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGateway {
     private static final String LOGS_EXPIRED_MESSAGE = "Logs expired: the build job has been cleaned up";
+    private static final String MSG_TYPE = "type";
 
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -58,7 +59,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
 
             List<String> containers = getContainers(job);
             sink.sendText(objectMapper.writeValueAsString(Map.of(
-                    "type", "steps",
+                    MSG_TYPE, "steps",
                     "data", containers
             )));
 
@@ -70,7 +71,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
             }
 
             if (handle.isOpen(sink)) {
-                sink.sendText(objectMapper.writeValueAsString(Map.of("type", "done")));
+                sink.sendText(objectMapper.writeValueAsString(Map.of(MSG_TYPE, "done")));
                 sink.close();
             }
         } catch (Exception e) {
