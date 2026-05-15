@@ -119,7 +119,7 @@ export default function SandboxDetailPage() {
         bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
         actions={
           <div className="flex items-center gap-3">
-            <Skeleton className="h-2 w-2 rounded-full" />
+            <Skeleton className="size-2 rounded-full" />
             <Skeleton className="h-5 w-14 rounded-full" />
           </div>
         }
@@ -156,7 +156,7 @@ export default function SandboxDetailPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center">
-                <Info className="h-3.5 w-3.5" />
+                <Info className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent className="text-xs font-mono space-y-0.5">
@@ -174,7 +174,7 @@ export default function SandboxDetailPage() {
       bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
       actions={
         <div className="flex items-center gap-3">
-          <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`} />
+          <span className={`size-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`} />
           <StatusBadge status={sandbox.status} />
         </div>
       }

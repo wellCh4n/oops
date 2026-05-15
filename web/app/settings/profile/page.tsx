@@ -151,7 +151,7 @@ export default function ProfilePage() {
     return (
       <ContentPage title={t("profile.title")}>
         <div className="flex justify-center items-center py-16">
-          <Loader2 className="animate-spin h-6 w-6 text-muted-foreground" />
+          <Loader2 className="animate-spin size-6 text-muted-foreground" />
         </div>
       </ContentPage>
     )
@@ -164,7 +164,7 @@ export default function ProfilePage() {
           <form onSubmit={profileForm.handleSubmit(onSaveProfile)} className="flex w-full flex-col gap-4">
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-                <Info className="h-4 w-4 text-muted-foreground" />
+                <Info className="size-4 text-muted-foreground" />
                 <span className="text-sm font-semibold">{t("profile.basicInfo")}</span>
               </div>
               <div className="flex flex-col gap-4 p-4">
@@ -203,7 +203,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex">
               <Button type="submit" disabled={savingProfile}>
-                {savingProfile && <Loader2 className="h-4 w-4 animate-spin" />}
+                {savingProfile && <Loader2 className="size-4 animate-spin" />}
                 {t("common.save")}
               </Button>
             </div>
@@ -214,7 +214,7 @@ export default function ProfilePage() {
           <form onSubmit={passwordForm.handleSubmit(onChangePassword)} className="flex w-full flex-col gap-4">
             <div className="border rounded-lg overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                <KeyRound className="size-4 text-muted-foreground" />
                 <span className="text-sm font-semibold">{t("profile.changePassword")}</span>
               </div>
               <div className="flex flex-col gap-4 p-4">
@@ -231,11 +231,11 @@ export default function ProfilePage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                            className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowOld(!showOld)}
                             tabIndex={-1}
                           >
-                            {showOld ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showOld ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                           </Button>
                         </div>
                       </FormControl>
@@ -256,11 +256,11 @@ export default function ProfilePage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                            className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowNew(!showNew)}
                             tabIndex={-1}
                           >
-                            {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                           </Button>
                         </div>
                       </FormControl>
@@ -281,11 +281,11 @@ export default function ProfilePage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-9 w-9 text-muted-foreground hover:bg-transparent"
+                            className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
                             onClick={() => setShowConfirm(!showConfirm)}
                             tabIndex={-1}
                           >
-                            {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                           </Button>
                         </div>
                       </FormControl>
@@ -297,7 +297,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex">
               <Button type="submit" disabled={savingPassword}>
-                {savingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
+                {savingPassword && <Loader2 className="size-4 animate-spin" />}
                 {t("profile.confirmChangePwd")}
               </Button>
             </div>
@@ -306,7 +306,7 @@ export default function ProfilePage() {
 
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            <ShieldCheck className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("profile.accessToken")}</span>
           </div>
           <div className="flex flex-col gap-3 p-4">
@@ -326,23 +326,23 @@ export default function ProfilePage() {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-muted-foreground hover:bg-transparent"
+                    className="size-9 text-muted-foreground hover:bg-transparent"
                     onClick={() => setShowToken((prev) => !prev)}
                     disabled={!user?.accessToken}
                     tabIndex={-1}
                   >
-                    {showToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-9 w-9 text-muted-foreground hover:bg-transparent"
+                    className="size-9 text-muted-foreground hover:bg-transparent"
                     onClick={onCopyAccessToken}
                     disabled={!user?.accessToken}
                     tabIndex={-1}
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="size-4" />
                   </Button>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export default function ProfilePage() {
                 }}
                 disabled={resettingToken}
               >
-                {resettingToken && <Loader2 className="h-4 w-4 animate-spin" />}
+                {resettingToken && <Loader2 className="size-4 animate-spin" />}
                 {user?.accessToken ? t("profile.accessToken.reset") : t("profile.accessToken.generate")}
               </Button>
             </div>

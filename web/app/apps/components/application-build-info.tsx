@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import Editor from "@monaco-editor/react"
+import dynamic from "next/dynamic"
+const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
@@ -248,7 +249,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
           {/* Global Build Config Section */}
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              <Settings2 className="size-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.build.sourceConfig")}</span>
             </div>
             <div className="flex flex-col gap-4 p-4">
@@ -257,7 +258,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
               name="sourceType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-1"><PackageSearch className="h-3.5 w-3.5" />{t("apps.build.sourceType")}</FormLabel>
+                  <FormLabel className="flex items-center gap-1"><PackageSearch className="size-3.5" />{t("apps.build.sourceType")}</FormLabel>
                   <FormControl>
                     <Tabs value={field.value} onValueChange={field.onChange}>
                       <TabsList className="justify-start h-auto flex-wrap">
@@ -281,7 +282,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                 name="repository"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />{t("apps.build.repository")}</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><GitBranch className="size-3.5" />{t("apps.build.repository")}</FormLabel>
                     <FormControl>
                       <Input
                         autoComplete="off"
@@ -300,12 +301,12 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
             <div className="grid gap-2">
               <Label className="flex items-center gap-1">
-                <FileCode className="h-3.5 w-3.5" />
+                <FileCode className="size-3.5" />
                 {t("apps.build.dockerfile")}
               </Label>
               <div className="grid gap-3 border rounded-md p-3">
               <div className="flex items-center gap-1 text-sm font-medium">
-                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                <SlidersHorizontal className="size-3.5 text-muted-foreground" />
                 {t("apps.build.dockerfileType")}
               </div>
               <FormField
@@ -348,7 +349,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   name="dockerFileConfig.path"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><FolderOpen className="h-3.5 w-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><FolderOpen className="size-3.5" />{t("apps.build.dockerfilePath")}</FormLabel>
                       <FormControl>
                         <Input autoComplete="off" placeholder="Dockerfile" {...field} value={field.value || ""} />
                       </FormControl>
@@ -363,7 +364,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   name="dockerFileConfig.content"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="flex items-center gap-1"><FileCode className="h-3.5 w-3.5" />{t("apps.build.dockerfileContent")}</FormLabel>
+                      <FormLabel className="flex items-center gap-1"><FileCode className="size-3.5" />{t("apps.build.dockerfileContent")}</FormLabel>
                       <FormControl>
                         <div className="border rounded-md overflow-hidden">
                           <div className="bg-muted px-3 py-1 text-xs text-muted-foreground border-b flex items-center">
@@ -399,7 +400,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
           <div className="border rounded-lg overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-              <Hammer className="h-4 w-4 text-muted-foreground" />
+              <Hammer className="size-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.build.envConfig")}</span>
             </div>
             <div className="flex flex-col gap-4 p-4">
@@ -408,7 +409,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                 name="buildImage"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-1"><Box className="h-3.5 w-3.5" />{t("apps.build.buildImage")}</FormLabel>
+                    <FormLabel className="flex items-center gap-1"><Box className="size-3.5" />{t("apps.build.buildImage")}</FormLabel>
                     <FormControl>
                       <Input
                         autoComplete="off"
@@ -424,7 +425,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
               <div className="grid gap-2">
                 <Label className="flex items-center gap-1">
-                  <Terminal className="h-3.5 w-3.5" />
+                  <Terminal className="size-3.5" />
                   {t("apps.build.buildCommand")}
                 </Label>
                 <div className="w-full">

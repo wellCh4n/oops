@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { Suspense, use, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Rocket } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
@@ -19,8 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-export default function IDEInstancePage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
+function IDEInstancePageContent({ id }: { id: string }) {
   const { t } = useLanguage()
   const { features, loaded } = useFeaturesStore()
   const searchParams = useSearchParams()
@@ -70,6 +69,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
       {url && loaded ? (
         <iframe
           src={url}
+          title={t("ide.frameTitle")}
           className="flex-1 min-h-0 w-full border-0"
           allow="clipboard-read; clipboard-write"
         />
@@ -84,7 +84,7 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
           onClick={() => setShowConfirm(true)}
           className="fixed top-0.75 right-3 z-30 flex items-center gap-2 text-xs text-primary-foreground bg-primary px-3 py-1.5 rounded-full border border-primary-foreground/20 shadow-sm hover:bg-primary/90 transition-colors cursor-pointer"
         >
-          <Rocket className="w-3.5 h-3.5" />
+          <Rocket className="size-3.5" />
           <span>{t("ide.publish")}</span>
         </button>
       )}
@@ -108,5 +108,14 @@ export default function IDEInstancePage({ params }: { params: Promise<{ id: stri
         </AlertDialogContent>
       </AlertDialog>
     </ContentPage>
+  )
+}
+
+export default function IDEInstancePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params)
+  return (
+    <Suspense fallback={null}>
+      <IDEInstancePageContent id={id} />
+    </Suspense>
   )
 }

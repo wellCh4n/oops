@@ -272,11 +272,11 @@ export default function PublishPage({ params }: PageProps) {
                   >
                     <span className="text-sm font-medium">{env.environmentName}</span>
                     {selected ? (
-                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                        <Check className="h-3 w-3" />
+                      <div className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <Check className="size-3" />
                       </div>
                     ) : (
-                      <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                      <div className="size-5 rounded-full border border-muted-foreground/30" />
                     )}
                   </div>
                 )
@@ -290,7 +290,7 @@ export default function PublishPage({ params }: PageProps) {
                 className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
               >
                 <span className="hover:underline">{t("apps.publish.noEnvLink")}</span>
-                <ExternalLink className="h-3 w-3" />
+                <ExternalLink className="size-3" />
               </Link>
               {t("apps.publish.noEnvSuffix")}
             </p>
@@ -352,7 +352,7 @@ export default function PublishPage({ params }: PageProps) {
                     disabled={isUploading}
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="size-4" />
                     {isUploading ? t("apps.build.uploading") : t("apps.build.uploadZip")}
                   </Button>
                 </>
@@ -402,11 +402,11 @@ export default function PublishPage({ params }: PageProps) {
                     {mode === "MANUAL" ? t("apps.publish.modeManual") : t("apps.publish.modeImmediate")}
                   </span>
                   {selected ? (
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                      <Check className="h-3 w-3" />
+                    <div className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <Check className="size-3" />
                     </div>
                   ) : (
-                    <div className="h-5 w-5 rounded-full border border-muted-foreground/30" />
+                    <div className="size-5 rounded-full border border-muted-foreground/30" />
                   )}
                 </div>
               )
@@ -416,7 +416,7 @@ export default function PublishPage({ params }: PageProps) {
 
         <div className="pt-2">
           <Button onClick={handlePublish} disabled={loading || !selectedEnv}>
-            <Rocket className="h-4 w-4" />
+            <Rocket className="size-4" />
             {loading ? t("apps.publish.submitting") : deployMode === "MANUAL" ? t("apps.publish.submitBuild") : t("apps.publish.confirmDeploy")}
           </Button>
         </div>

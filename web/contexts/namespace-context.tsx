@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useEffect } from "react"
+import React, { Suspense, createContext, useContext, useEffect } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useNamespaceStore } from "@/store/namespace"
 
@@ -23,17 +23,30 @@ const NamespaceContext = createContext<NamespaceContextType>({
  * URL takes priority: if URL has a namespace that differs from the store, the store is updated.
  * If the URL has no namespace but the store does, the namespace is added to the URL.
  *
- * Must be rendered inside a Suspense boundary (uses useSearchParams).
+ * Wraps the URL-syncing effect in a Suspense boundary (uses useSearchParams).
  */
 export function NamespaceParamProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
-
   const namespaces = useNamespaceStore((s) => s.namespaces)
   const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
   const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
   const loadNamespaces = useNamespaceStore((s) => s.load)
+
+  return (
+    <NamespaceContext.Provider value={{ namespaces, selectedNamespace, setSelectedNamespace, loadNamespaces }}>
+      <Suspense fallback={null}>
+        <NamespaceUrlSync />
+      </Suspense>
+      {children}
+    </NamespaceContext.Provider>
+  )
+}
+
+function NamespaceUrlSync() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const setSelectedNamespace = useNamespaceStore((s) => s.setSelectedNamespace)
 
   const urlNamespace = searchParams.get("namespace") ?? ""
 
@@ -48,11 +61,7 @@ export function NamespaceParamProvider({ children }: { children: React.ReactNode
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlNamespace, selectedNamespace])
 
-  return (
-    <NamespaceContext.Provider value={{ namespaces, selectedNamespace, setSelectedNamespace, loadNamespaces }}>
-      {children}
-    </NamespaceContext.Provider>
-  )
+  return null
 }
 
 export function useNamespace() {

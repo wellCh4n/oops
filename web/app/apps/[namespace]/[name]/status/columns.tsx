@@ -50,15 +50,15 @@ export const getStatusColumns = (
             size="sm"
             onClick={() => onRestart(row.original.name)}
           >
-            <RotateCw className="h-4 w-4" />
+            <RotateCw className="size-4" />
             <span className="hidden lg:inline">{t("apps.status.col.restart")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onViewLogs(row.original.name)}>
-            <FileText className="h-4 w-4" />
+            <FileText className="size-4" />
             <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
-            <Terminal className="h-4 w-4" />
+            <Terminal className="size-4" />
             <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
           </Button>
         </div>

@@ -1,5 +1,5 @@
 import { apiFetch } from "./client"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationRuntimeSpecEnvironmentConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -144,14 +144,6 @@ export const getApplicationBuildEnvConfigs = async (namespace: string, name: str
   return response.json() as Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>>
 }
 
-export const getApplicationRuntimeSpecEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationRuntimeSpecEnvironmentConfig[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/runtime-specs`)
-  if (!response.ok) {
-    throw new Error("Failed to fetch application runtime specs")
-  }
-  return response.json() as Promise<ApiResponse<ApplicationRuntimeSpecEnvironmentConfig[]>>
-}
-
 export const getApplicationRuntimeSpec = async (namespace: string, name: string): Promise<ApiResponse<ApplicationRuntimeSpec>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/runtime-spec`)
   if (!response.ok) {
@@ -200,22 +192,6 @@ export const updateApplicationBuildEnvConfigs = async (
   })
   if (!response.ok) {
     throw new Error("Failed to save application build environment configs")
-  }
-  return response.json() as Promise<ApiResponse<boolean>>
-}
-
-export const updateApplicationRuntimeSpecEnvConfigs = async (
-  namespace: string,
-  name: string,
-  configs: ApplicationRuntimeSpecEnvironmentConfig[]
-): Promise<ApiResponse<boolean>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/runtime-specs`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(configs),
-  })
-  if (!response.ok) {
-    throw new Error("Failed to save application runtime specs")
   }
   return response.json() as Promise<ApiResponse<boolean>>
 }

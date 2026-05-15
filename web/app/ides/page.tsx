@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LocalTime } from "@/components/ui/local-time"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
@@ -180,10 +181,12 @@ function IDEPageContent() {
   useEffect(() => {
     stopPolling()
     const hasPending = ides.some((ide) => !ide.ready)
-    if (hasPending && selectedApp && selectedEnv) {
-      pollRef.current = setInterval(fetchIDEs, 5000)
+    if (!hasPending || !selectedApp || !selectedEnv) {
+      return
     }
-    return () => stopPolling()
+    const intervalId = setInterval(fetchIDEs, 5000)
+    pollRef.current = intervalId
+    return () => clearInterval(intervalId)
   }, [ides]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreateDialog = async () => {
@@ -257,7 +260,7 @@ function IDEPageContent() {
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
-                <Layers className="w-4 h-4" />{t("apps.namespaceFilter")}
+                <Layers className="size-4" />{t("apps.namespaceFilter")}
               </span>
               <SelectWithSearch
                 value={selectedNamespace}
@@ -271,7 +274,7 @@ function IDEPageContent() {
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
-                <LayoutGrid className="w-4 h-4" />{t("apps.appNameFilter")}
+                <LayoutGrid className="size-4" />{t("apps.appNameFilter")}
               </span>
               <SelectWithSearch
                 value={selectedAppValue}
@@ -351,7 +354,7 @@ function IDEPageContent() {
                     onClick={fetchIDEs}
                     disabled={loading || !activeNamespace || !selectedApp || !selectedEnv}
                   >
-                    <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
                     {t("pipelines.refresh")}
                   </Button>
                   <Button
@@ -359,7 +362,7 @@ function IDEPageContent() {
                     onClick={openCreateDialog}
                     disabled={!activeNamespace || !selectedApp || !selectedEnv || sourceType === "ZIP"}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="size-4" />
                     {t("ide.create")}
                   </Button>
                 </div>
@@ -381,33 +384,33 @@ function IDEPageContent() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between rounded-md border px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-2 w-2 rounded-full" />
+                      <Skeleton className="size-2 rounded-full" />
                       <div className="flex flex-col gap-1">
                         <Skeleton className="h-4 w-32" />
                         <Skeleton className="h-3 w-48" />
                       </div>
                     </div>
-                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="size-8" />
                   </div>
                   <div className="flex items-center justify-between rounded-md border px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-2 w-2 rounded-full" />
+                      <Skeleton className="size-2 rounded-full" />
                       <div className="flex flex-col gap-1">
                         <Skeleton className="h-4 w-40" />
                         <Skeleton className="h-3 w-56" />
                       </div>
                     </div>
-                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="size-8" />
                   </div>
                   <div className="flex items-center justify-between rounded-md border px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Skeleton className="h-2 w-2 rounded-full" />
+                      <Skeleton className="size-2 rounded-full" />
                       <div className="flex flex-col gap-1">
                         <Skeleton className="h-4 w-28" />
                         <Skeleton className="h-3 w-44" />
                       </div>
                     </div>
-                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="size-8" />
                   </div>
                 </div>
               ) : ides.length === 0 ? (
@@ -423,7 +426,7 @@ function IDEPageContent() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`shrink-0 h-2 w-2 rounded-full ${ide.ready ? "bg-green-500" : "bg-yellow-400 animate-pulse"}`}
+                          className={`shrink-0 size-2 rounded-full ${ide.ready ? "bg-green-500" : "bg-yellow-400 animate-pulse"}`}
                           title={ide.ready ? t("ide.statusReady") : t("ide.statusPending")}
                         />
                         <div className="flex flex-col gap-0.5 min-w-0">
@@ -442,12 +445,12 @@ function IDEPageContent() {
                                 className="shrink-0 text-muted-foreground hover:text-primary"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <ExternalLink className="h-3 w-3" />
+                                <ExternalLink className="size-3" />
                               </a>
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && new Date(ide.createdAt).toLocaleString()}
+                            {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && <LocalTime value={ide.createdAt} />}
                           </span>
                         </div>
                       </div>
@@ -457,7 +460,7 @@ function IDEPageContent() {
                         className="text-destructive hover:text-destructive shrink-0"
                         onClick={() => setDeleteTarget(ide)}
                       >
-                        <Power className="h-4 w-4" />
+                        <Power className="size-4" />
                       </Button>
                     </div>
                   ))}
@@ -488,7 +491,7 @@ function IDEPageContent() {
             />
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground [&[data-state=open]>svg]:rotate-180">
-                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+                <ChevronDown className="size-4 transition-transform duration-200" />
                 {t("ide.advancedConfig")}
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 min-w-0">

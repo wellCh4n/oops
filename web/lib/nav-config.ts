@@ -1,6 +1,6 @@
 import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, Globe, Box, type LucideIcon } from "lucide-react"
 
-export interface NavItem {
+interface NavItem {
   title: string
   url: string
   icon: LucideIcon
@@ -91,10 +91,11 @@ export const navConfig: NavGroup[] = [
   },
 ]
 
-export const adminOnlyPrefixes: string[] = navConfig.flatMap((group) =>
-  group.items
-    .filter((item) => group.adminOnly || item.adminOnly)
-    .map((item) => item.url)
+const adminOnlyPrefixes: string[] = navConfig.flatMap((group) =>
+  group.items.reduce<string[]>((acc, item) => {
+    if (group.adminOnly || item.adminOnly) acc.push(item.url)
+    return acc
+  }, [])
 )
 
 export function isAdminOnlyPath(pathname: string): boolean {

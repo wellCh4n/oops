@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { Toaster } from "@/components/ui/sonner"
@@ -70,7 +70,9 @@ export function AppLayout({
   return (
     <LanguageProvider initialLocale={initialLocale}>
       <SidebarProvider defaultOpen={defaultSidebarOpen}>
-        <AppSidebar onOpenCommandPalette={() => setCmdOpen(true)} />
+        <Suspense fallback={null}>
+          <AppSidebar onOpenCommandPalette={() => setCmdOpen(true)} />
+        </Suspense>
         <SidebarInset className="overflow-x-auto overflow-y-auto overscroll-y-none">
           <div className="flex min-h-full flex-col gap-4 p-4 min-w-[720px]">
             {adminBlocked ? null : children}

@@ -25,20 +25,15 @@ export interface Environment {
   buildStorageClass?: string
 }
 
-export interface KubernetesApiServer {
+interface KubernetesApiServer {
   url: string,
   token: string
 }
 
-export interface ImageRepository {
+interface ImageRepository {
   url: string,
   username?: string,
   password?: string
-}
-
-export interface Workspace {
-  id: string
-  name: string
 }
 
 export interface Namespace {
@@ -75,9 +70,9 @@ export interface Application {
   createdTime?: string
 }
 
-export type DockerFileType = 'BUILTIN' | 'USER'
+type DockerFileType = 'BUILTIN' | 'USER'
 
-export interface DockerFileConfig {
+interface DockerFileConfig {
   type: DockerFileType
   path?: string
   content?: string
@@ -96,12 +91,12 @@ export interface ApplicationBuildConfig {
 
 export type ApplicationSourceType = 'GIT' | 'ZIP'
 
-export interface GitDeployStrategyParam {
+interface GitDeployStrategyParam {
   type: 'GIT'
   branch?: string
 }
 
-export interface ZipDeployStrategyParam {
+interface ZipDeployStrategyParam {
   type: 'ZIP'
   repository: string
 }
@@ -143,7 +138,7 @@ export interface ApplicationRuntimeSpecEnvironmentConfig {
   memoryLimit?: string
 }
 
-export interface ApplicationRuntimeSpecHealthCheck {
+interface ApplicationRuntimeSpecHealthCheck {
   enabled?: boolean
   path?: string
   initialDelaySeconds?: number
@@ -161,7 +156,7 @@ export interface ApplicationPodStatus {
   containers: ApplicationContainerStatus[]
 }
 
-export interface ApplicationContainerStatus {
+interface ApplicationContainerStatus {
   name: string
   image: string
   ready: boolean
@@ -169,7 +164,7 @@ export interface ApplicationContainerStatus {
   startedAt?: string | null
 }
 
-export type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
+type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
 
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 

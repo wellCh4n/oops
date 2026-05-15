@@ -4,6 +4,7 @@ import { ColumnDef } from "@tanstack/react-table"
 import { KeyRound, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
+import { LocalTime } from "@/components/ui/local-time"
 import { User } from "@/lib/api/users"
 
 interface TableMeta {
@@ -46,13 +47,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
   {
     accessorKey: "createdTime",
     header: t("users.col.createdTime"),
-    cell: ({ row }) => (
-      <span>
-        {row.original.createdTime
-          ? new Date(row.original.createdTime).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <LocalTime value={row.original.createdTime} />,
   },
   {
     id: "actions",
@@ -67,7 +62,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
             size="sm"
             onClick={() => meta?.onEdit(user)}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("users.col.edit")}
           </Button>
           <Button
@@ -75,7 +70,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
             size="sm"
             onClick={() => meta?.onChangePassword(user)}
           >
-            <KeyRound className="h-4 w-4" />
+            <KeyRound className="size-4" />
             {t("users.col.changePassword")}
           </Button>
         </div>

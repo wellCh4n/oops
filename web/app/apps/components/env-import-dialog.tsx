@@ -71,11 +71,15 @@ export function EnvImportDialog({
   }, [currentConfigs, parsedEnvContent, importMode])
 
   const handleConfirm = () => {
-    const selectedReplacesList = toReplace
-      .filter(r => selectedReplaces.has(r.new.key))
-      .map(r => ({ old: r.old, new: r.new }))
-
-    const allToAdd = [...toAdd, ...toReplace.filter(r => !selectedReplaces.has(r.new.key)).map(r => r.new)]
+    const selectedReplacesList: { old: ConfigMapEntry; new: ConfigMapEntry }[] = []
+    const allToAdd: ConfigMapEntry[] = [...toAdd]
+    for (const r of toReplace) {
+      if (selectedReplaces.has(r.new.key)) {
+        selectedReplacesList.push({ old: r.old, new: r.new })
+      } else {
+        allToAdd.push(r.new)
+      }
+    }
 
     onConfirm({
       toAdd: allToAdd,

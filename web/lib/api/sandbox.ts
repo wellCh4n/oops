@@ -26,17 +26,6 @@ export interface SandboxInstanceCreatePayload {
   memory?: { request?: string; limit?: string }
 }
 
-export interface SandboxExecutionResult {
-  exitCode: number
-  output: string
-}
-
-export interface SandboxExecPayload {
-  command: string
-  timeoutSeconds?: number
-  stream?: boolean
-}
-
 export async function listSandboxImages(): Promise<ApiResponse<string[]>> {
   const response = await apiFetch(`/api/sandbox/images`)
   if (!response.ok) {
@@ -82,16 +71,4 @@ export async function deleteSandbox(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete sandbox")
   }
-}
-
-export async function execSandbox(id: string, payload: SandboxExecPayload): Promise<ApiResponse<SandboxExecutionResult>> {
-  const response = await apiFetch(`/api/sandbox/instances/${id}/exec`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, stream: false }),
-  })
-  if (!response.ok) {
-    throw new Error("Failed to exec in sandbox")
-  }
-  return response.json() as Promise<ApiResponse<SandboxExecutionResult>>
 }

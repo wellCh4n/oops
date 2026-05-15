@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Suspense, useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { useParams, useSearchParams } from "next/navigation"
 import { ContentPage } from "@/components/content-page"
@@ -12,7 +12,7 @@ import { getPodFileDownloadUrl, listPodDirectory } from "@/lib/api/pod-files"
 
 const TerminalView = dynamic(() => import("@/components/terminal-view"), {
   ssr: false,
-  loading: () => <div className="p-4 text-white">Loading terminal...</div>
+  loading: () => <div className="p-4 text-white">Loading terminal…</div>
 })
 
 const FileTree = dynamic(() => import("@/components/file-tree"), {
@@ -24,6 +24,14 @@ const FILE_TREE_MAX_WIDTH = 480
 const FILE_TREE_DEFAULT_WIDTH = 260
 
 export default function TerminalPage() {
+  return (
+    <Suspense fallback={null}>
+      <TerminalPageContent />
+    </Suspense>
+  )
+}
+
+function TerminalPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const namespace = params.namespace as string
@@ -94,7 +102,7 @@ export default function TerminalPage() {
       actions={
         <div className="flex items-center gap-3">
           <span
-            className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
+            className={`size-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
           />
           <Badge className="bg-orange-500 text-white">{env}</Badge>
         </div>

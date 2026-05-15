@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,12 @@ import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { RefreshCw, WifiOff } from "lucide-react"
 
-export default function ApplicationPodLogsPage() {
+interface LogLine {
+  id: number
+  text: string
+}
+
+function ApplicationPodLogsContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const namespace = params.namespace as string
@@ -19,12 +24,13 @@ export default function ApplicationPodLogsPage() {
   const pod = params.pod as string
   const env = searchParams.get("env")
 
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<LogLine[]>([])
   const [error, setError] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting")
   const bottomRef = useRef<HTMLDivElement>(null)
+  const logIdRef = useRef(0)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -57,8 +63,9 @@ export default function ApplicationPodLogsPage() {
 
       ws.onmessage = (event: MessageEvent<string>) => {
         if (event.data === "pong") return
-        const logLine = event.data
-        setLogs((prev) => [...prev, logLine])
+        const text = event.data
+        const id = ++logIdRef.current
+        setLogs((prev) => [...prev, { id, text }])
       }
 
       ws.onerror = (err) => {
@@ -103,7 +110,7 @@ export default function ApplicationPodLogsPage() {
       actions={
         <div className="flex items-center gap-3">
           <span
-            className={`h-2 w-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
+            className={`size-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
           />
           <Badge className="bg-orange-500 text-white">{env}</Badge>
         </div>
@@ -131,23 +138,31 @@ export default function ApplicationPodLogsPage() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden font-mono text-xs text-white">
+        <div className="flex-1 min-h-0 bg-zinc-950 p-4 overflow-hidden font-mono text-xs text-white">
           <ScrollArea className="h-full w-full">
-            {logs.map((log, index) => (
-              <div key={index} className="whitespace-pre-wrap break-all">
-                {log}
+            {logs.map((log) => (
+              <div key={log.id} className="whitespace-pre-wrap break-all">
+                {log.text}
               </div>
             ))}
             <div ref={bottomRef} />
             {logs.length === 0 && !error && (
-              <div className="text-gray-500 italic">Waiting for logs...</div>
+              <div className="text-zinc-500 italic">Waiting for logs…</div>
             )}
             {error && logs.length === 0 && (
-              <div className="text-gray-500 italic">{error}</div>
+              <div className="text-zinc-500 italic">{error}</div>
             )}
           </ScrollArea>
         </div>
       </div>
     </ContentPage>
+  )
+}
+
+export default function ApplicationPodLogsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ApplicationPodLogsContent />
+    </Suspense>
   )
 }

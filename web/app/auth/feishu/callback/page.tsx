@@ -1,13 +1,22 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { Suspense, useEffect, useRef } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { setAuth } from "@/lib/auth"
 import { getCurrentUser, feishuCallback } from "@/lib/api/auth"
 import { useLanguage } from "@/contexts/language-context"
 
-export default function FeishuCallbackPage() {
+function CallbackLoading({ message }: { message: string }) {
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+      <Loader2 className="size-10 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
+  )
+}
+
+function FeishuCallbackContent() {
   const searchParams = useSearchParams()
   const { t } = useLanguage()
   const exchangedRef = useRef(false)
@@ -42,10 +51,13 @@ export default function FeishuCallbackPage() {
       })
   }, [searchParams, t])
 
+  return <CallbackLoading message={t("login.callback.processing")} />
+}
+
+export default function FeishuCallbackPage() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
-      <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground">{t("login.callback.processing")}</p>
-    </div>
+    <Suspense fallback={<CallbackLoading message="" />}>
+      <FeishuCallbackContent />
+    </Suspense>
   )
 }

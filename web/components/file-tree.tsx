@@ -109,7 +109,7 @@ export default function FileTree({
         <button
           type="button"
           onClick={() => loadDirectory(rootPath)}
-          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
           title={t("common.refresh")}
         >
           {rootState?.loading ? (

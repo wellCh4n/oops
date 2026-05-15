@@ -103,7 +103,12 @@ interface PageProps {
 export default function PipelineDetailPage({ params }: PageProps) {
   const { namespace, name, pipelineId } = use(params)
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
+  const [logs, setLogs] = useState<{ id: number; text: string }[]>([])
+  const logIdRef = useRef(0)
+  const appendLog = (text: string) => {
+    const id = ++logIdRef.current
+    setLogs(prev => [...prev, { id, text }])
+  }
   const [steps, setSteps] = useState<string[]>([])
   const [activeStep, setActiveStep] = useState<string>("")
   const logContainerRef = useRef<HTMLDivElement>(null)
@@ -216,10 +221,10 @@ export default function PipelineDetailPage({ params }: PageProps) {
           if (isStepsMessage(jsonData)) {
             setSteps(jsonData.data)
           } else if (isStepLogMessage(jsonData)) {
-            setLogs(prev => [...prev, jsonData.data])
+            appendLog(jsonData.data)
             setActiveStep(jsonData.container)
           } else if (isErrorMessage(jsonData)) {
-            setLogs(prev => [...prev, `[ERROR] ${jsonData.data}`])
+            appendLog(`[ERROR] ${jsonData.data}`)
           }
         } catch {
           // Fallback for non-JSON messages (backward compatibility)
@@ -231,13 +236,13 @@ export default function PipelineDetailPage({ params }: PageProps) {
               console.error("Failed to parse legacy steps format", parseError)
             }
           } else if (message.startsWith("ERROR:")) {
-            setLogs(prev => [...prev, `[ERROR] ${message.substring(6)}`])
+            appendLog(`[ERROR] ${message.substring(6)}`)
           } else if (message.includes(":")) {
             const [stepName, ...logParts] = message.split(":")
-            setLogs(prev => [...prev, logParts.join(":")])
+            appendLog(logParts.join(":"))
             setActiveStep(stepName ?? "")
           } else {
-            setLogs(prev => [...prev, message])
+            appendLog(message)
           }
         }
       }
@@ -385,7 +390,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="default" size="sm">
-                    <Rocket className="h-4 w-4" />
+                    <Rocket className="size-4" />
                     {t("apps.pipeline.deployBtn")}
                   </Button>
                 </AlertDialogTrigger>
@@ -419,12 +424,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   return (
                     <div key={step} className="flex items-center flex-1 last:flex-none">
                       <div className="flex flex-col items-center relative w-6">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
+                        <div className={`size-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
                               ${isCompleted ? 'bg-primary text-primary-foreground' : ''}
                               ${isActive ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : ''}
                               ${!isCompleted && !isActive ? 'bg-muted text-muted-foreground' : ''}
                             `}>
-                          {isCompleted ? <Check className="w-3 h-3" /> : index + 1}
+                          {isCompleted ? <Check className="size-3" /> : index + 1}
                         </div>
                         <span className={`absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs truncate max-w-24 text-center whitespace-nowrap ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                           {step}
@@ -439,12 +444,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
               </div>
             )}
             {/* Logs Area */}
-            <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+            <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
-                {logs.map((log, i) => (
-                  <div key={i} className={log.startsWith("[ERROR]") ? "text-red-400" : undefined}>{log}</div>
+                {logs.map((log) => (
+                  <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>{log.text}</div>
                 ))}
-                {logs.length === 0 && <div className="text-gray-500">Waiting for logs...</div>}
+                {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
               </div>
             </div>
           </div>
@@ -459,7 +464,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {t("apps.pipeline.viewDetails")}
-                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  <ArrowUpRight className="size-3.5" />
                 </Link>
               )}
             </div>
@@ -474,11 +479,11 @@ export default function PipelineDetailPage({ params }: PageProps) {
                 {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
                   <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1 items-center w-fit">
                     {clusterDomain.externalDomains.map((domain, index) => (
-                      <Fragment key={index}>
+                      <Fragment key={domain}>
                         <span className="font-medium whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
                         <Copyable value={domain} maxLength={Infinity} />
                         <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                          <ExternalLink className="h-4 w-4" />
+                          <ExternalLink className="size-4" />
                         </a>
                       </Fragment>
                     ))}

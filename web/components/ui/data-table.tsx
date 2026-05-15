@@ -101,13 +101,13 @@ export function DataTable<TData, TValue>({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 shrink-0 -ml-2"
+                    className="size-6 p-0 shrink-0 -ml-2"
                     onClick={() => toggleRow(row.id)}
                   >
                     {expanded[row.id] ? (
-                      <ChevronUp className="h-3.5 w-3.5" />
+                      <ChevronUp className="size-3.5" />
                     ) : (
-                      <ChevronDown className="h-3.5 w-3.5" />
+                      <ChevronDown className="size-3.5" />
                     )}
                   </Button>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

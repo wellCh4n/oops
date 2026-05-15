@@ -34,7 +34,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Namespace>[] =
             onClick={() => meta?.onEdit(namespace)}
             title={t("common.edit")}
           >
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("common.edit")}
           </Button>
         </div>

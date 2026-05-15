@@ -4,7 +4,7 @@ function ApplicationEditorCardSkeleton({ children }: { children: React.ReactNode
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b">
-        <Skeleton className="h-4 w-4 rounded-sm" />
+        <Skeleton className="size-4 rounded-sm" />
         <Skeleton className="h-4 w-28" />
       </div>
       <div className="flex flex-col gap-4 p-4">

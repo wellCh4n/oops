@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
+import { LocalTime } from "@/components/ui/local-time"
 import { Domain } from "@/lib/api/domains"
 
 interface TableMeta {
@@ -49,19 +50,13 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
     cell: ({ row }) => {
       const d = row.original
       if (d.certMode !== "UPLOADED" || !d.certNotAfter) return <span className="text-muted-foreground">-</span>
-      return <span>{new Date(d.certNotAfter).toLocaleString()}</span>
+      return <LocalTime value={d.certNotAfter} />
     },
   },
   {
     accessorKey: "createdTime",
     header: t("domains.col.createdTime"),
-    cell: ({ row }) => (
-      <span>
-        {row.original.createdTime
-          ? new Date(row.original.createdTime).toLocaleString()
-          : "-"}
-      </span>
-    ),
+    cell: ({ row }) => <LocalTime value={row.original.createdTime} />,
   },
   {
     id: "actions",
@@ -72,7 +67,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
       return (
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" size="sm" onClick={() => meta?.onEdit(domain)}>
-            <Pencil className="h-4 w-4" />
+            <Pencil className="size-4" />
             {t("common.edit")}
           </Button>
         </div>

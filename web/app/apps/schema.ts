@@ -13,26 +13,6 @@ export const getApplicationBasicSchema = (t?: (key: string) => string) => z.obje
   collaborators: z.array(z.string()).optional(),
 })
 
-export const applicationBasicSchema = getApplicationBasicSchema()
-
-export const applicationBuildConfigSchema = z.object({
-  sourceType: z.enum(["GIT", "ZIP"]),
-  repository: z.string().nullish(),
-  dockerFileConfig: z.object({
-    type: z.enum(["BUILTIN", "USER"]),
-    path: z.string().nullish(),
-    content: z.string().nullish(),
-  }).nullish(),
-  buildImage: z.string().nullish(),
-}).superRefine((value, ctx) => {
-  if (value.sourceType === "GIT" && !value.repository?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
-  }
-  if (value.dockerFileConfig?.type === "USER" && !value.dockerFileConfig?.content?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dockerFileConfig", "content"], message: "Dockerfile content is required" })
-  }
-})
-
 export const getCreateApplicationSchema = (t?: (key: string) => string) => z.object({
   name: z.string()
     .min(1, t?.("validation.required") || "Name is required")
@@ -41,8 +21,6 @@ export const getCreateApplicationSchema = (t?: (key: string) => string) => z.obj
   namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
 })
-
-export const createApplicationSchema = getCreateApplicationSchema()
 
 export const applicationBuildSchema = z.object({
   sourceType: z.enum(["GIT", "ZIP"]),
@@ -113,9 +91,8 @@ export const applicationServiceSchema = z.object({
   })),
 })
 
-export type ApplicationBasicFormValues = z.infer<typeof applicationBasicSchema>
-export type ApplicationBuildConfigFormValues = z.infer<typeof applicationBuildConfigSchema>
-export type CreateApplicationFormValues = z.infer<typeof createApplicationSchema>
+export type ApplicationBasicFormValues = z.infer<ReturnType<typeof getApplicationBasicSchema>>
+export type CreateApplicationFormValues = z.infer<ReturnType<typeof getCreateApplicationSchema>>
 export type ApplicationBuildFormValues = z.infer<typeof applicationBuildSchema>
 export type ApplicationRuntimeSpecFormValues = z.infer<typeof applicationRuntimeSpecSchema>
 export type ApplicationConfigFormValues = z.infer<typeof applicationConfigSchema>

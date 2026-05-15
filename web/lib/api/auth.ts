@@ -18,15 +18,6 @@ export interface CurrentUser {
   accessToken: string | null
 }
 
-export async function getEnabledProviders(): Promise<string[]> {
-  const res = await apiFetch("/api/auth/external/providers")
-  const data = await res.json() as ApiResponse<string[]>
-  if (!data.success) {
-    return []
-  }
-  return data.data ?? []
-}
-
 export async function getFeishuLoginUrl(): Promise<string> {
   const res = await apiFetch("/api/auth/external/feishu/redirect")
   const data = await res.json() as ApiResponse<string>

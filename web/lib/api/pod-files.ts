@@ -3,7 +3,7 @@ import { API_BASE_URL } from "./config"
 import { getToken } from "@/lib/auth"
 import { ApiResponse } from "./types"
 
-export type PodFileType = "DIRECTORY" | "FILE" | "SYMLINK" | "OTHER"
+type PodFileType = "DIRECTORY" | "FILE" | "SYMLINK" | "OTHER"
 
 export interface PodFileEntry {
   name: string

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { LocalTime } from "@/components/ui/local-time"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
@@ -192,7 +193,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
               )}
               {target?.certNotAfter && (
                 <div className="text-muted-foreground">
-                  {t("domains.cert.validUntil")}: {new Date(target.certNotAfter).toLocaleString()}
+                  {t("domains.cert.validUntil")}: <LocalTime value={target.certNotAfter} />
                 </div>
               )}
               <Button
@@ -243,7 +244,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
                 disabled={submitting}
                 className="mr-auto"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
                 {t("common.delete")}
               </Button>
             )}
@@ -308,7 +309,7 @@ function PemField({ id, label, placeholder, uploadLabel, value, onChange }: PemF
           size="sm"
           onClick={() => inputRef.current?.click()}
         >
-          <Upload className="h-4 w-4" />
+          <Upload className="size-4" />
           {uploadLabel}
         </Button>
         <input

@@ -512,13 +512,13 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
         <div className="border rounded-lg overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
-            <Network className="h-4 w-4 text-muted-foreground" />
+            <Network className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.service.accessEntry")}</span>
           </div>
           <div className="flex flex-col gap-4 p-4">
             <div className="grid gap-2">
             <Label htmlFor="service-port" className="flex items-center gap-1">
-              <Plug className="h-3.5 w-3.5" />
+              <Plug className="size-3.5" />
               {t("apps.service.port")}
             </Label>
             <FormField
@@ -545,7 +545,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           </div>
 
           <Label className="flex items-center gap-1">
-            <Globe className="h-3.5 w-3.5" />
+            <Globe className="size-3.5" />
             {t("apps.service.hosts")}
           </Label>
 
@@ -573,7 +573,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                             {t("apps.service.noDomainPrefix")}
                             <Link href="/networks/domains" className="inline-flex items-center gap-0.5 text-primary mx-1">
                               <span className="hover:underline">{t("apps.service.noDomainLink")}</span>
-                              <ExternalLink className="h-3 w-3" />
+                              <ExternalLink className="size-3" />
                             </Link>
                             {t("apps.service.noDomainSuffix")}
                           </div>
@@ -648,7 +648,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                         rel="noopener noreferrer"
                                         className="text-muted-foreground hover:text-foreground transition-colors"
                                       >
-                                        <ExternalLink className="h-4 w-4" />
+                                        <ExternalLink className="size-4" />
                                       </a>
                                     </div>
                                   ) : (
@@ -667,7 +667,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                     aria-label={t("apps.service.confirmHost")}
                                     onClick={() => confirmEdit(group.environmentName, hostIndex)}
                                   >
-                                    <Check className="h-4 w-4" />
+                                    <Check className="size-4" />
                                   </Button>
                                 ) : (
                                   <Button
@@ -677,7 +677,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                     aria-label={t("apps.service.editHost")}
                                     onClick={() => beginEdit(group.environmentName, hostIndex)}
                                   >
-                                    <Pencil className="h-4 w-4" />
+                                    <Pencil className="size-4" />
                                   </Button>
                                 )}
 
@@ -689,7 +689,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                     aria-label={t("apps.service.cancelHost")}
                                     onClick={() => cancelEdit(group.environmentName, hostIndex)}
                                   >
-                                    <X className="h-4 w-4" />
+                                    <X className="size-4" />
                                   </Button>
                                 ) : (
                                   <Button
@@ -698,7 +698,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                     size="icon"
                                     onClick={() => removeHost(group.environmentName, hostIndex)}
                                   >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Trash2 className="size-4 text-destructive" />
                                   </Button>
                                 )}
                               </div>
@@ -713,7 +713,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                             className="w-full"
                             onClick={() => addHost(group.environmentName)}
                           >
-                            <Plus className="h-4 w-4 mr-1" />
+                            <Plus className="size-4 mr-1" />
                             {t("apps.service.addHost")}
                           </Button>
                         )}

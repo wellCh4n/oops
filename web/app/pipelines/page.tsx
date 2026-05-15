@@ -145,7 +145,10 @@ function PipelinesContent() {
       try {
         const res = await getApplicationBuildEnvConfigs(activeNamespace, selectedApp)
         if (res.data) {
-          setEnvironments(res.data.map(c => c.environmentName).filter((name): name is string => !!name))
+          setEnvironments(res.data.reduce<string[]>((acc, c) => {
+            if (c.environmentName) acc.push(c.environmentName)
+            return acc
+          }, []))
         }
       } catch {
         setEnvironments([])
@@ -227,7 +230,7 @@ function PipelinesContent() {
           <div className="flex items-end justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="w-4 h-4" />{t("pipelines.nsLabel")}</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="size-4" />{t("pipelines.nsLabel")}</span>
                 <SelectWithSearch
                   value={selectedNamespace}
                   onValueChange={handleNamespaceChange}
@@ -239,7 +242,7 @@ function PipelinesContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="w-4 h-4" />{t("pipelines.appLabel")}</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><LayoutGrid className="size-4" />{t("pipelines.appLabel")}</span>
                 <SelectWithSearch
                   value={selectedAppValue}
                   onOptionSelect={(option) => {
@@ -290,7 +293,7 @@ function PipelinesContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="w-4 h-4" />{t("pipelines.envLabel")}</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="size-4" />{t("pipelines.envLabel")}</span>
                 <SelectWithSearch
                   value={selectedEnv}
                   onValueChange={(v: string) => updateParams({ env: v, page: "1" })}
@@ -304,7 +307,7 @@ function PipelinesContent() {
               </div>
             </div>
             <Button variant="outline" onClick={fetchPipelines} disabled={loading || !activeNamespace || !selectedApp}>
-              <RotateCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RotateCcw className={`size-4 ${loading ? 'animate-spin' : ''}`} />
               {t("pipelines.refresh")}
             </Button>
           </div>
@@ -341,7 +344,7 @@ function PipelinesContent() {
                     disabled={page === 1 || loading}
                     onClick={() => updateParams({ page: String(page - 1) })}
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="size-4" />
                     {t("pipelines.prevPage")}
                   </Button>
                   <span className="text-sm text-muted-foreground">
@@ -354,7 +357,7 @@ function PipelinesContent() {
                     onClick={() => updateParams({ page: String(page + 1) })}
                   >
                     {t("pipelines.nextPage")}
-                    <ChevronRight className="ml-2 h-4 w-4" />
+                    <ChevronRight className="ml-2 size-4" />
                   </Button>
                 </div>
               </div>

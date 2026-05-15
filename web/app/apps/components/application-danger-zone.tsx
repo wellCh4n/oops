@@ -76,7 +76,7 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
             setShowDialog(true)
           }}
         >
-          <Trash2 className="h-4 w-4 mr-1" />
+          <Trash2 className="size-4 mr-1" />
           {t("apps.danger.deleteBtn")}
         </Button>
       </div>
@@ -97,7 +97,6 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
               placeholder={t("apps.danger.deletePlaceholder")}
-              autoFocus
             />
           </div>
           <AlertDialogFooter>

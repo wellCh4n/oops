@@ -46,6 +46,7 @@ export function MultiSelectWithSearch({
   disabled = false,
 }: MultiSelectWithSearchProps) {
   const [open, setOpen] = React.useState(false)
+  const listboxId = React.useId()
 
   const selectedOptions = values
     .map((value) => options.find((option) => option.value === value))
@@ -71,6 +72,7 @@ export function MultiSelectWithSearch({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           disabled={disabled}
           className={cn(
             "w-full justify-between bg-transparent border-input hover:bg-transparent hover:border-input font-normal min-h-9 h-auto py-1.5",
@@ -99,25 +101,25 @@ export function MultiSelectWithSearch({
                     }}
                     className="rounded-sm hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
                   >
-                    <X className="h-3 w-3" />
+                    <X className="size-3" />
                   </span>
                 </Badge>
               ))
             )}
           </div>
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>
           <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <Search className="mr-2 size-4 shrink-0 opacity-50" />
             <CommandInput
               placeholder={searchPlaceholder}
               className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 border-0 focus:ring-0"
             />
           </div>
-          <CommandList>
+          <CommandList id={listboxId}>
             {options.length === 0 ? (
               <CommandEmpty>{emptyText}</CommandEmpty>
             ) : (
@@ -133,13 +135,13 @@ export function MultiSelectWithSearch({
                     >
                       <span
                         className={cn(
-                          "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                          "flex size-4 shrink-0 items-center justify-center rounded border",
                           checked
                             ? "bg-primary border-primary text-primary-foreground"
                             : "border-input"
                         )}
                       >
-                        {checked && <span className="h-2 w-2 rounded-sm bg-current" />}
+                        {checked && <span className="size-2 rounded-sm bg-current" />}
                       </span>
                       <span className="flex-1 truncate">{option.label}</span>
                     </CommandItem>

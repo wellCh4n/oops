@@ -42,7 +42,7 @@ import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
 import { useNamespaceStore } from "@/store/namespace"
 import { usePathname, useSearchParams } from "next/navigation"
-import React, { useState, useEffect } from "react"
+import React, { Suspense, useState, useEffect } from "react"
 import { clearAuth, isAdmin } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
@@ -50,6 +50,14 @@ import { useLanguage } from "@/contexts/language-context"
 import { localeLabels, Locale } from "@/lib/i18n"
 
 export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {
+  return (
+    <Suspense fallback={null}>
+      <AppSidebarContent onOpenCommandPalette={onOpenCommandPalette} />
+    </Suspense>
+  )
+}
+
+function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -98,7 +106,7 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center px-1 py-1">
+            <div className="flex items-center p-1">
               <Link href="/" className="flex items-center gap-2 min-w-0">
                 <div className={`relative aspect-square overflow-hidden shrink-0 ${open ? "size-12 rounded-lg" : "size-6 rounded-md"}`}>
                   <Image src="/icon.png" alt="Oops" fill sizes="48px" priority className="object-cover dark:[filter:url(#white-stroke)]" />
@@ -199,8 +207,8 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                 </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
-                      <MoreHorizontal className="h-4 w-4" />
+                    <Button variant="ghost" size="icon" className="size-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
+                      <MoreHorizontal className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top">
