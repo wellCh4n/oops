@@ -60,10 +60,10 @@ Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
 
 If you already have a MySQL instance, use `docker-compose.local.yml` which skips the bundled MySQL and connects to your own.
 
-1. Copy `.env.example` to `.env` and fill in your database details:
+1. Copy `docker/.env.example` to `docker/.env` and fill in your database details:
 
 ```bash
-cp .env.example .env
+cp docker/.env.example docker/.env
 ```
 
 ```ini
@@ -77,7 +77,7 @@ DB_PASSWORD=your_password_here
 2. Start the stack:
 
 ```bash
-docker compose -f docker/docker-compose.local.yml --env-file .env up -d --build
+docker compose -f docker/docker-compose.local.yml up -d --build
 ```
 
 Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
