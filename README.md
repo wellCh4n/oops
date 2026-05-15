@@ -3,87 +3,38 @@
 
 <img src="web/public/icon.png" width="120" alt="OOPS logo">
 
-OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provides a web UI for deploying and managing containerized applications across multiple clusters.
+OOPS is a Kubernetes PaaS where **humans and AI Agents are equal first-class operators**. It ships with a [Claude Code Skill](skills/oops/SKILL.md) that lets Agents drive end-to-end deploys — create app, upload source, configure build, deploy, stream logs, get notified on success or failure — without `kubectl` or YAML, with every write awaiting explicit user approval so the Agent can't silently mass-mutate.
 
 [中文](docs/README.zh.md)
 
 [![React Doctor](https://www.react.doctor/share/badge?p=oops&s=84&w=232&f=60)](https://www.react.doctor/share?p=oops&s=84&w=232&f=60)
 
+## Why OOPS?
+
+KubeSphere, Rainbond, and ArgoCD each solve a real slice of the Kubernetes problem — and each one assumes a **human** is the only operator. OOPS keeps the human experience intact and lets Agents drive the same platform through the same surface:
+
+| Project | Built for | How OOPS differs |
+|---|---|---|
+| **KubeSphere** | Platform teams building enterprise IDPs through plug-in ecosystems | Small, focused surface — same actions usable from UI or API, no plug-in framework to navigate |
+| **Rainbond** | Developers who don't want to learn Kubernetes | Same simplicity for developers, plus a programmatic surface so Agents can drive the platform too |
+| **ArgoCD** | GitOps pipelines reconciling Git → cluster | Humans or Agents can deploy directly from a code archive — Git is supported but not required |
+
 ## Features
 
-### Application Management
-- Deploy applications as StatefulSets with automatic service and ingress configuration
-- Manage environment variables via ConfigMap injection
-- Support for multiple replicas and optional resource configuration (cpu/memory requests and limits)
-- Configurable HTTP health checks (liveness probe)
-- Real-time pod status monitoring
-- Cascade deletion of Kubernetes resources (StatefulSet, Service, IngressRoute)
+### Deploy any app
+Push code or upload a ZIP, and OOPS builds the image and rolls it out to your Kubernetes cluster, with build logs streaming in real time.
 
-### Multi-cluster Support
-- Manage multiple Kubernetes clusters (Environments) from a single interface
-- Per-environment API server credentials and namespace isolation
-- Deploy applications to any configured cluster
+### Multi-cluster management
+Connect any number of clusters and manage them side by side from a single console — switch deployment targets without leaving the UI.
 
-### CI/CD Pipelines
-- Git-based build pipelines powered by Kubernetes Jobs
-- **ZIP-based deployments** with S3-compatible object storage (presigned URL upload)
-- Three-stage pipeline: **clone** (shallow clone support) → **build** → **push** (Buildah image build)
-- Two deploy modes: **IMMEDIATE** (auto-deploy after build) or **MANUAL** (wait for manual trigger)
-- Real-time log streaming via WebSocket
-- Pipeline history and status tracking
-- **Pipeline status notifications** via linked external accounts (Feishu/Lark)
+### Watch what's running
+Live logs, in-browser terminal, and a file browser for any running pod. Cluster nodes and pod status at a glance.
 
-### Cluster Operations
-- View and monitor cluster nodes across environments
+### A sandbox built for Agents
+Agent-grade sandbox capability built in (similar to [OpenSandbox](https://github.com/alibaba/OpenSandbox)) — give your Agent an isolated workspace to run commands, install tools, or debug. Results stream back live, and everything is torn down when it's done.
 
-### Command Palette
-- Press `/` or click the sidebar trigger to quickly search applications, deploy apps, open IDEs, or jump to pipelines
-- Fast keyboard-driven navigation across namespaces
-
-### Pod Operations
-- Live pod log streaming
-- In-browser terminal access (full TTY support via xterm.js)
-- In-browser file browser — list and download files from a running pod
-- Pod lifecycle management
-
-### IDE Integration (Optional)
-- Browser-based code-server IDE instances as StatefulSets
-- Persistent workspace volumes per developer
-- Proxy domain support for IDE ingress routing
-- Toggle via `oops.ide.enabled=true`
-
-### Domain Management
-- Admin-managed domains with TLS certificate configuration
-- Support for auto (Traefik certResolver) and uploaded certificate modes
-- Longest-suffix domain matching with wildcard support
-
-### Authentication & Authorization
-- Built-in username/password authentication with JWT
-- Optional Feishu (Lark) OAuth integration
-- External account linking for notification routing
-- Namespace-based resource isolation
-- Application ownership — users are assigned as owners of their applications
-- Application collaborators — owners can grant other users access to their applications
-- Danger zone (cascade delete) restricted to application owner and admins
-
-### Sandbox Execution API
-- Run arbitrary commands in isolated Kubernetes Jobs via `/openapi/sandbox/executions`
-- Runtime image is configured per environment; supports streaming (SSE) and non-streaming modes
-- Configurable resource limits (CPU, memory), timeout, and TTL after completion
-
-### Programmatic API & CLI
-- Parallel `/openapi/**` REST surface authenticated by API key (separate from the UI's `/api/**` JWT surface)
-- Bundled Python CLI at [`skills/oops/scripts/oops.py`](skills/oops/scripts/oops.py) drives end-to-end deploys: create app → configure build → bind environment → set service/runtime → trigger pipeline → wait for rollout
-- Ships as an agent skill ([`skills/oops/SKILL.md`](skills/oops/SKILL.md)) for AI-assisted deployments
-
-### Localization
-- Four languages: Chinese (Simplified/Traditional), English, Japanese
-- Language preference persisted across sessions
-
-### Ingress
-- Traefik IngressRoute CRD support for automatic HTTPS routing
-- HTTP to HTTPS redirect middleware for HTTPS applications
-- Gracefully skips ingress setup if Traefik CRDs are absent
+### Multi-domain management
+Manage multiple domains from a single console. Configure automatic HTTPS via certificate resolvers or upload your own TLS certificates; wildcard domains are supported.
 
 ## Requirements
 
@@ -95,45 +46,29 @@ OOPS is a lightweight Kubernetes-based PaaS (Platform as a Service) that provide
 | Traefik v3 | No | Ingress and HTTPS routing |
 | S3-compatible object storage | No | ZIP source uploads |
 
-## Database Migrations
-
-OOPS uses Flyway to apply schema and data migrations automatically during application startup.
-
-- SQLite migrations live in `src/main/resources/db/migration/sqlite`
-- MySQL migrations live in `src/main/resources/db/migration/mysql`
-- Migration files must be append-only and named like `V2__add_pipeline_index.sql`
-- Existing databases without Flyway history are baselined at version `1`; new databases run `V1__baseline_schema.sql`
-- Hibernate DDL generation is disabled with `spring.jpa.hibernate.ddl-auto=none`
-
 ## Quick Start
 
-1. Copy and configure `src/main/resources/application.properties.example`
-2. Build and run:
+### Docker Compose
 
 ```bash
-# Run backend
-./mvnw spring-boot:run
-
-# Run tests
-./mvnw test
-
-# Run frontend (dev) — automatically proxies /api to localhost:8080
-cd web && pnpm install && pnpm dev
-
-# Frontend lint / build
-cd web && pnpm lint
-cd web && pnpm build
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-Or build the full Docker image:
+Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
+
+### Build from source
 
 ```bash
-docker build -t oops .
+# Backend
+./mvnw spring-boot:run
+
+# Frontend (dev) — automatically proxies /api to localhost:8080
+cd web && pnpm install && pnpm dev
 ```
 
 Default admin credentials: `admin` / `admin123` (override via `ADMIN_PASSWORD` env)
 
-## How It Works
+## How it works
 
 ### Application Build & Deploy Pipeline
 
