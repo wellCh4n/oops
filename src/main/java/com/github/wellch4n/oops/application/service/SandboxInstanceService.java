@@ -29,7 +29,6 @@ public class SandboxInstanceService {
 
     private final EnvironmentRepository environmentRepository;
     private final SandboxExecutionGateway sandboxExecutionGateway;
-    private final SandboxProperties sandboxProperties;
     private final UserService userService;
 
     public SandboxInstanceService(EnvironmentRepository environmentRepository,
@@ -38,7 +37,6 @@ public class SandboxInstanceService {
                                   UserService userService) {
         this.environmentRepository = environmentRepository;
         this.sandboxExecutionGateway = sandboxExecutionGateway;
-        this.sandboxProperties = sandboxProperties;
         this.userService = userService;
     }
 
