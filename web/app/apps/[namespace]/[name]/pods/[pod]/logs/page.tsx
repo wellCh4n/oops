@@ -138,7 +138,7 @@ function ApplicationPodLogsContent() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 bg-black p-4 overflow-hidden font-mono text-xs text-white">
+        <div className="flex-1 min-h-0 bg-zinc-950 p-4 overflow-hidden font-mono text-xs text-white">
           <ScrollArea className="h-full w-full">
             {logs.map((log) => (
               <div key={log.id} className="whitespace-pre-wrap break-all">

@@ -444,7 +444,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               </div>
             )}
             {/* Logs Area */}
-            <div className="flex-1 bg-black text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+            <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                 {logs.map((log) => (
                   <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>{log.text}</div>

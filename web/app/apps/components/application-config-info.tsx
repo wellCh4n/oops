@@ -200,18 +200,20 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }) => {
     const currentConfigs = form.getValues("configMaps")
     const newConfigs = [...currentConfigs]
+    const indexByKey = new Map(newConfigs.map((c, i) => [c.key, i]))
 
     // 添加新配置
     for (const item of result.toAdd) {
-      if (!newConfigs.some(c => c.key === item.key)) {
+      if (!indexByKey.has(item.key)) {
+        indexByKey.set(item.key, newConfigs.length)
         newConfigs.push(item)
       }
     }
 
     // 替换冲突配置
     for (const item of result.toReplace) {
-      const index = newConfigs.findIndex(c => c.key === item.old.key)
-      if (index !== -1) {
+      const index = indexByKey.get(item.old.key)
+      if (index !== undefined) {
         newConfigs[index] = item.new
       }
     }
@@ -390,13 +392,13 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                         onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
                         className="flex gap-4"
                       >
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <RadioGroupItem value="key-value" id="key-value" />
                           <Label htmlFor="key-value" className="cursor-pointer">
                             {t("apps.config.importKeyValue")}
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-2">
                           <RadioGroupItem value="key-only" id="key-only" />
                           <Label htmlFor="key-only" className="cursor-pointer">
                             {t("apps.config.importKeyOnly")}

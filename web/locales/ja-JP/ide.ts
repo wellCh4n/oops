@@ -1,5 +1,6 @@
 const ide = {
   "ide.title": "開発環境インスタンス",
+  "ide.frameTitle": "開発環境",
   "ide.instances": "インスタンスリスト",
   "ide.namePlaceholder": "名前",
   "ide.branchPlaceholder": "ブランチ名（未入力の場合はデフォルトブランチ）",

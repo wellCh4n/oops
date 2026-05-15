@@ -106,7 +106,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center px-1 py-1">
+            <div className="flex items-center p-1">
               <Link href="/" className="flex items-center gap-2 min-w-0">
                 <div className={`relative aspect-square overflow-hidden shrink-0 ${open ? "size-12 rounded-lg" : "size-6 rounded-md"}`}>
                   <Image src="/icon.png" alt="Oops" fill sizes="48px" priority className="object-cover dark:[filter:url(#white-stroke)]" />

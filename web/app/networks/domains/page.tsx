@@ -62,7 +62,7 @@ export default function DomainsPage() {
                 <Search className="size-4" />
                 {t("domains.title")}
               </span>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}

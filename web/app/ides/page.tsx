@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LocalTime } from "@/components/ui/local-time"
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import {
@@ -449,7 +450,7 @@ function IDEPageContent() {
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">
-                            {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && new Date(ide.createdAt).toLocaleString()}
+                            {ide.id !== ide.name && <>{ide.id} · </>}{ide.createdAt && <LocalTime value={ide.createdAt} />}
                           </span>
                         </div>
                       </div>

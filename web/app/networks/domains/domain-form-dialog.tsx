@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import { LocalTime } from "@/components/ui/local-time"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import {
   Dialog,
@@ -192,7 +193,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
               )}
               {target?.certNotAfter && (
                 <div className="text-muted-foreground">
-                  {t("domains.cert.validUntil")}: {new Date(target.certNotAfter).toLocaleString()}
+                  {t("domains.cert.validUntil")}: <LocalTime value={target.certNotAfter} />
                 </div>
               )}
               <Button

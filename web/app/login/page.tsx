@@ -113,7 +113,6 @@ export default function LoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder={t("login.usernamePlaceholder")}
                 required
-                autoFocus
               />
             </div>
             <div className="space-y-2">

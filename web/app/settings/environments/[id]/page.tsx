@@ -539,7 +539,6 @@ export default function EnvironmentEditPage() {
               value={deleteConfirmInput}
               onChange={(e) => setDeleteConfirmInput(e.target.value)}
               placeholder={environmentName || t("env.namePlaceholder")}
-              autoFocus
             />
           </div>
           <AlertDialogFooter>

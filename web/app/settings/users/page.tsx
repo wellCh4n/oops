@@ -159,7 +159,7 @@ export default function UsersPage() {
           <div className="flex items-end justify-between gap-4">
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Search className="size-4" />{t("users.searchLabel")}</span>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}

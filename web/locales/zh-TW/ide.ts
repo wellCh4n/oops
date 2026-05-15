@@ -1,5 +1,6 @@
 const ide = {
   "ide.title": "開發環境實例",
+  "ide.frameTitle": "開發環境",
   "ide.instances": "實例列表",
   "ide.namePlaceholder": "名稱",
   "ide.branchPlaceholder": "分支名稱（不填則為預設分支）",

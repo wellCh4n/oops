@@ -69,6 +69,7 @@ function IDEInstancePageContent({ id }: { id: string }) {
       {url && loaded ? (
         <iframe
           src={url}
+          title={t("ide.frameTitle")}
           className="flex-1 min-h-0 w-full border-0"
           allow="clipboard-read; clipboard-write"
         />

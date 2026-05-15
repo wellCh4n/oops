@@ -1,5 +1,6 @@
 const ide = {
   "ide.title": "IDE Instances",
+  "ide.frameTitle": "IDE",
   "ide.instances": "Instances",
   "ide.namePlaceholder": "Name",
   "ide.branchPlaceholder": "Branch name (default branch if empty)",

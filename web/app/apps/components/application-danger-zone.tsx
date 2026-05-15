@@ -97,7 +97,6 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value)}
               placeholder={t("apps.danger.deletePlaceholder")}
-              autoFocus
             />
           </div>
           <AlertDialogFooter>
