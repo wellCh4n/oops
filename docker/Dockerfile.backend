@@ -1,0 +1,39 @@
+# syntax=docker/dockerfile:1
+
+# --- Stage 1: backend build ---
+FROM maven:3.9-eclipse-temurin-25 AS builder
+WORKDIR /build
+
+RUN echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
+  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"> \
+  <mirrors> \
+    <mirror> \
+      <id>aliyunmaven</id> \
+      <mirrorOf>central</mirrorOf> \
+      <name>Aliyun Maven</name> \
+      <url>https://maven.aliyun.com/repository/public</url> \
+    </mirror> \
+  </mirrors> \
+</settings>' > /usr/share/maven/conf/settings.xml
+
+COPY pom.xml ./
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn dependency:go-offline -B
+
+COPY src ./src
+RUN --mount=type=cache,target=/root/.m2 \
+    mvn -DskipTests package
+
+# --- Stage 2: runtime ---
+FROM eclipse-temurin:25-jre-alpine AS runtime
+ENV TZ=Asia/Shanghai \
+    JAVA_TOOL_OPTIONS="-XX:+ExitOnOutOfMemoryError -XX:+UseCompactObjectHeaders -XX:+UseShenandoahGC"
+
+WORKDIR /app
+RUN mkdir -p /app/config
+
+COPY --from=builder /build/target/oops-0.0.1-SNAPSHOT.jar /app/oops.jar
+
+EXPOSE 8080
+CMD ["java", "-jar", "/app/oops.jar"]

@@ -101,10 +101,18 @@ pnpm lint
 
 ### Docker Build
 
-```bash
-# Full application build (multi-stage Dockerfile)
-docker build -t oops .
-```
+Two layouts live under `docker/`:
+
+- **Multi-service stack** (recommended for local dev):
+  ```bash
+  docker compose -f docker/docker-compose.yml up -d
+  ```
+  Four services on a shared bridge network: `mysql` (8.4) + `backend` (Spring Boot, JRE-only image) + `frontend` (Next.js standalone) + `nginx` (1.27-alpine reverse proxy on host port 8080). Build files are [docker/Dockerfile.backend](docker/Dockerfile.backend) and [docker/Dockerfile.frontend](docker/Dockerfile.frontend); the proxy config is [docker/nginx.conf](docker/nginx.conf). Backend datasource is wired to MySQL via env vars (`SPRING_DATASOURCE_URL`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration/mysql`, etc.) — no config-file mount.
+- **All-in-one image** (single container, three processes):
+  ```bash
+  docker build -f docker/all-in-one/Dockerfile -t oops .
+  ```
+  Uses [docker/all-in-one/Dockerfile](docker/all-in-one/Dockerfile), [docker/all-in-one/nginx.conf](docker/all-in-one/nginx.conf), and [docker/all-in-one/entrypoint.sh](docker/all-in-one/entrypoint.sh). SQLite-backed by default; useful for quick demos.
 
 ## Configuration
 
@@ -308,15 +316,15 @@ OOPS uses Flyway to apply schema and data migrations automatically during applic
 
 Default admin credentials: `admin` / password from env `ADMIN_PASSWORD` (defaults to `admin123`), created by `UserInitializer` on first startup if no admin exists.
 
-MySQL template available at `docker/application-mysql.properties`. Switch by setting `SPRING_CONFIG_LOCATION`.
+MySQL is wired via Spring env vars (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`, `SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver`, `SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.MySQLDialect`, `SPRING_FLYWAY_LOCATIONS=classpath:db/migration/mysql`). The multi-service compose stack does this for you; for the all-in-one image, set the same vars at `docker run` time. Custom `application.properties` can also be injected at `/app/config/application.properties`.
 
-In production container, Nginx (port 80) reverse-proxies `/api/` to Spring Boot (port 8080) and `/` to Next.js (port 3000). Custom `application.properties` can be injected at `/app/config/application.properties`.
+**All-in-one container** (`docker/all-in-one/`): Nginx (port 80) reverse-proxies `/api/` to Spring Boot (port 8080) and `/` to Next.js (port 3000). Runtime image is `node:20-slim` (not a JVM base image) — the JDK is copied from the Maven builder stage. `TZ=Asia/Shanghai` is set. The entrypoint monitors all three PIDs (Java, Node, Nginx); if any process dies it kills the others and exits non-zero.
 
-**Docker runtime image**: `node:20-slim` (not a JVM base image) — the JDK is copied from the Maven builder stage. `TZ=Asia/Shanghai` is set. The entrypoint monitors all three PIDs (Java, Node, Nginx); if any process dies it kills the others and exits non-zero.
+**Multi-service stack** (`docker/docker-compose.yml`): backend uses `eclipse-temurin:25-jre-alpine`; frontend uses `node:20-slim`; nginx uses `nginx:1.27-alpine` with [docker/nginx.conf](docker/nginx.conf) bind-mounted to `/etc/nginx/conf.d/default.conf`. Upstreams use Docker DNS service names (`backend:8080`, `frontend:3000`).
 
 **Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.properties` → `/app/application.properties` → built-in defaults.
 
-**Nginx**: `client_max_body_size 50m`. `proxy_read_timeout 1h` and `add_header X-Accel-Buffering no` on `/api/` for streaming/WebSocket.
+**Nginx**: `client_max_body_size 50m`. `proxy_read_timeout 1h` and `add_header X-Accel-Buffering no` on `/api/` for streaming/WebSocket. Both `nginx.conf` files share these settings.
 
 ## Testing
 

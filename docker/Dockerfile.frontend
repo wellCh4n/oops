@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+
+# --- Stage 1: frontend build ---
+FROM node:20-alpine AS builder
+WORKDIR /build
+RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN pnpm config set registry https://registry.npmmirror.com
+
+COPY web/package.json web/pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --no-frozen-lockfile
+
+COPY web/ ./
+RUN pnpm build
+
+# --- Stage 2: runtime ---
+FROM node:20-slim AS runtime
+ENV NODE_ENV=production \
+    TZ=Asia/Shanghai \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+WORKDIR /app
+
+COPY --from=builder /build/.next/standalone ./
+COPY --from=builder /build/.next/static ./.next/static
+COPY --from=builder /build/public ./public
+
+EXPOSE 3000
+CMD ["node", "server.js"]

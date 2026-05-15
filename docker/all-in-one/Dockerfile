@@ -65,8 +65,8 @@ COPY --from=web-deps /build/web/.next/standalone /app/web
 COPY --from=web-deps /build/web/.next/static /app/web/.next/static
 COPY --from=web-deps /build/web/public /app/web/public
 
-COPY docker/nginx.conf /etc/nginx/conf.d/app.conf
-COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/all-in-one/nginx.conf /etc/nginx/conf.d/app.conf
+COPY docker/all-in-one/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
