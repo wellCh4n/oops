@@ -65,7 +65,7 @@ Key technologies:
 ### Backend
 
 ```bash
-# Run the application (requires src/main/resources/application.yml — cp from application.yml.example)
+# Run the application (requires config/application.yml — cp from config/application.yml.example)
 ./mvnw spring-boot:run
 
 # Build JAR
@@ -118,7 +118,7 @@ Two layouts live under `docker/`:
 
 OOPS uses a single `application.yml` for all configuration. There are two checked-in templates:
 
-- `src/main/resources/application.yml.example` → cp to `src/main/resources/application.yml` for local dev (`./mvnw spring-boot:run`). The runtime file is gitignored AND excluded from the packaged JAR via `pom.xml`'s `<resources><excludes>application.yml</excludes></resources>`, so dev secrets never leak into the build artifact.
+- `config/application.yml.example` → cp to `config/application.yml` for local dev (`./mvnw spring-boot:run` or IDE Run). Spring Boot's default external-config search path includes `./config/` (relative to the working directory), so the file is picked up automatically when launched from the project root. The runtime file is gitignored and is outside `src/main/resources/`, so dev secrets never end up in the packaged JAR.
 - `docker/application.yml.example` → cp to `docker/application.yml` for either docker-compose stack. Both `docker-compose.yml` and `docker-compose.local.yml` bind-mount `./application.yml` to `/app/config/application.yml`; the template's datasource block carries commented "scenario A / scenario B" alternatives for bundled vs external MySQL.
 
 Key properties to configure:
@@ -328,7 +328,7 @@ MySQL and all other OOPS settings are provided in `application.yml`. Both compos
 
 **Multi-service stack** (`docker/docker-compose.yml`): backend uses `eclipse-temurin:25-jre-alpine`; frontend uses `node:20-slim`; nginx uses `nginx:1.27-alpine` with [docker/nginx.conf](docker/nginx.conf) bind-mounted to `/etc/nginx/conf.d/default.conf`. Upstreams use Docker DNS service names (`backend:8080`, `frontend:3000`).
 
-**Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.yml` (compose mount point — Spring Boot's default external-config path when `WORKDIR=/app`) → classpath defaults. Note: `src/main/resources/application.yml` is excluded from the packaged JAR via `pom.xml`'s `<resources><excludes>`, so dev secrets never end up in classpath defaults.
+**Config injection precedence**: `SPRING_CONFIG_LOCATION` env → `/app/config/application.yml` (compose mount point — Spring Boot's default external-config path when `WORKDIR=/app`) → classpath defaults. Note: the runtime `application.yml` lives in the project's top-level `./config/` directory, which is outside `src/main/resources/`, so it never ends up in the packaged JAR.
 
 **Nginx**: `client_max_body_size 50m`. `proxy_read_timeout 1h` and `add_header X-Accel-Buffering no` on `/api/` for streaming/WebSocket. Both `nginx.conf` files share these settings.
 
