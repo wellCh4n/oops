@@ -22,6 +22,7 @@ export interface Environment {
   kubernetesApiServer: KubernetesApiServer
   workNamespace: string
   imageRepository: ImageRepository
+  gitCredential?: GitCredential
   buildStorageClass?: string
 }
 
@@ -34,6 +35,12 @@ interface ImageRepository {
   url: string,
   username?: string,
   password?: string
+}
+
+interface GitCredential {
+  username?: string,
+  password?: string,
+  privateKey?: string
 }
 
 export interface Namespace {

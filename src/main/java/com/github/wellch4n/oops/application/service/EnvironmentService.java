@@ -54,15 +54,17 @@ public class EnvironmentService {
         existingEnvironment.setBuildStorageClass(environment.getBuildStorageClass());
         existingEnvironment.setWorkNamespace(environment.getWorkNamespace());
         existingEnvironment.setImageRepository(environment.getImageRepository());
+        existingEnvironment.setGitCredential(environment.getGitCredential());
 
         syncDockerHubSecret(existingEnvironment);
+        syncGitCredentialSecret(existingEnvironment);
         environmentRepository.saveAndFlush(existingEnvironment);
         return true;
     }
 
     public Environment createEnvironment(Environment environment) {
         try {
-            ResourceNameChecker.check(environment.getName());
+            ResourceNameChecker.checkEnvironmentName(environment.getName());
         } catch (IllegalArgumentException e) {
             throw new BizException(e.getMessage(), e);
         }
@@ -71,6 +73,7 @@ public class EnvironmentService {
             throw new BizException("Environment already exists: " + environment.getName());
         }
         syncDockerHubSecret(environment);
+        syncGitCredentialSecret(environment);
         return environmentRepository.save(environment);
     }
 
@@ -135,6 +138,16 @@ public class EnvironmentService {
             log.info("Synced dockerhub secret to namespace: {}", environment.getWorkNamespace());
         } catch (Exception e) {
             throw new BizException("Failed to sync dockerhub secret to namespace "
+                    + environment.getWorkNamespace() + ": " + e.getMessage(), e);
+        }
+    }
+
+    private void syncGitCredentialSecret(Environment environment) {
+        try {
+            environmentGateway.syncGitCredentialSecret(environment);
+            log.info("Synced git-credential secret to namespace: {}", environment.getWorkNamespace());
+        } catch (Exception e) {
+            throw new BizException("Failed to sync git-credential secret to namespace "
                     + environment.getWorkNamespace() + ": " + e.getMessage(), e);
         }
     }

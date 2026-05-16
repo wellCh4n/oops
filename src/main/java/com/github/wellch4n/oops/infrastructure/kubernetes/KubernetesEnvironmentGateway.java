@@ -8,6 +8,7 @@ import io.fabric8.kubernetes.api.model.SecretBuilder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import okhttp3.Credentials;
 import okhttp3.HttpUrl;
@@ -124,4 +125,67 @@ public class KubernetesEnvironmentGateway implements EnvironmentGateway {
             client.secrets().inNamespace(workNamespace).resource(secret).patch(OopsConstants.PATCH_CONTEXT);
         }
     }
+
+    @Override
+    public void syncGitCredentialSecret(Environment environment) {
+        String workNamespace = environment.getWorkNamespace();
+        Environment.KubernetesApiServer kubernetesApiServer = environment.getKubernetesApiServer();
+        Environment.GitCredential gitCredential = environment.getGitCredential();
+
+        if (kubernetesApiServer == null || StringUtils.isEmpty(workNamespace)) {
+            return;
+        }
+
+        try (var client = KubernetesClients.from(kubernetesApiServer)) {
+            if (gitCredential == null || gitCredential.isEmpty()) {
+                client.secrets().inNamespace(workNamespace).withName(GIT_CREDENTIAL_SECRET).delete();
+                return;
+            }
+
+            LinkedHashMap<String, String> data = new LinkedHashMap<>();
+            String netrc = buildNetrc(gitCredential);
+            if (netrc != null) {
+                data.put(".netrc",
+                        Base64.getEncoder().encodeToString(netrc.getBytes(StandardCharsets.UTF_8)));
+            }
+            if (StringUtils.isNotBlank(gitCredential.getPrivateKey())) {
+                String privateKey = gitCredential.getPrivateKey();
+                if (!privateKey.endsWith("\n")) {
+                    privateKey = privateKey + "\n";
+                }
+                data.put("id_rsa",
+                        Base64.getEncoder().encodeToString(privateKey.getBytes(StandardCharsets.UTF_8)));
+            }
+
+            var secret = new SecretBuilder()
+                    .withNewMetadata()
+                        .withName(GIT_CREDENTIAL_SECRET)
+                        .withNamespace(workNamespace)
+                    .endMetadata()
+                    .withType("Opaque")
+                    .withData(data)
+                    .build();
+
+            client.secrets().inNamespace(workNamespace).resource(secret).patch(OopsConstants.PATCH_CONTEXT);
+        }
+    }
+
+    private static String buildNetrc(Environment.GitCredential gitCredential) {
+        String username = gitCredential.getUsername();
+        String password = gitCredential.getPassword();
+        if (StringUtils.isAllBlank(username, password)) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder("default");
+        if (StringUtils.isNotBlank(username)) {
+            builder.append(" login ").append(username);
+        }
+        if (StringUtils.isNotBlank(password)) {
+            builder.append(" password ").append(password);
+        }
+        builder.append('\n');
+        return builder.toString();
+    }
+
+    private static final String GIT_CREDENTIAL_SECRET = "git-credential";
 }

@@ -12,4 +12,6 @@ public interface EnvironmentGateway {
     boolean isImageRepositoryValid(Environment.ImageRepository imageRepository);
 
     void syncImagePullSecret(Environment environment);
+
+    void syncGitCredentialSecret(Environment environment);
 }

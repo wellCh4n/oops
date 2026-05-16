@@ -2,7 +2,7 @@
 
 import { useState, useEffect, type CSSProperties } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Eye, EyeOff, Check, Loader2, Info, Server, Package, AlertTriangle } from "lucide-react"
+import { Eye, EyeOff, Check, Loader2, Info, Server, Package, AlertTriangle, KeyRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { EnvironmentFormValues, getEnvironmentSchema } from "../columns"
@@ -41,6 +41,8 @@ export default function EnvironmentEditPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showToken, setShowToken] = useState(false)
   const [showRepoPassword, setShowRepoPassword] = useState(false)
+  const [showGitPassword, setShowGitPassword] = useState(false)
+  const [showGitPrivateKey, setShowGitPrivateKey] = useState(false)
   
   const [isK8sValidated, setIsK8sValidated] = useState(false)
   const [isRepoValidated, setIsRepoValidated] = useState(false)
@@ -68,6 +70,11 @@ export default function EnvironmentEditPage() {
         url: "",
         username: "",
         password: "",
+      },
+      gitCredential: {
+        username: "",
+        password: "",
+        privateKey: "",
       },
       buildStorageClass: "",
     },
@@ -107,6 +114,11 @@ export default function EnvironmentEditPage() {
               url: env.imageRepository?.url || "",
               username: env.imageRepository?.username || "",
               password: env.imageRepository?.password || "",
+            },
+            gitCredential: {
+              username: env.gitCredential?.username || "",
+              password: env.gitCredential?.password || "",
+              privateKey: env.gitCredential?.privateKey || "",
             },
           })
         } else {
@@ -459,6 +471,101 @@ export default function EnvironmentEditPage() {
                                     onClick={() => setShowRepoPassword(!showRepoPassword)}
                                   >
                                     {showRepoPassword ? (
+                                      <EyeOff className="size-4" />
+                                    ) : (
+                                      <Eye className="size-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Git Credential Block */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
+                      <KeyRound className="size-4 text-muted-foreground" />
+                      <span className="text-sm font-semibold">{t("env.gitCredential")}</span>
+                    </div>
+                    <div className="flex flex-col gap-4 p-4">
+                      <p className="text-xs text-muted-foreground">{t("env.gitCredentialDesc")}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="gitCredential.username"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("env.gitUsername")}</FormLabel>
+                              <FormControl>
+                                <Input placeholder="username" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="gitCredential.password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{t("env.gitPassword")}</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input
+                                    type={showGitPassword ? "text" : "password"}
+                                    placeholder="token or password"
+                                    {...field}
+                                    className="pr-10"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
+                                    onClick={() => setShowGitPassword(!showGitPassword)}
+                                  >
+                                    {showGitPassword ? (
+                                      <EyeOff className="size-4" />
+                                    ) : (
+                                      <Eye className="size-4" />
+                                    )}
+                                  </Button>
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="gitCredential.privateKey"
+                          render={({ field }) => (
+                            <FormItem className="col-span-2">
+                              <FormLabel>{t("env.gitPrivateKey")}</FormLabel>
+                              <FormControl>
+                                <div className="relative w-full">
+                                  <Textarea
+                                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                                    {...field}
+                                    rows={3}
+                                    className="pr-10 min-h-[unset] max-h-[80px] break-all resize-none overflow-y-auto"
+                                    style={{
+                                      WebkitTextSecurity: showGitPrivateKey ? 'none' : 'disc',
+                                    } as CSSProperties}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute right-0 top-0 size-9 text-muted-foreground hover:bg-transparent"
+                                    onClick={() => setShowGitPrivateKey(!showGitPrivateKey)}
+                                  >
+                                    {showGitPrivateKey ? (
                                       <EyeOff className="size-4" />
                                     ) : (
                                       <Eye className="size-4" />

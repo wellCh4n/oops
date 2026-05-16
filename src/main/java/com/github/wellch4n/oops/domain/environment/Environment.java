@@ -17,6 +17,7 @@ public class Environment extends BaseAggregateRoot {
     private String workNamespace;
     private String buildStorageClass;
     private ImageRepository imageRepository;
+    private GitCredential gitCredential;
 
     @Data
     @NoArgsConstructor
@@ -44,6 +45,23 @@ public class Environment extends BaseAggregateRoot {
 
         public boolean hasCredentials() {
             return !StringUtils.isAnyEmpty(url, username, password);
+        }
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GitCredential {
+        private String username;
+        private String password;
+        private String privateKey;
+
+        public static GitCredential of(String username, String password, String privateKey) {
+            return new GitCredential(username, password, privateKey);
+        }
+
+        public boolean isEmpty() {
+            return StringUtils.isAllBlank(username, password, privateKey);
         }
     }
 }
