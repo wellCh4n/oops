@@ -83,7 +83,7 @@ docker compose -f docker/docker-compose.local.yml up -d --build
 
 ```bash
 # 后端
-cp src/main/resources/application.yml.example src/main/resources/application.yml
+cp config/application.yml.example config/application.yml
 ./mvnw spring-boot:run
 
 # 前端
