@@ -32,6 +32,10 @@ jobs:
             platform: linux/arm64
             runner: ubuntu-24.04-arm
     steps:
+      - name: Lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+
       - name: Prepare platform pair
         id: prep
         run: |
@@ -55,7 +59,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/oops-${{ matrix.image }}
+          images: ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }}
 
       - name: Build and push by digest
         id: build
@@ -65,7 +69,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/oops-${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.image }}-${{ steps.prep.outputs.platform_pair }}
           cache-to: type=gha,scope=${{ matrix.image }}-${{ steps.prep.outputs.platform_pair }},mode=max
 
@@ -96,6 +100,10 @@ jobs:
           - backend
           - frontend
     steps:
+      - name: Lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
@@ -117,7 +125,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/oops-${{ matrix.image }}
+          images: ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
@@ -126,8 +134,8 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf 'ghcr.io/${{ github.repository_owner }}/oops-${{ matrix.image }}@sha256:%s ' *)
+            $(printf 'ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ghcr.io/${{ github.repository_owner }}/oops-${{ matrix.image }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }}:${{ steps.meta.outputs.version }}
