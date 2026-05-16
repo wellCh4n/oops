@@ -51,6 +51,9 @@ const env = {
   "env.deleteDescPrefix": "この操作は元に戻せません。確認のため環境名 ",
   "env.deleteDescSuffix": " を入力してください。",
   "env.deleteConfirmBtn": "削除を確認",
+  "env.emptyWarning": "環境がまだ設定されていません。先に環境を作成してから他の機能をご利用ください。",
+  "env.emptyWarningUser": "環境がまだ設定されていません。管理者に環境の設定を依頼してください。",
+  "env.goConfigure": "設定へ移動",
 }
 
 export default env

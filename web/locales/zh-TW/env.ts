@@ -51,6 +51,9 @@ const env = {
   "env.deleteDescPrefix": "此操作不可撤銷。請輸入環境名稱",
   "env.deleteDescSuffix": "以確認刪除。",
   "env.deleteConfirmBtn": "確認刪除",
+  "env.emptyWarning": "尚未配置任何環境，請先建立環境後再使用其他功能。",
+  "env.emptyWarningUser": "尚未配置任何環境，請聯絡管理員配置環境。",
+  "env.goConfigure": "前往配置",
 }
 
 export default env

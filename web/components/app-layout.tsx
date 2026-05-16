@@ -10,6 +10,7 @@ import { LanguageProvider } from "@/contexts/language-context"
 import { Locale } from "@/lib/i18n"
 import { useFeaturesStore } from "@/store/features"
 import { CommandPalette } from "@/components/command-palette"
+import { EmptyEnvironmentReminder } from "@/components/empty-environment-reminder"
 import { isAdminOnlyPath } from "@/lib/nav-config"
 
 export function AppLayout({
@@ -80,6 +81,7 @@ export function AppLayout({
         </SidebarInset>
         <Toaster position="top-right" />
         <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+        <EmptyEnvironmentReminder />
       </SidebarProvider>
     </LanguageProvider>
   )

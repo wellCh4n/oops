@@ -51,6 +51,9 @@ const env = {
   "env.deleteDescPrefix": "This cannot be undone. Enter the environment name ",
   "env.deleteDescSuffix": " to confirm deletion.",
   "env.deleteConfirmBtn": "Confirm Delete",
+  "env.emptyWarning": "No environments configured yet. Please create one before using other features.",
+  "env.emptyWarningUser": "No environments configured yet. Please contact an administrator to set one up.",
+  "env.goConfigure": "Configure now",
 }
 
 export default env
