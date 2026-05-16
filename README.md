@@ -97,7 +97,7 @@ Default admin credentials: `admin` / `admin123` (override `oops.admin.password` 
 ### Application Build & Deploy Pipeline
 
 ```mermaid
-flowchart LR
+flowchart TD
     Start([User triggers deploy]) --> Src{Source}
     Src -->|GIT| Clone["① Clone<br/>git clone"]
     Src -->|ZIP| Upload["Upload ZIP<br/>(presigned S3 URL)"]
@@ -123,7 +123,7 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-    direction LR
+    direction TB
     [*] --> INITIALIZED: Pipeline created
     INITIALIZED --> RUNNING: K8s Job submitted
 

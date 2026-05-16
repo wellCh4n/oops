@@ -97,7 +97,7 @@ cd web && pnpm install && pnpm dev
 ### 应用构建与部署流水线
 
 ```mermaid
-flowchart LR
+flowchart TD
     Start([用户触发部署]) --> Src{源码类型}
     Src -->|GIT| Clone["① 克隆<br/>git clone"]
     Src -->|ZIP| Upload["上传 ZIP<br/>（预签名 S3 URL）"]
@@ -123,7 +123,7 @@ flowchart LR
 
 ```mermaid
 stateDiagram-v2
-    direction LR
+    direction TB
     [*] --> INITIALIZED: 流水线创建
     INITIALIZED --> RUNNING: K8s Job 提交
 
