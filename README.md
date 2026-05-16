@@ -53,23 +53,33 @@ cp docker/application.yml.example docker/application.yml
 # edit docker/application.yml — change secrets, datasource, and any optional features
 ```
 
-### Docker Compose
+### Docker Compose (prebuilt images)
+
+Pulls `ghcr.io/wellch4n/oops-backend:latest` and `ghcr.io/wellch4n/oops-frontend:latest` from GitHub Container Registry.
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 Then open <http://localhost:8080> and sign in with `admin` / `admin123`.
 
-### Docker Compose (existing MySQL)
+### Docker Compose (build from source)
 
-Edit the `spring.datasource` section in `docker/application.yml` with your connection info.
+Build images locally instead of pulling from GHCR.
+
+Bundled MySQL:
+
+```bash
+docker compose -f docker/docker-compose.build.yml up -d --build
+```
+
+Existing MySQL — edit the `spring.datasource` section in `docker/application.yml` first:
 
 ```bash
 docker compose -f docker/docker-compose.local.yml up -d --build
 ```
 
-### Build from source
+### Run from source
 
 ```bash
 # Backend

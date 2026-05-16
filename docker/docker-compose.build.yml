@@ -21,7 +21,9 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/wellch4n/oops-backend:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
     container_name: backend
     depends_on:
       mysql:
@@ -31,7 +33,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/wellch4n/oops-frontend:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
     container_name: frontend
     restart: unless-stopped
 

@@ -53,23 +53,33 @@ cp docker/application.yml.example docker/application.yml
 # 编辑 docker/application.yml — 修改 secret、数据源以及可选功能
 ```
 
-### Docker Compose
+### Docker Compose（预构建镜像）
+
+从 GitHub Container Registry 拉取 `ghcr.io/wellch4n/oops-backend:latest` 与 `ghcr.io/wellch4n/oops-frontend:latest`。
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d --build
+docker compose -f docker/docker-compose.yml up -d
 ```
 
 打开 <http://localhost:8080>，使用 `admin` / `admin123` 登录。
 
-### Docker Compose（已有 MySQL）
+### Docker Compose（源码构建）
 
-在 `docker/application.yml` 的 `spring.datasource` 段修改连接信息。
+本地构建镜像，不从 GHCR 拉取。
+
+自带 MySQL：
+
+```bash
+docker compose -f docker/docker-compose.build.yml up -d --build
+```
+
+已有 MySQL — 先在 `docker/application.yml` 的 `spring.datasource` 段修改连接信息：
 
 ```bash
 docker compose -f docker/docker-compose.local.yml up -d --build
 ```
 
-### 从源码构建
+### 从源码运行
 
 ```bash
 # 后端
