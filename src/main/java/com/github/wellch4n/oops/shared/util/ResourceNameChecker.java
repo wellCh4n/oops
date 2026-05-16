@@ -13,6 +13,7 @@ public class ResourceNameChecker {
 
     private static final int MAX_LENGTH = 24;
     private static final Pattern VALID_NAME_PATTERN = Pattern.compile("^[a-z]([-a-z0-9]*[a-z0-9])?$");
+    private static final Pattern ENVIRONMENT_NAME_PATTERN = Pattern.compile("^[A-Za-z]([-A-Za-z0-9]*[A-Za-z0-9])?$");
 
     private ResourceNameChecker() {
     }
@@ -28,6 +29,20 @@ public class ResourceNameChecker {
             throw new IllegalArgumentException(
                     "Name must contain only lowercase letters, digits, and hyphens, "
                             + "start with a lowercase letter, and end with a letter or digit");
+        }
+    }
+
+    public static void checkEnvironmentName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        if (name.length() > MAX_LENGTH) {
+            throw new IllegalArgumentException("Name cannot exceed " + MAX_LENGTH + " characters");
+        }
+        if (!ENVIRONMENT_NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException(
+                    "Name must contain only letters, digits, and hyphens, "
+                            + "start with a letter, and end with a letter or digit");
         }
     }
 }

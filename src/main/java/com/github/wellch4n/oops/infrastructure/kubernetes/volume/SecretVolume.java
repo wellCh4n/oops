@@ -36,10 +36,10 @@ public class SecretVolume {
 
         this.volumes.add(new VolumeBuilder()
                 .withName("git-secret")
-                .withNewConfigMap()
-                .withName("git-credential")
+                .withNewSecret()
+                .withSecretName("git-credential")
                 .withOptional(true)
-                .withDefaultMode(0600) // 对应 0600 八进制
+                .withDefaultMode(0600)
                 .addNewItem()
                 .withKey(".netrc")
                 .withPath(".netrc")
@@ -48,7 +48,7 @@ public class SecretVolume {
                 .withKey("id_rsa")
                 .withPath("id_rsa")
                 .endItem()
-                .endConfigMap()
+                .endSecret()
                 .build());
 
         this.volumeMounts.add(new VolumeMountBuilder()

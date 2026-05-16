@@ -1,6 +1,8 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.EncryptedStringConverter;
+import com.github.wellch4n.oops.shared.util.EncryptionUtils;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import jakarta.persistence.*;
 import lombok.*;
@@ -38,6 +40,11 @@ public class Environment {
 
     @Embedded
     private ImageRepository imageRepository;
+
+    @Lob
+    @Column(name = "git_credential", columnDefinition = "TEXT")
+    @Convert(converter = GitCredentialConverter.class)
+    private GitCredential gitCredential;
 
     @Embeddable
     @NoArgsConstructor
@@ -85,4 +92,48 @@ public class Environment {
         }
 
     }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GitCredential {
+        private String username;
+        private String password;
+        private String privateKey;
+
+        public static GitCredential of(String username, String password, String privateKey) {
+            return new GitCredential(username, password, privateKey);
+        }
+    }
+
+    @Converter
+    public static class GitCredentialConverter implements AttributeConverter<GitCredential, String> {
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+        @Override
+        public String convertToDatabaseColumn(GitCredential attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return EncryptionUtils.encrypt(OBJECT_MAPPER.writeValueAsString(attribute));
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize gitCredential", e);
+            }
+        }
+
+        @Override
+        public GitCredential convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                String json = EncryptionUtils.decrypt(dbData);
+                return OBJECT_MAPPER.readValue(json, GitCredential.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize gitCredential", e);
+            }
+        }
+    }
+
 }
