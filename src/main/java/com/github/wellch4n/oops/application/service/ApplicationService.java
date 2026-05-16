@@ -441,29 +441,20 @@ public class ApplicationService {
     }
 
     public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {
-        try {
-            Environment environment = environmentRepository.findFirstByName(environmentName);
-            if (environment == null) {
-                throw new IllegalArgumentException("Environment not found: " + environmentName);
-            }
-            return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to get application status: " + e.getMessage(), e);
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
         }
+        return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
     }
 
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
-        try {
-            Environment environment = environmentRepository.findFirstByName(environmentName);
-            if (environment == null) {
-                throw new IllegalArgumentException("Environment not found: " + environmentName);
-            }
-
-            applicationRuntimeGateway.restartPod(environment, namespace, podName);
-            return true;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to restart application pod: " + e.getMessage(), e);
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
         }
+        applicationRuntimeGateway.restartPod(environment, namespace, podName);
+        return true;
     }
 
     public ClusterDomainView getClusterDomain(String namespace, String name, String environmentName) {

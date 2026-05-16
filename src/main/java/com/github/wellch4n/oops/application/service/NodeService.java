@@ -24,11 +24,6 @@ public class NodeService {
         if (environment == null) {
             throw new IllegalArgumentException("Environment not found: " + environmentName);
         }
-
-        try {
-            return clusterNodeGateway.getNodes(environment);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to get nodes: " + e.getMessage(), e);
-        }
+        return clusterNodeGateway.getNodes(environment);
     }
 }

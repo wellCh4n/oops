@@ -30,12 +30,8 @@ public class ConfigMapService {
     }
 
     public Boolean updateConfigMap(String namespace, String applicationName, String environmentName, List<UpdateConfigMapCommand> configMaps) {
-        try {
-            Environment environment = environmentService.getEnvironment(environmentName);
-            configMapGateway.updateConfigMap(environment, namespace, applicationName, configMaps);
-            return true;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update config map: " + e.getMessage(), e);
-        }
+        Environment environment = environmentService.getEnvironment(environmentName);
+        configMapGateway.updateConfigMap(environment, namespace, applicationName, configMaps);
+        return true;
     }
 }
