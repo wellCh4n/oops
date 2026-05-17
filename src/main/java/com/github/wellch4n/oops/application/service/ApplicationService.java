@@ -32,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @author wellCh4n
@@ -446,6 +447,14 @@ public class ApplicationService {
             throw new IllegalArgumentException("Environment not found: " + environmentName);
         }
         return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
+    }
+
+    public SseEmitter watchApplicationStatus(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
+        }
+        return applicationRuntimeGateway.watchPodStatuses(environment, namespace, name);
     }
 
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {

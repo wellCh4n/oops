@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, Fragment } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
-import { getApplicationStatus, restartApplicationPod, getClusterDomain } from "@/lib/api/applications"
+import { restartApplicationPod, getClusterDomain, watchApplicationStatus } from "@/lib/api/applications"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { ApplicationPodStatus, Environment, ClusterDomainInfo } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
@@ -113,38 +113,35 @@ function ApplicationStatusContent() {
     loadEnvironments()
   }, [envParam, pathname, router, searchParams, t])
 
-  // Fetch status when environment changes and poll
+  // Subscribe to pod status via SSE when environment changes
   useEffect(() => {
     if (!selectedEnv) return
 
-    const fetchStatus = async (showLoading = false) => {
-      if (showLoading) setLoading(true)
-      try {
-        const res = await getApplicationStatus(namespace, name, selectedEnv)
-        setPodStatuses(res.data ?? [])
-      } catch (error) {
-        console.error("Failed to fetch application status:", error)
-        if (showLoading) {
-          toast.error(t("apps.status.fetchError"))
-          setPodStatuses([])
-        }
-      } finally {
-        if (showLoading) setLoading(false)
-      }
-    }
+    setLoading(true)
+    setPodStatuses([])
 
-    // Fetch cluster domain
+    // Fetch cluster domain (one-shot)
     getClusterDomain(namespace, name, selectedEnv)
       .then(res => setClusterDomain(res.data ?? null))
       .catch(() => setClusterDomain(null))
 
-    // Initial fetch
-    fetchStatus(true)
+    const stopWatch = watchApplicationStatus(namespace, name, selectedEnv, {
+      events: {
+        status: (statuses) => {
+          setPodStatuses(statuses)
+          setLoading(false)
+        },
+      },
+      onError: () => {
+        // Browser will auto-reconnect; just clear the initial loading state
+        setLoading(false)
+      },
+      onTerminate: () => {
+        toast.error(t("apps.status.watchTerminated"))
+      },
+    })
 
-    // Poll every 1000ms
-    const intervalId = setInterval(() => fetchStatus(false), 1000)
-
-    return () => clearInterval(intervalId)
+    return stopWatch
   }, [namespace, name, selectedEnv, t])
 
   const handleTabChange = (value: string) => {
@@ -165,9 +162,7 @@ function ApplicationStatusContent() {
     try {
       await restartApplicationPod(namespace, name, podToRestart, selectedEnv)
       toast.success(t("apps.status.restartSuccess"))
-      // Refresh status immediately
-      const res = await getApplicationStatus(namespace, name, selectedEnv)
-      setPodStatuses(res.data ?? [])
+      // Status table will pick up the new pod state via the SSE watch
     } catch (error) {
       console.error("Failed to restart pod:", error)
       toast.error(t("apps.status.restartError"))

@@ -175,6 +175,7 @@ const apps = {
   "apps.status.restartError": "重启失败",
   "apps.status.fetchEnvError": "获取环境列表失败",
   "apps.status.fetchError": "获取运行状态失败",
+  "apps.status.watchTerminated": "运行状态实时连接已断开，请刷新页面重连",
   "apps.status.containers": "容器",
   "apps.status.containerName": "名称",
   "apps.status.containerImage": "镜像",

@@ -175,6 +175,7 @@ const apps = {
   "apps.status.restartError": "重啟失敗",
   "apps.status.fetchEnvError": "取得環境列表失敗",
   "apps.status.fetchError": "取得運行狀態失敗",
+  "apps.status.watchTerminated": "運行狀態即時連線已中斷，請重新整理頁面以重連",
   "apps.status.containers": "容器",
   "apps.status.containerName": "名稱",
   "apps.status.containerImage": "鏡像",

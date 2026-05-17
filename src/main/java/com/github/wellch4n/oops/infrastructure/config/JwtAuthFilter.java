@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.shared.util.JwtUtils;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -41,6 +42,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String queryToken = request.getParameter("token");
             if (queryToken != null && !queryToken.isBlank()) {
                 token = queryToken;
+            } else {
+                Cookie[] cookies = request.getCookies();
+                if (cookies != null) {
+                    for (Cookie cookie : cookies) {
+                        if ("auth_token".equals(cookie.getName()) && cookie.getValue() != null && !cookie.getValue().isBlank()) {
+                            token = cookie.getValue();
+                            break;
+                        }
+                    }
+                }
             }
         }
         if (token != null && jwtUtils.isValid(token)) {

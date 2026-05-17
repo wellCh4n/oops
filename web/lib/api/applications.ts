@@ -1,4 +1,5 @@
 import { apiFetch } from "./client"
+import { watchSse, SseWatchOptions } from "./sse"
 import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
@@ -250,6 +251,25 @@ export const getApplicationStatus = async (namespace: string, name: string, env:
     throw new Error("Failed to fetch application status")
   }
   return response.json() as Promise<ApiResponse<ApplicationPodStatus[]>>
+}
+
+// Events streamed by GET /api/namespaces/{ns}/applications/{name}/status/watch.
+// Backend emits `status` with the full pod list snapshot whenever any pod
+// in the application changes.
+export type ApplicationStatusEvents = {
+  status: ApplicationPodStatus[]
+}
+
+export const watchApplicationStatus = (
+  namespace: string,
+  name: string,
+  env: string,
+  options: Omit<SseWatchOptions<ApplicationStatusEvents>, "url">
+): (() => void) => {
+  return watchSse<ApplicationStatusEvents>({
+    url: `/api/namespaces/${namespace}/applications/${name}/status/watch?env=${encodeURIComponent(env)}`,
+    ...options,
+  })
 }
 
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {

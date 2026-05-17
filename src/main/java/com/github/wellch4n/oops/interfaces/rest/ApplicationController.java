@@ -17,6 +17,7 @@ import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @author wellCh4n
@@ -196,6 +197,13 @@ public class ApplicationController {
                                                                            @PathVariable String name,
                                                                            @RequestParam String env) {
         return Result.success(applicationService.getApplicationStatus(namespace, name, env));
+    }
+
+    @GetMapping("/{name}/status/watch")
+    public SseEmitter watchApplicationStatus(@PathVariable String namespace,
+                                              @PathVariable String name,
+                                              @RequestParam String env) {
+        return applicationService.watchApplicationStatus(namespace, name, env);
     }
 
     @PutMapping("/{name}/pods/{pod}/restart")

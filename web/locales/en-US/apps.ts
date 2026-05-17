@@ -175,6 +175,7 @@ const apps = {
   "apps.status.restartError": "Restart failed",
   "apps.status.fetchEnvError": "Failed to fetch environments",
   "apps.status.fetchError": "Failed to fetch status",
+  "apps.status.watchTerminated": "Disconnected from status updates. Refresh the page to reconnect.",
   "apps.status.containers": "Containers",
   "apps.status.containerName": "Name",
   "apps.status.containerImage": "Image",

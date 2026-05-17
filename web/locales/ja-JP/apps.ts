@@ -175,6 +175,7 @@ const apps = {
   "apps.status.restartError": "再起動に失敗しました",
   "apps.status.fetchEnvError": "環境リストの取得に失敗しました",
   "apps.status.fetchError": "実行ステータスの取得に失敗しました",
+  "apps.status.watchTerminated": "ステータス更新の接続が切断されました。ページを再読み込みして再接続してください",
   "apps.status.containers": "コンテナ",
   "apps.status.containerName": "名前",
   "apps.status.containerImage": "イメージ",

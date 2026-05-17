@@ -1,17 +1,29 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.WatcherException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+@Slf4j
 @Component
 public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGateway {
 
@@ -19,6 +31,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     private static final String CLUSTER_DOMAIN_FORMAT = "%s.%s.svc.%s";
 
     private final KubernetesClientPool clientPool;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public KubernetesApplicationRuntimeGateway(KubernetesClientPool clientPool) {
         this.clientPool = clientPool;
@@ -85,31 +98,144 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 .withLabel("oops.type", OopsTypes.APPLICATION.name())
                 .withLabel("oops.app.name", applicationName)
                 .list();
-        return pods.getItems().stream().map(pod -> {
-            var status = new ApplicationPodStatusView();
-            status.setName(pod.getMetadata().getName());
-            status.setNamespace(pod.getMetadata().getNamespace());
-            status.setPodIP(pod.getStatus().getPodIP());
-            status.setStatus(pod.getStatus().getPhase());
-            status.setNodeName(pod.getSpec().getNodeName());
-            var containerStatuses = pod.getStatus().getContainerStatuses();
-            List<ApplicationPodStatusView.ContainerStatus> containers = new ArrayList<>();
-            if (containerStatuses != null) {
-                for (var containerStatus : containerStatuses) {
-                    var container = new ApplicationPodStatusView.ContainerStatus();
-                    container.setName(containerStatus.getName());
-                    container.setImage(containerStatus.getImage());
-                    container.setReady(containerStatus.getReady());
-                    container.setRestartCount(containerStatus.getRestartCount());
-                    if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
-                        container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
+        return pods.getItems().stream().map(this::toView).toList();
+    }
+
+    @Override
+    public SseEmitter watchPodStatuses(Environment environment, String namespace, String applicationName) {
+        SseEmitter emitter = new SseEmitter(0L);
+        AtomicBoolean closed = new AtomicBoolean(false);
+        Map<String, ApplicationPodStatusView> state = new ConcurrentHashMap<>();
+
+        // Non-pooled client: lifecycle tied to this SSE connection
+        KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer());
+
+        Runnable cleanup = () -> {
+            if (closed.compareAndSet(false, true)) {
+                try { client.close(); } catch (Exception _) {}
+            }
+        };
+        emitter.onCompletion(cleanup);
+        emitter.onTimeout(cleanup);
+        emitter.onError(error -> {
+            log.warn("SSE error watching pod statuses for {}/{}: {}", namespace, applicationName, error.getMessage());
+            cleanup.run();
+        });
+
+        // Heartbeat: keeps the connection warm through idle proxies and lets us
+        // detect dead clients within ~25s (a failed send triggers cleanup).
+        Thread.startVirtualThread(() -> {
+            while (!closed.get()) {
+                try {
+                    Thread.sleep(25_000);
+                    if (closed.get()) {
+                        return;
                     }
-                    containers.add(container);
+                    emitter.send(SseEmitter.event().name("heartbeat").data(""));
+                } catch (InterruptedException _) {
+                    Thread.currentThread().interrupt();
+                    return;
+                } catch (Exception _) {
+                    // Receiver disconnected — emitter callbacks will clean up
+                    return;
                 }
             }
-            status.setContainers(containers);
-            return status;
-        }).toList();
+        });
+
+        Thread.startVirtualThread(() -> {
+            try {
+                var podsResource = client.pods()
+                        .inNamespace(namespace)
+                        .withLabel("oops.type", OopsTypes.APPLICATION.name())
+                        .withLabel("oops.app.name", applicationName);
+
+                var initial = podsResource.list();
+                for (Pod pod : initial.getItems()) {
+                    state.put(pod.getMetadata().getName(), toView(pod));
+                }
+                send(emitter, state.values());
+
+                Watch watch = podsResource.watch(new Watcher<>() {
+                    @Override
+                    public void eventReceived(Action action, Pod pod) {
+                        if (closed.get()) {
+                            return;
+                        }
+                        String podName = pod.getMetadata().getName();
+                        switch (action) {
+                            case ADDED, MODIFIED -> state.put(podName, toView(pod));
+                            case DELETED -> state.remove(podName);
+                            default -> {
+                                return;
+                            }
+                        }
+                        send(emitter, state.values());
+                    }
+
+                    @Override
+                    public void onClose(WatcherException cause) {
+                        if (cause != null) {
+                            log.info("Pod watch closed for {}/{}: {}", namespace, applicationName, cause.getMessage());
+                            emitter.completeWithError(cause);
+                        } else {
+                            emitter.complete();
+                        }
+                        cleanup.run();
+                    }
+                });
+
+                emitter.onCompletion(() -> {
+                    try { watch.close(); } catch (Exception _) {}
+                });
+                emitter.onTimeout(() -> {
+                    try { watch.close(); } catch (Exception _) {}
+                });
+                emitter.onError(_ -> {
+                    try { watch.close(); } catch (Exception _) {}
+                });
+            } catch (Exception e) {
+                log.error("Failed to start pod status watch for {}/{}", namespace, applicationName, e);
+                emitter.completeWithError(e);
+                cleanup.run();
+            }
+        });
+
+        return emitter;
+    }
+
+    private void send(SseEmitter emitter, java.util.Collection<ApplicationPodStatusView> snapshot) {
+        try {
+            emitter.send(SseEmitter.event().name("status").data(objectMapper.writeValueAsString(snapshot)));
+        } catch (Exception e) {
+            // Receiver disconnected — let the emitter callbacks handle cleanup
+            emitter.completeWithError(e);
+        }
+    }
+
+    private ApplicationPodStatusView toView(Pod pod) {
+        var view = new ApplicationPodStatusView();
+        view.setName(pod.getMetadata().getName());
+        view.setNamespace(pod.getMetadata().getNamespace());
+        view.setPodIP(pod.getStatus() != null ? pod.getStatus().getPodIP() : null);
+        view.setStatus(pod.getStatus() != null ? pod.getStatus().getPhase() : null);
+        view.setNodeName(pod.getSpec() != null ? pod.getSpec().getNodeName() : null);
+        List<ApplicationPodStatusView.ContainerStatus> containers = new ArrayList<>();
+        var containerStatuses = pod.getStatus() != null ? pod.getStatus().getContainerStatuses() : null;
+        if (containerStatuses != null) {
+            for (var containerStatus : containerStatuses) {
+                var container = new ApplicationPodStatusView.ContainerStatus();
+                container.setName(containerStatus.getName());
+                container.setImage(containerStatus.getImage());
+                container.setReady(containerStatus.getReady());
+                container.setRestartCount(containerStatus.getRestartCount());
+                if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
+                    container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
+                }
+                containers.add(container);
+            }
+        }
+        view.setContainers(containers);
+        return view;
     }
 
     @Override
