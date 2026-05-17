@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import { Plus, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -33,7 +32,6 @@ import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 
 export default function EnvironmentsPage() {
-  const router = useRouter()
   const { t } = useLanguage()
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -115,10 +113,6 @@ export default function EnvironmentsPage() {
     }
   }
 
-  const handleView = (env: Environment) => {
-    router.push(`/settings/environments/${env.id}`)
-  }
-
   return (
     <ContentPage title={t("env.title")}>
       <TableForm
@@ -151,9 +145,6 @@ export default function EnvironmentsPage() {
             columns={getColumns(t)}
             data={appliedSearch ? environments.filter(e => e.name.toLowerCase().includes(appliedSearch.toLowerCase())) : environments}
             loading={isLoading}
-            meta={{
-              onView: handleView,
-            }}
           />
         }
       />

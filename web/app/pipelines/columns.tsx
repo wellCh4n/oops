@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
 import { Pipeline } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +10,6 @@ import { Eye, Ban, Rocket } from "lucide-react"
 
 export const getPipelineColumns = (
   t: (key: string) => string,
-  onView: (pipeline: Pipeline) => void,
   onStop: (pipeline: Pipeline) => void,
   onDeploy: (pipeline: Pipeline) => void
 ): ColumnDef<Pipeline>[] => [
@@ -86,9 +86,11 @@ export const getPipelineColumns = (
     cell: ({ row }) => {
       return (
         <div className="flex items-center justify-end gap-1.5">
-          <Button variant="outline" size="sm" className="h-8 px-2 gap-1" onClick={() => onView(row.original)}>
-            <Eye className="size-4" />
-            {t("pipelines.col.view")}
+          <Button asChild variant="outline" size="sm" className="h-8 px-2 gap-1">
+            <Link href={`/apps/${row.original.namespace}/${row.original.applicationName}/pipelines/${row.original.id}`}>
+              <Eye className="size-4" />
+              {t("pipelines.col.view")}
+            </Link>
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" className="h-8 px-2 gap-1" onClick={() => onDeploy(row.original)}>

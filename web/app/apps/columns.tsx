@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
 import { Pencil, Rocket, Activity, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -7,14 +8,6 @@ import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Application } from "@/lib/api/types"
 import { appColor } from "@/lib/app-color"
-
-// Define the shape of our table meta to include handlers
-interface TableMeta {
-  onEdit: (application: Application) => void
-  onPublish: (application: Application) => void
-  onStatus: (application: Application) => void
-  onPipelines: (application: Application) => void
-}
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
   {
@@ -63,47 +56,37 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
   },
   {
     id: "actions",
-    cell: ({ row, table }) => {
+    cell: ({ row }) => {
       const application = row.original
-      const meta = table.options.meta as TableMeta
-
+      const base = `/apps/${application.namespace}/${application.name}`
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onEdit(application)}
-            title={t("apps.col.edit")}
-          >
-            <Pencil className="size-4" />
-            {t("apps.col.edit")}
+          <Button asChild variant="outline" size="sm">
+            <Link href={base} title={t("apps.col.edit")}>
+              <Pencil className="size-4" />
+              {t("apps.col.edit")}
+            </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onPublish(application)}
-            title={t("apps.col.publish")}
-          >
-            <Rocket className="size-4" />
-            {t("apps.col.publish")}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${base}/publish`} title={t("apps.col.publish")}>
+              <Rocket className="size-4" />
+              {t("apps.col.publish")}
+            </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onStatus(application)}
-            title={t("apps.col.status")}
-          >
-            <Activity className="size-4" />
-            {t("apps.col.status")}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${base}/status`} title={t("apps.col.status")}>
+              <Activity className="size-4" />
+              {t("apps.col.status")}
+            </Link>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onPipelines(application)}
-            title={t("apps.col.pipelines")}
-          >
-            <GitBranch className="size-4" />
-            {t("apps.col.pipelines")}
+          <Button asChild variant="outline" size="sm">
+            <Link
+              href={`/pipelines?namespace=${application.namespace}&app=${application.name}`}
+              title={t("apps.col.pipelines")}
+            >
+              <GitBranch className="size-4" />
+              {t("apps.col.pipelines")}
+            </Link>
           </Button>
         </div>
       )

@@ -194,9 +194,8 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           <SidebarMenuItem>
             {open ? (
               <div className="flex items-center justify-between gap-1 pr-1">
-                <button
-                  type="button"
-                  onClick={() => router.push("/settings/profile")}
+                <Link
+                  href="/settings/profile"
                   className="flex flex-col min-w-0 flex-1 text-left rounded-md px-2 py-1 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
                   title={t("sidebar.profile")}
                 >
@@ -204,7 +203,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                   {currentUser?.email && (
                     <span className="text-xs text-muted-foreground/70 truncate">{currentUser.email}</span>
                   )}
-                </button>
+                </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="size-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
@@ -235,9 +234,11 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-                      <UserCog className="size-4" />
-                      {t("sidebar.profile")}
+                    <DropdownMenuItem asChild>
+                      <Link href="/settings/profile">
+                        <UserCog className="size-4" />
+                        {t("sidebar.profile")}
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                       <LogOut className="size-4 text-destructive" />
@@ -277,9 +278,11 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/settings/profile")}>
-                    <UserCog className="size-4" />
-                    {t("sidebar.profile")}
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/profile">
+                      <UserCog className="size-4" />
+                      {t("sidebar.profile")}
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                     <LogOut className="size-4 text-destructive" />

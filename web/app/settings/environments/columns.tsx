@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
 import { Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -33,11 +34,6 @@ export const getEnvironmentSchema = (t: (key: string) => string) => z.object({
 })
 
 export type EnvironmentFormValues = z.infer<ReturnType<typeof getEnvironmentSchema>>
-
-// Define the shape of our table meta to include handlers
-interface TableMeta {
-  onView: (environment: Environment) => void
-}
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[] => [
   {
@@ -73,19 +69,15 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[]
   },
   {
     id: "actions",
-    cell: ({ row, table }) => {
+    cell: ({ row }) => {
       const environment = row.original
-      const meta = table.options.meta as TableMeta
-
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => meta?.onView(environment)}
-          >
-            <Pencil className="size-4" />
-            {t("common.edit")}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/settings/environments/${environment.id}`}>
+              <Pencil className="size-4" />
+              {t("common.edit")}
+            </Link>
           </Button>
         </div>
       )

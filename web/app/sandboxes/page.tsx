@@ -1,6 +1,7 @@
 "use client"
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick } from "lucide-react"
 import { toast } from "sonner"
@@ -260,14 +261,11 @@ function SandboxesContent() {
       size: 180,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 gap-1"
-            onClick={() => window.open(`/sandboxes/${row.original.id}`, "_blank", "noopener,noreferrer")}
-          >
-            <SquareTerminal className="size-4" />
-            {t("sandbox.terminal")}
+          <Button asChild variant="outline" size="sm" className="h-8 px-2 gap-1">
+            <Link href={`/sandboxes/${row.original.id}`}>
+              <SquareTerminal className="size-4" />
+              {t("sandbox.terminal")}
+            </Link>
           </Button>
           <Button
             variant="destructive"

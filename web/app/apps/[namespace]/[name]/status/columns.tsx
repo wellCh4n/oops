@@ -1,16 +1,22 @@
 "use client"
 
+import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
 import { ApplicationPodStatus } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RotateCw, Terminal, FileText } from "lucide-react"
 
+interface PodLinkContext {
+  namespace: string
+  applicationName: string
+  env: string
+}
+
 export const getStatusColumns = (
   t: (key: string) => string,
   onRestart: (podName: string) => void,
-  onViewLogs: (podName: string) => void,
-  onTerminal: (podName: string) => void
+  linkContext: PodLinkContext
 ): ColumnDef<ApplicationPodStatus>[] => [
   {
     accessorKey: "name",
@@ -43,23 +49,30 @@ export const getStatusColumns = (
   {
     id: "actions",
     cell: ({ row }) => {
+      const podName = row.original.name
+      const podPath = `/apps/${linkContext.namespace}/${linkContext.applicationName}/pods/${podName}`
+      const query = `?env=${encodeURIComponent(linkContext.env)}`
       return (
         <div className="flex items-center justify-end gap-2">
           <Button
             variant={row.original.status === "Running" ? "warning" : "outline"}
             size="sm"
-            onClick={() => onRestart(row.original.name)}
+            onClick={() => onRestart(podName)}
           >
             <RotateCw className="size-4" />
             <span className="hidden lg:inline">{t("apps.status.col.restart")}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onViewLogs(row.original.name)}>
-            <FileText className="size-4" />
-            <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${podPath}/logs${query}`}>
+              <FileText className="size-4" />
+              <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
+            </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onTerminal(row.original.name)}>
-            <Terminal className="size-4" />
-            <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`${podPath}/terminal${query}`}>
+              <Terminal className="size-4" />
+              <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
+            </Link>
           </Button>
         </div>
       )

@@ -119,22 +119,6 @@ function AppsContent() {
     }
   }
 
-  const handleEdit = (app: Application) => {
-    router.push(`/apps/${app.namespace}/${app.name}`)
-  }
-
-  const handlePublish = (app: Application) => {
-    router.push(`/apps/${app.namespace}/${app.name}/publish`)
-  }
-
-  const handleStatus = (app: Application) => {
-    router.push(`/apps/${app.namespace}/${app.name}/status`)
-  }
-
-  const handlePipelines = (app: Application) => {
-    router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
-  }
-
   return (
     <ContentPage title={t("apps.title")}>
       <TableForm
@@ -220,12 +204,6 @@ function AppsContent() {
               columns={columns}
               data={applications}
               loading={loading}
-              meta={{
-                onEdit: handleEdit,
-                onPublish: handlePublish,
-                onStatus: handleStatus,
-                onPipelines: handlePipelines,
-              }}
             />
             <div className="flex items-center justify-end gap-4 mt-2">
               <div className="flex items-center gap-2">

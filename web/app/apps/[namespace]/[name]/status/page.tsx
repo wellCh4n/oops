@@ -177,15 +177,11 @@ function ApplicationStatusContent() {
     }
   }
 
-  const handleViewLogs = (podName: string) => {
-    window.open(`/apps/${namespace}/${name}/pods/${podName}/logs?env=${selectedEnv}`, '_blank')
-  }
-
-  const handleTerminal = (podName: string) => {
-    window.open(`/apps/${namespace}/${name}/pods/${podName}/terminal?env=${selectedEnv}`, '_blank')
-  }
-
-  const columns = getStatusColumns(t, handleRestartClick, handleViewLogs, handleTerminal)
+  const columns = getStatusColumns(t, handleRestartClick, {
+    namespace,
+    applicationName: name,
+    env: selectedEnv,
+  })
 
   const renderExpandedRow = (pod: ApplicationPodStatus) => {
     const containers = pod.containers ?? []

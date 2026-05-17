@@ -183,10 +183,6 @@ function PipelinesContent() {
     if (initialized) fetchPipelines()
   }, [initialized, fetchPipelines])
 
-  const handleView = (pipeline: Pipeline) => {
-    router.push(`/apps/${pipeline.namespace}/${pipeline.applicationName}/pipelines/${pipeline.id}`)
-  }
-
   const handleStop = (pipeline: Pipeline) => {
     setStopTarget(pipeline)
   }
@@ -315,7 +311,7 @@ function PipelinesContent() {
         table={
           <>
             <div className="overflow-x-auto">
-              <DataTable columns={getPipelineColumns(t, handleView, handleStop, handleDeploy)} data={pipelines} loading={initialLoad} />
+              <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy)} data={pipelines} loading={initialLoad} />
             </div>
             {selectedApp && (
               <div className="flex items-center justify-end gap-4 mt-2">
