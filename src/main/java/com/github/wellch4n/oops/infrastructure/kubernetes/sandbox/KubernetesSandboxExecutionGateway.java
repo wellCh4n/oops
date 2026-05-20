@@ -506,6 +506,8 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                 .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build());
         if (spec.useDefaultKeepalive()) {
             containerBuilder.withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND);
+        } else {
+            containerBuilder.withStdin(true).withTty(true);
         }
 
         return new StatefulSetBuilder()
