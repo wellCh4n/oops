@@ -68,7 +68,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
       </div>
       {summary && <div className="text-sm text-muted-foreground">{summary}</div>}
       <div className="relative">
-        <pre className="overflow-x-auto rounded border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono">
+        <pre className="overflow-x-auto rounded border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono [font-variant-ligatures:none] [font-feature-settings:'liga'_0,'clig'_0,'calt'_0]">
           <code>{curl}</code>
         </pre>
         <Button
