@@ -13,3 +13,9 @@ export const NAME_REGEX = /^[a-z]([-a-z0-9]*[a-z0-9])?$/
 // Environment name constraint is slightly looser: uppercase letters are allowed
 // because environment names are internal-only and never used as K8s resource names.
 export const ENVIRONMENT_NAME_REGEX = /^[A-Za-z]([-A-Za-z0-9]*[A-Za-z0-9])?$/
+
+export function shortImageName(image: string | null | undefined): string {
+  if (!image) return ""
+  const slashIndex = image.lastIndexOf("/")
+  return slashIndex >= 0 ? image.slice(slashIndex + 1) : image
+}

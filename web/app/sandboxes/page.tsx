@@ -3,12 +3,13 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick, X } from "lucide-react"
+import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick, Info } from "lucide-react"
 import { toast } from "sonner"
 import { ColumnDef } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -18,7 +19,8 @@ import { TableForm } from "@/components/ui/table-form"
 import { DataTable } from "@/components/ui/data-table"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { cn } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { cn, shortImageName } from "@/lib/utils"
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
@@ -79,7 +81,7 @@ function SandboxesContent() {
   const [cpuLimit, setCpuLimit] = useState("")
   const [memoryRequest, setMemoryRequest] = useState("")
   const [memoryLimit, setMemoryLimit] = useState("")
-  const [envRows, setEnvRows] = useState<{ name: string; value: string }[]>([])
+  const [envText, setEnvText] = useState("")
   const [useDefaultKeepalive, setUseDefaultKeepalive] = useState(true)
 
   const [deleteTarget, setDeleteTarget] = useState<SandboxInstance | null>(null)
@@ -145,7 +147,7 @@ function SandboxesContent() {
     setCpuLimit("")
     setMemoryRequest("")
     setMemoryLimit("")
-    setEnvRows([])
+    setEnvText("")
     setUseDefaultKeepalive(true)
   }
 
@@ -174,18 +176,28 @@ function SandboxesContent() {
     try {
       const cpu = (cpuRequest || cpuLimit) ? { request: cpuRequest || undefined, limit: cpuLimit || undefined } : undefined
       const memory = (memoryRequest || memoryLimit) ? { request: memoryRequest || undefined, limit: memoryLimit || undefined } : undefined
-      const envEntries = envRows
-        .map((row) => ({ name: row.name.trim(), value: row.value }))
-        .filter((row) => row.name)
       const envNamePattern = /^[A-Za-z_][A-Za-z0-9_]*$/
-      const invalid = envEntries.find((row) => !envNamePattern.test(row.name))
-      if (invalid) {
-        toast.error(t("sandbox.envInvalidName").replace("{name}", invalid.name))
-        setCreating(false)
-        return
+      const envEntries: { name: string; value: string }[] = []
+      for (const raw of envText.split("\n")) {
+        const line = raw.trim()
+        if (!line || line.startsWith("#")) continue
+        const eq = line.indexOf("=")
+        if (eq === -1) {
+          toast.error(t("sandbox.envInvalidLine").replace("{line}", line))
+          setCreating(false)
+          return
+        }
+        const name = line.slice(0, eq).trim()
+        const value = line.slice(eq + 1)
+        if (!envNamePattern.test(name)) {
+          toast.error(t("sandbox.envInvalidName").replace("{name}", name))
+          setCreating(false)
+          return
+        }
+        envEntries.push({ name, value })
       }
       const env = envEntries.length > 0
-        ? Object.fromEntries(envEntries.map((row) => [row.name, row.value]))
+        ? Object.fromEntries(envEntries.map((entry) => [entry.name, entry.value]))
         : undefined
       const trimmedName = createName.trim()
       await createSandbox({
@@ -251,7 +263,19 @@ function SandboxesContent() {
       accessorKey: "image",
       header: t("sandbox.col.image"),
       size: 120,
-      cell: ({ row }) => <span className="font-mono text-xs">{row.original.image}</span>,
+      cell: ({ row }) => {
+        const fullImage = row.original.image
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="font-mono text-xs truncate inline-block max-w-full">{shortImageName(fullImage)}</span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-160 break-all font-mono text-xs">
+              {fullImage}
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
     },
     {
       accessorKey: "status",
@@ -471,7 +495,7 @@ function SandboxesContent() {
                 {t("sandbox.advancedConfig")}
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-3 space-y-4">
-                <div className="inline-grid grid-cols-2 gap-x-8 gap-y-4">
+                <div className="inline-grid grid-cols-4 gap-x-4 gap-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-cpu-request" className="flex items-center gap-1">
                       <Cpu className="size-3.5" />{t("sandbox.cpuRequest")}
@@ -534,64 +558,31 @@ function SandboxesContent() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>{t("sandbox.envVars")}</Label>
-                  {envRows.length > 0 && (
-                    <div className="space-y-2">
-                      {envRows.map((row, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <Input
-                            value={row.name}
-                            onChange={(event) =>
-                              setEnvRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
-                              )
-                            }
-                            className="font-mono text-sm w-44"
-                            autoComplete="off"
-                          />
-                          <Input
-                            value={row.value}
-                            onChange={(event) =>
-                              setEnvRows((prev) =>
-                                prev.map((item, i) => (i === index ? { ...item, value: event.target.value } : item))
-                              )
-                            }
-                            className="font-mono text-sm flex-1"
-                            autoComplete="off"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-9 w-9 p-0 shrink-0"
-                            onClick={() => setEnvRows((prev) => prev.filter((_, i) => i !== index))}
-                            aria-label={t("sandbox.envRemove")}
-                          >
-                            <X className="size-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEnvRows((prev) => [...prev, { name: "", value: "" }])}
-                  >
-                    <Plus className="size-4" />
-                    {t("sandbox.envAdd")}
-                  </Button>
+                  <Label htmlFor="sandbox-env-text">{t("sandbox.envVars")}</Label>
+                  <Textarea
+                    id="sandbox-env-text"
+                    value={envText}
+                    onChange={(event) => setEnvText(event.target.value)}
+                    placeholder={t("sandbox.envPlaceholderText")}
+                    spellCheck={false}
+                    autoComplete="off"
+                    className="font-mono text-xs min-h-16 max-h-24 resize-none overflow-auto"
+                  />
                 </div>
-                <div className="flex items-start justify-between gap-4 rounded-md border p-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="sandbox-keepalive" className="text-sm font-medium">
-                      {t("sandbox.useDefaultKeepalive")}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t("sandbox.useDefaultKeepaliveHint")}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                  <Label htmlFor="sandbox-keepalive" className="flex items-center gap-1.5 text-sm font-medium">
+                    {t("sandbox.useDefaultKeepalive")}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("sandbox.useDefaultKeepaliveHint")}>
+                          <Info className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-xs">
+                        {t("sandbox.useDefaultKeepaliveHint")}
+                      </TooltipContent>
+                    </Tooltip>
+                  </Label>
                   <Switch
                     id="sandbox-keepalive"
                     checked={useDefaultKeepalive}

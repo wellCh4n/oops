@@ -32,8 +32,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useLanguage } from "@/contexts/language-context"
 import { useRecentAppStore } from "@/store/recent-app"
+import { shortImageName } from "@/lib/utils"
 
 function formatUptime(startedAt: string | null | undefined): string {
   if (!startedAt) return "-"
@@ -200,7 +202,16 @@ function ApplicationStatusContent() {
               {containers.map((container) => (
                 <TableRow key={container.name}>
                   <TableCell className="px-3 py-2 font-medium">{container.name}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground truncate max-w-xs">{container.image}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground max-w-xs">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="truncate inline-block max-w-full align-bottom">{shortImageName(container.image)}</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-160 break-all font-mono text-xs">
+                        {container.image}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell className="px-3 py-2">
                     <Badge variant={container.ready ? "default" : "destructive"}>
                       {container.ready ? "Ready" : "Not Ready"}

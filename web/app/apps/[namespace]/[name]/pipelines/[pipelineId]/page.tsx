@@ -36,6 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { shortImageName } from "@/lib/utils"
 
 // WebSocket message types
 interface StepsMessage {
@@ -305,7 +307,16 @@ export default function PipelineDetailPage({ params }: PageProps) {
               {containers.map((container) => (
                 <TableRow key={container.name}>
                   <TableCell className="px-3 py-2 font-medium">{container.name}</TableCell>
-                  <TableCell className="px-3 py-2 text-muted-foreground truncate max-w-xs">{container.image}</TableCell>
+                  <TableCell className="px-3 py-2 text-muted-foreground max-w-xs">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="truncate inline-block max-w-full align-bottom">{shortImageName(container.image)}</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-160 break-all font-mono text-xs">
+                        {container.image}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell className="px-3 py-2">
                     <Badge variant={container.ready ? "default" : "destructive"}>
                       {container.ready ? "Ready" : "Not Ready"}
