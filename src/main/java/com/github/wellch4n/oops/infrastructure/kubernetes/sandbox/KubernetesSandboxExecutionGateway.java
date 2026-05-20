@@ -20,6 +20,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.SecurityContextBuilder;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
@@ -469,6 +470,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                         .withCommand(BIN_SH, "-c", spec.command())
                         .withEnv(toEnvVars(spec.env()))
                         .withResources(resources)
+                        .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build())
                         .build())
                 .endSpec()
                 .endTemplate()
@@ -523,6 +525,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                                     .withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND)
                                     .withEnv(toEnvVars(spec.env()))
                                     .withResources(resources)
+                                    .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build())
                                     .build())
                         .endSpec()
                     .endTemplate()

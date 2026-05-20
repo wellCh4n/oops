@@ -66,6 +66,7 @@ final class AlpineMateTemplate {
                                     .withImage(IMAGE)
                                     .withImagePullPolicy("IfNotPresent")
                                     .withSecurityContext(new SecurityContextBuilder()
+                                            .withPrivileged(true)
                                             .withSeccompProfile(new SeccompProfileBuilder()
                                                     .withType("Unconfined").build())
                                             .build())
