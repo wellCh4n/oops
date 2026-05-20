@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.application.service;
 
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAULT_TIMEOUT_SECONDS;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.positiveOrDefault;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.sanitizeEnv;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.trimToNull;
 
 import com.github.wellch4n.oops.application.dto.SandboxInstanceCreateRequest;
@@ -86,6 +87,7 @@ public class SandboxInstanceService {
                 cpu != null ? trimToNull(cpu.limit()) : null,
                 memory != null ? trimToNull(memory.request()) : null,
                 memory != null ? trimToNull(memory.limit()) : null,
+                sanitizeEnv(request.env()),
                 callerUserId
         );
         return sandboxExecutionGateway.createPersistent(environment, spec);

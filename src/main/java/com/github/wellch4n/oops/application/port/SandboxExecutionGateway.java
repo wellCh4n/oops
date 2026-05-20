@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.application.port;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -36,6 +37,7 @@ public interface SandboxExecutionGateway {
             String cpuLimit,
             String memoryRequest,
             String memoryLimit,
+            Map<String, String> env,
             String createdByUserId
     ) {
     }
@@ -48,6 +50,7 @@ public interface SandboxExecutionGateway {
             String cpuLimit,
             String memoryRequest,
             String memoryLimit,
+            Map<String, String> env,
             String createdByUserId
     ) {
     }

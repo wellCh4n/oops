@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick } from "lucide-react"
+import { Box, Check, Plus, RefreshCw, SquareTerminal, Trash2, Server, Search, Cpu, MemoryStick, X } from "lucide-react"
 import { toast } from "sonner"
 import { ColumnDef } from "@tanstack/react-table"
 
@@ -78,6 +78,7 @@ function SandboxesContent() {
   const [cpuLimit, setCpuLimit] = useState("")
   const [memoryRequest, setMemoryRequest] = useState("")
   const [memoryLimit, setMemoryLimit] = useState("")
+  const [envRows, setEnvRows] = useState<{ name: string; value: string }[]>([])
 
   const [deleteTarget, setDeleteTarget] = useState<SandboxInstance | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -142,6 +143,7 @@ function SandboxesContent() {
     setCpuLimit("")
     setMemoryRequest("")
     setMemoryLimit("")
+    setEnvRows([])
   }
 
   const openCreateDialog = () => {
@@ -169,6 +171,19 @@ function SandboxesContent() {
     try {
       const cpu = (cpuRequest || cpuLimit) ? { request: cpuRequest || undefined, limit: cpuLimit || undefined } : undefined
       const memory = (memoryRequest || memoryLimit) ? { request: memoryRequest || undefined, limit: memoryLimit || undefined } : undefined
+      const envEntries = envRows
+        .map((row) => ({ name: row.name.trim(), value: row.value }))
+        .filter((row) => row.name)
+      const envNamePattern = /^[A-Za-z_][A-Za-z0-9_]*$/
+      const invalid = envEntries.find((row) => !envNamePattern.test(row.name))
+      if (invalid) {
+        toast.error(t("sandbox.envInvalidName").replace("{name}", invalid.name))
+        setCreating(false)
+        return
+      }
+      const env = envEntries.length > 0
+        ? Object.fromEntries(envEntries.map((row) => [row.name, row.value]))
+        : undefined
       const trimmedName = createName.trim()
       await createSandbox({
         environment: createEnv,
@@ -176,6 +191,7 @@ function SandboxesContent() {
         image,
         cpu,
         memory,
+        env,
       })
       toast.success(t("sandbox.createSuccess"))
       setCreateOpen(false)
@@ -450,7 +466,7 @@ function SandboxesContent() {
                 <ChevronDown className="size-4 transition-transform duration-200" />
                 {t("sandbox.advancedConfig")}
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-3">
+              <CollapsibleContent className="mt-3 space-y-4">
                 <div className="inline-grid grid-cols-2 gap-x-8 gap-y-4">
                   <div className="space-y-1.5">
                     <Label htmlFor="sandbox-cpu-request" className="flex items-center gap-1">
@@ -512,6 +528,56 @@ function SandboxesContent() {
                       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Mi</span>
                     </div>
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>{t("sandbox.envVars")}</Label>
+                  {envRows.length > 0 && (
+                    <div className="space-y-2">
+                      {envRows.map((row, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={row.name}
+                            onChange={(event) =>
+                              setEnvRows((prev) =>
+                                prev.map((item, i) => (i === index ? { ...item, name: event.target.value } : item))
+                              )
+                            }
+                            className="font-mono text-sm w-44"
+                            autoComplete="off"
+                          />
+                          <Input
+                            value={row.value}
+                            onChange={(event) =>
+                              setEnvRows((prev) =>
+                                prev.map((item, i) => (i === index ? { ...item, value: event.target.value } : item))
+                              )
+                            }
+                            className="font-mono text-sm flex-1"
+                            autoComplete="off"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-9 w-9 p-0 shrink-0"
+                            onClick={() => setEnvRows((prev) => prev.filter((_, i) => i !== index))}
+                            aria-label={t("sandbox.envRemove")}
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEnvRows((prev) => [...prev, { name: "", value: "" }])}
+                  >
+                    <Plus className="size-4" />
+                    {t("sandbox.envAdd")}
+                  </Button>
                 </div>
               </CollapsibleContent>
             </Collapsible>

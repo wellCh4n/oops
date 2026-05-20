@@ -1,8 +1,14 @@
 package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.shared.exception.BizException;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 final class SandboxDefaults {
+
+    private static final Pattern ENV_VAR_NAME_PATTERN = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*$");
 
     static final int DEFAULT_TIMEOUT_SECONDS = 300;
     static final int DEFAULT_TTL_SECONDS_AFTER_FINISHED = 60;
@@ -45,5 +51,28 @@ final class SandboxDefaults {
             throw new BizException(fieldName + " must be non-negative");
         }
         return requested;
+    }
+
+    static Map<String, String> sanitizeEnv(Map<String, String> env) {
+        if (env == null || env.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> sanitized = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : env.entrySet()) {
+            String rawName = entry.getKey();
+            if (rawName == null) {
+                continue;
+            }
+            String name = rawName.trim();
+            if (name.isEmpty()) {
+                continue;
+            }
+            if (!ENV_VAR_NAME_PATTERN.matcher(name).matches()) {
+                throw new BizException("Invalid env var name: " + name
+                        + " (must match [A-Za-z_][A-Za-z0-9_]*)");
+            }
+            sanitized.put(name, entry.getValue() == null ? "" : entry.getValue());
+        }
+        return Collections.unmodifiableMap(sanitized);
     }
 }

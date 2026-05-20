@@ -9,6 +9,7 @@ import static com.github.wellch4n.oops.application.service.SandboxDefaults.DEFAU
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.firstNonBlank;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.nonNegativeOrDefault;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.positiveOrDefault;
+import static com.github.wellch4n.oops.application.service.SandboxDefaults.sanitizeEnv;
 import static com.github.wellch4n.oops.application.service.SandboxDefaults.trimToNull;
 
 import com.github.wellch4n.oops.application.dto.SandboxExecutionRequest;
@@ -19,6 +20,7 @@ import com.github.wellch4n.oops.application.port.repository.EnvironmentRepositor
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -79,6 +81,7 @@ public class SandboxExecutionService {
         String script = String.join("\n", trimmedCommands);
         SandboxExecutionRequest.ResourceSpec cpu = request.cpu();
         SandboxExecutionRequest.ResourceSpec memory = request.memory();
+        Map<String, String> env = sanitizeEnv(request.env());
         SandboxJobSpec spec = new SandboxJobSpec(
                 image,
                 script,
@@ -88,6 +91,7 @@ public class SandboxExecutionService {
                 firstNonBlank(cpu != null ? cpu.limit() : null, DEFAULT_CPU_LIMIT),
                 firstNonBlank(memory != null ? memory.request() : null, DEFAULT_MEMORY_REQUEST),
                 firstNonBlank(memory != null ? memory.limit() : null, DEFAULT_MEMORY_LIMIT),
+                env,
                 callerUserId
         );
         return new PreparedExecution(environment, spec);

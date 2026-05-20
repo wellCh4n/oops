@@ -11,6 +11,8 @@ import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.OwnerReference;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -45,6 +47,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -76,6 +79,9 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
     private static final String BIN_SH = "/bin/sh";
     private static final String RESOURCE_CPU = "cpu";
     private static final String RESOURCE_MEMORY = "memory";
+    private static final int MAX_LABEL_VALUE_LENGTH = 63;
+    private static final Pattern LABEL_VALUE_INVALID_CHARS = Pattern.compile("[^A-Za-z0-9._-]");
+    private static final Pattern LABEL_VALUE_EDGE_TRIM = Pattern.compile("^[^A-Za-z0-9]+|[^A-Za-z0-9]+$");
 
     private final KubernetesClientPool clientPool;
 
@@ -164,7 +170,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         Map<String, String> labels = buildPersistentLabels(spec, builtin.getKey());
         Map<String, String> annotations = buildPersistentAnnotations(spec);
         StatefulSet statefulSet = switch (builtin) {
-            case ALPINE_MATE -> AlpineMateTemplate.buildStatefulSet(spec, statefulSetName, workNamespace, labels, annotations);
+            case ALPINE_MATE -> AlpineMateTemplate.buildStatefulSet(spec, statefulSetName, workNamespace, labels, annotations, toEnvVars(spec.env()));
         };
         Service service = switch (builtin) {
             case ALPINE_MATE -> AlpineMateTemplate.buildService(statefulSetName, workNamespace, spec.sandboxId());
@@ -201,7 +207,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         labels.put(LABEL_TYPE, LABEL_TYPE_VALUE);
         labels.put(LABEL_KIND, LABEL_KIND_PERSISTENT);
         labels.put(LABEL_SANDBOX_ID, spec.sandboxId());
-        labels.put(LABEL_IMAGE, imageLabel);
+        labels.put(LABEL_IMAGE, sanitizeLabelValue(imageLabel));
         if (spec.createdByUserId() != null && !spec.createdByUserId().isBlank()) {
             labels.put(LABEL_CREATED_BY, spec.createdByUserId());
         }
@@ -257,7 +263,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
             selector.put(LABEL_CREATED_BY, createdByUserId);
         }
         if (image != null && !image.isBlank()) {
-            selector.put(LABEL_IMAGE, image);
+            selector.put(LABEL_IMAGE, sanitizeLabelValue(image));
         }
         List<StatefulSet> statefulSets = client.apps().statefulSets()
                 .inNamespace(workNamespace)
@@ -461,6 +467,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                         .withImage(spec.image())
                         .withImagePullPolicy("IfNotPresent")
                         .withCommand(BIN_SH, "-c", spec.command())
+                        .withEnv(toEnvVars(spec.env()))
                         .withResources(resources)
                         .build())
                 .endSpec()
@@ -514,6 +521,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                                     .withImage(spec.image())
                                     .withImagePullPolicy("IfNotPresent")
                                     .withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND)
+                                    .withEnv(toEnvVars(spec.env()))
                                     .withResources(resources)
                                     .build())
                         .endSpec()
@@ -524,6 +532,26 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
 
     private static boolean isNotBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private static String sanitizeLabelValue(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        String replaced = LABEL_VALUE_INVALID_CHARS.matcher(value).replaceAll("_");
+        if (replaced.length() > MAX_LABEL_VALUE_LENGTH) {
+            replaced = replaced.substring(0, MAX_LABEL_VALUE_LENGTH);
+        }
+        return LABEL_VALUE_EDGE_TRIM.matcher(replaced).replaceAll("");
+    }
+
+    private static List<EnvVar> toEnvVars(Map<String, String> env) {
+        if (env == null || env.isEmpty()) {
+            return List.of();
+        }
+        return env.entrySet().stream()
+                .map(entry -> new EnvVarBuilder().withName(entry.getKey()).withValue(entry.getValue()).build())
+                .toList();
     }
 
     private static String withMemoryUnit(String value) {

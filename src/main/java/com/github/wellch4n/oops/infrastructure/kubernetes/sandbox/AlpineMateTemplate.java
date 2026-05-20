@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.sandbox;
 import com.github.wellch4n.oops.application.port.SandboxExecutionGateway.PersistentSandboxSpec;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.Quantity;
@@ -17,7 +18,10 @@ import io.fabric8.kubernetes.api.model.VolumeBuilder;
 import io.fabric8.kubernetes.api.model.VolumeMountBuilder;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 final class AlpineMateTemplate {
@@ -33,7 +37,8 @@ final class AlpineMateTemplate {
     }
 
     static StatefulSet buildStatefulSet(PersistentSandboxSpec spec, String statefulSetName, String workNamespace,
-                                        Map<String, String> labels, Map<String, String> annotations) {
+                                        Map<String, String> labels, Map<String, String> annotations,
+                                        List<EnvVar> userEnv) {
         Map<String, String> selectorLabels = new HashMap<>();
         selectorLabels.put(LABEL_SANDBOX_ID, spec.sandboxId());
 
@@ -64,12 +69,7 @@ final class AlpineMateTemplate {
                                             .withSeccompProfile(new SeccompProfileBuilder()
                                                     .withType("Unconfined").build())
                                             .build())
-                                    .withEnv(
-                                            new EnvVarBuilder().withName("PUID").withValue("1000").build(),
-                                            new EnvVarBuilder().withName("PGID").withValue("1000").build(),
-                                            new EnvVarBuilder().withName("TZ").withValue("Asia/Shanghai").build(),
-                                            new EnvVarBuilder().withName("SUBFOLDER").withValue("/").build(),
-                                            new EnvVarBuilder().withName("TITLE").withValue(spec.name()).build())
+                                    .withEnv(mergeEnv(spec, userEnv))
                                     .withPorts(
                                             new ContainerPortBuilder().withName("http")
                                                     .withContainerPort(HTTP_PORT).withProtocol(PROTOCOL_TCP).build(),
@@ -92,6 +92,21 @@ final class AlpineMateTemplate {
                     .endTemplate()
                 .endSpec()
                 .build();
+    }
+
+    private static List<EnvVar> mergeEnv(PersistentSandboxSpec spec, List<EnvVar> userEnv) {
+        Map<String, EnvVar> merged = new LinkedHashMap<>();
+        merged.put("PUID", new EnvVarBuilder().withName("PUID").withValue("1000").build());
+        merged.put("PGID", new EnvVarBuilder().withName("PGID").withValue("1000").build());
+        merged.put("TZ", new EnvVarBuilder().withName("TZ").withValue("Asia/Shanghai").build());
+        merged.put("SUBFOLDER", new EnvVarBuilder().withName("SUBFOLDER").withValue("/").build());
+        merged.put("TITLE", new EnvVarBuilder().withName("TITLE").withValue(spec.name()).build());
+        if (userEnv != null) {
+            for (EnvVar entry : userEnv) {
+                merged.put(entry.getName(), entry);
+            }
+        }
+        return new ArrayList<>(merged.values());
     }
 
     static Service buildService(String statefulSetName, String workNamespace, String sandboxId) {
