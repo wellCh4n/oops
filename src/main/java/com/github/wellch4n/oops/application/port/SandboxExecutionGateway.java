@@ -51,7 +51,8 @@ public interface SandboxExecutionGateway {
             String memoryRequest,
             String memoryLimit,
             Map<String, String> env,
-            String createdByUserId
+            String createdByUserId,
+            boolean useDefaultKeepalive
     ) {
     }
 }

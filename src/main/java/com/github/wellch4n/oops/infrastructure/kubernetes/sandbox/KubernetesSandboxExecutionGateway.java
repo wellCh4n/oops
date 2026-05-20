@@ -497,6 +497,17 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         }
         ResourceRequirements resources = resourcesBuilder.build();
 
+        ContainerBuilder containerBuilder = new ContainerBuilder()
+                .withName(CONTAINER_NAME)
+                .withImage(spec.image())
+                .withImagePullPolicy("IfNotPresent")
+                .withEnv(toEnvVars(spec.env()))
+                .withResources(resources)
+                .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build());
+        if (spec.useDefaultKeepalive()) {
+            containerBuilder.withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND);
+        }
+
         return new StatefulSetBuilder()
                 .withApiVersion("apps/v1").withKind("StatefulSet")
                 .withNewMetadata()
@@ -518,15 +529,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                         .endMetadata()
                         .withNewSpec()
                             .withRestartPolicy("Always")
-                            .withContainers(new ContainerBuilder()
-                                    .withName(CONTAINER_NAME)
-                                    .withImage(spec.image())
-                                    .withImagePullPolicy("IfNotPresent")
-                                    .withCommand(BIN_SH, "-c", PERSISTENT_KEEPALIVE_COMMAND)
-                                    .withEnv(toEnvVars(spec.env()))
-                                    .withResources(resources)
-                                    .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build())
-                                    .build())
+                            .withContainers(containerBuilder.build())
                         .endSpec()
                     .endTemplate()
                 .endSpec()

@@ -80,6 +80,7 @@ export default function SandboxDocPage() {
               { name: "cpu", type: "object", description: "CPU 资源，结构 { request, limit }。" },
               { name: "memory", type: "object", description: "内存资源，结构 { request, limit }。" },
               { name: "env", type: "object", description: "自定义环境变量，键值均为字符串。内置 alpine-mate 镜像会在用户变量之上叠加 PUID / PGID / TZ / SUBFOLDER / TITLE 等默认变量，用户提供的同名变量会覆盖默认值。" },
+              { name: "useDefaultKeepalive", type: "boolean", description: "是否使用默认保活命令（sleep infinity）。缺省为 true：会覆盖镜像的 ENTRYPOINT/CMD。设为 false 则保留镜像自身的启动入口，适合 Dockerfile 已定义可长驻进程的场景。" },
             ]}
           />
         </DocSubSection>

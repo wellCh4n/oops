@@ -79,6 +79,7 @@ public class SandboxInstanceService {
 
         SandboxInstanceCreateRequest.ResourceSpec cpu = request.cpu();
         SandboxInstanceCreateRequest.ResourceSpec memory = request.memory();
+        boolean useDefaultKeepalive = request.useDefaultKeepalive() == null || request.useDefaultKeepalive();
         PersistentSandboxSpec spec = new PersistentSandboxSpec(
                 sandboxId,
                 resolvedName,
@@ -88,7 +89,8 @@ public class SandboxInstanceService {
                 memory != null ? trimToNull(memory.request()) : null,
                 memory != null ? trimToNull(memory.limit()) : null,
                 sanitizeEnv(request.env()),
-                callerUserId
+                callerUserId,
+                useDefaultKeepalive
         );
         return sandboxExecutionGateway.createPersistent(environment, spec);
     }

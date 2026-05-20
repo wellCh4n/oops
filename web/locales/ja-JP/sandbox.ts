@@ -36,6 +36,8 @@ const sandbox = {
   "sandbox.envAdd": "変数を追加",
   "sandbox.envRemove": "削除",
   "sandbox.envInvalidName": "環境変数名が不正です：{name}（[A-Za-z_][A-Za-z0-9_]* に一致する必要があります）",
+  "sandbox.useDefaultKeepalive": "デフォルトのキープアライブコマンドを使用",
+  "sandbox.useDefaultKeepaliveHint": "オンの場合、sleep infinity をコンテナのエントリポイントとして使用し、イメージの ENTRYPOINT/CMD を上書きします。オフにするとイメージ本来の起動コマンドが実行されます。",
   "sandbox.col.name": "名前",
   "sandbox.col.environment": "環境",
   "sandbox.col.image": "イメージ",

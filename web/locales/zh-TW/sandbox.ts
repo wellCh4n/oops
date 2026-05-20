@@ -36,6 +36,8 @@ const sandbox = {
   "sandbox.envAdd": "新增變數",
   "sandbox.envRemove": "移除",
   "sandbox.envInvalidName": "環境變數名稱不合法：{name}（需符合 [A-Za-z_][A-Za-z0-9_]*）",
+  "sandbox.useDefaultKeepalive": "使用預設保活命令",
+  "sandbox.useDefaultKeepaliveHint": "開啟後將以 sleep infinity 作為容器入口，覆蓋映像的 ENTRYPOINT/CMD；關閉後映像自身的啟動命令會被執行。",
   "sandbox.col.name": "名稱",
   "sandbox.col.environment": "環境",
   "sandbox.col.image": "鏡像",

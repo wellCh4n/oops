@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Copyable } from "@/components/ui/copyable"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
@@ -79,6 +80,7 @@ function SandboxesContent() {
   const [memoryRequest, setMemoryRequest] = useState("")
   const [memoryLimit, setMemoryLimit] = useState("")
   const [envRows, setEnvRows] = useState<{ name: string; value: string }[]>([])
+  const [useDefaultKeepalive, setUseDefaultKeepalive] = useState(true)
 
   const [deleteTarget, setDeleteTarget] = useState<SandboxInstance | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
@@ -144,6 +146,7 @@ function SandboxesContent() {
     setMemoryRequest("")
     setMemoryLimit("")
     setEnvRows([])
+    setUseDefaultKeepalive(true)
   }
 
   const openCreateDialog = () => {
@@ -192,6 +195,7 @@ function SandboxesContent() {
         cpu,
         memory,
         env,
+        useDefaultKeepalive,
       })
       toast.success(t("sandbox.createSuccess"))
       setCreateOpen(false)
@@ -578,6 +582,21 @@ function SandboxesContent() {
                     <Plus className="size-4" />
                     {t("sandbox.envAdd")}
                   </Button>
+                </div>
+                <div className="flex items-start justify-between gap-4 rounded-md border p-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="sandbox-keepalive" className="text-sm font-medium">
+                      {t("sandbox.useDefaultKeepalive")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t("sandbox.useDefaultKeepaliveHint")}
+                    </p>
+                  </div>
+                  <Switch
+                    id="sandbox-keepalive"
+                    checked={useDefaultKeepalive}
+                    onCheckedChange={setUseDefaultKeepalive}
+                  />
                 </div>
               </CollapsibleContent>
             </Collapsible>

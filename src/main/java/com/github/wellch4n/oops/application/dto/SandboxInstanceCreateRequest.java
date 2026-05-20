@@ -8,7 +8,8 @@ public record SandboxInstanceCreateRequest(
         String image,
         ResourceSpec cpu,
         ResourceSpec memory,
-        Map<String, String> env
+        Map<String, String> env,
+        Boolean useDefaultKeepalive
 ) {
     public record ResourceSpec(String request, String limit) {
     }

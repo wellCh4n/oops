@@ -36,6 +36,8 @@ const sandbox = {
   "sandbox.envAdd": "添加变量",
   "sandbox.envRemove": "移除",
   "sandbox.envInvalidName": "环境变量名不合法：{name}（需匹配 [A-Za-z_][A-Za-z0-9_]*）",
+  "sandbox.useDefaultKeepalive": "使用默认保活命令",
+  "sandbox.useDefaultKeepaliveHint": "开启后将以 sleep infinity 作为容器入口，覆盖镜像的 ENTRYPOINT/CMD；关闭后镜像自身的启动命令会被执行。",
   "sandbox.col.name": "名称",
   "sandbox.col.environment": "环境",
   "sandbox.col.image": "镜像",

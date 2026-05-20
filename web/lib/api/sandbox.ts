@@ -25,6 +25,7 @@ export interface SandboxInstanceCreatePayload {
   cpu?: { request?: string; limit?: string }
   memory?: { request?: string; limit?: string }
   env?: Record<string, string>
+  useDefaultKeepalive?: boolean
 }
 
 export async function listSandboxImages(): Promise<ApiResponse<string[]>> {

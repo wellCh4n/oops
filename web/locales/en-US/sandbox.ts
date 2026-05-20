@@ -36,6 +36,8 @@ const sandbox = {
   "sandbox.envAdd": "Add variable",
   "sandbox.envRemove": "Remove",
   "sandbox.envInvalidName": "Invalid env var name: {name} (must match [A-Za-z_][A-Za-z0-9_]*)",
+  "sandbox.useDefaultKeepalive": "Use default keepalive command",
+  "sandbox.useDefaultKeepaliveHint": "When on, the container entrypoint is sleep infinity, overriding the image's ENTRYPOINT/CMD. Turn off to run the image's own startup command.",
   "sandbox.col.name": "Name",
   "sandbox.col.environment": "Environment",
   "sandbox.col.image": "Image",
