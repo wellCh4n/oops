@@ -12,6 +12,8 @@ const nav = {
   "nav.environments": "环境",
   "nav.namespaces": "命名空间",
   "nav.domains": "域名",
+  "nav.help": "帮助",
+  "nav.docs": "OpenAPI 文档",
 }
 
 export default nav

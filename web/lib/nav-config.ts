@@ -1,4 +1,4 @@
-import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, Globe, Box, type LucideIcon } from "lucide-react"
+import { LayoutGrid, Users, Server, Layers, GitBranch, HardDrive, SquareCode, Globe, Box, BookOpen, type LucideIcon } from "lucide-react"
 
 interface NavItem {
   title: string
@@ -86,6 +86,17 @@ export const navConfig: NavGroup[] = [
         title: "nav.namespaces",
         url: "/settings/namespaces",
         icon: Layers,
+      },
+    ],
+  },
+  {
+    title: "nav.help",
+    items: [
+      {
+        title: "nav.docs",
+        url: "/help/docs/authentication",
+        icon: BookOpen,
+        match: (pathname) => pathname === "/help/docs" || pathname.startsWith("/help/docs/"),
       },
     ],
   },
