@@ -75,6 +75,7 @@ public class ApplicationController {
     }
 
     @DeleteMapping("/{name}")
+    @OpenApiHidden
     @PreAuthorize("isAuthenticated()")
     public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name,
                                              Authentication authentication) {

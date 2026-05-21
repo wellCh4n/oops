@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.config;
 import com.github.wellch4n.oops.application.port.repository.UserRepository;
 import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
+import com.github.wellch4n.oops.interfaces.rest.OpenApiHidden;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +16,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerExecutionChain;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 @Component
 public class OpenApiAuthFilter extends OncePerRequestFilter {
@@ -22,9 +26,12 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final UserRepository userRepository;
+    private final RequestMappingHandlerMapping handlerMapping;
 
-    public OpenApiAuthFilter(UserRepository userRepository) {
+    public OpenApiAuthFilter(UserRepository userRepository,
+                             RequestMappingHandlerMapping handlerMapping) {
         this.userRepository = userRepository;
+        this.handlerMapping = handlerMapping;
     }
 
     @Override
@@ -57,8 +64,7 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-        if ("DELETE".equalsIgnoreCase(request.getMethod())
-                && !request.getRequestURI().startsWith("/openapi/sandbox/")) {
+        if (isHiddenFromOpenApi(request)) {
             response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             return;
         }
@@ -69,5 +75,20 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
         );
         SecurityContextHolder.getContext().setAuthentication(auth);
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isHiddenFromOpenApi(HttpServletRequest request) {
+        try {
+            HandlerExecutionChain chain = handlerMapping.getHandler(request);
+            if (chain == null) {
+                return false;
+            }
+            if (!(chain.getHandler() instanceof HandlerMethod handlerMethod)) {
+                return false;
+            }
+            return handlerMethod.hasMethodAnnotation(OpenApiHidden.class);
+        } catch (Exception exception) {
+            return false;
+        }
     }
 }
