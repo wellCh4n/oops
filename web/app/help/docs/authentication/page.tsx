@@ -19,8 +19,8 @@ export default function AuthenticationDocPage() {
 
       <DocSection title="限制">
         <DocParagraph>
-          OpenAPI 拒绝所有 <InlineCode>DELETE</InlineCode> 方法，会直接返回 <InlineCode>405 Method Not Allowed</InlineCode>。
-          删除操作只能通过 UI 执行，以避免脚本意外清除资源。
+          OpenAPI 默认拒绝 <InlineCode>DELETE</InlineCode> 方法，直接返回 <InlineCode>405 Method Not Allowed</InlineCode>，
+          以避免脚本意外清除资源。例外是 <InlineCode>/openapi/sandbox/**</InlineCode>：沙箱实例的销毁是其生命周期的一部分，允许通过 OpenAPI 调用。
         </DocParagraph>
         <DocParagraph>
           缺失或非法的 <InlineCode>Authorization</InlineCode> 头会返回 <InlineCode>401 Unauthorized</InlineCode>。

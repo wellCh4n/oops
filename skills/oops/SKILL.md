@@ -215,7 +215,7 @@ python skills/oops/scripts/oops.py --json app ls -n default | jq '.[].name'
 | Symptom | Cause | Fix |
 |---|---|---|
 | `401 Unauthorized` | Token wrong or unset | Run `auth status`; re-run `auth set` |
-| `405 Method Not Allowed` | Tried to delete a resource | `/openapi` intentionally blocks DELETE. Ask the user to delete in the UI. |
+| `405 Method Not Allowed` | Tried to delete a non-sandbox resource | `/openapi` blocks DELETE on everything **except** `/openapi/sandbox/**`. Ask the user to delete in the UI. |
 | `Dockerfile content is required when type is USER` | Missing `--dockerfile-content` | See the hard constraint in step 3. |
 | `Application is being deployed` | Previous deploy still in flight | Wait; check `pipeline ls`; or `pipeline stop`. |
 | Pipeline `SUCCEEDED` but Pod count is 0 | Runtime spec never set (replicas=0) | Run step 6, then **re-deploy**. |
@@ -225,7 +225,8 @@ python skills/oops/scripts/oops.py --json app ls -n default | jq '.[].name'
 ## Hard boundaries
 
 - **Do not try to delete applications via CLI** — `/openapi` deliberately
-  blocks DELETE. Let the user delete in the UI.
+  blocks DELETE for everything **except** `/openapi/sandbox/**` (sandbox
+  teardown is allowed). For apps, envs, users, let the user delete in the UI.
 - **Do not pick namespace / env / host on behalf of the user** — list them
   with `ns ls` / `env ls` / `domain ls`, and ask if the user didn't say.
 - **Pre-deploy checklist**: build ✓ env ✓ service ✓ runtime ✓ — miss any

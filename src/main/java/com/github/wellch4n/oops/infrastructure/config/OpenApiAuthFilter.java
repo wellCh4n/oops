@@ -57,7 +57,8 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-        if ("DELETE".equalsIgnoreCase(request.getMethod())) {
+        if ("DELETE".equalsIgnoreCase(request.getMethod())
+                && !request.getRequestURI().startsWith("/openapi/sandbox/")) {
             response.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
             return;
         }

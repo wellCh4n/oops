@@ -227,7 +227,7 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 
 **Two parallel API surfaces:**
 - `/api/**` — UI-facing, authenticated by `JwtAuthFilter` (Bearer JWT or `?token=` query param for WebSocket).
-- `/openapi/**` — Machine/CLI-facing, authenticated by `OpenApiAuthFilter`. `SandboxController` is dual-mapped at `/api/sandbox` and `/openapi/sandbox`; `OpenApiDiscoveryController` serves discovery under `/openapi`. The repo-vendored deploy CLI (`skills/oops/scripts/oops.py`) targets this surface.
+- `/openapi/**` — Machine/CLI-facing, authenticated by `OpenApiAuthFilter`. `SandboxController` is dual-mapped at `/api/sandbox` and `/openapi/sandbox`; `OpenApiDiscoveryController` serves discovery under `/openapi`. The repo-vendored deploy CLI (`skills/oops/scripts/oops.py`) targets this surface. `OpenApiAuthFilter` blocks all `DELETE` requests with 405 **except** for `/openapi/sandbox/**` — sandbox instance teardown (`DELETE /openapi/sandbox/instances/{id}`) is a normal part of its lifecycle, while other resources (apps, environments, users) must be deleted via the UI.
 
 **Exceptions to namespacing:**
 - `GET /api/health` — health check, no auth required (explicitly permitted in `SecurityConfig`)

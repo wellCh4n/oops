@@ -117,8 +117,13 @@ export default function SandboxDocPage() {
           />
         </DocSubSection>
 
+        <Endpoint
+          method="DELETE"
+          path={`${PATH_PREFIX}/instances/{id}`}
+          summary="销毁指定的持久沙箱实例，连带删除其 StatefulSet、Service。响应 data 为 null。"
+        />
         <DocParagraph>
-          删除沙箱接口存在但 OpenAPI 不开放，需要在 UI 中执行（受 405 限制，详见 <InlineCode>认证</InlineCode> 一章）。
+          删除是沙箱生命周期的一部分，OpenAPI 对该路径开放 <InlineCode>DELETE</InlineCode>，其他资源仍受 405 限制（详见 <InlineCode>认证</InlineCode> 一章）。
         </DocParagraph>
       </DocSection>
 
