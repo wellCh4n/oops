@@ -42,6 +42,19 @@ const common = {
   "terminal.files.copyName": "Copy name",
   "terminal.files.copied": "Copied",
   "terminal.files.download": "Download",
+  "terminal.files.edit": "Edit",
+  "terminal.files.uploadHere": "Upload here",
+  "terminal.files.uploadSuccess": "Uploaded",
+  "terminal.files.save": "Save",
+  "terminal.files.saving": "Saving...",
+  "terminal.files.saveSuccess": "Saved",
+  "terminal.files.rename": "Rename",
+  "terminal.files.renameSuccess": "Renamed",
+  "terminal.files.renameInvalid": "Invalid name",
+  "terminal.files.delete": "Delete",
+  "terminal.files.deleteSuccess": "Deleted",
+  "terminal.files.deleteConfirmTitle": "Delete this item?",
+  "terminal.files.deleteConfirmBody": "This action cannot be undone.",
 }
 
 export default common

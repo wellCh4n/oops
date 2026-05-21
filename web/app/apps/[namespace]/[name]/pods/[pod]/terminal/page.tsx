@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, WifiOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { getPodFileDownloadUrl, listPodDirectory } from "@/lib/api/pod-files"
+import { deletePodPath, getPodFileContent, getPodFileDownloadUrl, listPodDirectory, renamePodPath, savePodFileContent, uploadPodFile } from "@/lib/api/pod-files"
 
 const TerminalView = dynamic(() => import("@/components/terminal-view"), {
   ssr: false,
@@ -53,6 +53,39 @@ function TerminalPageContent() {
 
   const getDownloadUrl = useCallback(
     (path: string) => getPodFileDownloadUrl({ namespace, name, pod, env: env!, path }),
+    [namespace, name, pod, env],
+  )
+
+  const uploadFile = useCallback(
+    (parentDir: string, file: File) => {
+      const dirPath = parentDir.endsWith("/") ? parentDir : `${parentDir}/`
+      return uploadPodFile({ namespace, name, pod, env: env!, path: dirPath, file })
+    },
+    [namespace, name, pod, env],
+  )
+
+  const getFileContent = useCallback(
+    async (path: string) => {
+      const result = await getPodFileContent({ namespace, name, pod, env: env!, path })
+      return result.content
+    },
+    [namespace, name, pod, env],
+  )
+
+  const saveFileContent = useCallback(
+    (path: string, content: string) =>
+      savePodFileContent({ namespace, name, pod, env: env!, path, content }),
+    [namespace, name, pod, env],
+  )
+
+  const deletePath = useCallback(
+    (path: string) => deletePodPath({ namespace, name, pod, env: env!, path }),
+    [namespace, name, pod, env],
+  )
+
+  const renamePath = useCallback(
+    (fromPath: string, toPath: string) =>
+      renamePodPath({ namespace, name, pod, env: env!, fromPath, toPath }),
     [namespace, name, pod, env],
   )
 
@@ -140,6 +173,11 @@ function TerminalPageContent() {
             <FileTree
               listDirectory={listDirectory}
               getDownloadUrl={getDownloadUrl}
+              uploadFile={uploadFile}
+              getFileContent={getFileContent}
+              saveFileContent={saveFileContent}
+              deletePath={deletePath}
+              renamePath={renamePath}
             />
           </div>
           <div

@@ -10,4 +10,6 @@ import org.springframework.context.annotation.Configuration;
 public class PodFileSystemProperties {
 
     private long maxDownloadSizeBytes = 52_428_800;
+    private long maxUploadSizeBytes = 52_428_800;
+    private long maxEditSizeBytes = 1_048_576;
 }

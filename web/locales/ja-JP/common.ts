@@ -42,6 +42,19 @@ const common = {
   "terminal.files.copyName": "名前をコピー",
   "terminal.files.copied": "コピーしました",
   "terminal.files.download": "ダウンロード",
+  "terminal.files.edit": "編集",
+  "terminal.files.uploadHere": "ここにアップロード",
+  "terminal.files.uploadSuccess": "アップロードしました",
+  "terminal.files.save": "保存",
+  "terminal.files.saving": "保存中...",
+  "terminal.files.saveSuccess": "保存しました",
+  "terminal.files.rename": "名前を変更",
+  "terminal.files.renameSuccess": "名前を変更しました",
+  "terminal.files.renameInvalid": "無効な名前",
+  "terminal.files.delete": "削除",
+  "terminal.files.deleteSuccess": "削除しました",
+  "terminal.files.deleteConfirmTitle": "削除しますか？",
+  "terminal.files.deleteConfirmBody": "この操作は取り消せません。",
 }
 
 export default common

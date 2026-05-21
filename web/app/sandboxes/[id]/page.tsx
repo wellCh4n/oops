@@ -15,7 +15,7 @@ import { ContentPage } from "@/components/content-page"
 import { useLanguage } from "@/contexts/language-context"
 
 import { getSandbox, SandboxInstance, SandboxInstanceStatus } from "@/lib/api/sandbox"
-import { getSandboxFileDownloadUrl, listSandboxDirectory } from "@/lib/api/sandbox-files"
+import { deleteSandboxPath, getSandboxFileContent, getSandboxFileDownloadUrl, listSandboxDirectory, renameSandboxPath, saveSandboxFileContent, uploadSandboxFile } from "@/lib/api/sandbox-files"
 
 const SandboxTerminalView = dynamic(() => import("@/components/sandbox-terminal-view"), {
   ssr: false,
@@ -76,6 +76,32 @@ export default function SandboxDetailPage() {
   )
   const getDownloadUrl = useCallback(
     (path: string) => getSandboxFileDownloadUrl({ id: sandboxId, path }),
+    [sandboxId],
+  )
+  const uploadFile = useCallback(
+    (parentDir: string, file: File) => {
+      const dirPath = parentDir.endsWith("/") ? parentDir : `${parentDir}/`
+      return uploadSandboxFile({ id: sandboxId, path: dirPath, file })
+    },
+    [sandboxId],
+  )
+  const getFileContent = useCallback(
+    async (path: string) => {
+      const result = await getSandboxFileContent({ id: sandboxId, path })
+      return result.content
+    },
+    [sandboxId],
+  )
+  const saveFileContent = useCallback(
+    (path: string, content: string) => saveSandboxFileContent({ id: sandboxId, path, content }),
+    [sandboxId],
+  )
+  const deletePath = useCallback(
+    (path: string) => deleteSandboxPath({ id: sandboxId, path }),
+    [sandboxId],
+  )
+  const renamePath = useCallback(
+    (fromPath: string, toPath: string) => renameSandboxPath({ id: sandboxId, fromPath, toPath }),
     [sandboxId],
   )
 
@@ -206,7 +232,15 @@ export default function SandboxDetailPage() {
               className="shrink-0 border-r border-sidebar-border"
               style={{ width: fileTreeWidth }}
             >
-              <FileTree listDirectory={listDirectory} getDownloadUrl={getDownloadUrl} />
+              <FileTree
+                listDirectory={listDirectory}
+                getDownloadUrl={getDownloadUrl}
+                uploadFile={uploadFile}
+                getFileContent={getFileContent}
+                saveFileContent={saveFileContent}
+                deletePath={deletePath}
+                renamePath={renamePath}
+              />
             </div>
             <div
               role="separator"

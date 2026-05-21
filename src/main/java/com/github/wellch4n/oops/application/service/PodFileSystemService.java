@@ -6,7 +6,11 @@ import com.github.wellch4n.oops.application.port.repository.EnvironmentRepositor
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.config.PodFileSystemProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -61,7 +65,73 @@ public class PodFileSystemService {
         podFileSystemGateway.streamFile(environment, namespace, podName, container, path, outputStream);
     }
 
+    public void uploadFile(String environmentName, String namespace, String podName, String container, String path, InputStream inputStream) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        uploadFile(environment, namespace, podName, container, path, inputStream);
+    }
+
+    public void uploadFile(Environment environment, String namespace, String podName, String container, String path, InputStream inputStream) {
+        podFileSystemGateway.uploadFile(environment, namespace, podName, container, path, inputStream);
+    }
+
+    public void deletePath(Environment environment, String namespace, String podName, String container, String path) {
+        podFileSystemGateway.deletePath(environment, namespace, podName, container, path);
+    }
+
+    public void deletePath(String environmentName, String namespace, String podName, String container, String path) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        deletePath(environment, namespace, podName, container, path);
+    }
+
+    public void renamePath(Environment environment, String namespace, String podName, String container, String fromPath, String toPath) {
+        podFileSystemGateway.renamePath(environment, namespace, podName, container, fromPath, toPath);
+    }
+
+    public void renamePath(String environmentName, String namespace, String podName, String container, String fromPath, String toPath) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        renamePath(environment, namespace, podName, container, fromPath, toPath);
+    }
+
+    public String readTextFile(Environment environment, String namespace, String podName, String container, String path) {
+        long fileSize = podFileSystemGateway.getFileSize(environment, namespace, podName, container, path);
+        long maxEditSizeBytes = podFileSystemProperties.getMaxEditSizeBytes();
+        if (fileSize > maxEditSizeBytes) {
+            long maxKB = maxEditSizeBytes / 1024;
+            throw new BizException("File too large to edit: " + fileSize + " bytes (max " + maxKB + " KB)");
+        }
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        podFileSystemGateway.streamFile(environment, namespace, podName, container, path, buffer);
+        return buffer.toString(StandardCharsets.UTF_8);
+    }
+
+    public void writeTextFile(Environment environment, String namespace, String podName, String container, String path, String content) {
+        byte[] bytes = content == null ? new byte[0] : content.getBytes(StandardCharsets.UTF_8);
+        long maxEditSizeBytes = podFileSystemProperties.getMaxEditSizeBytes();
+        if (bytes.length > maxEditSizeBytes) {
+            long maxKB = maxEditSizeBytes / 1024;
+            throw new BizException("Content too large: " + bytes.length + " bytes (max " + maxKB + " KB)");
+        }
+        podFileSystemGateway.uploadFile(environment, namespace, podName, container, path, new ByteArrayInputStream(bytes));
+    }
+
     public long getMaxDownloadSizeBytes() {
         return podFileSystemProperties.getMaxDownloadSizeBytes();
+    }
+
+    public long getMaxUploadSizeBytes() {
+        return podFileSystemProperties.getMaxUploadSizeBytes();
+    }
+
+    public long getMaxEditSizeBytes() {
+        return podFileSystemProperties.getMaxEditSizeBytes();
     }
 }

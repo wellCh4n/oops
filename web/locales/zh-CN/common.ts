@@ -42,6 +42,19 @@ const common = {
   "terminal.files.copyName": "复制名称",
   "terminal.files.copied": "已复制",
   "terminal.files.download": "下载",
+  "terminal.files.edit": "编辑",
+  "terminal.files.uploadHere": "上传到此目录",
+  "terminal.files.uploadSuccess": "上传成功",
+  "terminal.files.save": "保存",
+  "terminal.files.saving": "保存中...",
+  "terminal.files.saveSuccess": "保存成功",
+  "terminal.files.rename": "重命名",
+  "terminal.files.renameSuccess": "重命名成功",
+  "terminal.files.renameInvalid": "名称无效",
+  "terminal.files.delete": "删除",
+  "terminal.files.deleteSuccess": "已删除",
+  "terminal.files.deleteConfirmTitle": "确认删除？",
+  "terminal.files.deleteConfirmBody": "该操作不可撤销。",
 }
 
 export default common

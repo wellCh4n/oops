@@ -155,9 +155,8 @@ export default function SandboxDocPage() {
             rows={[
               { name: "name", type: "string" },
               { name: "path", type: "string", description: "完整路径。" },
-              { name: "directory", type: "boolean" },
-              { name: "size", type: "long", description: "字节数，目录为 0。" },
-              { name: "modifiedAt", type: "string", description: "最后修改时间。" },
+              { name: "type", type: "string", description: "取值 DIRECTORY / FILE / SYMLINK / OTHER。" },
+              { name: "size", type: "long", description: "字节数，目录为 null。" },
             ]}
           />
         </DocSubSection>
@@ -170,6 +169,79 @@ export default function SandboxDocPage() {
         <DocParagraph>
           单次下载受 <InlineCode>oops.pod-filesystem.max-download-size</InlineCode> 限制，超过会返回业务错误。
         </DocParagraph>
+      </DocSection>
+
+      <DocSection title="文件读取与保存">
+        <Endpoint
+          method="GET"
+          path={`${PATH_PREFIX}/instances/{id}/files/content?path=/path/to/file`}
+          summary="读取文本文件内容（UTF-8）。文件大小受 oops.pod-filesystem.max-edit-size 限制。"
+        />
+        <DocSubSection title="响应 (FileContentResponse)">
+          <FieldTable
+            rows={[
+              { name: "path", type: "string" },
+              { name: "content", type: "string", description: "文件内容（UTF-8 字符串）。" },
+            ]}
+          />
+        </DocSubSection>
+
+        <Endpoint
+          method="PUT"
+          path={`${PATH_PREFIX}/instances/{id}/files/content`}
+          summary="覆盖写入文本文件内容。父目录需已存在。"
+        />
+        <DocSubSection title="请求体 (FileSaveRequest)">
+          <FieldTable
+            rows={[
+              { name: "path", type: "string", required: true, description: "目标文件绝对路径。" },
+              { name: "content", type: "string", required: true, description: "新的文件内容。" },
+            ]}
+          />
+        </DocSubSection>
+      </DocSection>
+
+      <DocSection title="文件上传">
+        <Endpoint
+          method="POST"
+          path={`${PATH_PREFIX}/instances/{id}/files/upload?path=/target/dir`}
+          summary="以 multipart/form-data 上传文件到沙箱内指定目录。表单字段 file 为必填。"
+        />
+        <DocSubSection title="查询参数">
+          <FieldTable
+            rows={[
+              { name: "path", type: "string", required: true, description: "目标父目录绝对路径，会自动追加文件名。" },
+            ]}
+          />
+        </DocSubSection>
+        <DocParagraph>
+          单次上传大小受 <InlineCode>oops.pod-filesystem.max-upload-size</InlineCode> 限制（默认 50MB），同时受 Spring 的 <InlineCode>spring.servlet.multipart.max-file-size</InlineCode> 约束。文件名会做基本校验，禁止 <InlineCode>.</InlineCode>、<InlineCode>..</InlineCode> 与换行字符。
+        </DocParagraph>
+      </DocSection>
+
+      <DocSection title="删除与重命名">
+        <Endpoint
+          method="DELETE"
+          path={`${PATH_PREFIX}/instances/{id}/files?path=/path/to/target`}
+          summary="删除沙箱内的文件或目录（递归）。响应 data 为 null。"
+        />
+        <DocParagraph>
+          OpenAPI 默认禁止 <InlineCode>DELETE</InlineCode>，但 <InlineCode>/openapi/sandbox/**</InlineCode> 例外（详见 <InlineCode>认证</InlineCode>）。
+        </DocParagraph>
+
+        <Endpoint
+          method="POST"
+          path={`${PATH_PREFIX}/instances/{id}/files/rename`}
+          summary="将沙箱内的文件或目录从 fromPath 移动到 toPath。两端必须在同一文件系统内。"
+        />
+        <DocSubSection title="请求体 (FileRenameRequest)">
+          <FieldTable
+            rows={[
+              { name: "fromPath", type: "string", required: true, description: "源路径，必须存在。" },
+              { name: "toPath", type: "string", required: true, description: "目标路径，必须不存在。" },
+            ]}
+          />
+        </DocSubSection>
       </DocSection>
     </DocLayout>
   )

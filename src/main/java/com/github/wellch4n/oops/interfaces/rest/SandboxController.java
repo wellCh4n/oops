@@ -13,8 +13,12 @@ import com.github.wellch4n.oops.application.service.SandboxRuntimeService;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
+import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileContentResponse;
+import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileRenameRequest;
+import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileSaveRequest;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.springframework.http.ContentDisposition;
@@ -25,10 +29,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping({"/api/sandbox", "/openapi/sandbox"})
@@ -142,5 +148,72 @@ public class SandboxController {
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
         response.setContentLengthLong(fileSize);
         podFileSystemService.streamFile(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, path, response.getOutputStream());
+    }
+
+    @GetMapping("/instances/{id}/files/content")
+    public Result<FileContentResponse> getFileContent(@PathVariable("id") String id,
+                                                      @RequestParam(value = "path") String path,
+                                                      @AuthenticationPrincipal AuthUserPrincipal principal) {
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        String content = podFileSystemService.readTextFile(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, path);
+        return Result.success(new FileContentResponse(path, content));
+    }
+
+    @PutMapping("/instances/{id}/files/content")
+    public Result<Void> saveFileContent(@PathVariable("id") String id,
+                                        @RequestBody FileSaveRequest request,
+                                        @AuthenticationPrincipal AuthUserPrincipal principal) {
+        if (request == null || request.path() == null || request.path().isBlank()) {
+            throw new BizException("Path is required");
+        }
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        podFileSystemService.writeTextFile(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, request.path(), request.content());
+        return Result.success(null);
+    }
+
+    @PostMapping("/instances/{id}/files/upload")
+    public Result<Void> uploadFile(@PathVariable("id") String id,
+                                   @RequestParam(value = "path") String path,
+                                   @RequestParam("file") MultipartFile file,
+                                   @AuthenticationPrincipal AuthUserPrincipal principal) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new BizException("File is required");
+        }
+        long maxUploadSizeBytes = podFileSystemService.getMaxUploadSizeBytes();
+        if (file.getSize() > maxUploadSizeBytes) {
+            long maxMB = maxUploadSizeBytes / (1024 * 1024);
+            throw new BizException("File too large: " + file.getSize() + " bytes (max " + maxMB + " MB)");
+        }
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        String targetPath = PodFileSystemController.resolveUploadTargetPath(path, file.getOriginalFilename());
+        podFileSystemService.uploadFile(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, targetPath, file.getInputStream());
+        return Result.success(null);
+    }
+
+    @DeleteMapping("/instances/{id}/files")
+    public Result<Void> deleteFile(@PathVariable("id") String id,
+                                   @RequestParam(value = "path") String path,
+                                   @AuthenticationPrincipal AuthUserPrincipal principal) {
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        podFileSystemService.deletePath(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, path);
+        return Result.success(null);
+    }
+
+    @PostMapping("/instances/{id}/files/rename")
+    public Result<Void> renameFile(@PathVariable("id") String id,
+                                   @RequestBody FileRenameRequest request,
+                                   @AuthenticationPrincipal AuthUserPrincipal principal) {
+        if (request == null || request.fromPath() == null || request.fromPath().isBlank()
+                || request.toPath() == null || request.toPath().isBlank()) {
+            throw new BizException("fromPath and toPath are required");
+        }
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        podFileSystemService.renamePath(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, request.fromPath(), request.toPath());
+        return Result.success(null);
     }
 }
