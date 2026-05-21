@@ -64,7 +64,7 @@ final class AlpineMateTemplate {
                             .withContainers(new ContainerBuilder()
                                     .withName(CONTAINER_NAME)
                                     .withImage(IMAGE)
-                                    .withImagePullPolicy("IfNotPresent")
+                                    .withImagePullPolicy("Always")
                                     .withSecurityContext(new SecurityContextBuilder()
                                             .withPrivileged(true)
                                             .withSeccompProfile(new SeccompProfileBuilder()

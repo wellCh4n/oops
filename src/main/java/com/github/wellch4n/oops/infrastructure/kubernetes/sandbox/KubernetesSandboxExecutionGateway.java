@@ -466,7 +466,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
                 .withContainers(new ContainerBuilder()
                         .withName(CONTAINER_NAME)
                         .withImage(spec.image())
-                        .withImagePullPolicy("IfNotPresent")
+                        .withImagePullPolicy("Always")
                         .withCommand(BIN_SH, "-c", spec.command())
                         .withEnv(toEnvVars(spec.env()))
                         .withResources(resources)
@@ -501,7 +501,7 @@ public class KubernetesSandboxExecutionGateway implements SandboxExecutionGatewa
         ContainerBuilder containerBuilder = new ContainerBuilder()
                 .withName(CONTAINER_NAME)
                 .withImage(spec.image())
-                .withImagePullPolicy("IfNotPresent")
+                .withImagePullPolicy("Always")
                 .withEnv(toEnvVars(spec.env()))
                 .withResources(resources)
                 .withSecurityContext(new SecurityContextBuilder().withPrivileged(true).build());
