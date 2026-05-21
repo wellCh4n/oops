@@ -89,6 +89,7 @@ final class AlpineMateTemplate {
                                                 .withMedium("Memory")
                                                 .withSizeLimit(new Quantity("1Gi"))
                                             .endEmptyDir().build())
+                            .addNewImagePullSecret("dockerhub")
                         .endSpec()
                     .endTemplate()
                 .endSpec()
