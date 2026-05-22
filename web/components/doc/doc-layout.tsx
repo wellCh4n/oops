@@ -1,12 +1,65 @@
 "use client"
 
+import { Link2 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ReactNode } from "react"
+import { createContext, ReactNode, useContext } from "react"
+import { toast } from "sonner"
 import { ContentPage } from "@/components/content-page"
 import { DOC_TOPICS } from "@/components/doc/doc-topics"
 import { DocProvider } from "@/components/doc/doc-context"
 import { cn } from "@/lib/utils"
+
+function slugify(title: string): string {
+  return title
+    .normalize("NFKC")
+    .toLowerCase()
+    .trim()
+    .replace(/[()[\]{}<>"'`,.;:!?@#$%^&*=+|\\/]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
+const SectionSlugContext = createContext<string>("")
+
+function AnchorHeading({
+  id,
+  as: Tag,
+  className,
+  children,
+}: {
+  id: string
+  as: "h2" | "h3"
+  className: string
+  children: ReactNode
+}) {
+  const handleCopy = async () => {
+    const url = `${window.location.origin}${window.location.pathname}#${id}`
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success("锚点链接已复制")
+    } catch {
+      window.location.hash = id
+      toast.success("已定位到该章节")
+    }
+  }
+
+  return (
+    <Tag id={id} className={cn("group scroll-mt-14 flex items-center gap-2", className)}>
+      <span>{children}</span>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label="复制锚点链接"
+        title="复制锚点链接"
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+      >
+        <Link2 className="h-3.5 w-3.5" />
+      </button>
+    </Tag>
+  )
+}
 
 interface DocLayoutProps {
   title: string
@@ -51,19 +104,45 @@ export function DocLayout({ title, children }: DocLayoutProps) {
   )
 }
 
-export function DocSection({ title, children }: { title: string; children: ReactNode }) {
+export function DocSection({
+  title,
+  id,
+  children,
+}: {
+  title: string
+  id?: string
+  children: ReactNode
+}) {
+  const sectionId = id ?? slugify(title)
   return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-semibold border-b pb-1">{title}</h2>
-      {children}
-    </section>
+    <SectionSlugContext.Provider value={sectionId}>
+      <section className="space-y-3">
+        <AnchorHeading id={sectionId} as="h2" className="border-b pb-1 text-lg font-semibold">
+          {title}
+        </AnchorHeading>
+        {children}
+      </section>
+    </SectionSlugContext.Provider>
   )
 }
 
-export function DocSubSection({ title, children }: { title: string; children: ReactNode }) {
+export function DocSubSection({
+  title,
+  id,
+  children,
+}: {
+  title: string
+  id?: string
+  children: ReactNode
+}) {
+  const parentSlug = useContext(SectionSlugContext)
+  const selfSlug = id ?? slugify(title)
+  const sectionId = parentSlug ? `${parentSlug}-${selfSlug}` : selfSlug
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-foreground/90">{title}</h3>
+      <AnchorHeading id={sectionId} as="h3" className="text-sm font-semibold text-foreground/90">
+        {title}
+      </AnchorHeading>
       {children}
     </div>
   )
