@@ -13,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copyable } from "@/components/ui/copyable"
-import { Check, ExternalLink, Pencil, Plug, Globe, Plus, Trash2, X, Network } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Check, ExternalLink, Pencil, Plug, Globe, Info, Plus, Trash2, X, Network } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
@@ -514,6 +515,16 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
             <Network className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.service.accessEntry")}</span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("apps.service.accessEntryRepublishNotice")}>
+                  <Info className="size-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs">
+                {t("apps.service.accessEntryRepublishNotice")}
+              </TooltipContent>
+            </Tooltip>
           </div>
           <div className="flex flex-col gap-4 p-4">
             <div className="grid gap-2">

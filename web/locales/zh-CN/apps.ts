@@ -145,6 +145,7 @@ const apps = {
   "apps.service.domainPlaceholder": "例如 app.example.com",
   "apps.service.accessEntry": "应用访问",
   "apps.service.hosts": "域名配置",
+  "apps.service.accessEntryRepublishNotice": "应用访问配置需要重新发布应用才会生效。",
   "apps.service.addHost": "添加域名",
   "apps.service.hostDuplicated": "域名已被环境 {environment} / 命名空间 {namespace} / 应用 {name} 占用",
   "apps.service.prefixPlaceholder": "子域名",

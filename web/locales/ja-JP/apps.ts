@@ -145,6 +145,7 @@ const apps = {
   "apps.service.domainPlaceholder": "例: app.example.com",
   "apps.service.accessEntry": "アプリケーションアクセス",
   "apps.service.hosts": "ドメイン設定",
+  "apps.service.accessEntryRepublishNotice": "アプリケーションアクセス設定は、アプリを再公開すると反映されます。",
   "apps.service.addHost": "ドメインを追加",
   "apps.service.hostDuplicated": "このドメインは環境 {environment} / ネームスペース {namespace} / アプリ {name} によって使用されています",
   "apps.service.prefixPlaceholder": "サブドメイン",

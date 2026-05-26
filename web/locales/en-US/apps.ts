@@ -145,6 +145,7 @@ const apps = {
   "apps.service.domainPlaceholder": "e.g. app.example.com",
   "apps.service.accessEntry": "Application Access",
   "apps.service.hosts": "Hosts",
+  "apps.service.accessEntryRepublishNotice": "Application access changes take effect after you republish the application.",
   "apps.service.addHost": "Add Host",
   "apps.service.hostDuplicated": "Host already used by environment {environment} / namespace {namespace} / application {name}",
   "apps.service.prefixPlaceholder": "subdomain",
