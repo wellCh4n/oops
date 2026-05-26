@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -283,8 +284,9 @@ export default function EnvironmentEditPage() {
                           <FormItem>
                             <FormLabel>{t("env.col.name")}</FormLabel>
                             <FormControl>
-                              <Input placeholder="Production" {...field} />
+                              <Input placeholder="Production" disabled {...field} />
                             </FormControl>
+                            <FormDescription>{t("env.nameImmutableDesc")}</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}

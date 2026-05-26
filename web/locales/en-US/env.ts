@@ -12,6 +12,7 @@ const env = {
   "env.loadError": "Failed to load environment",
   "env.nameRequired": "Name is required",
   "env.namePlaceholder": "Environment name",
+  "env.nameImmutableDesc": "Environment names cannot be changed after creation.",
   "env.col.name": "Name",
   "env.col.workNamespace": "Work Namespace",
   "env.col.imageRepo": "Image Repository",

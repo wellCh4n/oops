@@ -12,6 +12,7 @@ const env = {
   "env.loadError": "加载环境失败",
   "env.nameRequired": "名称不能为空",
   "env.namePlaceholder": "环境名称",
+  "env.nameImmutableDesc": "环境名称创建后不可修改。",
   "env.col.name": "名称",
   "env.col.workNamespace": "工作命名空间",
   "env.col.imageRepo": "镜像仓库",
