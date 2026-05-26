@@ -12,6 +12,7 @@ const env = {
   "env.loadError": "載入環境失敗",
   "env.nameRequired": "名稱不能為空",
   "env.namePlaceholder": "環境名稱",
+  "env.nameImmutableDesc": "環境名稱建立後不可修改。",
   "env.col.name": "名稱",
   "env.col.workNamespace": "工作命名空間",
   "env.col.imageRepo": "鏡像倉庫",

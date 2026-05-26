@@ -12,6 +12,7 @@ const env = {
   "env.loadError": "環境の読み込みに失敗しました",
   "env.nameRequired": "名前は必須です",
   "env.namePlaceholder": "環境名",
+  "env.nameImmutableDesc": "環境名は作成後に変更できません。",
   "env.col.name": "名前",
   "env.col.workNamespace": "作業用名前空間",
   "env.col.imageRepo": "イメージリポジトリ",
