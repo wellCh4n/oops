@@ -55,6 +55,11 @@ const common = {
   "terminal.files.deleteSuccess": "已删除",
   "terminal.files.deleteConfirmTitle": "确认删除？",
   "terminal.files.deleteConfirmBody": "该操作不可撤销。",
+  "terminal.files.newFolder": "新建文件夹",
+  "terminal.files.newFolderHere": "在此处新建文件夹",
+  "terminal.files.newFolderTitle": "新建文件夹",
+  "terminal.files.newFolderPlaceholder": "文件夹名称",
+  "terminal.files.newFolderSuccess": "已创建",
 }
 
 export default common

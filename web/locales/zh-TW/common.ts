@@ -55,6 +55,11 @@ const common = {
   "terminal.files.deleteSuccess": "已刪除",
   "terminal.files.deleteConfirmTitle": "確認刪除？",
   "terminal.files.deleteConfirmBody": "此操作無法復原。",
+  "terminal.files.newFolder": "新建資料夾",
+  "terminal.files.newFolderHere": "在此處新建資料夾",
+  "terminal.files.newFolderTitle": "新建資料夾",
+  "terminal.files.newFolderPlaceholder": "資料夾名稱",
+  "terminal.files.newFolderSuccess": "已建立",
 }
 
 export default common

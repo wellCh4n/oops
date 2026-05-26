@@ -55,6 +55,11 @@ const common = {
   "terminal.files.deleteSuccess": "Deleted",
   "terminal.files.deleteConfirmTitle": "Delete this item?",
   "terminal.files.deleteConfirmBody": "This action cannot be undone.",
+  "terminal.files.newFolder": "New folder",
+  "terminal.files.newFolderHere": "New folder here",
+  "terminal.files.newFolderTitle": "New folder",
+  "terminal.files.newFolderPlaceholder": "Folder name",
+  "terminal.files.newFolderSuccess": "Created",
 }
 
 export default common

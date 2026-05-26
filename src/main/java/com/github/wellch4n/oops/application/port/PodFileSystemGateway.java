@@ -18,11 +18,14 @@ public interface PodFileSystemGateway {
 
     void renamePath(Environment environment, String namespace, String podName, String container, String fromPath, String toPath);
 
+    void createDirectory(Environment environment, String namespace, String podName, String container, String path);
+
     record PodFileEntry(String name, String path, FileType type, Long size) {
         public enum FileType {
             DIRECTORY,
             FILE,
-            SYMLINK,
+            SYMLINK_DIRECTORY,
+            SYMLINK_FILE,
             OTHER
         }
     }

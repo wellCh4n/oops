@@ -3,7 +3,7 @@ import { API_BASE_URL } from "./config"
 import { getToken } from "@/lib/auth"
 import { ApiResponse } from "./types"
 
-type PodFileType = "DIRECTORY" | "FILE" | "SYMLINK" | "OTHER"
+type PodFileType = "DIRECTORY" | "FILE" | "SYMLINK_DIRECTORY" | "SYMLINK_FILE" | "OTHER"
 
 export interface PodFileEntry {
   name: string
@@ -112,6 +112,20 @@ export async function deletePodPath(params: PodFileBaseParams & { path: string }
   const body = (await res.json()) as ApiResponse<void>
   if (!res.ok || !body.success) {
     throw new Error(body.message || "Failed to delete")
+  }
+}
+
+export async function createPodDirectory(params: PodFileBaseParams & { path: string }): Promise<void> {
+  const search = new URLSearchParams()
+  appendCommonParams(search, params)
+  const res = await apiFetch(`${buildFileBaseUrl(params)}/directory?${search.toString()}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: params.path }),
+  })
+  const body = (await res.json()) as ApiResponse<void>
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || "Failed to create directory")
   }
 }
 

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, WifiOff } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { deletePodPath, getPodFileContent, getPodFileDownloadUrl, listPodDirectory, renamePodPath, savePodFileContent, uploadPodFile } from "@/lib/api/pod-files"
+import { createPodDirectory, deletePodPath, getPodFileContent, getPodFileDownloadUrl, listPodDirectory, renamePodPath, savePodFileContent, uploadPodFile } from "@/lib/api/pod-files"
 
 const TerminalView = dynamic(() => import("@/components/terminal-view"), {
   ssr: false,
@@ -86,6 +86,11 @@ function TerminalPageContent() {
   const renamePath = useCallback(
     (fromPath: string, toPath: string) =>
       renamePodPath({ namespace, name, pod, env: env!, fromPath, toPath }),
+    [namespace, name, pod, env],
+  )
+
+  const createDirectory = useCallback(
+    (path: string) => createPodDirectory({ namespace, name, pod, env: env!, path }),
     [namespace, name, pod, env],
   )
 
@@ -178,6 +183,7 @@ function TerminalPageContent() {
               saveFileContent={saveFileContent}
               deletePath={deletePath}
               renamePath={renamePath}
+              createDirectory={createDirectory}
             />
           </div>
           <div

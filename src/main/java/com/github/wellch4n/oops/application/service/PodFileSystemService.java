@@ -101,6 +101,18 @@ public class PodFileSystemService {
         renamePath(environment, namespace, podName, container, fromPath, toPath);
     }
 
+    public void createDirectory(Environment environment, String namespace, String podName, String container, String path) {
+        podFileSystemGateway.createDirectory(environment, namespace, podName, container, path);
+    }
+
+    public void createDirectory(String environmentName, String namespace, String podName, String container, String path) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new BizException("Environment not found: " + environmentName);
+        }
+        createDirectory(environment, namespace, podName, container, path);
+    }
+
     public String readTextFile(Environment environment, String namespace, String podName, String container, String path) {
         long fileSize = podFileSystemGateway.getFileSize(environment, namespace, podName, container, path);
         long maxEditSizeBytes = podFileSystemProperties.getMaxEditSizeBytes();

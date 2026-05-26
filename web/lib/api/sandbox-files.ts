@@ -84,6 +84,18 @@ export async function deleteSandboxPath(params: { id: string; path: string }): P
   }
 }
 
+export async function createSandboxDirectory(params: { id: string; path: string }): Promise<void> {
+  const res = await apiFetch(`/api/sandbox/instances/${encodeURIComponent(params.id)}/files/directory`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path: params.path }),
+  })
+  const body = (await res.json()) as ApiResponse<void>
+  if (!res.ok || !body.success) {
+    throw new Error(body.message || "Failed to create directory")
+  }
+}
+
 export async function renameSandboxPath(params: { id: string; fromPath: string; toPath: string }): Promise<void> {
   const res = await apiFetch(`/api/sandbox/instances/${encodeURIComponent(params.id)}/files/rename`, {
     method: "POST",

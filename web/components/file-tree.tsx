@@ -7,6 +7,8 @@ import {
   File as FileIcon,
   FileSymlink,
   Folder,
+  FolderPlus,
+  FolderSymlink,
   Loader2,
   RefreshCw,
 } from "lucide-react"
@@ -59,6 +61,7 @@ export interface FileTreeProps {
   saveFileContent?: (path: string, content: string) => Promise<void>
   deletePath?: (path: string) => Promise<void>
   renamePath?: (fromPath: string, toPath: string) => Promise<void>
+  createDirectory?: (path: string) => Promise<void>
   rootPath?: string
 }
 
@@ -89,6 +92,13 @@ interface RenameState {
 interface DeleteState {
   entry: PodFileEntry
   deleting: boolean
+}
+
+interface MkdirState {
+  parentDir: string
+  draft: string
+  saving: boolean
+  error: string | null
 }
 
 function detectLanguage(name: string): string {
@@ -168,6 +178,7 @@ export default function FileTree({
   saveFileContent,
   deletePath,
   renamePath,
+  createDirectory,
   rootPath = "/",
 }: FileTreeProps) {
   const { t } = useLanguage()
@@ -177,6 +188,7 @@ export default function FileTree({
   const [edit, setEdit] = useState<EditState | null>(null)
   const [rename, setRename] = useState<RenameState | null>(null)
   const [del, setDel] = useState<DeleteState | null>(null)
+  const [mkdir, setMkdir] = useState<MkdirState | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const fileInputTargetRef = useRef<string | null>(null)
 
@@ -218,7 +230,7 @@ export default function FileTree({
 
   const toggle = useCallback(
     (entry: PodFileEntry) => {
-      if (entry.type !== "DIRECTORY") return
+      if (entry.type !== "DIRECTORY" && entry.type !== "SYMLINK_DIRECTORY") return
       const existing = nodes[entry.path]
       if (existing?.expanded) {
         setNodes((prev) => ({ ...prev, [entry.path]: { ...existing, expanded: false } }))
@@ -387,6 +399,40 @@ export default function FileTree({
     }
   }, [del, deletePath, t, refreshParent])
 
+  const openMkdir = useCallback((parentDir: string) => {
+    setMkdir({ parentDir, draft: "", saving: false, error: null })
+  }, [])
+
+  const handleMkdirConfirm = useCallback(async () => {
+    if (!mkdir || !createDirectory) return
+    const trimmed = mkdir.draft.trim()
+    if (!trimmed) {
+      setMkdir({ ...mkdir, error: t("terminal.files.renameInvalid") })
+      return
+    }
+    if (trimmed.includes("/") || trimmed === "." || trimmed === "..") {
+      setMkdir({ ...mkdir, error: t("terminal.files.renameInvalid") })
+      return
+    }
+    const parent = mkdir.parentDir
+    const targetPath = parent === "/" ? `/${trimmed}` : `${parent}/${trimmed}`
+    setMkdir({ ...mkdir, saving: true, error: null })
+    try {
+      await createDirectory(targetPath)
+      toast.success(t("terminal.files.newFolderSuccess"))
+      setMkdir(null)
+      if (nodes[parent]) {
+        loadDirectory(parent)
+      }
+    } catch (err) {
+      setMkdir((prev) =>
+        prev
+          ? { ...prev, saving: false, error: err instanceof Error ? err.message : "Create failed" }
+          : prev,
+      )
+    }
+  }, [mkdir, createDirectory, t, nodes, loadDirectory])
+
   const rootState = nodes[rootPath]
   const rootUploading = !!uploadingDirs[rootPath]
 
@@ -402,18 +448,30 @@ export default function FileTree({
         <span className="truncate text-xs font-medium text-foreground/80">
           {t("terminal.files.title")}
         </span>
-        <button
-          type="button"
-          onClick={() => loadDirectory(rootPath)}
-          className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-          title={t("common.refresh")}
-        >
-          {rootState?.loading ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="size-3.5" />
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          {createDirectory ? (
+            <button
+              type="button"
+              onClick={() => openMkdir(rootPath)}
+              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              title={t("terminal.files.newFolder")}
+            >
+              <FolderPlus className="size-3.5" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => loadDirectory(rootPath)}
+            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            title={t("common.refresh")}
+          >
+            {rootState?.loading ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+          </button>
+        </div>
       </div>
       <RootDropZone
         rootPath={rootPath}
@@ -441,11 +499,13 @@ export default function FileTree({
               canEdit={!!getFileContent && !!saveFileContent}
               canRename={!!renamePath}
               canDelete={!!deletePath}
+              canMkdir={!!createDirectory}
               onTriggerUpload={triggerUpload}
               onUploadFiles={handleUpload}
               onEdit={openEdit}
               onRename={openRename}
               onDelete={openDelete}
+              onMkdir={openMkdir}
             />
           )}
         </div>
@@ -608,6 +668,57 @@ export default function FileTree({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!mkdir}
+        onOpenChange={(open) => {
+          if (!open && !mkdir?.saving) setMkdir(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("terminal.files.newFolderTitle")}</DialogTitle>
+            <DialogDescription className="font-mono text-[11px] break-all">
+              {mkdir?.parentDir}
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={mkdir?.draft ?? ""}
+            placeholder={t("terminal.files.newFolderPlaceholder")}
+            onChange={(e) => setMkdir((prev) => (prev ? { ...prev, draft: e.target.value, error: null } : prev))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                handleMkdirConfirm()
+              }
+            }}
+            autoFocus
+            disabled={mkdir?.saving}
+          />
+          {mkdir?.error && (
+            <div className="text-xs text-destructive">{mkdir.error}</div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setMkdir(null)} disabled={mkdir?.saving}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleMkdirConfirm}
+              disabled={!mkdir || mkdir.saving || !mkdir.draft.trim()}
+            >
+              {mkdir?.saving ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {t("terminal.files.saving")}
+                </>
+              ) : (
+                t("common.confirm")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -682,11 +793,13 @@ interface TreeLevelProps {
   canEdit: boolean
   canRename: boolean
   canDelete: boolean
+  canMkdir: boolean
   onTriggerUpload: (parentDir: string) => void
   onUploadFiles: (parentDir: string, file: File) => Promise<void>
   onEdit: (entry: PodFileEntry) => void
   onRename: (entry: PodFileEntry) => void
   onDelete: (entry: PodFileEntry) => void
+  onMkdir: (parentDir: string) => void
 }
 
 function TreeLevel({
@@ -700,11 +813,13 @@ function TreeLevel({
   canEdit,
   canRename,
   canDelete,
+  canMkdir,
   onTriggerUpload,
   onUploadFiles,
   onEdit,
   onRename,
   onDelete,
+  onMkdir,
 }: TreeLevelProps) {
   if (entries.length === 0) {
     return (
@@ -731,11 +846,13 @@ function TreeLevel({
           canEdit={canEdit}
           canRename={canRename}
           canDelete={canDelete}
+          canMkdir={canMkdir}
           onTriggerUpload={onTriggerUpload}
           onUploadFiles={onUploadFiles}
           onEdit={onEdit}
           onRename={onRename}
           onDelete={onDelete}
+          onMkdir={onMkdir}
         />
       ))}
     </ul>
@@ -753,11 +870,13 @@ interface TreeRowProps {
   canEdit: boolean
   canRename: boolean
   canDelete: boolean
+  canMkdir: boolean
   onTriggerUpload: (parentDir: string) => void
   onUploadFiles: (parentDir: string, file: File) => Promise<void>
   onEdit: (entry: PodFileEntry) => void
   onRename: (entry: PodFileEntry) => void
   onDelete: (entry: PodFileEntry) => void
+  onMkdir: (parentDir: string) => void
 }
 
 function formatBytes(bytes: number): string {
@@ -783,19 +902,21 @@ function TreeRow({
   canEdit,
   canRename,
   canDelete,
+  canMkdir,
   onTriggerUpload,
   onUploadFiles,
   onEdit,
   onRename,
   onDelete,
+  onMkdir,
 }: TreeRowProps) {
   const { t } = useLanguage()
-  const isDir = entry.type === "DIRECTORY"
-  const isFile = entry.type === "FILE"
+  const isDir = entry.type === "DIRECTORY" || entry.type === "SYMLINK_DIRECTORY"
+  const isFile = entry.type === "FILE" || entry.type === "SYMLINK_FILE"
   const state = nodes[entry.path]
   const expanded = isDir && state?.expanded
   const indent = 8 + depth * 12
-  const showSize = entry.type === "FILE" && entry.size != null
+  const showSize = isFile && entry.size != null
   const dirUploading = isDir && uploadingDirs[entry.path]
   const [dragOver, setDragOver] = useState(false)
 
@@ -892,10 +1013,12 @@ function TreeRow({
                       ) : null}
                     </span>
                     <span className="flex w-4 shrink-0 items-center justify-center">
-                      {isDir ? (
-                        <Folder className="size-3.5 text-sky-500" />
-                      ) : entry.type === "SYMLINK" ? (
+                      {entry.type === "SYMLINK_DIRECTORY" ? (
+                        <FolderSymlink className="size-3.5 text-violet-500" />
+                      ) : entry.type === "SYMLINK_FILE" ? (
                         <FileSymlink className="size-3.5 text-violet-500" />
+                      ) : isDir ? (
+                        <Folder className="size-3.5 text-sky-500" />
                       ) : (
                         <FileIcon className="size-3.5 text-muted-foreground" />
                       )}
@@ -930,14 +1053,17 @@ function TreeRow({
               <ContextMenuSeparator />
             </>
           )}
-          {isDir && canUpload && (
-            <>
-              <ContextMenuItem onClick={() => onTriggerUpload(entry.path)} className="cursor-pointer">
-                {t("terminal.files.uploadHere")}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-            </>
+          {isDir && canMkdir && (
+            <ContextMenuItem onClick={() => onMkdir(entry.path)} className="cursor-pointer">
+              {t("terminal.files.newFolderHere")}
+            </ContextMenuItem>
           )}
+          {isDir && canUpload && (
+            <ContextMenuItem onClick={() => onTriggerUpload(entry.path)} className="cursor-pointer">
+              {t("terminal.files.uploadHere")}
+            </ContextMenuItem>
+          )}
+          {isDir && (canMkdir || canUpload) && <ContextMenuSeparator />}
           <ContextMenuItem onClick={() => handleCopy(entry.path)} className="cursor-pointer">
             {t("terminal.files.copyPath")}
           </ContextMenuItem>
@@ -982,11 +1108,13 @@ function TreeRow({
             canEdit={canEdit}
             canRename={canRename}
             canDelete={canDelete}
+            canMkdir={canMkdir}
             onTriggerUpload={onTriggerUpload}
             onUploadFiles={onUploadFiles}
             onEdit={onEdit}
             onRename={onRename}
             onDelete={onDelete}
+            onMkdir={onMkdir}
           />
         ) : null
       ) : null}

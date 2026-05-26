@@ -155,7 +155,7 @@ export default function SandboxDocPage() {
             rows={[
               { name: "name", type: "string" },
               { name: "path", type: "string", description: "完整路径。" },
-              { name: "type", type: "string", description: "取值 DIRECTORY / FILE / SYMLINK / OTHER。" },
+              { name: "type", type: "string", description: "取值 DIRECTORY / FILE / SYMLINK_DIRECTORY / SYMLINK_FILE / OTHER。软链接会按其指向的真实类型展开为 SYMLINK_DIRECTORY 或 SYMLINK_FILE；失效软链接为 OTHER。" },
               { name: "size", type: "long", description: "字节数，目录为 null。" },
             ]}
           />
@@ -219,7 +219,7 @@ export default function SandboxDocPage() {
         </DocParagraph>
       </DocSection>
 
-      <DocSection title="删除与重命名">
+      <DocSection title="删除、重命名与新建目录">
         <Endpoint
           method="DELETE"
           path={`${PATH_PREFIX}/instances/{id}/files?path=/path/to/target`}
@@ -239,6 +239,19 @@ export default function SandboxDocPage() {
             rows={[
               { name: "fromPath", type: "string", required: true, description: "源路径，必须存在。" },
               { name: "toPath", type: "string", required: true, description: "目标路径，必须不存在。" },
+            ]}
+          />
+        </DocSubSection>
+
+        <Endpoint
+          method="POST"
+          path={`${PATH_PREFIX}/instances/{id}/files/directory`}
+          summary="在沙箱内创建目录（等价于 mkdir -p）。路径已存在（包括同名软链接）会失败。"
+        />
+        <DocSubSection title="请求体 (DirectoryCreateRequest)">
+          <FieldTable
+            rows={[
+              { name: "path", type: "string", required: true, description: "要创建的目录绝对路径，不能为根 /。" },
             ]}
           />
         </DocSubSection>

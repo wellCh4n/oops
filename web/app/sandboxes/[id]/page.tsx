@@ -15,7 +15,7 @@ import { ContentPage } from "@/components/content-page"
 import { useLanguage } from "@/contexts/language-context"
 
 import { getSandbox, SandboxInstance, SandboxInstanceStatus } from "@/lib/api/sandbox"
-import { deleteSandboxPath, getSandboxFileContent, getSandboxFileDownloadUrl, listSandboxDirectory, renameSandboxPath, saveSandboxFileContent, uploadSandboxFile } from "@/lib/api/sandbox-files"
+import { createSandboxDirectory, deleteSandboxPath, getSandboxFileContent, getSandboxFileDownloadUrl, listSandboxDirectory, renameSandboxPath, saveSandboxFileContent, uploadSandboxFile } from "@/lib/api/sandbox-files"
 
 const SandboxTerminalView = dynamic(() => import("@/components/sandbox-terminal-view"), {
   ssr: false,
@@ -102,6 +102,10 @@ export default function SandboxDetailPage() {
   )
   const renamePath = useCallback(
     (fromPath: string, toPath: string) => renameSandboxPath({ id: sandboxId, fromPath, toPath }),
+    [sandboxId],
+  )
+  const createDirectory = useCallback(
+    (path: string) => createSandboxDirectory({ id: sandboxId, path }),
     [sandboxId],
   )
 
@@ -240,6 +244,7 @@ export default function SandboxDetailPage() {
                 saveFileContent={saveFileContent}
                 deletePath={deletePath}
                 renamePath={renamePath}
+                createDirectory={createDirectory}
               />
             </div>
             <div

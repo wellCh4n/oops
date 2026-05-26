@@ -137,6 +137,21 @@ public class PodFileSystemController {
         return Result.success(null);
     }
 
+    @PostMapping("/directory")
+    public Result<Void> createDirectory(@PathVariable String namespace,
+                                        @PathVariable String name,
+                                        @PathVariable String pod,
+                                        @RequestParam(value = "env") String env,
+                                        @RequestParam(value = "container", required = false) String container,
+                                        @RequestBody DirectoryCreateRequest request) {
+        if (request == null || request.path() == null || request.path().isBlank()) {
+            throw new BizException("Path is required");
+        }
+        String resolvedContainer = (container == null || container.isBlank()) ? name : container;
+        podFileSystemService.createDirectory(env, namespace, pod, resolvedContainer, request.path());
+        return Result.success(null);
+    }
+
     @PostMapping("/rename")
     public Result<Void> renamePath(@PathVariable String namespace,
                                    @PathVariable String name,
@@ -202,5 +217,8 @@ public class PodFileSystemController {
     }
 
     public record FileRenameRequest(String fromPath, String toPath) {
+    }
+
+    public record DirectoryCreateRequest(String path) {
     }
 }

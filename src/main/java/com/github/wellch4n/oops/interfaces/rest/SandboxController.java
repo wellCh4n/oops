@@ -13,6 +13,7 @@ import com.github.wellch4n.oops.application.service.SandboxRuntimeService;
 import com.github.wellch4n.oops.domain.sandbox.SandboxInstance;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
+import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.DirectoryCreateRequest;
 import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileContentResponse;
 import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileRenameRequest;
 import com.github.wellch4n.oops.interfaces.rest.PodFileSystemController.FileSaveRequest;
@@ -214,6 +215,19 @@ public class SandboxController {
         String callerUserId = principal != null ? principal.userId() : null;
         SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
         podFileSystemService.renamePath(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, request.fromPath(), request.toPath());
+        return Result.success(null);
+    }
+
+    @PostMapping("/instances/{id}/files/directory")
+    public Result<Void> createDirectory(@PathVariable("id") String id,
+                                        @RequestBody DirectoryCreateRequest request,
+                                        @AuthenticationPrincipal AuthUserPrincipal principal) {
+        if (request == null || request.path() == null || request.path().isBlank()) {
+            throw new BizException("Path is required");
+        }
+        String callerUserId = principal != null ? principal.userId() : null;
+        SandboxTerminalTarget target = sandboxInstanceService.resolveTerminalTarget(id, callerUserId);
+        podFileSystemService.createDirectory(target.environment(), target.namespace(), target.podName(), SANDBOX_CONTAINER, request.path());
         return Result.success(null);
     }
 }

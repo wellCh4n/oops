@@ -34,8 +34,8 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
             set -e
             target=$1
             if [ -z "$target" ]; then target=/; fi
-            if [ ! -e "$target" ]; then echo __OOPS_NOT_FOUND__; exit 0; fi
-            if [ ! -d "$target" ]; then echo __OOPS_NOT_DIR__; exit 0; fi
+            if [ ! -e "$target" ] && [ ! -L "$target" ]; then echo __OOPS_NOT_FOUND__; exit 0; fi
+            if [ ! -d "$target/" ]; then echo __OOPS_NOT_DIR__; exit 0; fi
             cd "$target" 2>/dev/null || { echo __OOPS_DENIED__; exit 0; }
             for entry in .* *; do
               [ "$entry" = "." ] && continue
@@ -44,7 +44,14 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
               [ "$entry" = ".*" ] && continue
               [ ! -e "$entry" ] && [ ! -L "$entry" ] && continue
               if [ -L "$entry" ]; then
-                kind=L; size=0
+                if [ -d "$entry/" ]; then
+                  kind=LD; size=0
+                elif [ -f "$entry" ]; then
+                  kind=LF
+                  size=$(wc -c < "$entry" 2>/dev/null | tr -d ' ' || echo 0)
+                else
+                  kind=O; size=0
+                fi
               elif [ -d "$entry" ]; then
                 kind=D; size=0
               elif [ -f "$entry" ]; then
@@ -71,6 +78,12 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
             if [ -z "$target" ] || [ "$target" = "/" ]; then echo __OOPS_REFUSED__ >&2; exit 1; fi
             if [ ! -e "$target" ] && [ ! -L "$target" ]; then echo __OOPS_NOT_FOUND__ >&2; exit 1; fi
             rm -rf -- "$target" 2>&1 || { echo __OOPS_DELETE_FAILED__ >&2; exit 1; }
+            """;
+    private static final String MKDIR_SCRIPT = """
+            target=$1
+            if [ -z "$target" ] || [ "$target" = "/" ]; then echo __OOPS_REFUSED__ >&2; exit 1; fi
+            if [ -e "$target" ] || [ -L "$target" ]; then echo __OOPS_TARGET_EXISTS__ >&2; exit 1; fi
+            mkdir -p -- "$target" || { echo __OOPS_MKDIR_FAILED__ >&2; exit 1; }
             """;
     private static final String RENAME_SCRIPT = """
             from=$1
@@ -307,6 +320,26 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
     }
 
     @Override
+    public void createDirectory(Environment environment, String namespace, String podName, String container, String path) {
+        sanitizePath(path);
+        if ("/".equals(path)) {
+            throw new BizException("Refusing to create root path");
+        }
+        ExecResult result = runExec(environment, namespace, podName, container, EXEC_TIMEOUT_SECONDS, MKDIR_SCRIPT, "sh", path);
+        String stderr = result.stderr();
+        if (stderr.contains("__OOPS_REFUSED__")) {
+            throw new BizException("Refused to create directory");
+        }
+        if (stderr.contains("__OOPS_TARGET_EXISTS__")) {
+            throw new BizException("Path already exists");
+        }
+        if (result.failed() || stderr.contains("__OOPS_MKDIR_FAILED__")) {
+            String detail = stderr.replace("__OOPS_MKDIR_FAILED__", "").trim();
+            throw new BizException(detail.isEmpty() ? "Create directory failed" : "Create directory failed: " + detail);
+        }
+    }
+
+    @Override
     public void renamePath(Environment environment, String namespace, String podName, String container, String fromPath, String toPath) {
         sanitizePath(fromPath);
         sanitizePath(toPath);
@@ -410,7 +443,8 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
             PodFileEntry.FileType type = switch (parts[0]) {
                 case "D" -> PodFileEntry.FileType.DIRECTORY;
                 case "F" -> PodFileEntry.FileType.FILE;
-                case "L" -> PodFileEntry.FileType.SYMLINK;
+                case "LD" -> PodFileEntry.FileType.SYMLINK_DIRECTORY;
+                case "LF" -> PodFileEntry.FileType.SYMLINK_FILE;
                 default -> PodFileEntry.FileType.OTHER;
             };
             Long size;
@@ -424,7 +458,8 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
         }
 
         entries.sort(Comparator
-                .comparing((PodFileEntry entry) -> entry.type() != PodFileEntry.FileType.DIRECTORY)
+                .comparing((PodFileEntry entry) -> entry.type() != PodFileEntry.FileType.DIRECTORY
+                        && entry.type() != PodFileEntry.FileType.SYMLINK_DIRECTORY)
                 .thenComparing(entry -> entry.name().toLowerCase()));
         return entries;
     }

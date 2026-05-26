@@ -55,6 +55,11 @@ const common = {
   "terminal.files.deleteSuccess": "削除しました",
   "terminal.files.deleteConfirmTitle": "削除しますか？",
   "terminal.files.deleteConfirmBody": "この操作は取り消せません。",
+  "terminal.files.newFolder": "新規フォルダ",
+  "terminal.files.newFolderHere": "ここに新規フォルダ",
+  "terminal.files.newFolderTitle": "新規フォルダ",
+  "terminal.files.newFolderPlaceholder": "フォルダ名",
+  "terminal.files.newFolderSuccess": "作成しました",
 }
 
 export default common
