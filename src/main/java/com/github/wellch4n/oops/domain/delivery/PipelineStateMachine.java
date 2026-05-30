@@ -17,6 +17,7 @@ public class PipelineStateMachine {
     static {
         ALLOWED_TRANSITIONS.put(PipelineStatus.INITIALIZED, EnumSet.of(
                 PipelineStatus.RUNNING,
+                PipelineStatus.DEPLOYING,
                 PipelineStatus.ERROR,
                 PipelineStatus.STOPPED
         ));

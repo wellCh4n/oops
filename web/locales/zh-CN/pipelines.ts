@@ -35,6 +35,16 @@ const pipelines = {
   "pipelines.confirmDescPrefix": "将把当前编译产物部署到环境 ",
   "pipelines.confirmDescSuffix": "，该操作无法撤销。",
   "pipelines.confirm": "确认发布",
+  "pipelines.col.currentVersion": "当前版本",
+  "pipelines.col.rollbackTag": "回滚",
+  "pipelines.col.rollbackBtn": "回滚",
+  "pipelines.rollbackSuccess": "已触发回滚",
+  "pipelines.rollbackError": "回滚失败",
+  "pipelines.rollbackConfirmTitle": "确认回滚？",
+  "pipelines.rollbackConfirmDescPrefix": "将把部署回滚到镜像 ",
+  "pipelines.rollbackConfirmDescSuffix": "，运行参数与配置保持当前值，该操作无法撤销。",
+  "pipelines.rollbackConfirm": "确认回滚",
+  "pipelines.rolling": "回滚中...",
 }
 
 export default pipelines

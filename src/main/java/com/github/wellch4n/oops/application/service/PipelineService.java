@@ -192,6 +192,71 @@ public class PipelineService {
     }
 
     @Transactional(noRollbackFor = RuntimeException.class)
+    public String rollback(String namespace, String applicationName, String targetPipelineId, String operatorUserId) {
+        Pipeline source = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, targetPipelineId);
+        if (source == null) {
+            throw new BizException("Target pipeline not found");
+        }
+        if (source.getStatus() != PipelineStatus.SUCCEEDED) {
+            throw new BizException("Only succeeded pipelines can be rolled back to");
+        }
+        if (StringUtils.isBlank(source.getArtifact())) {
+            throw new BizException("Target pipeline has no artifact to deploy");
+        }
+
+        deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
+                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+        ));
+
+        Pipeline rollbackPipeline = pipelineRepository.save(Pipeline.rollback(source, operatorUserId));
+        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                rollbackPipeline, PipelineNotificationType.CREATED, "回滚任务已创建。"
+        ));
+
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.INITIALIZED, PipelineStatus.DEPLOYING);
+        int claimed = pipelineRepository.updateStatusIfMatch(rollbackPipeline.getId(), PipelineStatus.INITIALIZED, PipelineStatus.DEPLOYING);
+        if (claimed == 0) {
+            throw new BizException("Pipeline state changed concurrently, please retry");
+        }
+        rollbackPipeline.markDeploying();
+        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                rollbackPipeline, PipelineNotificationType.DEPLOYING, "回滚任务已进入部署阶段。"
+        ));
+
+        try {
+            Environment environment = requireEnvironment(rollbackPipeline.getEnvironment());
+            Application application = applicationRepository.findAggregate(namespace, applicationName);
+            if (application == null) {
+                throw new BizException("Application not found");
+            }
+            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
+                    application.runtimeEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
+            ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
+            ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
+
+            artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig);
+
+            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+            pipelineRepository.updateStatusIfMatch(rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+            rollbackPipeline.markSucceeded();
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    rollbackPipeline, PipelineNotificationType.SUCCEEDED, "回滚已成功。"
+            ));
+        } catch (Exception e) {
+            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
+            String message = StringUtils.defaultIfBlank(e.getMessage(), "回滚任务执行失败，请查看日志。");
+            pipelineRepository.updateStatusAndMessageIfMatch(
+                    rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
+            rollbackPipeline.markFailed(message);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    rollbackPipeline, PipelineNotificationType.FAILED, message
+            ));
+            throw new RuntimeException("Rollback failed: " + e.getMessage(), e);
+        }
+        return rollbackPipeline.getId();
+    }
+
+    @Transactional(noRollbackFor = RuntimeException.class)
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {

@@ -35,6 +35,16 @@ const pipelines = {
   "pipelines.confirmDescPrefix": "現在のビルド成果物を環境 ",
   "pipelines.confirmDescSuffix": " にデプロイします。この操作は元に戻せません。",
   "pipelines.confirm": "公開を確認",
+  "pipelines.col.currentVersion": "稼働中",
+  "pipelines.col.rollbackTag": "ロールバック",
+  "pipelines.col.rollbackBtn": "ロールバック",
+  "pipelines.rollbackSuccess": "ロールバックを開始しました",
+  "pipelines.rollbackError": "ロールバックに失敗しました",
+  "pipelines.rollbackConfirmTitle": "ロールバックしますか？",
+  "pipelines.rollbackConfirmDescPrefix": "デプロイをイメージ ",
+  "pipelines.rollbackConfirmDescSuffix": " にロールバックします。ランタイムと設定は現在の値のままです。この操作は元に戻せません。",
+  "pipelines.rollbackConfirm": "ロールバック",
+  "pipelines.rolling": "ロールバック中...",
 }
 
 export default pipelines

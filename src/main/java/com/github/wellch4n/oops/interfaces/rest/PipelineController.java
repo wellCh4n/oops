@@ -2,9 +2,11 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.PipelineDto;
+import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -55,5 +57,15 @@ public class PipelineController {
                                           @PathVariable String name,
                                           @PathVariable String id) {
         return Result.success(pipelineService.deployPipeline(namespace, name, id));
+    }
+
+    @PostMapping("/{id}/rollback")
+    @PreAuthorize("isAuthenticated()")
+    public Result<String> rollbackPipeline(@PathVariable String namespace,
+                                           @PathVariable String name,
+                                           @PathVariable String id,
+                                           Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(pipelineService.rollback(namespace, name, id, principal.userId()));
     }
 }

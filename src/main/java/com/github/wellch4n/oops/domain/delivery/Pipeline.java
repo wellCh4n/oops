@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.BaseAggregateRoot;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
+import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -23,6 +24,8 @@ public class Pipeline extends BaseAggregateRoot {
     private DeployMode deployMode;
     private String operatorId;
     private String message;
+    private PipelineTriggerType triggerType;
+    private String rollbackFromPipelineId;
 
     public static Pipeline initialize(
             String namespace,
@@ -40,6 +43,29 @@ public class Pipeline extends BaseAggregateRoot {
         pipeline.setDeployMode(deployMode != null ? deployMode : DeployMode.IMMEDIATE);
         pipeline.setOperatorId(operatorId);
         pipeline.setStatus(PipelineStatus.INITIALIZED);
+        pipeline.setTriggerType(PipelineTriggerType.BUILD);
+        return pipeline;
+    }
+
+    /**
+     * Builds a rollback pipeline that reuses a historic pipeline's artifact (image) and skips the build phase.
+     * The source must be a successfully deployed pipeline; the new pipeline starts at {@link PipelineStatus#INITIALIZED}
+     * and is expected to transition directly to {@link PipelineStatus#DEPLOYING}.
+     */
+    public static Pipeline rollback(Pipeline source, String operatorId) {
+        Pipeline pipeline = new Pipeline();
+        pipeline.setNamespace(source.getNamespace());
+        pipeline.setApplicationName(source.getApplicationName());
+        pipeline.setEnvironment(source.getEnvironment());
+        pipeline.setArtifact(source.getArtifact());
+        pipeline.setPublishType(source.getPublishType());
+        pipeline.setBranch(source.getBranch());
+        pipeline.setPublishRepository(source.getPublishRepository());
+        pipeline.setDeployMode(DeployMode.IMMEDIATE);
+        pipeline.setOperatorId(operatorId);
+        pipeline.setStatus(PipelineStatus.INITIALIZED);
+        pipeline.setTriggerType(PipelineTriggerType.ROLLBACK);
+        pipeline.setRollbackFromPipelineId(source.getId());
         return pipeline;
     }
 

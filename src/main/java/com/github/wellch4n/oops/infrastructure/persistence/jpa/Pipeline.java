@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
+import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -41,6 +42,11 @@ public class Pipeline extends BaseDataObject {
     private String operatorId;
 
     private String message;
+
+    @Enumerated(EnumType.STRING)
+    private PipelineTriggerType triggerType;
+
+    private String rollbackFromPipelineId;
 
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, getId());

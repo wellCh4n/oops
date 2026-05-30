@@ -200,6 +200,13 @@ public class ApplicationController {
         return Result.success(applicationService.getApplicationStatus(namespace, name, env));
     }
 
+    @GetMapping("/{name}/current-image")
+    public Result<String> getCurrentImage(@PathVariable String namespace,
+                                          @PathVariable String name,
+                                          @RequestParam String env) {
+        return Result.success(applicationService.getCurrentImage(namespace, name, env));
+    }
+
     @GetMapping("/{name}/status/watch")
     public SseEmitter watchApplicationStatus(@PathVariable String namespace,
                                               @PathVariable String name,
