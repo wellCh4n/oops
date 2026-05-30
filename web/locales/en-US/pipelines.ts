@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.triggerType": "Type",
   "pipelines.col.buildTag": "Build",
   "pipelines.col.rollbackTag": "Rollback",
+  "pipelines.col.rollbackFrom": "Rolled back from: ",
   "pipelines.col.rollbackBtn": "Rollback",
   "pipelines.rollbackSuccess": "Rollback triggered",
   "pipelines.rollbackError": "Rollback failed",

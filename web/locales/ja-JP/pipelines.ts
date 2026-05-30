@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.triggerType": "種別",
   "pipelines.col.buildTag": "ビルド",
   "pipelines.col.rollbackTag": "ロールバック",
+  "pipelines.col.rollbackFrom": "ロールバック元: ",
   "pipelines.col.rollbackBtn": "ロールバック",
   "pipelines.rollbackSuccess": "ロールバックを開始しました",
   "pipelines.rollbackError": "ロールバックに失敗しました",

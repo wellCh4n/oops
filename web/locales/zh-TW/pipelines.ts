@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.triggerType": "類型",
   "pipelines.col.buildTag": "發布",
   "pipelines.col.rollbackTag": "回滾",
+  "pipelines.col.rollbackFrom": "回滾自: ",
   "pipelines.col.rollbackBtn": "回滾",
   "pipelines.rollbackSuccess": "已觸發回滾",
   "pipelines.rollbackError": "回滾失敗",
