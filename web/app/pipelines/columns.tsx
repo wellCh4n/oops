@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Eye, Ban, Rocket, Undo2, CircleDot } from "lucide-react"
+import { Eye, Ban, Rocket, Undo2, CircleDot, Info } from "lucide-react"
 
 export const getPipelineColumns = (
   t: (key: string) => string,
@@ -58,29 +58,28 @@ export const getPipelineColumns = (
       const isRollback = row.original.triggerType === "ROLLBACK"
       if (!isRollback) {
         return (
-          <span className="inline-flex items-center gap-1 text-muted-foreground whitespace-nowrap">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
             <Rocket className="size-3.5" />
             {t("pipelines.col.buildTag")}
           </span>
         )
       }
       const fromId = row.original.rollbackFromPipelineId
-      const label = (
-        <span className="inline-flex items-center gap-1 text-foreground whitespace-nowrap">
+      return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
           <Undo2 className="size-3.5" />
           {t("pipelines.col.rollbackTag")}
+          {fromId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="size-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("pipelines.col.rollbackFrom")}{fromId}
+              </TooltipContent>
+            </Tooltip>
+          )}
         </span>
-      )
-      if (!fromId) return label
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-help underline decoration-dotted underline-offset-4">{label}</span>
-          </TooltipTrigger>
-          <TooltipContent>
-            {t("pipelines.col.rollbackFrom")}{fromId}
-          </TooltipContent>
-        </Tooltip>
       )
     }
   },
