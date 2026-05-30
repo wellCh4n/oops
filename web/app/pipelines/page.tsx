@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
-import { getPipelines, stopPipeline, deployPipeline } from "@/lib/api/pipelines"
+import { getPipelines, stopPipeline, deployPipeline, rollbackPipeline, getCurrentImage } from "@/lib/api/pipelines"
 import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
 import { Pipeline, Application } from "@/lib/api/types"
 import { getPipelineColumns } from "./columns"
@@ -58,6 +58,9 @@ function PipelinesContent() {
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
   const [stopTarget, setStopTarget] = useState<Pipeline | null>(null)
   const [stopping, setStopping] = useState(false)
+  const [rollbackTarget, setRollbackTarget] = useState<Pipeline | null>(null)
+  const [rolling, setRolling] = useState(false)
+  const [currentPipelineId, setCurrentPipelineId] = useState<string | null>(null)
 
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<string[]>([])
@@ -183,6 +186,25 @@ function PipelinesContent() {
     if (initialized) fetchPipelines()
   }, [initialized, fetchPipelines])
 
+  // Load the current live image to highlight which pipeline is deployed.
+  // Only meaningful when a concrete environment is selected.
+  useEffect(() => {
+    if (!activeNamespace || !selectedApp || selectedEnv === "all") {
+      setCurrentPipelineId(null)
+      return
+    }
+    const load = async () => {
+      try {
+        const res = await getCurrentImage(activeNamespace, selectedApp, selectedEnv)
+        const image = res.data
+        setCurrentPipelineId(image ? image.split(":").pop() ?? null : null)
+      } catch {
+        setCurrentPipelineId(null)
+      }
+    }
+    load()
+  }, [activeNamespace, selectedApp, selectedEnv])
+
   const handleStop = (pipeline: Pipeline) => {
     setStopTarget(pipeline)
   }
@@ -204,6 +226,25 @@ function PipelinesContent() {
 
   const handleDeploy = (pipeline: Pipeline) => {
     setDeployTarget(pipeline)
+  }
+
+  const handleRollback = (pipeline: Pipeline) => {
+    setRollbackTarget(pipeline)
+  }
+
+  const confirmRollback = async () => {
+    if (!rollbackTarget) return
+    setRolling(true)
+    try {
+      await rollbackPipeline(rollbackTarget.namespace, rollbackTarget.applicationName, rollbackTarget.id)
+      toast.success(t("pipelines.rollbackSuccess"))
+      fetchPipelines()
+    } catch {
+      toast.error(t("pipelines.rollbackError"))
+    } finally {
+      setRolling(false)
+      setRollbackTarget(null)
+    }
   }
 
   const confirmDeploy = async () => {
@@ -311,7 +352,7 @@ function PipelinesContent() {
         table={
           <>
             <div className="overflow-x-auto">
-              <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy)} data={pipelines} loading={initialLoad} />
+              <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId)} data={pipelines} loading={initialLoad} />
             </div>
             {selectedApp && (
               <div className="flex items-center justify-end gap-4 mt-2">
@@ -387,6 +428,22 @@ function PipelinesContent() {
             <AlertDialogCancel disabled={stopping}>{t("common.cancel")}</AlertDialogCancel>
             <Button onClick={confirmStop} disabled={stopping}>
               {stopping ? t("pipelines.stopping") : t("pipelines.stopConfirm")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!rollbackTarget} onOpenChange={(open) => { if (!open && !rolling) setRollbackTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("pipelines.rollbackConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("pipelines.rollbackConfirmDescPrefix")}<strong>{rollbackTarget?.artifact}</strong>{t("pipelines.rollbackConfirmDescSuffix")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={rolling}>{t("common.cancel")}</AlertDialogCancel>
+            <Button onClick={confirmRollback} disabled={rolling}>
+              {rolling ? t("pipelines.rolling") : t("pipelines.rollbackConfirm")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

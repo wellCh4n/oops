@@ -35,6 +35,19 @@ const pipelines = {
   "pipelines.confirmDescPrefix": "This will deploy to environment ",
   "pipelines.confirmDescSuffix": ". This cannot be undone.",
   "pipelines.confirm": "Deploy",
+  "pipelines.col.currentVersion": "Live",
+  "pipelines.col.triggerType": "Type",
+  "pipelines.col.buildTag": "Build",
+  "pipelines.col.rollbackTag": "Rollback",
+  "pipelines.col.rollbackFrom": "Rolled back from: ",
+  "pipelines.col.rollbackBtn": "Rollback",
+  "pipelines.rollbackSuccess": "Rollback triggered",
+  "pipelines.rollbackError": "Rollback failed",
+  "pipelines.rollbackConfirmTitle": "Confirm Rollback?",
+  "pipelines.rollbackConfirmDescPrefix": "This will roll back the deployment to image ",
+  "pipelines.rollbackConfirmDescSuffix": ". Runtime and config stay at current values. This cannot be undone.",
+  "pipelines.rollbackConfirm": "Rollback",
+  "pipelines.rolling": "Rolling back...",
 }
 
 export default pipelines

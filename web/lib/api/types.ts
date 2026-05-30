@@ -182,6 +182,8 @@ export interface LastSuccessfulPipelineInfo {
   publishRepository?: string | null
 }
 
+export type PipelineTriggerType = 'BUILD' | 'ROLLBACK'
+
 export interface Pipeline {
   id: string
   namespace: string
@@ -194,6 +196,8 @@ export interface Pipeline {
   operatorId?: string
   operatorName?: string
   message?: string | null
+  triggerType?: PipelineTriggerType
+  rollbackFromPipelineId?: string | null
 }
 
 export interface ConfigMap {

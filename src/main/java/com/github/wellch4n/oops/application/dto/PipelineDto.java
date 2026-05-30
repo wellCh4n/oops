@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.application.dto;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
+import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
 import java.time.LocalDateTime;
 
 public record PipelineDto(
@@ -18,7 +19,9 @@ public record PipelineDto(
         DeployMode deployMode,
         String operatorId,
         String operatorName,
-        String message
+        String message,
+        PipelineTriggerType triggerType,
+        String rollbackFromPipelineId
 ) {
     public static PipelineDto from(Pipeline pipeline, String operatorName) {
         return new PipelineDto(
@@ -34,7 +37,9 @@ public record PipelineDto(
                 pipeline.getDeployMode(),
                 pipeline.getOperatorId(),
                 operatorName,
-                pipeline.getMessage()
+                pipeline.getMessage(),
+                pipeline.getTriggerType(),
+                pipeline.getRollbackFromPipelineId()
         );
     }
 }

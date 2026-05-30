@@ -6,22 +6,34 @@ import { Pipeline } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
-import { Eye, Ban, Rocket } from "lucide-react"
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { Eye, Ban, Rocket, Undo2, CircleDot, Info } from "lucide-react"
 
 export const getPipelineColumns = (
   t: (key: string) => string,
   onStop: (pipeline: Pipeline) => void,
-  onDeploy: (pipeline: Pipeline) => void
+  onDeploy: (pipeline: Pipeline) => void,
+  onRollback: (pipeline: Pipeline) => void,
+  currentPipelineId?: string | null
 ): ColumnDef<Pipeline>[] => [
   {
     accessorKey: "id",
     header: "ID",
-    size: 260,
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">
-        <Copyable value={row.original.id} maxLength={Infinity} />
-      </div>
-    ),
+    size: 300,
+    cell: ({ row }) => {
+      const isCurrent = !!currentPipelineId && row.original.id === currentPipelineId
+      return (
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <Copyable value={row.original.id} maxLength={Infinity} />
+          {isCurrent && (
+            <Badge variant="default" className="gap-1">
+              <CircleDot className="size-3" />
+              {t("pipelines.col.currentVersion")}
+            </Badge>
+          )}
+        </div>
+      )
+    },
   },
   {
     accessorKey: "environment",
@@ -36,6 +48,39 @@ export const getPipelineColumns = (
       const deployMode = row.original.deployMode
       if (!deployMode) return <span className="text-muted-foreground">-</span>
       return deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
+    }
+  },
+  {
+    accessorKey: "triggerType",
+    header: t("pipelines.col.triggerType"),
+    size: 90,
+    cell: ({ row }) => {
+      const isRollback = row.original.triggerType === "ROLLBACK"
+      if (!isRollback) {
+        return (
+          <span className="inline-flex items-center gap-1 whitespace-nowrap">
+            <Rocket className="size-3.5" />
+            {t("pipelines.col.buildTag")}
+          </span>
+        )
+      }
+      const fromId = row.original.rollbackFromPipelineId
+      return (
+        <span className="inline-flex items-center gap-1 whitespace-nowrap">
+          <Undo2 className="size-3.5" />
+          {t("pipelines.col.rollbackTag")}
+          {fromId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="size-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("pipelines.col.rollbackFrom")}{fromId}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </span>
+      )
     }
   },
   {
@@ -102,6 +147,14 @@ export const getPipelineColumns = (
             <Button variant="destructive" size="sm" className="h-8 px-2 gap-1" onClick={() => onStop(row.original)}>
               <Ban className="size-4" />
               {t("pipelines.col.stop")}
+            </Button>
+          )}
+          {row.original.status === "SUCCEEDED"
+            && !!row.original.artifact
+            && !(currentPipelineId && row.original.id === currentPipelineId) && (
+            <Button variant="outline" size="sm" className="h-8 px-2 gap-1" onClick={() => onRollback(row.original)}>
+              <Undo2 className="size-4" />
+              {t("pipelines.col.rollbackBtn")}
             </Button>
           )}
         </div>

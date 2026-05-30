@@ -449,6 +449,14 @@ public class ApplicationService {
         return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
     }
 
+    public String getCurrentImage(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
+        }
+        return applicationRuntimeGateway.findCurrentImage(environment, namespace, name);
+    }
+
     public SseEmitter watchApplicationStatus(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {

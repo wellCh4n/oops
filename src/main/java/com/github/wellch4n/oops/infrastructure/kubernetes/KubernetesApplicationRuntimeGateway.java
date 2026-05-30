@@ -258,6 +258,27 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 CLUSTER_SUFFIX);
     }
 
+    @Override
+    public String findCurrentImage(Environment environment, String namespace, String applicationName) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var statefulSet = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(applicationName)
+                .get();
+        if (statefulSet == null
+                || statefulSet.getSpec() == null
+                || statefulSet.getSpec().getTemplate() == null
+                || statefulSet.getSpec().getTemplate().getSpec() == null) {
+            return null;
+        }
+        var containers = statefulSet.getSpec().getTemplate().getSpec().getContainers();
+        return containers.stream()
+                .filter(container -> applicationName.equals(container.getName()))
+                .map(io.fabric8.kubernetes.api.model.Container::getImage)
+                .findFirst()
+                .orElseGet(() -> containers.isEmpty() ? null : containers.getFirst().getImage());
+    }
+
     private boolean hasResource(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
         return StringUtils.isNotBlank(runtimeSpec.getCpuRequest())
                 || StringUtils.isNotBlank(runtimeSpec.getCpuLimit())

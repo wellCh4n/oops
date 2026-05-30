@@ -21,4 +21,10 @@ public interface ApplicationRuntimeGateway {
     void restartPod(Environment environment, String namespace, String podName);
 
     String findInternalServiceDomain(Environment environment, String namespace, String applicationName);
+
+    /**
+     * Returns the container image currently set on the application's StatefulSet, or {@code null}
+     * if the workload does not exist. Used to highlight which pipeline's artifact is currently live.
+     */
+    String findCurrentImage(Environment environment, String namespace, String applicationName);
 }
