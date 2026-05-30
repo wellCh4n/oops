@@ -36,6 +36,8 @@ const pipelines = {
   "pipelines.confirmDescSuffix": "，该操作无法撤销。",
   "pipelines.confirm": "确认发布",
   "pipelines.col.currentVersion": "当前版本",
+  "pipelines.col.triggerType": "类型",
+  "pipelines.col.buildTag": "发布",
   "pipelines.col.rollbackTag": "回滚",
   "pipelines.col.rollbackBtn": "回滚",
   "pipelines.rollbackSuccess": "已触发回滚",

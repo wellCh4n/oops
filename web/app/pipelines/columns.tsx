@@ -30,12 +30,6 @@ export const getPipelineColumns = (
               {t("pipelines.col.currentVersion")}
             </Badge>
           )}
-          {row.original.triggerType === "ROLLBACK" && (
-            <Badge variant="outline" className="gap-1">
-              <Undo2 className="size-3" />
-              {t("pipelines.col.rollbackTag")}
-            </Badge>
-          )}
         </div>
       )
     },
@@ -53,6 +47,20 @@ export const getPipelineColumns = (
       const deployMode = row.original.deployMode
       if (!deployMode) return <span className="text-muted-foreground">-</span>
       return deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
+    }
+  },
+  {
+    accessorKey: "triggerType",
+    header: t("pipelines.col.triggerType"),
+    size: 90,
+    cell: ({ row }) => {
+      const isRollback = row.original.triggerType === "ROLLBACK"
+      return (
+        <Badge variant={isRollback ? "outline" : "secondary"} className="gap-1">
+          {isRollback ? <Undo2 className="size-3" /> : <Rocket className="size-3" />}
+          {isRollback ? t("pipelines.col.rollbackTag") : t("pipelines.col.buildTag")}
+        </Badge>
+      )
     }
   },
   {

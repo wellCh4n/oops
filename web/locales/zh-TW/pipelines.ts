@@ -36,6 +36,8 @@ const pipelines = {
   "pipelines.confirmDescSuffix": "，該操作無法撤銷。",
   "pipelines.confirm": "確認發布",
   "pipelines.col.currentVersion": "目前版本",
+  "pipelines.col.triggerType": "類型",
+  "pipelines.col.buildTag": "發布",
   "pipelines.col.rollbackTag": "回滾",
   "pipelines.col.rollbackBtn": "回滾",
   "pipelines.rollbackSuccess": "已觸發回滾",

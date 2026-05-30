@@ -36,6 +36,8 @@ const pipelines = {
   "pipelines.confirmDescSuffix": " にデプロイします。この操作は元に戻せません。",
   "pipelines.confirm": "公開を確認",
   "pipelines.col.currentVersion": "稼働中",
+  "pipelines.col.triggerType": "種別",
+  "pipelines.col.buildTag": "ビルド",
   "pipelines.col.rollbackTag": "ロールバック",
   "pipelines.col.rollbackBtn": "ロールバック",
   "pipelines.rollbackSuccess": "ロールバックを開始しました",

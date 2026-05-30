@@ -36,6 +36,8 @@ const pipelines = {
   "pipelines.confirmDescSuffix": ". This cannot be undone.",
   "pipelines.confirm": "Deploy",
   "pipelines.col.currentVersion": "Live",
+  "pipelines.col.triggerType": "Type",
+  "pipelines.col.buildTag": "Build",
   "pipelines.col.rollbackTag": "Rollback",
   "pipelines.col.rollbackBtn": "Rollback",
   "pipelines.rollbackSuccess": "Rollback triggered",
