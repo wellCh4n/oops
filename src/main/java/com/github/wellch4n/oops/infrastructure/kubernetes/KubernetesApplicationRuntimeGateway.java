@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.DeploymentHealth;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
@@ -282,6 +283,62 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 .map(io.fabric8.kubernetes.api.model.Container::getImage)
                 .findFirst()
                 .orElseGet(() -> containers.isEmpty() ? null : containers.getFirst().getImage());
+    }
+
+    private static final java.util.Set<String> FATAL_WAITING_REASONS =
+            java.util.Set.of("ImagePullBackOff", "ErrImagePull", "CrashLoopBackOff");
+
+    @Override
+    public DeploymentHealth getDeploymentHealth(Environment environment, String namespace, String applicationName) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var statefulSet = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(applicationName)
+                .get();
+        if (statefulSet == null) {
+            return new DeploymentHealth(true, false, null, null, null);
+        }
+
+        Integer desiredReplicas = statefulSet.getSpec() != null ? statefulSet.getSpec().getReplicas() : null;
+        var status = statefulSet.getStatus();
+        Integer readyReplicas = status != null ? status.getReadyReplicas() : null;
+        Integer updatedReplicas = status != null ? status.getUpdatedReplicas() : null;
+        Long generation = statefulSet.getMetadata() != null ? statefulSet.getMetadata().getGeneration() : null;
+        Long observedGeneration = status != null ? status.getObservedGeneration() : null;
+
+        int desired = desiredReplicas == null ? 0 : desiredReplicas;
+        int ready = readyReplicas == null ? 0 : readyReplicas;
+        int updated = updatedReplicas == null ? 0 : updatedReplicas;
+        boolean generationObserved = generation == null
+                || (observedGeneration != null && observedGeneration >= generation);
+        boolean rolloutComplete = generationObserved && updated == desired && ready == desired;
+
+        String failureReason = findFatalPodWaitingReason(client, namespace, applicationName);
+
+        return new DeploymentHealth(false, rolloutComplete, desiredReplicas, readyReplicas, failureReason);
+    }
+
+    private String findFatalPodWaitingReason(KubernetesClient client, String namespace, String applicationName) {
+        var pods = client.pods()
+                .inNamespace(namespace)
+                .withLabel("oops.type", OopsTypes.APPLICATION.name())
+                .withLabel("oops.app.name", applicationName)
+                .list();
+        for (Pod pod : pods.getItems()) {
+            if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) {
+                continue;
+            }
+            for (var containerStatus : pod.getStatus().getContainerStatuses()) {
+                var state = containerStatus.getState();
+                if (state != null && state.getWaiting() != null) {
+                    String reason = state.getWaiting().getReason();
+                    if (reason != null && FATAL_WAITING_REASONS.contains(reason)) {
+                        return reason + " (" + pod.getMetadata().getName() + ")";
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private boolean hasResource(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {

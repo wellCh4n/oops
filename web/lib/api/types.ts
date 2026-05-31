@@ -189,7 +189,7 @@ interface ApplicationContainerStatus {
   startedAt?: string | null
 }
 
-type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
+type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'VERIFYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
 
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 

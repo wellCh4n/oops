@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.domain.shared.BaseAggregateRoot;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -26,6 +27,7 @@ public class Pipeline extends BaseAggregateRoot {
     private String message;
     private PipelineTriggerType triggerType;
     private String rollbackFromPipelineId;
+    private LocalDateTime verifyDeadline;
 
     public static Pipeline initialize(
             String namespace,
@@ -84,6 +86,19 @@ public class Pipeline extends BaseAggregateRoot {
 
     public void markDeploying() {
         transitionTo(PipelineStatus.DEPLOYING);
+    }
+
+    /**
+     * Enters post-deploy health verification. The artifact has been applied to the cluster but the rollout
+     * may not yet be ready; {@code verifyDeadline} bounds how long the scan job will wait before failing.
+     */
+    public void markVerifying(LocalDateTime verifyDeadline) {
+        this.verifyDeadline = verifyDeadline;
+        transitionTo(PipelineStatus.VERIFYING);
+    }
+
+    public boolean isVerifyTimedOut(LocalDateTime now) {
+        return verifyDeadline != null && now.isAfter(verifyDeadline);
     }
 
     public void markSucceeded() {

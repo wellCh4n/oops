@@ -30,6 +30,26 @@ class PipelineStateMachineTests {
     }
 
     @Test
+    void allowsDeployingToVerifyingThenSucceeded() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING));
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void allowsVerifyingToError() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.VERIFYING, PipelineStatus.ERROR));
+    }
+
+    @Test
+    void rejectsVerifyingToStopped() {
+        assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
+                PipelineStatus.VERIFYING, PipelineStatus.STOPPED));
+    }
+
+    @Test
     void rejectsIllegalTransitionFromInitialized() {
         assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
                 PipelineStatus.INITIALIZED, PipelineStatus.SUCCEEDED));

@@ -25,6 +25,7 @@ import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,11 @@ class PipelineRollbackTests {
         PipelineJobGateway pipelineJobGateway = org.mockito.Mockito.mock(PipelineJobGateway.class);
         PipelineLogGateway pipelineLogGateway = org.mockito.Mockito.mock(PipelineLogGateway.class);
 
+        // Health verification disabled: rollback completes straight to SUCCEEDED, keeping these tests
+        // focused on rollback mechanics. The VERIFYING path is covered by PipelineHealthVerificationTests.
+        PipelineHealthProperties healthProperties = new PipelineHealthProperties();
+        healthProperties.setEnabled(false);
+
         pipelineService = new PipelineService(
                 pipelineRepository,
                 environmentService,
@@ -68,7 +74,8 @@ class PipelineRollbackTests {
                 pipelineJobGateway,
                 pipelineLogGateway,
                 PipelineStateMachine.getInstance(),
-                new DeploymentConcurrencyPolicy()
+                new DeploymentConcurrencyPolicy(),
+                healthProperties
         );
     }
 

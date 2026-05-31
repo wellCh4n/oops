@@ -40,6 +40,12 @@ oops:
         - "*/__MACOSX/*"
         - .DS_Store
         - "*/.DS_Store"
+    # Post-deploy health verification. When enabled, a deploy enters VERIFYING after the StatefulSet is
+    # applied and is only marked SUCCEEDED once the rollout is ready (catches ImagePullBackOff / not-ready
+    # pods). Set enabled=false to revert to marking SUCCEEDED immediately after apply.
+    health:
+      enabled: true
+      timeout: 5m
   pod-filesystem:
     max-download-size-bytes: 52428800
   ingress:

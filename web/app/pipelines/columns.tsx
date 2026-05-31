@@ -88,7 +88,7 @@ export const getPipelineColumns = (
     cell: ({ row }) => {
       const status = row.original.status
       let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
-      if (status === "RUNNING" || status === "DEPLOYING") variant = "default"
+      if (status === "RUNNING" || status === "DEPLOYING" || status === "VERIFYING") variant = "default"
       if (status === "SUCCEEDED") variant = "secondary"
       if (status === "ERROR" || status === "STOPPED") variant = "destructive"
 
@@ -97,6 +97,7 @@ export const getPipelineColumns = (
         INITIALIZED: "apps.pipeline.status.INITIALIZED",
         RUNNING: "apps.pipeline.status.RUNNING",
         DEPLOYING: "apps.pipeline.status.DEPLOYING",
+        VERIFYING: "apps.pipeline.status.VERIFYING",
         SUCCEEDED: "apps.pipeline.status.SUCCEEDED",
         ERROR: "apps.pipeline.status.ERROR",
         STOPPED: "apps.pipeline.status.STOPPED",

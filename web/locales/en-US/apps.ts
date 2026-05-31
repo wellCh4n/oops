@@ -247,6 +247,7 @@ const apps = {
   "apps.pipeline.status.INITIALIZED": "Initialized",
   "apps.pipeline.status.RUNNING": "Running",
   "apps.pipeline.status.DEPLOYING": "Deploying",
+  "apps.pipeline.status.VERIFYING": "Verifying",
   "apps.pipeline.status.SUCCEEDED": "Succeeded",
   "apps.pipeline.status.ERROR": "Failed",
   "apps.pipeline.status.STOPPED": "Stopped",

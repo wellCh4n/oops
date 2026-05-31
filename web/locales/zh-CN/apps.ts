@@ -247,6 +247,7 @@ const apps = {
   "apps.pipeline.status.INITIALIZED": "初始化",
   "apps.pipeline.status.RUNNING": "运行中",
   "apps.pipeline.status.DEPLOYING": "发布中",
+  "apps.pipeline.status.VERIFYING": "验证中",
   "apps.pipeline.status.SUCCEEDED": "成功",
   "apps.pipeline.status.ERROR": "失败",
   "apps.pipeline.status.STOPPED": "已停止",

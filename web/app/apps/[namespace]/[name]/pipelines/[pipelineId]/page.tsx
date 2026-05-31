@@ -82,13 +82,14 @@ const statusLabel: Record<string, string> = {
   INITIALIZED: "apps.pipeline.status.INITIALIZED",
   RUNNING: "apps.pipeline.status.RUNNING",
   DEPLOYING: "apps.pipeline.status.DEPLOYING",
+  VERIFYING: "apps.pipeline.status.VERIFYING",
   SUCCEEDED: "apps.pipeline.status.SUCCEEDED",
   ERROR: "apps.pipeline.status.ERROR",
   STOPPED: "apps.pipeline.status.STOPPED",
 }
 
 function getStatusVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
-  if (status === "RUNNING" || status === "DEPLOYING") return "default"
+  if (status === "RUNNING" || status === "DEPLOYING" || status === "VERIFYING") return "default"
   if (status === "SUCCEEDED") return "secondary"
   if (status === "ERROR" || status === "STOPPED") return "destructive"
   return "outline"

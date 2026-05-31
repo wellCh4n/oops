@@ -1,10 +1,13 @@
 package com.github.wellch4n.oops.infrastructure.scheduler;
 
+import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
 import com.github.wellch4n.oops.application.port.PipelineJobStatus;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
+import com.github.wellch4n.oops.application.dto.DeploymentHealth;
+import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
@@ -15,6 +18,7 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
@@ -36,13 +40,17 @@ public class PipelineInstanceScanJob {
     private final PipelineJobGateway pipelineJobGateway;
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
     private final PipelineStateMachine pipelineStateMachine;
+    private final ApplicationRuntimeGateway applicationRuntimeGateway;
+    private final PipelineHealthProperties pipelineHealthProperties;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
                                    ApplicationEventPublisher eventPublisher,
                                    PipelineJobGateway pipelineJobGateway,
                                    ArtifactDeploymentExecutor artifactDeploymentExecutor,
-                                   PipelineStateMachine pipelineStateMachine) {
+                                   PipelineStateMachine pipelineStateMachine,
+                                   ApplicationRuntimeGateway applicationRuntimeGateway,
+                                   PipelineHealthProperties pipelineHealthProperties) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
@@ -50,6 +58,8 @@ public class PipelineInstanceScanJob {
         this.pipelineJobGateway = pipelineJobGateway;
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
         this.pipelineStateMachine = pipelineStateMachine;
+        this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.pipelineHealthProperties = pipelineHealthProperties;
     }
 
     @Scheduled(fixedRate = 5000)
@@ -113,14 +123,7 @@ public class PipelineInstanceScanJob {
                                 applicationExpertConfig
                         );
 
-                        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-                        pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED
-                        );
-                        pipeline.markSucceeded();
-                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
-                        ));
+                        completeDeployPhase(pipeline);
                     } else if (jobStatus == PipelineJobStatus.FAILED) {
                         System.err.println("Error processing succeeded pipeline " + pipeline.getId());
                         pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
@@ -152,6 +155,88 @@ public class PipelineInstanceScanJob {
                 }
             }
         }
+
+        scanVerifyingPipelines();
+    }
+
+    /**
+     * Polls pipelines awaiting post-deploy health verification. Each VERIFYING pipeline is checked against the
+     * live StatefulSet rollout: a converged rollout marks it SUCCEEDED, a fatal pod state or an exceeded deadline
+     * marks it ERROR, and anything in between leaves it VERIFYING for the next tick.
+     */
+    private void scanVerifyingPipelines() {
+        List<Pipeline> verifyingPipelines = pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING);
+        for (Pipeline pipeline : verifyingPipelines) {
+            try {
+                Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
+                if (environment == null) {
+                    throw new IllegalStateException("Environment not found: " + pipeline.getEnvironment());
+                }
+
+                DeploymentHealth health = applicationRuntimeGateway.getDeploymentHealth(
+                        environment, pipeline.getNamespace(), pipeline.getApplicationName());
+
+                if (health.hasFailure()) {
+                    failVerification(pipeline, "新版本部署失败：" + health.failureReason());
+                } else if (!health.workloadMissing() && health.rolloutComplete()) {
+                    succeedVerification(pipeline);
+                } else if (pipeline.isVerifyTimedOut(LocalDateTime.now())) {
+                    failVerification(pipeline, "健康验证超时，新版本未在规定时间内就绪。");
+                }
+                // otherwise: still rolling out, leave VERIFYING for the next tick
+            } catch (Exception e) {
+                System.out.println("Error verifying pipeline instance: " + e.getMessage());
+            }
+        }
+    }
+
+    private void succeedVerification(Pipeline pipeline) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED);
+        int updated = pipelineRepository.updateStatusIfMatch(
+                pipeline.getId(), PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED);
+        if (updated > 0) {
+            pipeline.markSucceeded();
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
+            ));
+        }
+    }
+
+    private void failVerification(Pipeline pipeline, String message) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.VERIFYING, PipelineStatus.ERROR);
+        int updated = pipelineRepository.updateStatusAndMessageIfMatch(
+                pipeline.getId(), PipelineStatus.VERIFYING, PipelineStatus.ERROR, message);
+        if (updated > 0) {
+            pipeline.markFailed(message);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.FAILED, message
+            ));
+        }
+    }
+
+    /**
+     * Completes the deploy phase after the artifact is applied: moves to VERIFYING (with a deadline) when health
+     * verification is enabled, otherwise marks SUCCEEDED immediately (legacy behavior).
+     */
+    private void completeDeployPhase(Pipeline pipeline) {
+        if (pipelineHealthProperties.isEnabled()) {
+            LocalDateTime deadline = LocalDateTime.now().plus(pipelineHealthProperties.getTimeout());
+            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING);
+            pipelineRepository.updateStatusAndDeadlineIfMatch(
+                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING, deadline);
+            pipeline.markVerifying(deadline);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.VERIFYING, "正在验证新版本是否就绪…"
+            ));
+            return;
+        }
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+        pipelineRepository.updateStatusIfMatch(
+                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+        pipeline.markSucceeded();
+        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
+        ));
     }
 
     private ApplicationRuntimeSpec.EnvironmentConfig resolveEnvironmentConfig(Application application, String environmentName) {
