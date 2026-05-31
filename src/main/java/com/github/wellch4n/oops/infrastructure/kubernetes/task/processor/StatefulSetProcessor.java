@@ -65,6 +65,19 @@ public class StatefulSetProcessor implements DeployProcessor {
                     .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
                     .withFailureThreshold(healthCheck.effectiveFailureThreshold())
                 .endLivenessProbe();
+            // Readiness probe from the same config: it gates Service traffic and, crucially, drives
+            // readyReplicas — which is what post-deploy verification (VERIFYING) keys off to decide a
+            // rollout is actually healthy rather than merely started.
+            containerBuilder.withNewReadinessProbe()
+                    .withNewHttpGet()
+                        .withPath(healthCheck.normalizedPath())
+                        .withNewPort(appPort)
+                    .endHttpGet()
+                    .withInitialDelaySeconds(healthCheck.effectiveInitialDelaySeconds())
+                    .withPeriodSeconds(healthCheck.effectivePeriodSeconds())
+                    .withTimeoutSeconds(healthCheck.effectiveTimeoutSeconds())
+                    .withFailureThreshold(healthCheck.effectiveFailureThreshold())
+                .endReadinessProbe();
         }
 
         StatefulSet statefulSet = new StatefulSetBuilder()
