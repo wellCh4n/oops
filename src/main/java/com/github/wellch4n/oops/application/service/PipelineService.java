@@ -149,7 +149,7 @@ public class PipelineService {
         }
         pipelineStateMachine.ensureManualDeployable(pipeline.getStatus());
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
         pipelineStateMachine.ensureCanTransition(PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
 
@@ -205,7 +205,7 @@ public class PipelineService {
         }
 
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
 
         Pipeline rollbackPipeline = pipelineRepository.save(Pipeline.rollback(source, operatorUserId));

@@ -132,6 +132,21 @@ class PipelineVerificationScanTests {
     }
 
     @Test
+    void exceededDeadlineAfterHealthQueryErrorMarksError() {
+        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
+                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().minusMinutes(1))));
+        when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
+                .thenThrow(new IllegalStateException("Kubernetes API unavailable"));
+        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any()))
+                .thenReturn(1);
+
+        scanJob.scan();
+
+        verify(pipelineRepository).updateStatusAndMessageIfMatch(
+                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any());
+    }
+
+    @Test
     void inProgressRolloutLeavesVerifyingUntouched() {
         when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
                 .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().plusMinutes(5))));

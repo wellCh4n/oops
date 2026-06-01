@@ -186,6 +186,9 @@ public class PipelineInstanceScanJob {
                 // otherwise: still rolling out, leave VERIFYING for the next tick
             } catch (Exception e) {
                 System.out.println("Error verifying pipeline instance: " + e.getMessage());
+                if (pipeline.isVerifyTimedOut(LocalDateTime.now())) {
+                    failVerification(pipeline, "健康验证超时，新版本未在规定时间内就绪。");
+                }
             }
         }
     }
