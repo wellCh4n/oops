@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class PodFileSystemService {
 
+    private static final String ENVIRONMENT_NOT_FOUND_PREFIX = "Environment not found: ";
+
     private final EnvironmentRepository environmentRepository;
     private final PodFileSystemGateway podFileSystemGateway;
     private final PodFileSystemProperties podFileSystemProperties;
@@ -32,7 +34,7 @@ public class PodFileSystemService {
     public List<PodFileEntry> listDirectory(String environmentName, String namespace, String podName, String container, String path) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         return listDirectory(environment, namespace, podName, container, path);
     }
@@ -44,7 +46,7 @@ public class PodFileSystemService {
     public long getFileSize(String environmentName, String namespace, String podName, String container, String path) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         return getFileSize(environment, namespace, podName, container, path);
     }
@@ -56,7 +58,7 @@ public class PodFileSystemService {
     public void streamFile(String environmentName, String namespace, String podName, String container, String path, OutputStream outputStream) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         streamFile(environment, namespace, podName, container, path, outputStream);
     }
@@ -68,7 +70,7 @@ public class PodFileSystemService {
     public void uploadFile(String environmentName, String namespace, String podName, String container, String path, InputStream inputStream) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         uploadFile(environment, namespace, podName, container, path, inputStream);
     }
@@ -84,7 +86,7 @@ public class PodFileSystemService {
     public void deletePath(String environmentName, String namespace, String podName, String container, String path) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         deletePath(environment, namespace, podName, container, path);
     }
@@ -96,7 +98,7 @@ public class PodFileSystemService {
     public void renamePath(String environmentName, String namespace, String podName, String container, String fromPath, String toPath) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         renamePath(environment, namespace, podName, container, fromPath, toPath);
     }
@@ -108,7 +110,7 @@ public class PodFileSystemService {
     public void createDirectory(String environmentName, String namespace, String podName, String container, String path) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new BizException("Environment not found: " + environmentName);
+            throw new BizException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         createDirectory(environment, namespace, podName, container, path);
     }

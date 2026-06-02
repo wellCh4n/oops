@@ -1,0 +1,27 @@
+# Test-only configuration. Keeps the Spring context self-contained so tests
+# (including the OopsApplicationTests smoke test) run without an external MySQL.
+# Uses an in-memory H2 database with the schema generated from JPA entities;
+# Flyway is disabled because the production migrations use MySQL-specific DDL.
+spring:
+  datasource:
+    url: jdbc:h2:mem:oops;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: true
+  flyway:
+    enabled: false
+
+oops:
+  admin:
+    password: admin123
+  jwt:
+    secret: test-jwt-secret-key-which-is-long-enough-0123456789
+    expiration: 86400000
+  crypto:
+    secret-key: test-crypto-secret-key-0123456789

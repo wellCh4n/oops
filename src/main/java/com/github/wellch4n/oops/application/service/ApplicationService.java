@@ -43,6 +43,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public class ApplicationService {
 
+    private static final String ENVIRONMENT_NOT_FOUND_PREFIX = "Environment not found: ";
+
     private final ApplicationRepository applicationRepository;
     private final EnvironmentRepository environmentRepository;
     private final UserService userService;
@@ -444,7 +446,7 @@ public class ApplicationService {
     public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
     }
@@ -452,7 +454,7 @@ public class ApplicationService {
     public String getCurrentImage(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         return applicationRuntimeGateway.findCurrentImage(environment, namespace, name);
     }
@@ -460,7 +462,7 @@ public class ApplicationService {
     public SseEmitter watchApplicationStatus(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         return applicationRuntimeGateway.watchPodStatuses(environment, namespace, name);
     }
@@ -468,7 +470,7 @@ public class ApplicationService {
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
         }
         applicationRuntimeGateway.restartPod(environment, namespace, podName);
         return true;
@@ -478,7 +480,7 @@ public class ApplicationService {
         try {
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
-                throw new IllegalArgumentException("Environment not found: " + environmentName);
+                throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND_PREFIX + environmentName);
             }
 
             String internalDomain = applicationRuntimeGateway.findInternalServiceDomain(environment, namespace, name);
