@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
@@ -137,7 +136,6 @@ public class PipelineService {
         return pipelineLogGateway.watch(pipeline, environment);
     }
 
-    @Transactional(noRollbackFor = RuntimeException.class)
     public Boolean deployPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
@@ -191,7 +189,6 @@ public class PipelineService {
         return true;
     }
 
-    @Transactional(noRollbackFor = RuntimeException.class)
     public String rollback(String namespace, String applicationName, String targetPipelineId, String operatorUserId) {
         Pipeline source = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, targetPipelineId);
         if (source == null) {
@@ -256,7 +253,6 @@ public class PipelineService {
         return rollbackPipeline.getId();
     }
 
-    @Transactional(noRollbackFor = RuntimeException.class)
     public Boolean stopPipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {

@@ -125,7 +125,6 @@ public class ApplicationService {
         return true;
     }
 
-    @Transactional
     public Boolean deleteApplication(String namespace, String name, String currentUserId) {
         Application exist = applicationRepository.findAggregate(namespace, name);
         if (exist == null) {
@@ -313,7 +312,6 @@ public class ApplicationService {
         return true;
     }
 
-    @Transactional
     public Boolean updateApplicationRuntimeSpecEnvironmentConfigs(
             String namespace,
             String appName,
@@ -328,7 +326,6 @@ public class ApplicationService {
         return true;
     }
 
-    @Transactional
     public Boolean updateApplicationRuntimeSpec(String namespace, String appName, ApplicationConfigDto.RuntimeSpec request) {
         Application application = requireAggregate(namespace, appName);
         List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs = application.runtimeEnvironmentConfigs();

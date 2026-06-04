@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.application.port.repository.ApplicationRepository {
@@ -87,6 +88,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
+    @Transactional
     public com.github.wellch4n.oops.domain.application.Application saveAggregate(com.github.wellch4n.oops.domain.application.Application application) {
         com.github.wellch4n.oops.domain.application.Application saved = PersistenceMapper.toDomain(
                 applicationRepository.save(PersistenceMapper.toEntity(application)));
@@ -95,6 +97,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
+    @Transactional
     public void deleteAggregate(String namespace, String name) {
         environmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
         buildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
