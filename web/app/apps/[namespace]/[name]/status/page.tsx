@@ -9,9 +9,11 @@ import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { toast } from "sonner"
-import { ExternalLink } from "lucide-react"
+import { ChevronRight, ExternalLink } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { ApplicationResourceViewer } from "@/app/apps/components/application-resource-viewer"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,6 +79,7 @@ function ApplicationStatusContent() {
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
+  const [resourcesOpen, setResourcesOpen] = useState(false)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
 
@@ -287,6 +290,16 @@ function ApplicationStatusContent() {
           </div>
         }
       />
+
+      <Collapsible open={resourcesOpen} onOpenChange={setResourcesOpen} className="mt-4">
+        <CollapsibleTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+          <ChevronRight className={`size-4 transition-transform ${resourcesOpen ? "rotate-90" : ""}`} />
+          {t("apps.status.resources")}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2">
+          <ApplicationResourceViewer namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+        </CollapsibleContent>
+      </Collapsible>
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
         <AlertDialogContent>

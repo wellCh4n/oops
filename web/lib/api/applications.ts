@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, SseWatchOptions } from "./sse"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -175,6 +175,14 @@ export const updateApplicationExpertConfig = async (
     throw new Error("Failed to save application expert config")
   }
   return response.json() as Promise<ApiResponse<boolean>>
+}
+
+export const getApplicationResources = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationResource[]>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/resources?env=${encodeURIComponent(env)}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch application resources")
+  }
+  return response.json() as Promise<ApiResponse<ApplicationResource[]>>
 }
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {

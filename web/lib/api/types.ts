@@ -157,6 +157,12 @@ export interface ApplicationExpertConfigEnvironmentConfig {
   serviceAccountName?: string
 }
 
+export interface ApplicationResource {
+  kind: string
+  name: string
+  data: string
+}
+
 interface ApplicationRuntimeSpecHealthCheck {
   enabled?: boolean
   path?: string
