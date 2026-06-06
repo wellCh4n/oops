@@ -58,16 +58,14 @@ export const getPipelineColumns = (
       const isRollback = row.original.triggerType === "ROLLBACK"
       if (!isRollback) {
         return (
-          <span className="inline-flex items-center gap-1 whitespace-nowrap">
-            <Rocket className="size-3.5" />
-            {t("pipelines.col.buildTag")}
+          <span className="whitespace-nowrap">
+            {t("pipelines.col.releaseTag")}
           </span>
         )
       }
       const fromId = row.original.rollbackFromPipelineId
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap">
-          <Undo2 className="size-3.5" />
           {t("pipelines.col.rollbackTag")}
           {fromId && (
             <Tooltip>

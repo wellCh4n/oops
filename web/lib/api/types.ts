@@ -182,7 +182,7 @@ export interface LastSuccessfulPipelineInfo {
   publishRepository?: string | null
 }
 
-export type PipelineTriggerType = 'BUILD' | 'ROLLBACK'
+export type PipelineTriggerType = 'RELEASE' | 'ROLLBACK'
 
 export interface Pipeline {
   id: string

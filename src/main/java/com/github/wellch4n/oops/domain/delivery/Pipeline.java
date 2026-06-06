@@ -43,7 +43,7 @@ public class Pipeline extends BaseAggregateRoot {
         pipeline.setDeployMode(deployMode != null ? deployMode : DeployMode.IMMEDIATE);
         pipeline.setOperatorId(operatorId);
         pipeline.setStatus(PipelineStatus.INITIALIZED);
-        pipeline.setTriggerType(PipelineTriggerType.BUILD);
+        pipeline.setTriggerType(PipelineTriggerType.RELEASE);
         return pipeline;
     }
 
