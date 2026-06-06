@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
+import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
@@ -155,6 +156,13 @@ public class ApplicationController {
                                                          @PathVariable String name,
                                                          @RequestBody ApplicationConfigDto.ExpertConfig request) {
         return Result.success(applicationService.updateApplicationExpertConfig(namespace, name, request));
+    }
+
+    @GetMapping("/{name}/expert-config/resources")
+    public Result<List<ApplicationResourceView>> getApplicationResources(@PathVariable String namespace,
+                                                                         @PathVariable String name,
+                                                                         @RequestParam String env) {
+        return Result.success(applicationService.getApplicationResources(namespace, name, env));
     }
 
     @GetMapping("/{name}/environments")
