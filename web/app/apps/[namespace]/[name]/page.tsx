@@ -4,19 +4,21 @@
 import { Suspense, useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { ApplicationForm } from "../../application-form"
-import { 
-  getApplication, 
-  getApplicationBuildConfig, 
-  getApplicationBuildEnvConfigs, 
+import {
+  getApplication,
+  getApplicationBuildConfig,
+  getApplicationBuildEnvConfigs,
   getApplicationRuntimeSpec,
-  getApplicationService
+  getApplicationService,
+  getApplicationExpertConfig
 } from "@/lib/api/applications"
-import { 
-  Application, 
-  ApplicationBuildConfig, 
-  ApplicationBuildEnvironmentConfig, 
+import {
+  Application,
+  ApplicationBuildConfig,
+  ApplicationBuildEnvironmentConfig,
   ApplicationRuntimeSpec,
-  ApplicationServiceConfig
+  ApplicationServiceConfig,
+  ApplicationExpertConfig
 } from "@/lib/api/types"
 import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
@@ -34,6 +36,7 @@ export default function EditAppPage() {
   const [buildEnvConfigs, setBuildEnvConfigs] = useState<ApplicationBuildEnvironmentConfig[]>([])
   const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | undefined>(undefined)
   const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
+  const [expertConfig, setExpertConfig] = useState<ApplicationExpertConfig | undefined>(undefined)
   
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
@@ -42,12 +45,13 @@ export default function EditAppPage() {
   useEffect(() => {
     const fetchApp = async () => {
       try {
-        const [appRes, buildConfigRes, buildEnvRes, runtimeSpecRes, serviceRes] = await Promise.all([
+        const [appRes, buildConfigRes, buildEnvRes, runtimeSpecRes, serviceRes, expertRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationBuildConfig(namespace, name),
           getApplicationBuildEnvConfigs(namespace, name),
           getApplicationRuntimeSpec(namespace, name),
           getApplicationService(namespace, name),
+          getApplicationExpertConfig(namespace, name),
         ])
 
         if (appRes.data) {
@@ -76,6 +80,10 @@ export default function EditAppPage() {
             setServiceConfig(serviceRes.data)
         }
 
+        if (expertRes.data) {
+            setExpertConfig(expertRes.data)
+        }
+
       } catch (error) {
         console.error("Failed to fetch application:", error)
         toast.error(t("apps.detail.fetchError"))
@@ -102,6 +110,7 @@ export default function EditAppPage() {
           initialBuildEnvConfigs={buildEnvConfigs}
           initialRuntimeSpec={runtimeSpec}
           initialServiceConfig={serviceConfig}
+          initialExpertConfig={expertConfig}
         />
       </Suspense>
     </ContentPage>

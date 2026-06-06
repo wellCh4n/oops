@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.task;
 import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
 import com.github.wellch4n.oops.infrastructure.config.OopsConstants;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
@@ -30,6 +31,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
     private final ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec;
     private final ApplicationRuntimeSpec.HealthCheck healthCheck;
     private final ApplicationServiceConfig applicationServiceConfig;
+    private final ApplicationExpertConfig.EnvironmentConfig expertConfig;
     private final IngressProperties ingressConfig;
 
     private static final int SERVICE_PORT = 80;
@@ -39,6 +41,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                               ApplicationRuntimeSpec.EnvironmentConfig environmentConfig,
                               ApplicationRuntimeSpec.HealthCheck healthCheck,
                               ApplicationServiceConfig applicationServiceConfig,
+                              ApplicationExpertConfig.EnvironmentConfig expertConfig,
                               IngressProperties ingressConfig) {
         this.pipeline = pipeline;
         this.application = application;
@@ -46,6 +49,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         this.runtimeSpec = environmentConfig;
         this.healthCheck = healthCheck;
         this.applicationServiceConfig = applicationServiceConfig;
+        this.expertConfig = expertConfig;
         this.ingressConfig = ingressConfig;
     }
 
@@ -54,7 +58,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
         try (KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
             DeployContext ctx = new DeployContext(
                     pipeline, application, environment, runtimeSpec, healthCheck,
-                    applicationServiceConfig, ingressConfig, client, OopsConstants.PATCH_CONTEXT,
+                    applicationServiceConfig, expertConfig, ingressConfig, client, OopsConstants.PATCH_CONTEXT,
                     SERVICE_PORT, Map.of(
                             "oops.type", OopsTypes.APPLICATION.name(),
                             "oops.app.name", application.getName())

@@ -16,6 +16,7 @@ import com.github.wellch4n.oops.application.port.PipelineLogGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
@@ -123,7 +124,7 @@ class PipelineRollbackTests {
 
         verify(artifactDeploymentExecutor).deploy(any(Pipeline.class), any(Application.class), any(Environment.class),
                 any(ApplicationRuntimeSpec.EnvironmentConfig.class), any(ApplicationRuntimeSpec.HealthCheck.class),
-                any(ApplicationServiceConfig.class));
+                any(ApplicationServiceConfig.class), any(ApplicationExpertConfig.EnvironmentConfig.class));
         verify(pipelineRepository).updateStatusIfMatch(NEW_ID, PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
     }
 
@@ -179,7 +180,7 @@ class PipelineRollbackTests {
                 .thenReturn(succeededSource());
         stubHappyDependencies();
         org.mockito.Mockito.doThrow(new RuntimeException("boom"))
-                .when(artifactDeploymentExecutor).deploy(any(), any(), any(), any(), any(), any());
+                .when(artifactDeploymentExecutor).deploy(any(), any(), any(), any(), any(), any(), any());
 
         assertThrows(RuntimeException.class,
                 () -> pipelineService.rollback(NAMESPACE, APP_NAME, SOURCE_ID, "operator-1"));

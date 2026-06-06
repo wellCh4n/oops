@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Quantity;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -68,6 +69,16 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         if (!hasResource(runtimeSpec)) {
             return;
         }
+        var resources = buildResources(runtimeSpec);
+        client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
+                .edit(statefulSet -> {
+                    statefulSet.getSpec().getTemplate().getSpec().getContainers()
+                            .forEach(container -> container.setResources(resources));
+                    return statefulSet;
+                });
+    }
+
+    private ResourceRequirements buildResources(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
         var resourcesBuilder = new ResourceRequirementsBuilder();
         if (StringUtils.isNotBlank(runtimeSpec.getCpuRequest())) {
             resourcesBuilder.addToRequests("cpu", new Quantity(runtimeSpec.getCpuRequest()));
@@ -81,13 +92,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         if (StringUtils.isNotBlank(runtimeSpec.getMemoryLimit())) {
             resourcesBuilder.addToLimits("memory", new Quantity(runtimeSpec.getMemoryLimit() + "Mi"));
         }
-        var resources = resourcesBuilder.build();
-        client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
-                .edit(statefulSet -> {
-                    statefulSet.getSpec().getTemplate().getSpec().getContainers()
-                            .forEach(container -> container.setResources(resources));
-                    return statefulSet;
-                });
+        return resourcesBuilder.build();
     }
 
     @Override

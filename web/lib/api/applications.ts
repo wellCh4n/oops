@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, SseWatchOptions } from "./sse"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -151,6 +151,30 @@ export const getApplicationRuntimeSpec = async (namespace: string, name: string)
     throw new Error("Failed to fetch application runtime spec")
   }
   return response.json() as Promise<ApiResponse<ApplicationRuntimeSpec>>
+}
+
+export const getApplicationExpertConfig = async (namespace: string, name: string): Promise<ApiResponse<ApplicationExpertConfig>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/expert-config`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch application expert config")
+  }
+  return response.json() as Promise<ApiResponse<ApplicationExpertConfig>>
+}
+
+export const updateApplicationExpertConfig = async (
+  namespace: string,
+  name: string,
+  expertConfig: Pick<ApplicationExpertConfig, "environmentConfigs">
+): Promise<ApiResponse<boolean>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/expert-config`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(expertConfig),
+  })
+  if (!response.ok) {
+    throw new Error("Failed to save application expert config")
+  }
+  return response.json() as Promise<ApiResponse<boolean>>
 }
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {

@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.application.port.PipelineLogGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
@@ -166,8 +167,10 @@ public class PipelineService {
                     application.runtimeEnvironmentConfigOrDefault(pipeline.getEnvironment());
             ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
             ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
+            ApplicationExpertConfig.EnvironmentConfig expertConfig =
+                    application.expertEnvironmentConfigOrDefault(pipeline.getEnvironment());
 
-            artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig);
+            artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
             pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
@@ -230,8 +233,10 @@ public class PipelineService {
                     application.runtimeEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
             ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
             ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
+            ApplicationExpertConfig.EnvironmentConfig expertConfig =
+                    application.expertEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
 
-            artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig);
+            artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
             pipelineRepository.updateStatusIfMatch(rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);

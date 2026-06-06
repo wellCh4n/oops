@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.task.processor;
 
 import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
@@ -20,6 +21,7 @@ public class DeployContext {
     private final ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec;
     private final ApplicationRuntimeSpec.HealthCheck healthCheck;
     private final ApplicationServiceConfig applicationServiceConfig;
+    private final ApplicationExpertConfig.EnvironmentConfig expertConfig;
     private final IngressProperties ingressConfig;
     private final KubernetesClient client;
     private final PatchContext patchContext;

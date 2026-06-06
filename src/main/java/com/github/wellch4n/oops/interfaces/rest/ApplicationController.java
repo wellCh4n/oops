@@ -143,6 +143,20 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplicationRuntimeSpec(namespace, name, request));
     }
 
+    @GetMapping("/{name}/expert-config")
+    public Result<ApplicationConfigDto.ExpertConfig> getApplicationExpertConfig(@PathVariable String namespace,
+                                                                                @PathVariable String name) {
+        return Result.success(applicationService.getApplicationExpertConfig(namespace, name));
+    }
+
+    @PutMapping("/{name}/expert-config")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Boolean> updateApplicationExpertConfig(@PathVariable String namespace,
+                                                         @PathVariable String name,
+                                                         @RequestBody ApplicationConfigDto.ExpertConfig request) {
+        return Result.success(applicationService.updateApplicationExpertConfig(namespace, name, request));
+    }
+
     @GetMapping("/{name}/environments")
     public Result<List<ApplicationConfigDto.EnvironmentBinding>> getApplicationEnvironments(
             @PathVariable String namespace,

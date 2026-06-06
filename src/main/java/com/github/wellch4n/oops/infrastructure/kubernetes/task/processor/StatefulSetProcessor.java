@@ -84,6 +84,12 @@ public class StatefulSetProcessor implements DeployProcessor {
                 .endSpec()
                 .build();
 
+        var expertConfig = ctx.getExpertConfig();
+        if (expertConfig != null && StringUtils.isNotBlank(expertConfig.getServiceAccountName())) {
+            statefulSet.getSpec().getTemplate().getSpec()
+                    .setServiceAccountName(expertConfig.getServiceAccountName());
+        }
+
         StatefulSet created = ctx.getClient().apps().statefulSets()
                 .inNamespace(namespace)
                 .resource(statefulSet)
