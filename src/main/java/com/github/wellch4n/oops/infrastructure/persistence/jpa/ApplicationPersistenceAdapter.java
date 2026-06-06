@@ -17,6 +17,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     private final ApplicationEnvironmentRepository environmentRepository;
     private final ApplicationServiceConfigRepository serviceConfigRepository;
     private final ApplicationCollaboratorRepository collaboratorRepository;
+    private final ApplicationExpertConfigRepository expertConfigRepository;
 
     public ApplicationPersistenceAdapter(
             ApplicationRepository applicationRepository,
@@ -24,7 +25,8 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
             ApplicationRuntimeSpecRepository runtimeSpecRepository,
             ApplicationEnvironmentRepository environmentRepository,
             ApplicationServiceConfigRepository serviceConfigRepository,
-            ApplicationCollaboratorRepository collaboratorRepository
+            ApplicationCollaboratorRepository collaboratorRepository,
+            ApplicationExpertConfigRepository expertConfigRepository
     ) {
         this.applicationRepository = applicationRepository;
         this.buildConfigRepository = buildConfigRepository;
@@ -32,6 +34,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         this.environmentRepository = environmentRepository;
         this.serviceConfigRepository = serviceConfigRepository;
         this.collaboratorRepository = collaboratorRepository;
+        this.expertConfigRepository = expertConfigRepository;
     }
 
     @Override
@@ -103,6 +106,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         buildConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         runtimeSpecRepository.deleteByNamespaceAndApplicationName(namespace, name);
         serviceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        expertConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         collaboratorRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationRepository.deleteByNamespaceAndName(namespace, name);
     }
@@ -138,6 +142,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         application.setBuildConfig(findBuildConfig(namespace, name).orElse(null));
         application.setRuntimeSpec(findRuntimeSpec(namespace, name).orElse(null));
         application.setServiceConfig(findServiceConfig(namespace, name).orElse(null));
+        application.setExpertConfig(findExpertConfig(namespace, name).orElse(null));
         application.setEnvironments(findEnvironments(namespace, name));
         application.setCollaborators(findCollaborators(namespace, name));
     }
@@ -159,6 +164,11 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
             application.getServiceConfig().setNamespace(namespace);
             application.getServiceConfig().setApplicationName(name);
             serviceConfigRepository.save(PersistenceMapper.toEntity(application.getServiceConfig()));
+        }
+        if (application.getExpertConfig() != null) {
+            application.getExpertConfig().setNamespace(namespace);
+            application.getExpertConfig().setApplicationName(name);
+            expertConfigRepository.save(PersistenceMapper.toEntity(application.getExpertConfig()));
         }
         if (application.getEnvironments() != null) {
             environmentRepository.deleteByNamespaceAndApplicationName(namespace, name);
@@ -205,5 +215,9 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
 
     private Optional<com.github.wellch4n.oops.domain.application.ApplicationServiceConfig> findServiceConfig(String namespace, String applicationName) {
         return serviceConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
+    }
+
+    private Optional<com.github.wellch4n.oops.domain.application.ApplicationExpertConfig> findExpertConfig(String namespace, String applicationName) {
+        return expertConfigRepository.findByNamespaceAndApplicationName(namespace, applicationName).map(PersistenceMapper::toDomain);
     }
 }

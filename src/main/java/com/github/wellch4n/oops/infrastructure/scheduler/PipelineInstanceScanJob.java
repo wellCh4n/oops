@@ -105,10 +105,12 @@ public class PipelineInstanceScanJob {
                                 application, pipeline.getEnvironment());
                         ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
                         var applicationServiceConfig = application.serviceConfigOrDefault();
+                        var applicationExpertConfig = application.expertEnvironmentConfigOrDefault(pipeline.getEnvironment());
 
                         artifactDeploymentExecutor.deploy(
                                 pipeline, application, environment,
-                                applicationRuntimeSpecEnvironmentConfig, healthCheck, applicationServiceConfig
+                                applicationRuntimeSpecEnvironmentConfig, healthCheck, applicationServiceConfig,
+                                applicationExpertConfig
                         );
 
                         pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);

@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.application.dto;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
@@ -303,6 +304,56 @@ public final class ApplicationConfigDto {
             config.setEnvironmentName(environmentName);
             config.setHost(host);
             config.setHttps(https);
+            return config;
+        }
+    }
+
+    public record ExpertConfig(
+            String id,
+            LocalDateTime createdTime,
+            String namespace,
+            String applicationName,
+            List<ExpertEnvironmentConfig> environmentConfigs
+    ) {
+        public static ExpertConfig from(ApplicationExpertConfig config) {
+            if (config == null) {
+                return null;
+            }
+            return new ExpertConfig(
+                    config.getId(),
+                    config.getCreatedTime(),
+                    config.getNamespace(),
+                    config.getApplicationName(),
+                    map(config.getEnvironmentConfigs(), ExpertEnvironmentConfig::from)
+            );
+        }
+
+        public ApplicationExpertConfig toDomain() {
+            ApplicationExpertConfig config = new ApplicationExpertConfig();
+            config.setId(id);
+            config.setCreatedTime(createdTime);
+            config.setNamespace(namespace);
+            config.setApplicationName(applicationName);
+            config.setEnvironmentConfigs(map(environmentConfigs, ExpertEnvironmentConfig::toDomain));
+            return config;
+        }
+    }
+
+    public record ExpertEnvironmentConfig(
+            String environmentName,
+            String serviceAccountName
+    ) {
+        public static ExpertEnvironmentConfig from(ApplicationExpertConfig.EnvironmentConfig config) {
+            if (config == null) {
+                return null;
+            }
+            return new ExpertEnvironmentConfig(config.getEnvironmentName(), config.getServiceAccountName());
+        }
+
+        public ApplicationExpertConfig.EnvironmentConfig toDomain() {
+            ApplicationExpertConfig.EnvironmentConfig config = new ApplicationExpertConfig.EnvironmentConfig();
+            config.setEnvironmentName(environmentName);
+            config.setServiceAccountName(serviceAccountName);
             return config;
         }
     }

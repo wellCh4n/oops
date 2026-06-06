@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
@@ -28,7 +29,8 @@ public class KubernetesArtifactDeploymentExecutor implements ArtifactDeploymentE
                        Environment environment,
                        ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec,
                        ApplicationRuntimeSpec.HealthCheck healthCheck,
-                       ApplicationServiceConfig serviceConfig) {
+                       ApplicationServiceConfig serviceConfig,
+                       ApplicationExpertConfig.EnvironmentConfig expertConfig) {
         try {
             new ArtifactDeployTask(
                     pipeline,
@@ -37,6 +39,7 @@ public class KubernetesArtifactDeploymentExecutor implements ArtifactDeploymentE
                     runtimeSpec,
                     healthCheck,
                     serviceConfig,
+                    expertConfig,
                     ingressConfig
             ).call();
         } catch (KubernetesClientException e) {

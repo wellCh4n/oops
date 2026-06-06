@@ -17,6 +17,7 @@ public class Application extends BaseAggregateRoot {
     private ApplicationBuildConfig buildConfig;
     private ApplicationRuntimeSpec runtimeSpec;
     private ApplicationServiceConfig serviceConfig;
+    private ApplicationExpertConfig expertConfig;
     private List<ApplicationEnvironment> environments;
     private List<ApplicationCollaborator> collaborators;
 
@@ -120,6 +121,34 @@ public class Application extends BaseAggregateRoot {
         target.setEnvironmentConfigs(request.getEnvironmentConfigs());
     }
 
+    public void updateExpertEnvironmentConfigs(List<ApplicationExpertConfig.EnvironmentConfig> configs) {
+        ensureExpertConfig().setEnvironmentConfigs(configs != null ? configs : Collections.emptyList());
+    }
+
+    public List<ApplicationExpertConfig.EnvironmentConfig> expertEnvironmentConfigs() {
+        if (expertConfig == null || expertConfig.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return expertConfig.getEnvironmentConfigs();
+    }
+
+    public ApplicationExpertConfig expertConfigOrDefault() {
+        ApplicationExpertConfig target = expertConfig != null ? expertConfig : new ApplicationExpertConfig();
+        target.setNamespace(namespace);
+        target.setApplicationName(name);
+        if (target.getEnvironmentConfigs() == null) {
+            target.setEnvironmentConfigs(Collections.emptyList());
+        }
+        return target;
+    }
+
+    public ApplicationExpertConfig.EnvironmentConfig expertEnvironmentConfigOrDefault(String environmentName) {
+        return expertEnvironmentConfigs().stream()
+                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironmentName()))
+                .findFirst()
+                .orElseGet(ApplicationExpertConfig.EnvironmentConfig::new);
+    }
+
     public List<ApplicationBuildConfig.EnvironmentConfig> buildEnvironmentConfigs() {
         if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
             return Collections.emptyList();
@@ -193,6 +222,15 @@ public class Application extends BaseAggregateRoot {
             serviceConfig.setApplicationName(name);
         }
         return serviceConfig;
+    }
+
+    private ApplicationExpertConfig ensureExpertConfig() {
+        if (expertConfig == null) {
+            expertConfig = new ApplicationExpertConfig();
+            expertConfig.setNamespace(namespace);
+            expertConfig.setApplicationName(name);
+        }
+        return expertConfig;
     }
 
     private ApplicationRuntimeSpec.HealthCheck normalizeHealthCheck(

@@ -1,6 +1,6 @@
 "use client"
 
-import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig } from "@/lib/api/types"
+import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig, ApplicationExpertConfig as ApplicationExpertConfigType } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { RefObject, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { getUserId, isAdmin } from "@/lib/auth"
@@ -10,6 +10,7 @@ import { ApplicationBuildInfo } from "./components/application-build-info"
 import { ApplicationRuntimeSpec } from "./components/application-runtime-spec"
 import { ApplicationConfigInfo } from "./components/application-config-info"
 import { ApplicationServiceInfo } from "./components/application-service-info"
+import { ApplicationExpertConfig } from "./components/application-expert-config"
 import { ApplicationDangerZone } from "./components/application-danger-zone"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLanguage } from "@/contexts/language-context"
@@ -33,6 +34,7 @@ interface ApplicationFormProps {
   initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   initialRuntimeSpec?: ApplicationRuntimeSpecType
   initialServiceConfig?: ApplicationServiceConfig
+  initialExpertConfig?: ApplicationExpertConfigType
 }
 
 type ApplicationTab =
@@ -41,6 +43,7 @@ type ApplicationTab =
   | "runtime-spec"
   | "service-info"
   | "config-info"
+  | "expert-config"
   | "danger-zone"
 
 interface ApplicationFormState {
@@ -49,6 +52,7 @@ interface ApplicationFormState {
   buildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   runtimeSpec?: ApplicationRuntimeSpecType
   serviceConfig?: ApplicationServiceConfig
+  expertConfig?: ApplicationExpertConfigType
 }
 
 const DEFAULT_TAB: ApplicationTab = "app-info"
@@ -58,6 +62,7 @@ const VALID_TABS = new Set<ApplicationTab>([
   "runtime-spec",
   "service-info",
   "config-info",
+  "expert-config",
   "danger-zone",
 ])
 
@@ -76,7 +81,8 @@ function ApplicationFormContent({
   initialBuildConfig,
   initialBuildEnvConfigs,
   initialRuntimeSpec,
-  initialServiceConfig
+  initialServiceConfig,
+  initialExpertConfig
 }: ApplicationFormProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -100,6 +106,7 @@ function ApplicationFormContent({
   const runtimeSpecRef = useRef<ApplicationTabHandle>(null)
   const serviceInfoRef = useRef<ApplicationTabHandle>(null)
   const configInfoRef = useRef<ApplicationTabHandle>(null)
+  const expertConfigRef = useRef<ApplicationTabHandle>(null)
 
   const formState = useMemo<ApplicationFormState>(() => ({
     application: initialData,
@@ -107,6 +114,7 @@ function ApplicationFormContent({
     buildEnvConfigs: initialBuildEnvConfigs,
     runtimeSpec: initialRuntimeSpec,
     serviceConfig: initialServiceConfig,
+    expertConfig: initialExpertConfig,
     ...formStateOverrides,
   }), [
     formStateOverrides,
@@ -115,6 +123,7 @@ function ApplicationFormContent({
     initialData,
     initialRuntimeSpec,
     initialServiceConfig,
+    initialExpertConfig,
   ])
 
   const tabHandles = useMemo<Record<ApplicationTab, RefObject<ApplicationTabHandle | null>>>(() => ({
@@ -123,6 +132,7 @@ function ApplicationFormContent({
     "runtime-spec": runtimeSpecRef,
     "service-info": serviceInfoRef,
     "config-info": configInfoRef,
+    "expert-config": expertConfigRef,
     "danger-zone": { current: null },
   }), [])
 
@@ -213,6 +223,7 @@ function ApplicationFormContent({
               <Skeleton className="h-7 w-20 rounded-sm mx-1" />
               <Skeleton className="h-7 w-20 rounded-sm mx-1" />
               <Skeleton className="h-7 w-20 rounded-sm mx-1" />
+              <Skeleton className="h-7 w-20 rounded-sm mx-1" />
             </TabsList>
           ) : (
             <TabsList>
@@ -221,6 +232,7 @@ function ApplicationFormContent({
               <TabsTrigger value="service-info" className="px-6 cursor-pointer">{t("apps.tab.serviceConfig")}</TabsTrigger>
               <TabsTrigger value="runtime-spec" className="px-6 cursor-pointer">{t("apps.tab.runtimeSpec")}</TabsTrigger>
               <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
+              <TabsTrigger value="expert-config" className="px-6 cursor-pointer">{t("apps.tab.expertConfig")}</TabsTrigger>
               {canSeeDangerZone && (
                 <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
               )}
@@ -287,6 +299,18 @@ function ApplicationFormContent({
               ref={configInfoRef}
               applicationName={formState.application?.name}
               namespace={formState.application?.namespace}
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="expert-config">
+          {loading ? <ApplicationEditorTabSkeleton /> : (
+            <ApplicationExpertConfig
+              ref={expertConfigRef}
+              initialExpertConfig={formState.expertConfig}
+              applicationName={formState.application?.name}
+              namespace={formState.application?.namespace}
+              onSaved={(nextExpertConfig) => updateFormState({ expertConfig: nextExpertConfig })}
             />
           )}
         </TabsContent>

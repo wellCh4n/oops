@@ -77,6 +77,13 @@ export const applicationConfigSchema = z.object({
   })),
 })
 
+export const applicationExpertConfigSchema = z.object({
+  environmentConfigs: z.array(z.object({
+    environmentName: z.string(),
+    serviceAccountName: z.string().optional(),
+  })),
+})
+
 export const applicationServiceSchema = z.object({
   port: z.string(),
   environmentConfigs: z.array(z.object({
@@ -96,4 +103,5 @@ export type CreateApplicationFormValues = z.infer<ReturnType<typeof getCreateApp
 export type ApplicationBuildFormValues = z.infer<typeof applicationBuildSchema>
 export type ApplicationRuntimeSpecFormValues = z.infer<typeof applicationRuntimeSpecSchema>
 export type ApplicationConfigFormValues = z.infer<typeof applicationConfigSchema>
+export type ApplicationExpertConfigFormValues = z.infer<typeof applicationExpertConfigSchema>
 export type ApplicationServiceFormValues = z.infer<typeof applicationServiceSchema>

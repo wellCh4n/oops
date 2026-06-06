@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.application.port;
 
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
@@ -12,5 +13,6 @@ public interface ArtifactDeploymentExecutor {
                 Environment environment,
                 ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec,
                 ApplicationRuntimeSpec.HealthCheck healthCheck,
-                ApplicationServiceConfig serviceConfig);
+                ApplicationServiceConfig serviceConfig,
+                ApplicationExpertConfig.EnvironmentConfig expertConfig);
 }

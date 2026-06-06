@@ -145,6 +145,18 @@ export interface ApplicationRuntimeSpecEnvironmentConfig {
   memoryLimit?: string
 }
 
+export interface ApplicationExpertConfig {
+  id?: string
+  namespace: string
+  applicationName: string
+  environmentConfigs?: ApplicationExpertConfigEnvironmentConfig[]
+}
+
+export interface ApplicationExpertConfigEnvironmentConfig {
+  environmentName: string
+  serviceAccountName?: string
+}
+
 interface ApplicationRuntimeSpecHealthCheck {
   enabled?: boolean
   path?: string

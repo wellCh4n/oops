@@ -1,11 +1,13 @@
 package com.github.wellch4n.oops.application.service;
 
+import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
@@ -47,6 +49,7 @@ public class ApplicationService {
     private final EnvironmentRepository environmentRepository;
     private final UserService userService;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
+    private final ApplicationExpertConfigGateway applicationExpertConfigGateway;
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
 
@@ -54,12 +57,14 @@ public class ApplicationService {
                               EnvironmentRepository environmentRepository,
                               UserService userService,
                               ApplicationRuntimeGateway applicationRuntimeGateway,
+                              ApplicationExpertConfigGateway applicationExpertConfigGateway,
                               ApplicationBuildConfigPolicy buildConfigPolicy,
                               HealthCheckPolicy healthCheckPolicy) {
         this.applicationRepository = applicationRepository;
         this.environmentRepository = environmentRepository;
         this.userService = userService;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.applicationExpertConfigGateway = applicationExpertConfigGateway;
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
     }
@@ -364,6 +369,57 @@ public class ApplicationService {
                 log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
             }
         }
+    }
+
+    public ApplicationConfigDto.ExpertConfig getApplicationExpertConfig(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        if (application == null) {
+            return ApplicationConfigDto.ExpertConfig.from(defaultExpertConfig(namespace, name));
+        }
+        return ApplicationConfigDto.ExpertConfig.from(application.expertConfigOrDefault());
+    }
+
+    public Boolean updateApplicationExpertConfig(String namespace, String appName, ApplicationConfigDto.ExpertConfig request) {
+        Application application = requireAggregate(namespace, appName);
+        List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs = application.expertEnvironmentConfigs();
+        List<ApplicationExpertConfig.EnvironmentConfig> newConfigs = request.environmentConfigs() != null
+                ? request.environmentConfigs().stream().map(ApplicationConfigDto.ExpertEnvironmentConfig::toDomain).toList()
+                : Collections.emptyList();
+        application.updateExpertEnvironmentConfigs(newConfigs);
+        applicationRepository.saveAggregate(application);
+        applyExpertConfigUpdates(namespace, appName, application.expertEnvironmentConfigs(), existingConfigs);
+        return true;
+    }
+
+    private void applyExpertConfigUpdates(String namespace,
+                                          String appName,
+                                          List<ApplicationExpertConfig.EnvironmentConfig> configs,
+                                          List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs) {
+        for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
+            ApplicationExpertConfig.EnvironmentConfig existing = existingConfigs.stream()
+                    .filter(c -> c.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .findFirst().orElse(null);
+
+            boolean serviceAccountChanged = !StringUtils.equals(
+                    config.getServiceAccountName(), existing != null ? existing.getServiceAccountName() : null);
+            if (!serviceAccountChanged) continue;
+
+            try {
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                if (environment == null) continue;
+                applicationExpertConfigGateway.applyExpertConfig(environment, namespace, appName, config);
+            } catch (Exception e) {
+                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
+            }
+        }
+    }
+
+    private ApplicationExpertConfig defaultExpertConfig(String namespace, String name) {
+        ApplicationExpertConfig expertConfig = new ApplicationExpertConfig();
+        expertConfig.setNamespace(namespace);
+        expertConfig.setApplicationName(name);
+        expertConfig.setEnvironmentConfigs(Collections.emptyList());
+        return expertConfig;
     }
 
     public List<ApplicationConfigDto.EnvironmentBinding> getApplicationEnvironments(String namespace, String name) {
