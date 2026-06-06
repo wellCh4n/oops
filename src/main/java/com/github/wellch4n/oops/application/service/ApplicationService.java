@@ -18,6 +18,7 @@ import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
@@ -420,6 +421,14 @@ public class ApplicationService {
         expertConfig.setApplicationName(name);
         expertConfig.setEnvironmentConfigs(Collections.emptyList());
         return expertConfig;
+    }
+
+    public List<ApplicationResourceView> getApplicationResources(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
+        }
+        return applicationExpertConfigGateway.getApplicationResources(environment, namespace, name);
     }
 
     public List<ApplicationConfigDto.EnvironmentBinding> getApplicationEnvironments(String namespace, String name) {

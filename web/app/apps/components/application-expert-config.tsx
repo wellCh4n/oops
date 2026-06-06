@@ -12,14 +12,17 @@ import {
 import { Button } from "@/components/ui/button"
 import { useForm, useFieldArray, useFormContext } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import dynamic from "next/dynamic"
+const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { ApplicationExpertConfigFormValues, applicationExpertConfigSchema } from "../schema"
-import { TabsContent } from "@/components/ui/tabs"
-import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvironment } from "@/lib/api/types"
-import { updateApplicationExpertConfig } from "@/lib/api/applications"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvironment, ApplicationResource } from "@/lib/api/types"
+import { getApplicationResources, updateApplicationExpertConfig } from "@/lib/api/applications"
 import { fetchServiceAccounts } from "@/lib/api/service-accounts"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
-import { KeyRound, Wrench } from "lucide-react"
+import { FileCode, KeyRound, RefreshCw, Wrench } from "lucide-react"
 import { toast } from "sonner"
+import { useTheme } from "next-themes"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
@@ -157,6 +160,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
                       <SingleExpertEnvironmentConfig
                         index={index}
                         namespace={namespace}
+                        applicationName={applicationName}
                         environmentName={field.environmentName}
                       />
                     </TabsContent>
@@ -179,10 +183,11 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
 interface SingleExpertEnvironmentConfigProps {
   index: number
   namespace?: string
+  applicationName?: string
   environmentName: string
 }
 
-function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: SingleExpertEnvironmentConfigProps) {
+function SingleExpertEnvironmentConfig({ index, namespace, applicationName, environmentName }: SingleExpertEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationExpertConfigFormValues>()
   const { t } = useLanguage()
   const [serviceAccounts, setServiceAccounts] = useState<string[]>([])
@@ -232,6 +237,112 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
           </FormItem>
         )}
       />
+      <ExpertResourceViewer
+        namespace={namespace}
+        applicationName={applicationName}
+        environmentName={environmentName}
+      />
+    </div>
+  )
+}
+
+interface ExpertResourceViewerProps {
+  namespace?: string
+  applicationName?: string
+  environmentName: string
+}
+
+function ExpertResourceViewer({ namespace, applicationName, environmentName }: ExpertResourceViewerProps) {
+  const { t } = useLanguage()
+  const { resolvedTheme } = useTheme()
+  const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
+  const [resources, setResources] = useState<ApplicationResource[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [activeKind, setActiveKind] = useState<string>("")
+
+  const loadResources = useCallback(async () => {
+    if (!namespace || !applicationName || !environmentName) return
+    setLoading(true)
+    setError(false)
+    try {
+      const res = await getApplicationResources(namespace, applicationName, environmentName)
+      setResources(res.data ?? [])
+    } catch {
+      setError(true)
+      setResources([])
+    } finally {
+      setLoading(false)
+    }
+  }, [namespace, applicationName, environmentName])
+
+  useEffect(() => {
+    loadResources()
+  }, [loadResources])
+
+  const kinds = Array.from(new Set(resources.map((resource) => resource.kind)))
+
+  useEffect(() => {
+    if (kinds.length > 0 && !kinds.includes(activeKind)) {
+      setActiveKind(kinds[0])
+    }
+  }, [kinds, activeKind])
+
+  const activeContent = resources
+    .filter((resource) => resource.kind === activeKind)
+    .map((resource) => `# ===== ${resource.name} =====\n${resource.data.trimEnd()}`)
+    .join("\n---\n")
+
+  return (
+    <div className="border rounded-md overflow-hidden">
+      <div className="bg-muted px-3 py-1.5 text-xs text-muted-foreground border-b flex items-center justify-between">
+        <span className="flex items-center gap-1"><FileCode className="size-3.5" />{t("apps.expertConfig.resources")}</span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2"
+          onClick={loadResources}
+          disabled={loading || !applicationName}
+        >
+          <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+          {t("apps.expertConfig.resourcesRefresh")}
+        </Button>
+      </div>
+      {error ? (
+        <div className="px-3 py-6 text-sm text-muted-foreground text-center">{t("apps.expertConfig.resourcesError")}</div>
+      ) : loading ? (
+        <div className="px-3 py-6 text-sm text-muted-foreground text-center">{t("common.loading")}</div>
+      ) : resources.length === 0 ? (
+        <div className="px-3 py-6 text-sm text-muted-foreground text-center">{t("apps.expertConfig.resourcesEmpty")}</div>
+      ) : (
+        <Tabs value={activeKind} onValueChange={setActiveKind}>
+          <div className="border-b px-3 py-1.5">
+            <TabsList>
+              {kinds.map((kind) => (
+                <TabsTrigger key={kind} value={kind}>{kind}</TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+          <div className="h-[480px]">
+            <Editor
+              height="100%"
+              defaultLanguage="yaml"
+              theme={editorTheme}
+              path={`${environmentName}/${activeKind}`}
+              value={activeContent}
+              options={{
+                readOnly: true,
+                minimap: { enabled: false },
+                lineNumbers: "on",
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                padding: { top: 10 },
+              }}
+            />
+          </div>
+        </Tabs>
+      )}
     </div>
   )
 }
