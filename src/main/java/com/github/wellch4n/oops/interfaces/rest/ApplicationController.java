@@ -158,7 +158,7 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplicationExpertConfig(namespace, name, request));
     }
 
-    @GetMapping("/{name}/expert-config/resources")
+    @GetMapping("/{name}/resources")
     public Result<List<ApplicationResourceView>> getApplicationResources(@PathVariable String namespace,
                                                                          @PathVariable String name,
                                                                          @RequestParam String env) {

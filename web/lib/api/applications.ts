@@ -178,7 +178,7 @@ export const updateApplicationExpertConfig = async (
 }
 
 export const getApplicationResources = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationResource[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/expert-config/resources?env=${encodeURIComponent(env)}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/resources?env=${encodeURIComponent(env)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application resources")
   }
