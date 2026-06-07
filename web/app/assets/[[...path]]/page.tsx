@@ -143,12 +143,10 @@ export default function AssetsPage() {
                 <RefreshCw className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
                 {t("assets.refresh")}
               </Button>
-              {admin && (
-                <Button onClick={() => setUploadOpen(true)}>
-                  <Upload className="size-4" />
-                  {t("assets.uploadBtn")}
-                </Button>
-              )}
+              <Button onClick={() => setUploadOpen(true)}>
+                <Upload className="size-4" />
+                {t("assets.uploadBtn")}
+              </Button>
             </div>
           </div>
         }

@@ -31,7 +31,7 @@ public class StaticAssetController {
     }
 
     @PostMapping("/upload-url")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<ObjectStorageUploadResult> createUploadUrl(@RequestBody AssetUploadRequest request) {
         return Result.success(staticAssetService.createUploadUrl(
                 request.path(), request.fileName(), request.contentType(), request.fileSize()));
