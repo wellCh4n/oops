@@ -68,6 +68,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const { theme, setTheme } = useTheme()
   const { locale, setLocale, t } = useLanguage()
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
+  const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
   const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
 
   useEffect(() => {
@@ -130,6 +131,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           const filteredGroups = group.items.filter((item) => {
             if (item.adminOnly && !isAdminUser) return false
             if (item.url === "/ides" && !ideEnabled) return false
+            if (item.url === "/assets" && !objectStorageEnabled) return false
             return true
           })
           if (filteredGroups.length === 0) return null

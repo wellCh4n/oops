@@ -6,6 +6,7 @@ const nav = {
   "nav.ide": "开发环境",
   "nav.pipelines": "流水线",
   "nav.sandboxes": "沙箱",
+  "nav.assets": "静态资源",
   "nav.network": "网络",
   "nav.systemSettings": "系统",
   "nav.users": "用户",

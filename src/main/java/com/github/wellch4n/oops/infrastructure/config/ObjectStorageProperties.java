@@ -17,6 +17,8 @@ public class ObjectStorageProperties {
     private String secretKey;
     private boolean pathStyleAccess = false;
     private String keyPrefix = "oops-package";
+    private String assetKeyPrefix = "oops-assets";
+    private String assetBaseUrl;
     private long uploadUrlExpirationSeconds = 900;
     private long downloadUrlExpirationSeconds = 1800;
     private long maxFileSizeBytes = 524288000;

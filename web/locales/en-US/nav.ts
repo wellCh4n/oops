@@ -6,6 +6,7 @@ const nav = {
   "nav.ide": "IDEs",
   "nav.pipelines": "Pipelines",
   "nav.sandboxes": "Sandboxes",
+  "nav.assets": "Static Assets",
   "nav.network": "Networks",
   "nav.systemSettings": "Settings",
   "nav.users": "Users",

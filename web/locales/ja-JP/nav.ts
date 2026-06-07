@@ -6,6 +6,7 @@ const nav = {
   "nav.ide": "開発環境",
   "nav.pipelines": "パイプライン",
   "nav.sandboxes": "サンドボックス",
+  "nav.assets": "静的リソース",
   "nav.network": "ネットワーク",
   "nav.systemSettings": "システム",
   "nav.users": "ユーザー",
