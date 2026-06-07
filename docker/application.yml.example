@@ -77,6 +77,8 @@ oops:
     secret-key:
     path-style-access: false
     key-prefix: build-sources
+    asset-key-prefix: oops-assets
+    asset-base-url:
     upload-url-expiration-seconds: 900
     download-url-expiration-seconds: 1800
     max-file-size-bytes: 524288000
