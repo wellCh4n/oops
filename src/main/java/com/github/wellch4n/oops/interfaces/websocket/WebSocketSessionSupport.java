@@ -38,7 +38,7 @@ final class WebSocketSessionSupport {
             while (session.isOpen()) {
                 try {
                     Thread.sleep(HEARTBEAT_INTERVAL_MILLIS);
-                    sink.sendText("ping");
+                    sink.sendPing();
                 } catch (InterruptedException _) {
                     Thread.currentThread().interrupt();
                     break;
