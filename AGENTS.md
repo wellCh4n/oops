@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents when working with code in this repository.
 
 ## Project Overview
 
@@ -358,4 +358,4 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 
 ## Collaboration
 
-List Claude as a co-author when committing.
+List the assisting AI coding agent as a co-author when committing.
