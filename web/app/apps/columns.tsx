@@ -6,8 +6,8 @@ import { Pencil, Rocket, Activity, GitBranch } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { AppIdentityMark } from "@/components/app-identity-mark"
 import { Application } from "@/lib/api/types"
-import { appColor } from "@/lib/app-color"
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
   {
@@ -15,11 +15,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
     header: t("apps.col.name"),
     cell: ({ row }) => (
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className="inline-block size-2 shrink-0 rounded-full"
-          style={{ backgroundColor: appColor(row.original.name) }}
-        />
+        <AppIdentityMark seed={row.original} />
         <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />
       </div>
     ),

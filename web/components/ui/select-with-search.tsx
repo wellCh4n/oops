@@ -23,6 +23,9 @@ interface Option {
   label: string
   namespace?: string
   name?: string
+  colorBackground?: string
+  color?: string
+  accentColor?: string
   dotColor?: string
 }
 
@@ -113,13 +116,7 @@ export function SelectWithSearch({
           <span
             className={cn("truncate flex items-center gap-2 min-w-0", !value && "text-muted-foreground")}
           >
-            {selectedOption?.dotColor && (
-              <span
-                aria-hidden
-                className="inline-block size-2 shrink-0 rounded-full"
-                style={{ backgroundColor: selectedOption.dotColor }}
-              />
-            )}
+            <OptionColorMark option={selectedOption} />
             <span className="truncate">{selectedOption?.label || value || placeholder}</span>
           </span>
           <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
@@ -164,13 +161,7 @@ export function SelectWithSearch({
                           : "opacity-0"
                       )}
                     />
-                    {option.dotColor && (
-                      <span
-                        aria-hidden
-                        className="inline-block size-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: option.dotColor }}
-                      />
-                    )}
+                    <OptionColorMark option={option} />
                     <span className="flex-1 truncate">{option.label}</span>
                   </CommandItem>
                 ))}
@@ -181,4 +172,41 @@ export function SelectWithSearch({
       </PopoverContent>
     </Popover>
   )
+}
+
+function OptionColorMark({ option }: { option?: Option }) {
+  const background = getOptionColorBackground(option)
+
+  if (!background) {
+    return null
+  }
+
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-4 shrink-0 rounded-[4px] border border-black/10 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.28)] dark:border-white/15"
+      style={{ background }}
+    />
+  )
+}
+
+function getOptionColorBackground(option?: Option): string | undefined {
+  if (!option) {
+    return undefined
+  }
+
+  if (option.colorBackground) {
+    return option.colorBackground
+  }
+
+  const primaryColor = option.color ?? option.dotColor
+  if (!primaryColor) {
+    return undefined
+  }
+
+  if (!option.accentColor) {
+    return primaryColor
+  }
+
+  return `linear-gradient(135deg, ${primaryColor} 0 64%, ${option.accentColor} 64% 100%)`
 }

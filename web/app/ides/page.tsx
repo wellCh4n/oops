@@ -31,7 +31,7 @@ import { useRecentAppStore } from "@/store/recent-app"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment, ApplicationSourceType } from "@/lib/api/types"
-import { appColor } from "@/lib/app-color"
+import { appIdentityBackground } from "@/lib/app-color"
 
 export default function IDEPage() {
   return (
@@ -305,7 +305,7 @@ function IDEPageContent() {
                   label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                   namespace: app.namespace,
                   name: app.name,
-                  dotColor: appColor(app.name),
+                  colorBackground: appIdentityBackground(app),
                 }))}
                 onSearch={selectedNamespace ? async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
@@ -314,7 +314,7 @@ function IDEPageContent() {
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
-                    dotColor: appColor(app.name),
+                    colorBackground: appIdentityBackground(app),
                   }))
                 } : undefined}
                 placeholder={t("ide.page.selectApp")}

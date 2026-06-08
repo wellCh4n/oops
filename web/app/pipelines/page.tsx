@@ -33,7 +33,7 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
 import { useRecentAppStore } from "@/store/recent-app"
-import { appColor } from "@/lib/app-color"
+import { appIdentityBackground } from "@/lib/app-color"
 
 export default function PipelinesPage() {
   return (
@@ -310,7 +310,7 @@ function PipelinesContent() {
                     label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
-                    dotColor: appColor(app.name),
+                    colorBackground: appIdentityBackground(app),
                   }))}
                   onSearch={selectedNamespace ? async (query) => {
                     const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
@@ -319,7 +319,7 @@ function PipelinesContent() {
                       label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
                       namespace: app.namespace,
                       name: app.name,
-                      dotColor: appColor(app.name),
+                      colorBackground: appIdentityBackground(app),
                     }))
                   } : undefined}
                   placeholder={t("pipelines.selectApp")}
