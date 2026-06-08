@@ -358,4 +358,8 @@ The project currently has minimal test coverage — only `OopsApplicationTests.j
 
 ## Collaboration
 
-List the assisting AI coding agent as a co-author when committing.
+When committing, follow the repository's existing detailed commit style:
+
+- Use a conventional commit subject (`type(scope): summary`).
+- Include a meaningful body for non-trivial changes, explaining what changed and why in concise paragraphs.
+- Include co-author information for the assisting AI coding agent using a `Co-authored-by:` trailer.
