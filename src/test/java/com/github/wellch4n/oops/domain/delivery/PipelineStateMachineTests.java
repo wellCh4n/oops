@@ -26,7 +26,35 @@ class PipelineStateMachineTests {
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
                 PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING));
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT));
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void allowsDeployingToRollingOutThenSucceeded() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT));
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void rejectsDeployingToSucceededDirectly() {
+        assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
                 PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void allowsRollingOutToError() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.ERROR));
+    }
+
+    @Test
+    void rejectsRollingOutToStopped() {
+        assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.STOPPED));
     }
 
     @Test

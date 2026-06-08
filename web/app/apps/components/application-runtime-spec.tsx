@@ -44,14 +44,23 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
   namespace,
   onSaved,
 }: ApplicationRuntimeSpecProps, ref) {
-  const initialHealthCheck = {
+  const defaultProbe = {
     enabled: false,
     path: "/",
     initialDelaySeconds: 30,
     periodSeconds: 10,
     timeoutSeconds: 3,
     failureThreshold: 3,
-    ...initialRuntimeSpec?.healthCheck,
+  }
+  const initialHealthCheck = {
+    liveness: {
+      ...defaultProbe,
+      ...initialRuntimeSpec?.healthCheck?.liveness,
+    },
+    readiness: {
+      ...defaultProbe,
+      ...initialRuntimeSpec?.healthCheck?.readiness,
+    },
   }
 
   const form = useForm<ApplicationRuntimeSpecFormValues>({
@@ -84,12 +93,22 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
       memoryLimit: config.memoryLimit ?? "",
     })),
     healthCheck: {
-      enabled: !!values.healthCheck?.enabled,
-      path: values.healthCheck?.path ?? "",
-      initialDelaySeconds: values.healthCheck?.initialDelaySeconds ?? 30,
-      periodSeconds: values.healthCheck?.periodSeconds ?? 10,
-      timeoutSeconds: values.healthCheck?.timeoutSeconds ?? 3,
-      failureThreshold: values.healthCheck?.failureThreshold ?? 3,
+      liveness: {
+        enabled: !!values.healthCheck?.liveness?.enabled,
+        path: values.healthCheck?.liveness?.path ?? "",
+        initialDelaySeconds: values.healthCheck?.liveness?.initialDelaySeconds ?? 30,
+        periodSeconds: values.healthCheck?.liveness?.periodSeconds ?? 10,
+        timeoutSeconds: values.healthCheck?.liveness?.timeoutSeconds ?? 3,
+        failureThreshold: values.healthCheck?.liveness?.failureThreshold ?? 3,
+      },
+      readiness: {
+        enabled: !!values.healthCheck?.readiness?.enabled,
+        path: values.healthCheck?.readiness?.path ?? "",
+        initialDelaySeconds: values.healthCheck?.readiness?.initialDelaySeconds ?? 30,
+        periodSeconds: values.healthCheck?.readiness?.periodSeconds ?? 10,
+        timeoutSeconds: values.healthCheck?.readiness?.timeoutSeconds ?? 3,
+        failureThreshold: values.healthCheck?.readiness?.failureThreshold ?? 3,
+      },
     },
   }), [form])
 
@@ -211,21 +230,6 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
               <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b">
                 <Activity className="size-4 text-muted-foreground" />
                 <span className="text-sm font-semibold">{t("apps.runtimeSpec.healthCheck")}</span>
-                <FormField
-                  control={form.control}
-                  name="healthCheck.enabled"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Switch
-                          checked={!!field.value}
-                          onCheckedChange={field.onChange}
-                          aria-label={t("apps.runtimeSpec.healthCheck")}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
               </div>
               <div className="flex flex-col gap-4 p-4">
                 <HealthCheckConfig />
@@ -310,16 +314,45 @@ function NumberInput({ value, onChange, min = 0 }: { value: number | undefined, 
 }
 
 function HealthCheckConfig() {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <ProbeConfig probeName="liveness" titleKey="apps.runtimeSpec.livenessProbe" />
+      <ProbeConfig probeName="readiness" titleKey="apps.runtimeSpec.readinessProbe" />
+    </div>
+  )
+}
+
+type ProbeName = "liveness" | "readiness"
+
+function ProbeConfig({ probeName, titleKey }: { probeName: ProbeName, titleKey: string }) {
   const { control } = useFormContext<ApplicationRuntimeSpecFormValues>()
   const { t } = useLanguage()
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="rounded-md border p-3">
       <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">{t(titleKey)}</span>
+          <FormField
+            control={control}
+            name={`healthCheck.${probeName}.enabled`}
+            render={({ field }) => (
+              <FormItem>
+                <FormControl>
+                  <Switch
+                    checked={!!field.value}
+                    onCheckedChange={field.onChange}
+                    aria-label={t(titleKey)}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+        </div>
         <div className="flex flex-wrap items-end gap-2">
           <FormField
             control={control}
-            name="healthCheck.path"
+            name={`healthCheck.${probeName}.path`}
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="flex items-center gap-1"><Route className="size-3.5" />{t("apps.runtimeSpec.healthPath")}</FormLabel>
@@ -347,7 +380,7 @@ function HealthCheckConfig() {
               <div className="flex flex-wrap gap-x-6 gap-y-4 pt-3">
                 <FormField
                   control={control}
-                  name="healthCheck.initialDelaySeconds"
+                  name={`healthCheck.${probeName}.initialDelaySeconds`}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1"><Timer className="size-3.5" />{t("apps.runtimeSpec.initialDelay")}</FormLabel>
@@ -360,7 +393,7 @@ function HealthCheckConfig() {
                 />
                 <FormField
                   control={control}
-                  name="healthCheck.periodSeconds"
+                  name={`healthCheck.${probeName}.periodSeconds`}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1"><RotateCcw className="size-3.5" />{t("apps.runtimeSpec.period")}</FormLabel>
@@ -373,7 +406,7 @@ function HealthCheckConfig() {
                 />
                 <FormField
                   control={control}
-                  name="healthCheck.timeoutSeconds"
+                  name={`healthCheck.${probeName}.timeoutSeconds`}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1"><TimerOff className="size-3.5" />{t("apps.runtimeSpec.timeout")}</FormLabel>
@@ -386,7 +419,7 @@ function HealthCheckConfig() {
                 />
                 <FormField
                   control={control}
-                  name="healthCheck.failureThreshold"
+                  name={`healthCheck.${probeName}.failureThreshold`}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="flex items-center gap-1"><ShieldAlert className="size-3.5" />{t("apps.runtimeSpec.failureThreshold")}</FormLabel>

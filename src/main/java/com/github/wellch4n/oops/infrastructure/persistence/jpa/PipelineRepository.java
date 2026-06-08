@@ -58,4 +58,5 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
                                       @Param("expected") PipelineStatus expected,
                                       @Param("target") PipelineStatus target,
                                       @Param("message") String message);
+
 }

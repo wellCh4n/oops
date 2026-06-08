@@ -86,6 +86,14 @@ public class Pipeline extends BaseAggregateRoot {
         transitionTo(PipelineStatus.DEPLOYING);
     }
 
+    /**
+     * Enters the Kubernetes rollout phase. The artifact has been applied to the cluster but the workload may
+     * not yet be ready.
+     */
+    public void markRollingOut() {
+        transitionTo(PipelineStatus.ROLLING_OUT);
+    }
+
     public void markSucceeded() {
         transitionTo(PipelineStatus.SUCCEEDED);
     }

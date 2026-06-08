@@ -189,6 +189,28 @@ public final class ApplicationConfigDto {
     }
 
     public record HealthCheck(
+            Probe liveness,
+            Probe readiness
+    ) {
+        public static HealthCheck from(ApplicationRuntimeSpec.HealthCheck healthCheck) {
+            if (healthCheck == null) {
+                return null;
+            }
+            return new HealthCheck(
+                    Probe.from(healthCheck.getLiveness()),
+                    Probe.from(healthCheck.getReadiness())
+            );
+        }
+
+        public ApplicationRuntimeSpec.HealthCheck toDomain() {
+            ApplicationRuntimeSpec.HealthCheck healthCheck = new ApplicationRuntimeSpec.HealthCheck();
+            healthCheck.setLiveness(liveness != null ? liveness.toDomain() : null);
+            healthCheck.setReadiness(readiness != null ? readiness.toDomain() : null);
+            return healthCheck;
+        }
+    }
+
+    public record Probe(
             Boolean enabled,
             String path,
             Integer initialDelaySeconds,
@@ -196,29 +218,29 @@ public final class ApplicationConfigDto {
             Integer timeoutSeconds,
             Integer failureThreshold
     ) {
-        public static HealthCheck from(ApplicationRuntimeSpec.HealthCheck healthCheck) {
-            if (healthCheck == null) {
+        public static Probe from(ApplicationRuntimeSpec.HealthCheck.Probe probe) {
+            if (probe == null) {
                 return null;
             }
-            return new HealthCheck(
-                    healthCheck.getEnabled(),
-                    healthCheck.getPath(),
-                    healthCheck.getInitialDelaySeconds(),
-                    healthCheck.getPeriodSeconds(),
-                    healthCheck.getTimeoutSeconds(),
-                    healthCheck.getFailureThreshold()
+            return new Probe(
+                    probe.getEnabled(),
+                    probe.getPath(),
+                    probe.getInitialDelaySeconds(),
+                    probe.getPeriodSeconds(),
+                    probe.getTimeoutSeconds(),
+                    probe.getFailureThreshold()
             );
         }
 
-        public ApplicationRuntimeSpec.HealthCheck toDomain() {
-            ApplicationRuntimeSpec.HealthCheck healthCheck = new ApplicationRuntimeSpec.HealthCheck();
-            healthCheck.setEnabled(enabled);
-            healthCheck.setPath(path);
-            healthCheck.setInitialDelaySeconds(initialDelaySeconds);
-            healthCheck.setPeriodSeconds(periodSeconds);
-            healthCheck.setTimeoutSeconds(timeoutSeconds);
-            healthCheck.setFailureThreshold(failureThreshold);
-            return healthCheck;
+        public ApplicationRuntimeSpec.HealthCheck.Probe toDomain() {
+            ApplicationRuntimeSpec.HealthCheck.Probe probe = new ApplicationRuntimeSpec.HealthCheck.Probe();
+            probe.setEnabled(enabled);
+            probe.setPath(path);
+            probe.setInitialDelaySeconds(initialDelaySeconds);
+            probe.setPeriodSeconds(periodSeconds);
+            probe.setTimeoutSeconds(timeoutSeconds);
+            probe.setFailureThreshold(failureThreshold);
+            return probe;
         }
     }
 

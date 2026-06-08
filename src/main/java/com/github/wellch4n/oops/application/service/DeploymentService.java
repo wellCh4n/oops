@@ -13,13 +13,11 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
-import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.DeployCommand;
 import com.github.wellch4n.oops.application.dto.DeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.GitDeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.ZipDeployStrategyParam;
-import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -66,7 +64,7 @@ public class DeploymentService {
             throw new BizException("Deploy strategy is required");
         }
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
 
         Environment environment = requireEnvironment(request.environment());

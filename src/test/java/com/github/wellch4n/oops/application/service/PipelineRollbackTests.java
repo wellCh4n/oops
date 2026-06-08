@@ -125,7 +125,7 @@ class PipelineRollbackTests {
         verify(artifactDeploymentExecutor).deploy(any(Pipeline.class), any(Application.class), any(Environment.class),
                 any(ApplicationRuntimeSpec.EnvironmentConfig.class), any(ApplicationRuntimeSpec.HealthCheck.class),
                 any(ApplicationServiceConfig.class), any(ApplicationExpertConfig.EnvironmentConfig.class));
-        verify(pipelineRepository).updateStatusIfMatch(NEW_ID, PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+        verify(pipelineRepository).updateStatusIfMatch(NEW_ID, PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
     }
 
     @Test

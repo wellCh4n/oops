@@ -144,7 +144,7 @@ public class PipelineService {
         }
         pipelineStateMachine.ensureManualDeployable(pipeline.getStatus());
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
         pipelineStateMachine.ensureCanTransition(PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
 
@@ -172,12 +172,7 @@ public class PipelineService {
 
             artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-            pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-            pipeline.markSucceeded();
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
-            ));
+            completeDeployPhase(pipeline, "正在等待新版本发布生效…");
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(e.getMessage(), "发布任务执行失败，请查看日志。");
@@ -205,7 +200,7 @@ public class PipelineService {
         }
 
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
-                namespace, applicationName, List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING)
+                namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
 
         Pipeline rollbackPipeline = pipelineRepository.save(Pipeline.rollback(source, operatorUserId));
@@ -238,12 +233,7 @@ public class PipelineService {
 
             artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-            pipelineRepository.updateStatusIfMatch(rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-            rollbackPipeline.markSucceeded();
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    rollbackPipeline, PipelineNotificationType.SUCCEEDED, "回滚已成功。"
-            ));
+            completeDeployPhase(rollbackPipeline, "正在等待回滚版本发布生效…");
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(e.getMessage(), "回滚任务执行失败，请查看日志。");
@@ -284,6 +274,20 @@ public class PipelineService {
                 pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
         ));
         return true;
+    }
+
+    /**
+     * Completes the deploy phase after the artifact has been applied. The pipeline moves to ROLLING_OUT; the
+     * scan job later reads Kubernetes rollout status and decides SUCCEEDED/ERROR.
+     */
+    private void completeDeployPhase(Pipeline pipeline, String rollingOutDetail) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        pipelineRepository.updateStatusIfMatch(
+                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        pipeline.markRollingOut();
+        eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                pipeline, PipelineNotificationType.ROLLING_OUT, rollingOutDetail
+        ));
     }
 
     private Environment requireEnvironment(String environmentName) {

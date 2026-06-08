@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.application.port;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.DeploymentHealth;
 import java.util.List;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -27,4 +28,11 @@ public interface ApplicationRuntimeGateway {
      * if the workload does not exist. Used to highlight which pipeline's artifact is currently live.
      */
     String findCurrentImage(Environment environment, String namespace, String applicationName);
+
+    /**
+     * Post-deploy health snapshot: whether the StatefulSet rollout has converged onto the new revision and
+     * whether any pod is in a fatal waiting state (ImagePullBackOff / ErrImagePull / CrashLoopBackOff).
+     * Used by the scan job to drive the ROLLING_OUT status to SUCCEEDED or ERROR.
+     */
+    DeploymentHealth getDeploymentHealth(Environment environment, String namespace, String applicationName);
 }
