@@ -237,22 +237,6 @@ public class Application extends BaseAggregateRoot {
             ApplicationRuntimeSpec.HealthCheck healthCheck,
             HealthCheckPolicy healthCheckPolicy
     ) {
-        ApplicationRuntimeSpec.HealthCheck normalized = healthCheck != null
-                ? healthCheck
-                : new ApplicationRuntimeSpec.HealthCheck();
-        HealthCheckPolicy.NormalizedHealthCheck policyResult = healthCheckPolicy.normalize(
-                normalized.getEnabled(),
-                normalized.getPath(),
-                normalized.getInitialDelaySeconds(),
-                normalized.getPeriodSeconds(),
-                normalized.getTimeoutSeconds(),
-                normalized.getFailureThreshold());
-        normalized.setEnabled(policyResult.enabled());
-        normalized.setPath(policyResult.path());
-        normalized.setInitialDelaySeconds(policyResult.initialDelaySeconds());
-        normalized.setPeriodSeconds(policyResult.periodSeconds());
-        normalized.setTimeoutSeconds(policyResult.timeoutSeconds());
-        normalized.setFailureThreshold(policyResult.failureThreshold());
-        return normalized;
+        return healthCheckPolicy.normalize(healthCheck);
     }
 }

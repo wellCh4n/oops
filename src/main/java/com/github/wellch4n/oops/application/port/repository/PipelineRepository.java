@@ -2,7 +2,6 @@ package com.github.wellch4n.oops.application.port.repository;
 
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PipelineRepository {
@@ -33,8 +32,6 @@ public interface PipelineRepository {
     int updateStatusIfMatch(String id, PipelineStatus expected, PipelineStatus target);
 
     int updateStatusAndMessageIfMatch(String id, PipelineStatus expected, PipelineStatus target, String message);
-
-    int updateStatusAndDeadlineIfMatch(String id, PipelineStatus expected, PipelineStatus target, LocalDateTime deadline);
 
     List<Pipeline> query(String namespace, String applicationName);
 }

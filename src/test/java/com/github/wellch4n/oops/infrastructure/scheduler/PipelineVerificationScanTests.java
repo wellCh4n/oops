@@ -17,8 +17,7 @@ import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
-import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,15 +25,15 @@ import org.mockito.Mockito;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Exercises the scan job's VERIFYING decision logic: a converged rollout succeeds, a fatal pod state fails fast,
- * an exceeded deadline times out, and an in-progress rollout is left untouched.
+ * Exercises the scan job's ROLLING_OUT decision logic: a converged rollout succeeds, a fatal pod state fails fast,
+ * a rollout that has stayed not-ready too long times out, and an in-progress rollout is left untouched.
  */
 class PipelineVerificationScanTests {
 
     private static final String NAMESPACE = "default";
     private static final String APP_NAME = "demo";
     private static final String ENV = "prod";
-    private static final String PIPELINE_ID = "verifying-id";
+    private static final String PIPELINE_ID = "rollingOut-id";
 
     private PipelineRepository pipelineRepository;
     private EnvironmentService environmentService;
@@ -51,9 +50,6 @@ class PipelineVerificationScanTests {
         PipelineJobGateway pipelineJobGateway = Mockito.mock(PipelineJobGateway.class);
         ArtifactDeploymentExecutor artifactDeploymentExecutor = Mockito.mock(ArtifactDeploymentExecutor.class);
 
-        PipelineHealthProperties healthProperties = new PipelineHealthProperties();
-        healthProperties.setEnabled(true);
-
         scanJob = new PipelineInstanceScanJob(
                 applicationRepository,
                 pipelineRepository,
@@ -62,8 +58,7 @@ class PipelineVerificationScanTests {
                 pipelineJobGateway,
                 artifactDeploymentExecutor,
                 PipelineStateMachine.getInstance(),
-                applicationRuntimeGateway,
-                healthProperties
+                applicationRuntimeGateway
         );
 
         // No RUNNING pipelines; the build branch is a no-op for these tests.
@@ -74,90 +69,87 @@ class PipelineVerificationScanTests {
         when(environmentService.getEnvironment(ENV)).thenReturn(environment);
     }
 
-    private Pipeline verifyingPipeline(LocalDateTime deadline) {
+    private Pipeline rollingOutPipeline() {
         Pipeline pipeline = new Pipeline();
         pipeline.setId(PIPELINE_ID);
         pipeline.setNamespace(NAMESPACE);
         pipeline.setApplicationName(APP_NAME);
         pipeline.setEnvironment(ENV);
-        pipeline.setStatus(PipelineStatus.VERIFYING);
-        pipeline.setVerifyDeadline(deadline);
+        pipeline.setStatus(PipelineStatus.ROLLING_OUT);
         return pipeline;
     }
 
     @Test
     void convergedRolloutMarksSucceeded() {
-        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
-                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().plusMinutes(5))));
+        when(pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT))
+                .thenReturn(List.of(rollingOutPipeline()));
         when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
-                .thenReturn(new DeploymentHealth(false, true, 1, 1, null));
-        when(pipelineRepository.updateStatusIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.SUCCEEDED)))
+                .thenReturn(new DeploymentHealth(false, true, 1, 1, null, null));
+        when(pipelineRepository.updateStatusIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.SUCCEEDED)))
                 .thenReturn(1);
 
-        scanJob.scan();
+        scanJob.scanRollingOutPipelines();
 
-        verify(pipelineRepository).updateStatusIfMatch(PIPELINE_ID, PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED);
+        verify(pipelineRepository).updateStatusIfMatch(PIPELINE_ID, PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED);
     }
 
     @Test
     void fatalPodStateMarksErrorBeforeDeadline() {
-        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
-                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().plusMinutes(5))));
+        when(pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT))
+                .thenReturn(List.of(rollingOutPipeline()));
         when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
-                .thenReturn(new DeploymentHealth(false, false, 1, 0, "ImagePullBackOff (demo-0)"));
-        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any()))
+                .thenReturn(new DeploymentHealth(false, false, 1, 0, "ImagePullBackOff (demo-0)", Instant.now()));
+        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any()))
                 .thenReturn(1);
 
-        scanJob.scan();
+        scanJob.scanRollingOutPipelines();
 
         verify(pipelineRepository).updateStatusAndMessageIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any());
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any());
         verify(pipelineRepository, never()).updateStatusIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.SUCCEEDED));
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.SUCCEEDED));
     }
 
     @Test
-    void exceededDeadlineMarksError() {
-        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
-                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().minusMinutes(1))));
+    void notReadyLongerThanRolloutTimeoutMarksError() {
+        when(pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT))
+                .thenReturn(List.of(rollingOutPipeline()));
         when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
-                .thenReturn(new DeploymentHealth(false, false, 2, 1, null));
-        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any()))
+                .thenReturn(new DeploymentHealth(false, false, 2, 1, null, Instant.now().minusSeconds(301)));
+        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any()))
                 .thenReturn(1);
 
-        scanJob.scan();
+        scanJob.scanRollingOutPipelines();
 
         verify(pipelineRepository).updateStatusAndMessageIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any());
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any());
     }
 
     @Test
-    void exceededDeadlineAfterHealthQueryErrorMarksError() {
-        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
-                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().minusMinutes(1))));
+    void healthQueryErrorLeavesRollingOutUntouched() {
+        when(pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT))
+                .thenReturn(List.of(rollingOutPipeline()));
         when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
                 .thenThrow(new IllegalStateException("Kubernetes API unavailable"));
-        when(pipelineRepository.updateStatusAndMessageIfMatch(eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any()))
-                .thenReturn(1);
 
-        scanJob.scan();
+        scanJob.scanRollingOutPipelines();
 
-        verify(pipelineRepository).updateStatusAndMessageIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any());
+        verify(pipelineRepository, never()).updateStatusAndMessageIfMatch(
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any());
     }
 
     @Test
-    void inProgressRolloutLeavesVerifyingUntouched() {
-        when(pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING))
-                .thenReturn(List.of(verifyingPipeline(LocalDateTime.now().plusMinutes(5))));
+    void inProgressRolloutLeavesRollingOutUntouched() {
+        when(pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT))
+                .thenReturn(List.of(rollingOutPipeline()));
         when(applicationRuntimeGateway.getDeploymentHealth(any(), eq(NAMESPACE), eq(APP_NAME)))
-                .thenReturn(new DeploymentHealth(false, false, 2, 1, null));
+                .thenReturn(new DeploymentHealth(false, false, 2, 1, null, Instant.now()));
 
-        scanJob.scan();
+        scanJob.scanRollingOutPipelines();
 
         verify(pipelineRepository, never()).updateStatusIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.SUCCEEDED));
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.SUCCEEDED));
         verify(pipelineRepository, never()).updateStatusAndMessageIfMatch(
-                eq(PIPELINE_ID), eq(PipelineStatus.VERIFYING), eq(PipelineStatus.ERROR), any());
+                eq(PIPELINE_ID), eq(PipelineStatus.ROLLING_OUT), eq(PipelineStatus.ERROR), any());
     }
 }

@@ -51,7 +51,7 @@ export default function PipelinesDocPage() {
             ]}
           />
           <DocParagraph>
-            <InlineCode>status</InlineCode> 取值：<InlineCode>RUNNING</InlineCode>、<InlineCode>BUILD_SUCCEEDED</InlineCode>、<InlineCode>DEPLOYING</InlineCode>、<InlineCode>VERIFYING</InlineCode>、<InlineCode>SUCCEEDED</InlineCode>、<InlineCode>ERROR</InlineCode>、<InlineCode>STOPPED</InlineCode>。
+            <InlineCode>status</InlineCode> 取值：<InlineCode>RUNNING</InlineCode>、<InlineCode>BUILD_SUCCEEDED</InlineCode>、<InlineCode>DEPLOYING</InlineCode>、<InlineCode>ROLLING_OUT</InlineCode>、<InlineCode>SUCCEEDED</InlineCode>、<InlineCode>ERROR</InlineCode>、<InlineCode>STOPPED</InlineCode>。
           </DocParagraph>
         </DocSubSection>
       </DocSection>

@@ -101,12 +101,18 @@ export default function ApplicationsDocPage() {
           <FieldTable
             rows={[
               { name: "environmentConfigs", type: "array", description: "每个环境的资源配置数组，元素结构见下方 RuntimeEnvironmentConfig。" },
-              { name: "healthCheck.enabled", type: "boolean" },
-              { name: "healthCheck.path", type: "string", description: "HTTP 健康检查路径，例如 /healthz。" },
-              { name: "healthCheck.initialDelaySeconds", type: "int" },
-              { name: "healthCheck.periodSeconds", type: "int" },
-              { name: "healthCheck.timeoutSeconds", type: "int" },
-              { name: "healthCheck.failureThreshold", type: "int" },
+              { name: "healthCheck.liveness.enabled", type: "boolean" },
+              { name: "healthCheck.liveness.path", type: "string", description: "HTTP 存活检查路径，例如 /healthz。" },
+              { name: "healthCheck.liveness.initialDelaySeconds", type: "int" },
+              { name: "healthCheck.liveness.periodSeconds", type: "int" },
+              { name: "healthCheck.liveness.timeoutSeconds", type: "int" },
+              { name: "healthCheck.liveness.failureThreshold", type: "int" },
+              { name: "healthCheck.readiness.enabled", type: "boolean" },
+              { name: "healthCheck.readiness.path", type: "string", description: "HTTP 就绪检查路径，影响 Service 流量和 rollout 完成判定。" },
+              { name: "healthCheck.readiness.initialDelaySeconds", type: "int" },
+              { name: "healthCheck.readiness.periodSeconds", type: "int" },
+              { name: "healthCheck.readiness.timeoutSeconds", type: "int" },
+              { name: "healthCheck.readiness.failureThreshold", type: "int" },
             ]}
           />
         </DocSubSection>

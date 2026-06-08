@@ -32,7 +32,7 @@ public interface ApplicationRuntimeGateway {
     /**
      * Post-deploy health snapshot: whether the StatefulSet rollout has converged onto the new revision and
      * whether any pod is in a fatal waiting state (ImagePullBackOff / ErrImagePull / CrashLoopBackOff).
-     * Used by the scan job to drive the VERIFYING status to SUCCEEDED or ERROR.
+     * Used by the scan job to drive the ROLLING_OUT status to SUCCEEDED or ERROR.
      */
     DeploymentHealth getDeploymentHealth(Environment environment, String namespace, String applicationName);
 }

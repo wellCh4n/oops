@@ -32,12 +32,11 @@ public class PipelineStateMachine {
                 PipelineStatus.STOPPED
         ));
         ALLOWED_TRANSITIONS.put(PipelineStatus.DEPLOYING, EnumSet.of(
-                PipelineStatus.VERIFYING,
-                PipelineStatus.SUCCEEDED,
+                PipelineStatus.ROLLING_OUT,
                 PipelineStatus.ERROR,
                 PipelineStatus.STOPPED
         ));
-        ALLOWED_TRANSITIONS.put(PipelineStatus.VERIFYING, EnumSet.of(
+        ALLOWED_TRANSITIONS.put(PipelineStatus.ROLLING_OUT, EnumSet.of(
                 PipelineStatus.SUCCEEDED,
                 PipelineStatus.ERROR
         ));

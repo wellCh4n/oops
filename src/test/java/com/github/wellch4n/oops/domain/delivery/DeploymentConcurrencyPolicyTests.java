@@ -13,9 +13,9 @@ class DeploymentConcurrencyPolicyTests {
     private final DeploymentConcurrencyPolicy policy = new DeploymentConcurrencyPolicy();
 
     @Test
-    void activeStatusesIncludeVerifying() {
+    void activeStatusesIncludeRollingOut() {
         assertIterableEquals(
-                List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING),
+                List.of(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT),
                 policy.activePipelineStatuses());
     }
 

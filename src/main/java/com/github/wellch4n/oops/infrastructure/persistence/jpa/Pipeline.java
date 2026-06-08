@@ -7,7 +7,6 @@ import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -48,8 +47,6 @@ public class Pipeline extends BaseDataObject {
     private PipelineTriggerType triggerType;
 
     private String rollbackFromPipelineId;
-
-    private LocalDateTime verifyDeadline;
 
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, getId());

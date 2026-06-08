@@ -7,7 +7,9 @@ import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.DeploymentHealth;
+import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodCondition;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
@@ -15,9 +17,14 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
@@ -296,7 +303,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 .withName(applicationName)
                 .get();
         if (statefulSet == null) {
-            return new DeploymentHealth(true, false, null, null, null);
+            return new DeploymentHealth(true, false, null, null, null, null);
         }
 
         Integer desiredReplicas = statefulSet.getSpec() != null ? statefulSet.getSpec().getReplicas() : null;
@@ -314,8 +321,71 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         boolean rolloutComplete = generationObserved && updated == desired && ready == desired;
 
         String failureReason = findFatalPodWaitingReason(client, namespace, applicationName);
+        Instant notReadySince = rolloutComplete
+                ? null
+                : findRolloutNotReadySince(client, namespace, applicationName, statefulSet);
 
-        return new DeploymentHealth(false, rolloutComplete, desiredReplicas, readyReplicas, failureReason);
+        return new DeploymentHealth(false, rolloutComplete, desiredReplicas, readyReplicas, failureReason, notReadySince);
+    }
+
+    private Instant findRolloutNotReadySince(
+            KubernetesClient client,
+            String namespace,
+            String applicationName,
+            io.fabric8.kubernetes.api.model.apps.StatefulSet statefulSet
+    ) {
+        String rolloutStartedAt = statefulSet.getMetadata() != null
+                && statefulSet.getMetadata().getAnnotations() != null
+                ? statefulSet.getMetadata().getAnnotations().get(StatefulSetProcessor.ROLLOUT_STARTED_AT_ANNOTATION)
+                : null;
+        Instant annotatedRolloutStartedAt = parseKubernetesInstant(rolloutStartedAt);
+        if (annotatedRolloutStartedAt != null) {
+            return annotatedRolloutStartedAt;
+        }
+        return findOldestNotReadyPodTime(client, namespace, applicationName).orElse(null);
+    }
+
+    private Optional<Instant> findOldestNotReadyPodTime(KubernetesClient client, String namespace, String applicationName) {
+        var pods = client.pods()
+                .inNamespace(namespace)
+                .withLabel("oops.type", OopsTypes.APPLICATION.name())
+                .withLabel("oops.app.name", applicationName)
+                .list();
+        return pods.getItems().stream()
+                .map(this::notReadySince)
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder());
+    }
+
+    private Instant notReadySince(Pod pod) {
+        if (pod.getStatus() == null || pod.getStatus().getConditions() == null) {
+            return podCreationTime(pod);
+        }
+        PodCondition readyCondition = pod.getStatus().getConditions().stream()
+                .filter(condition -> "Ready".equals(condition.getType()))
+                .findFirst()
+                .orElse(null);
+        if (readyCondition == null || "True".equalsIgnoreCase(readyCondition.getStatus())) {
+            return null;
+        }
+        Instant lastTransitionTime = parseKubernetesInstant(readyCondition.getLastTransitionTime());
+        return lastTransitionTime != null ? lastTransitionTime : podCreationTime(pod);
+    }
+
+    private Instant podCreationTime(Pod pod) {
+        return pod.getMetadata() == null ? null : parseKubernetesInstant(pod.getMetadata().getCreationTimestamp());
+    }
+
+    private Instant parseKubernetesInstant(String value) {
+        if (StringUtils.isBlank(value)) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException exception) {
+            log.debug("Failed to parse Kubernetes timestamp: {}", value, exception);
+            return null;
+        }
     }
 
     private String findFatalPodWaitingReason(KubernetesClient client, String namespace, String applicationName) {

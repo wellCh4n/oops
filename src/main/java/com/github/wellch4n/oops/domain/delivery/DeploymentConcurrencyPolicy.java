@@ -9,7 +9,7 @@ public class DeploymentConcurrencyPolicy {
     private static final List<PipelineStatus> ACTIVE_PIPELINE_STATUSES = List.of(
             PipelineStatus.RUNNING,
             PipelineStatus.DEPLOYING,
-            PipelineStatus.VERIFYING
+            PipelineStatus.ROLLING_OUT
     );
 
     public List<PipelineStatus> activePipelineStatuses() {

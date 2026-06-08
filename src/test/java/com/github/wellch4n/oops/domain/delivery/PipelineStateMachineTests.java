@@ -26,27 +26,35 @@ class PipelineStateMachineTests {
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
                 PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING));
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT));
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void allowsDeployingToRollingOutThenSucceeded() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT));
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED));
+    }
+
+    @Test
+    void rejectsDeployingToSucceededDirectly() {
+        assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
                 PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED));
     }
 
     @Test
-    void allowsDeployingToVerifyingThenSucceeded() {
+    void allowsRollingOutToError() {
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
-                PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING));
-        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
-                PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED));
+                PipelineStatus.ROLLING_OUT, PipelineStatus.ERROR));
     }
 
     @Test
-    void allowsVerifyingToError() {
-        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
-                PipelineStatus.VERIFYING, PipelineStatus.ERROR));
-    }
-
-    @Test
-    void rejectsVerifyingToStopped() {
+    void rejectsRollingOutToStopped() {
         assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
-                PipelineStatus.VERIFYING, PipelineStatus.STOPPED));
+                PipelineStatus.ROLLING_OUT, PipelineStatus.STOPPED));
     }
 
     @Test

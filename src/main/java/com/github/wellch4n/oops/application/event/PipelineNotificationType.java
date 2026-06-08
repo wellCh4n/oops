@@ -4,7 +4,7 @@ public enum PipelineNotificationType {
     CREATED,
     BUILD_SUCCEEDED,
     DEPLOYING,
-    VERIFYING,
+    ROLLING_OUT,
     SUCCEEDED,
     FAILED,
     STOPPED

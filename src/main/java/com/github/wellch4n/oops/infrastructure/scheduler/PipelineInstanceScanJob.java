@@ -7,7 +7,6 @@ import com.github.wellch4n.oops.application.port.PipelineJobStatus;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.application.dto.DeploymentHealth;
-import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
@@ -18,7 +17,8 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +32,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class PipelineInstanceScanJob {
+    private static final Duration ROLLOUT_TIMEOUT = Duration.ofMinutes(5);
 
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
@@ -41,7 +42,6 @@ public class PipelineInstanceScanJob {
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
     private final PipelineStateMachine pipelineStateMachine;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
-    private final PipelineHealthProperties pipelineHealthProperties;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
@@ -49,8 +49,7 @@ public class PipelineInstanceScanJob {
                                    PipelineJobGateway pipelineJobGateway,
                                    ArtifactDeploymentExecutor artifactDeploymentExecutor,
                                    PipelineStateMachine pipelineStateMachine,
-                                   ApplicationRuntimeGateway applicationRuntimeGateway,
-                                   PipelineHealthProperties pipelineHealthProperties) {
+                                   ApplicationRuntimeGateway applicationRuntimeGateway) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
@@ -59,11 +58,10 @@ public class PipelineInstanceScanJob {
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
         this.pipelineStateMachine = pipelineStateMachine;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
-        this.pipelineHealthProperties = pipelineHealthProperties;
     }
 
     @Scheduled(fixedRate = 5000)
-    public void scan() {
+    public void scanPipelineJobs() {
         List<Pipeline> runningPipelines = pipelineRepository.findAllByStatus(PipelineStatus.RUNNING);
         for (Pipeline pipeline : runningPipelines) {
             try {
@@ -155,18 +153,17 @@ public class PipelineInstanceScanJob {
                 }
             }
         }
-
-        scanVerifyingPipelines();
     }
 
     /**
-     * Polls pipelines awaiting post-deploy health verification. Each VERIFYING pipeline is checked against the
-     * live StatefulSet rollout: a converged rollout marks it SUCCEEDED, a fatal pod state or an exceeded deadline
-     * marks it ERROR, and anything in between leaves it VERIFYING for the next tick.
+     * Polls pipelines awaiting Kubernetes rollout. Each ROLLING_OUT pipeline is checked against the
+     * live StatefulSet rollout: a converged rollout marks it SUCCEEDED, a missing workload, fatal pod state, or
+     * prolonged not-ready state marks it ERROR, and anything in between leaves it ROLLING_OUT for the next tick.
      */
-    private void scanVerifyingPipelines() {
-        List<Pipeline> verifyingPipelines = pipelineRepository.findAllByStatus(PipelineStatus.VERIFYING);
-        for (Pipeline pipeline : verifyingPipelines) {
+    @Scheduled(fixedRate = 5000)
+    public void scanRollingOutPipelines() {
+        List<Pipeline> rollingOutPipelines = pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT);
+        for (Pipeline pipeline : rollingOutPipelines) {
             try {
                 Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
                 if (environment == null) {
@@ -176,27 +173,26 @@ public class PipelineInstanceScanJob {
                 DeploymentHealth health = applicationRuntimeGateway.getDeploymentHealth(
                         environment, pipeline.getNamespace(), pipeline.getApplicationName());
 
-                if (health.hasFailure()) {
-                    failVerification(pipeline, "新版本部署失败：" + health.failureReason());
-                } else if (!health.workloadMissing() && health.rolloutComplete()) {
-                    succeedVerification(pipeline);
-                } else if (pipeline.isVerifyTimedOut(LocalDateTime.now())) {
-                    failVerification(pipeline, "健康验证超时，新版本未在规定时间内就绪。");
+                if (health.workloadMissing()) {
+                    failRollout(pipeline, "新版本部署失败：StatefulSet 不存在。");
+                } else if (health.hasFailure()) {
+                    failRollout(pipeline, "新版本部署失败：" + health.failureReason());
+                } else if (health.rolloutComplete()) {
+                    succeedRollout(pipeline);
+                } else if (health.notReadyLongerThan(Instant.now(), ROLLOUT_TIMEOUT)) {
+                    failRollout(pipeline, "发布生效超时，新版本未在规定时间内就绪。");
                 }
-                // otherwise: still rolling out, leave VERIFYING for the next tick
-            } catch (Exception e) {
-                System.out.println("Error verifying pipeline instance: " + e.getMessage());
-                if (pipeline.isVerifyTimedOut(LocalDateTime.now())) {
-                    failVerification(pipeline, "健康验证超时，新版本未在规定时间内就绪。");
-                }
+                // otherwise: still rolling out, leave ROLLING_OUT for the next tick
+            } catch (Exception exception) {
+                System.out.println("Error rollingOut pipeline instance: " + exception.getMessage());
             }
         }
     }
 
-    private void succeedVerification(Pipeline pipeline) {
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED);
+    private void succeedRollout(Pipeline pipeline) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED);
         int updated = pipelineRepository.updateStatusIfMatch(
-                pipeline.getId(), PipelineStatus.VERIFYING, PipelineStatus.SUCCEEDED);
+                pipeline.getId(), PipelineStatus.ROLLING_OUT, PipelineStatus.SUCCEEDED);
         if (updated > 0) {
             pipeline.markSucceeded();
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
@@ -205,10 +201,10 @@ public class PipelineInstanceScanJob {
         }
     }
 
-    private void failVerification(Pipeline pipeline, String message) {
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.VERIFYING, PipelineStatus.ERROR);
+    private void failRollout(Pipeline pipeline, String message) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.ROLLING_OUT, PipelineStatus.ERROR);
         int updated = pipelineRepository.updateStatusAndMessageIfMatch(
-                pipeline.getId(), PipelineStatus.VERIFYING, PipelineStatus.ERROR, message);
+                pipeline.getId(), PipelineStatus.ROLLING_OUT, PipelineStatus.ERROR, message);
         if (updated > 0) {
             pipeline.markFailed(message);
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
@@ -218,27 +214,16 @@ public class PipelineInstanceScanJob {
     }
 
     /**
-     * Completes the deploy phase after the artifact is applied: moves to VERIFYING (with a deadline) when health
-     * verification is enabled, otherwise marks SUCCEEDED immediately (legacy behavior).
+     * Completes the deploy phase after the artifact is applied: moves to ROLLING_OUT, then the
+     * scan job observes Kubernetes rollout state and decides SUCCEEDED/ERROR.
      */
     private void completeDeployPhase(Pipeline pipeline) {
-        if (pipelineHealthProperties.isEnabled()) {
-            LocalDateTime deadline = LocalDateTime.now().plus(pipelineHealthProperties.getTimeout());
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING);
-            pipelineRepository.updateStatusAndDeadlineIfMatch(
-                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING, deadline);
-            pipeline.markVerifying(deadline);
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.VERIFYING, "正在验证新版本是否就绪…"
-            ));
-            return;
-        }
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
         pipelineRepository.updateStatusIfMatch(
-                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-        pipeline.markSucceeded();
+                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        pipeline.markRollingOut();
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                pipeline, PipelineNotificationType.SUCCEEDED, "应用已经成功发布。"
+                pipeline, PipelineNotificationType.ROLLING_OUT, "正在等待新版本发布生效…"
         ));
     }
 

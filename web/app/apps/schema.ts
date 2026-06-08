@@ -54,19 +54,32 @@ export const applicationRuntimeSpecSchema = z.object({
     memoryLimit: z.string().optional(),
   })),
   healthCheck: z.object({
-    enabled: z.boolean().optional(),
-    path: z.string().optional(),
-    initialDelaySeconds: z.number().int().min(0).optional(),
-    periodSeconds: z.number().int().min(1).optional(),
-    timeoutSeconds: z.number().int().min(1).optional(),
-    failureThreshold: z.number().int().min(1).optional(),
+    liveness: z.object({
+      enabled: z.boolean().optional(),
+      path: z.string().optional(),
+      initialDelaySeconds: z.number().int().min(0).optional(),
+      periodSeconds: z.number().int().min(1).optional(),
+      timeoutSeconds: z.number().int().min(1).optional(),
+      failureThreshold: z.number().int().min(1).optional(),
+    }).optional(),
+    readiness: z.object({
+      enabled: z.boolean().optional(),
+      path: z.string().optional(),
+      initialDelaySeconds: z.number().int().min(0).optional(),
+      periodSeconds: z.number().int().min(1).optional(),
+      timeoutSeconds: z.number().int().min(1).optional(),
+      failureThreshold: z.number().int().min(1).optional(),
+    }).optional(),
   }).optional(),
 }).superRefine((value, ctx) => {
-  if (value.healthCheck?.enabled && !value.healthCheck.path?.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", "path"], message: "Path is required" })
-  }
-  if (value.healthCheck?.path && !value.healthCheck.path.startsWith("/")) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", "path"], message: "Path must start with /" })
+  for (const probeName of ["liveness", "readiness"] as const) {
+    const probe = value.healthCheck?.[probeName]
+    if (probe?.enabled && !probe.path?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", probeName, "path"], message: "Path is required" })
+    }
+    if (probe?.path && !probe.path.startsWith("/")) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["healthCheck", probeName, "path"], message: "Path must start with /" })
+    }
   }
 })
 

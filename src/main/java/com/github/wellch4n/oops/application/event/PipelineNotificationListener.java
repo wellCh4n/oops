@@ -76,7 +76,7 @@ public class PipelineNotificationListener {
             case CREATED -> "发布任务已创建";
             case BUILD_SUCCEEDED -> "构建成功";
             case DEPLOYING -> "开始部署";
-            case VERIFYING -> "验证部署中";
+            case ROLLING_OUT -> "发布生效中";
             case SUCCEEDED -> "发布成功";
             case FAILED -> "发布失败";
             case STOPPED -> "发布已停止";
@@ -89,7 +89,7 @@ public class PipelineNotificationListener {
             case FAILED -> ExternalMessageLevel.ERROR;
             case BUILD_SUCCEEDED -> ExternalMessageLevel.WARNING;
             case STOPPED -> ExternalMessageLevel.NEUTRAL;
-            case CREATED, DEPLOYING, VERIFYING -> ExternalMessageLevel.INFO;
+            case CREATED, DEPLOYING, ROLLING_OUT -> ExternalMessageLevel.INFO;
         };
     }
 }

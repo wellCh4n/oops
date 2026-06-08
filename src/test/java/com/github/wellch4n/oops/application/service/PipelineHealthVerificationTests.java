@@ -19,18 +19,14 @@ import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
-import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
-import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
- * Covers the post-deploy health verification path: with verification enabled a deploy moves to VERIFYING with a
- * deadline instead of straight to SUCCEEDED. The VERIFYING -> SUCCEEDED/ERROR decisions themselves live in the
- * scan job and are exercised in PipelineHealthVerificationScanTests-style setups; here we pin the service-side
- * transition.
+ * Covers the post-deploy rollout path: after Kubernetes apply, deploy/rollback moves to ROLLING_OUT instead of
+ * straight to SUCCEEDED. The ROLLING_OUT -> SUCCEEDED/ERROR decisions themselves live in the scan job.
  */
 class PipelineHealthVerificationTests {
 
@@ -57,10 +53,6 @@ class PipelineHealthVerificationTests {
         PipelineJobGateway pipelineJobGateway = Mockito.mock(PipelineJobGateway.class);
         PipelineLogGateway pipelineLogGateway = Mockito.mock(PipelineLogGateway.class);
 
-        PipelineHealthProperties healthProperties = new PipelineHealthProperties();
-        healthProperties.setEnabled(true);
-        healthProperties.setTimeout(Duration.ofMinutes(5));
-
         pipelineService = new PipelineService(
                 pipelineRepository,
                 environmentService,
@@ -71,8 +63,7 @@ class PipelineHealthVerificationTests {
                 pipelineJobGateway,
                 pipelineLogGateway,
                 PipelineStateMachine.getInstance(),
-                new DeploymentConcurrencyPolicy(),
-                healthProperties
+                new DeploymentConcurrencyPolicy()
         );
     }
 
@@ -88,7 +79,7 @@ class PipelineHealthVerificationTests {
     }
 
     @Test
-    void rollbackEntersVerifyingWhenHealthEnabled() {
+    void rollbackEntersRollingOutAfterApply() {
         when(pipelineRepository.findByNamespaceAndApplicationNameAndId(NAMESPACE, APP_NAME, SOURCE_ID))
                 .thenReturn(succeededSource());
         when(pipelineRepository.save(any(Pipeline.class))).thenAnswer(invocation -> {
@@ -113,9 +104,8 @@ class PipelineHealthVerificationTests {
         String resultId = pipelineService.rollback(NAMESPACE, APP_NAME, SOURCE_ID, "operator-1");
 
         assertEquals(NEW_ID, resultId);
-        // With health verification on, the deploy phase ends in VERIFYING (with a deadline), NOT SUCCEEDED.
-        verify(pipelineRepository).updateStatusAndDeadlineIfMatch(
-                eq(NEW_ID), eq(PipelineStatus.DEPLOYING), eq(PipelineStatus.VERIFYING), any());
+        verify(pipelineRepository).updateStatusIfMatch(
+                NEW_ID, PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
         verify(pipelineRepository, never()).updateStatusIfMatch(
                 eq(NEW_ID), eq(PipelineStatus.DEPLOYING), eq(PipelineStatus.SUCCEEDED));
     }

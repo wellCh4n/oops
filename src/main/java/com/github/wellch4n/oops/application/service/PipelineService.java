@@ -21,8 +21,6 @@ import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.PipelineDto;
-import com.github.wellch4n.oops.infrastructure.config.PipelineHealthProperties;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
@@ -48,7 +46,6 @@ public class PipelineService {
     private final PipelineLogGateway pipelineLogGateway;
     private final PipelineStateMachine pipelineStateMachine;
     private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
-    private final PipelineHealthProperties pipelineHealthProperties;
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
@@ -58,8 +55,7 @@ public class PipelineService {
                            PipelineJobGateway pipelineJobGateway,
                            PipelineLogGateway pipelineLogGateway,
                            PipelineStateMachine pipelineStateMachine,
-                           DeploymentConcurrencyPolicy deploymentConcurrencyPolicy,
-                           PipelineHealthProperties pipelineHealthProperties) {
+                           DeploymentConcurrencyPolicy deploymentConcurrencyPolicy) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
@@ -70,7 +66,6 @@ public class PipelineService {
         this.pipelineLogGateway = pipelineLogGateway;
         this.pipelineStateMachine = pipelineStateMachine;
         this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
-        this.pipelineHealthProperties = pipelineHealthProperties;
     }
 
     public Page<PipelineDto> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
@@ -177,7 +172,7 @@ public class PipelineService {
 
             artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
-            completeDeployPhase(pipeline, "正在验证新版本是否就绪…", "应用已经成功发布。");
+            completeDeployPhase(pipeline, "正在等待新版本发布生效…");
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(e.getMessage(), "发布任务执行失败，请查看日志。");
@@ -238,7 +233,7 @@ public class PipelineService {
 
             artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
-            completeDeployPhase(rollbackPipeline, "正在验证回滚版本是否就绪…", "回滚已成功。");
+            completeDeployPhase(rollbackPipeline, "正在等待回滚版本发布生效…");
         } catch (Exception e) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(e.getMessage(), "回滚任务执行失败，请查看日志。");
@@ -282,27 +277,16 @@ public class PipelineService {
     }
 
     /**
-     * Completes the deploy phase after the artifact has been applied. When health verification is enabled,
-     * the pipeline moves to VERIFYING with a deadline and the scan job later decides SUCCEEDED/ERROR. When
-     * disabled, it is marked SUCCEEDED immediately (legacy behavior).
+     * Completes the deploy phase after the artifact has been applied. The pipeline moves to ROLLING_OUT; the
+     * scan job later reads Kubernetes rollout status and decides SUCCEEDED/ERROR.
      */
-    private void completeDeployPhase(Pipeline pipeline, String verifyingDetail, String succeededDetail) {
-        if (pipelineHealthProperties.isEnabled()) {
-            LocalDateTime deadline = LocalDateTime.now().plus(pipelineHealthProperties.getTimeout());
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING);
-            pipelineRepository.updateStatusAndDeadlineIfMatch(
-                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.VERIFYING, deadline);
-            pipeline.markVerifying(deadline);
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.VERIFYING, verifyingDetail
-            ));
-            return;
-        }
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-        pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.SUCCEEDED);
-        pipeline.markSucceeded();
+    private void completeDeployPhase(Pipeline pipeline, String rollingOutDetail) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        pipelineRepository.updateStatusIfMatch(
+                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        pipeline.markRollingOut();
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                pipeline, PipelineNotificationType.SUCCEEDED, succeededDetail
+                pipeline, PipelineNotificationType.ROLLING_OUT, rollingOutDetail
         ));
     }
 

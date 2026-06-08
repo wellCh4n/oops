@@ -164,6 +164,11 @@ export interface ApplicationResource {
 }
 
 interface ApplicationRuntimeSpecHealthCheck {
+  liveness?: ApplicationRuntimeSpecProbe
+  readiness?: ApplicationRuntimeSpecProbe
+}
+
+interface ApplicationRuntimeSpecProbe {
   enabled?: boolean
   path?: string
   initialDelaySeconds?: number
@@ -189,7 +194,7 @@ interface ApplicationContainerStatus {
   startedAt?: string | null
 }
 
-type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'VERIFYING' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
+type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'ROLLING_OUT' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
 
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 

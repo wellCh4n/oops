@@ -47,57 +47,29 @@ public class ApplicationRuntimeSpec extends BaseDataObject {
 
     @Data
     public static class HealthCheck {
-        public static final int DEFAULT_INITIAL_DELAY_SECONDS = 30;
-        public static final int DEFAULT_PERIOD_SECONDS = 10;
-        public static final int DEFAULT_TIMEOUT_SECONDS = 3;
-        public static final int DEFAULT_FAILURE_THRESHOLD = 3;
-        public static final String DEFAULT_PATH = "/";
+        private Probe liveness = new Probe();
 
-        private Boolean enabled = false;
+        private Probe readiness = new Probe();
 
-        private String path = DEFAULT_PATH;
+        @Data
+        public static class Probe {
+            public static final int DEFAULT_INITIAL_DELAY_SECONDS = 30;
+            public static final int DEFAULT_PERIOD_SECONDS = 10;
+            public static final int DEFAULT_TIMEOUT_SECONDS = 3;
+            public static final int DEFAULT_FAILURE_THRESHOLD = 3;
+            public static final String DEFAULT_PATH = "/";
 
-        private Integer initialDelaySeconds = DEFAULT_INITIAL_DELAY_SECONDS;
+            private Boolean enabled = false;
 
-        private Integer periodSeconds = DEFAULT_PERIOD_SECONDS;
+            private String path = DEFAULT_PATH;
 
-        private Integer timeoutSeconds = DEFAULT_TIMEOUT_SECONDS;
+            private Integer initialDelaySeconds = DEFAULT_INITIAL_DELAY_SECONDS;
 
-        private Integer failureThreshold = DEFAULT_FAILURE_THRESHOLD;
+            private Integer periodSeconds = DEFAULT_PERIOD_SECONDS;
 
-        public boolean probeEnabled() {
-            return Boolean.TRUE.equals(enabled) && path != null && !path.isBlank();
-        }
+            private Integer timeoutSeconds = DEFAULT_TIMEOUT_SECONDS;
 
-        public String normalizedPath() {
-            if (path == null || path.isBlank()) {
-                return DEFAULT_PATH;
-            }
-            return path.startsWith("/") ? path : "/" + path;
-        }
-
-        public int effectiveInitialDelaySeconds() {
-            return initialDelaySeconds != null && initialDelaySeconds >= 0
-                    ? initialDelaySeconds
-                    : DEFAULT_INITIAL_DELAY_SECONDS;
-        }
-
-        public int effectivePeriodSeconds() {
-            return periodSeconds != null && periodSeconds > 0
-                    ? periodSeconds
-                    : DEFAULT_PERIOD_SECONDS;
-        }
-
-        public int effectiveTimeoutSeconds() {
-            return timeoutSeconds != null && timeoutSeconds > 0
-                    ? timeoutSeconds
-                    : DEFAULT_TIMEOUT_SECONDS;
-        }
-
-        public int effectiveFailureThreshold() {
-            return failureThreshold != null && failureThreshold > 0
-                    ? failureThreshold
-                    : DEFAULT_FAILURE_THRESHOLD;
+            private Integer failureThreshold = DEFAULT_FAILURE_THRESHOLD;
         }
     }
 
