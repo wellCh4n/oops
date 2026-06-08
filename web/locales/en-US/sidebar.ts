@@ -1,6 +1,8 @@
 const sidebar = {
   "sidebar.collapse": "Collapse",
   "sidebar.expand": "Expand Sidebar",
+  "sidebar.collapseGroup": "Collapse group",
+  "sidebar.expandGroup": "Expand group",
   "sidebar.more": "More",
   "sidebar.theme": "Theme",
   "sidebar.themeSystem": "System",

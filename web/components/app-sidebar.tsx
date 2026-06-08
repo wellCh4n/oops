@@ -3,7 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Keyboard, UserCog } from "lucide-react"
+import { ChevronRight, LogOut, Monitor, Moon, Sun, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Keyboard, UserCog } from "lucide-react"
 
 import {
   Sidebar,
@@ -18,6 +18,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,12 +43,13 @@ import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
 import { useNamespaceStore } from "@/store/namespace"
 import { usePathname, useSearchParams } from "next/navigation"
-import React, { Suspense, useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { clearAuth, isAdmin } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
 import { useTheme } from "next-themes"
 import { useLanguage } from "@/contexts/language-context"
 import { localeLabels, Locale } from "@/lib/i18n"
+import { useSidebarNavStore } from "@/store/sidebar"
 
 export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {
   return (
@@ -61,7 +63,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { open, toggleSidebar } = useSidebar()
+  const { open: sidebarOpen, toggleSidebar } = useSidebar()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -70,6 +72,8 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
   const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const expandedGroups = useSidebarNavStore((s) => s.expandedGroups)
+  const setGroupExpanded = useSidebarNavStore((s) => s.setGroupExpanded)
 
   useEffect(() => {
     getCurrentUser().then(setCurrentUser)
@@ -88,6 +92,10 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   }
 
   const locales = Object.keys(localeLabels) as Locale[]
+
+  function isGroupExpanded(groupTitle: string) {
+    return expandedGroups.includes(groupTitle)
+  }
 
   return (
     <>
@@ -109,10 +117,10 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           <SidebarMenuItem>
             <div className="flex items-center p-1">
               <Link href="/" className="flex items-center gap-2 min-w-0">
-                <div className={`relative aspect-square overflow-hidden shrink-0 ${open ? "size-12 rounded-lg" : "size-6 rounded-md"}`}>
+                <div className={`relative aspect-square overflow-hidden shrink-0 ${sidebarOpen ? "size-12 rounded-lg" : "size-6 rounded-md"}`}>
                   <Image src="/icon.png" alt="Oops" fill sizes="48px" priority className="object-cover dark:[filter:url(#white-stroke)]" />
                 </div>
-                {open && (
+                {sidebarOpen && (
                   <div className="flex flex-col gap-0.5 leading-none min-w-0">
                     <span className="font-bold text-xl">OOPS</span>
                     <span className="text-xs text-sidebar-foreground/60">
@@ -135,44 +143,71 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
             return true
           })
           if (filteredGroups.length === 0) return null
-          return (
-          <React.Fragment key={group.title}>
-            <SidebarGroup className="py-1 px-2">
-              {open && <SidebarGroupLabel>{t(group.title)}</SidebarGroupLabel>}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredGroups.map((item) => {
-                    const href = pathname === item.url
-                      ? (searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname)
-                      : selectedNamespace && (item.url === "/ides" || item.url === "/pipelines")
-                        ? `${item.url}?namespace=${selectedNamespace}`
-                        : item.url
+          const groupExpanded = isGroupExpanded(group.title)
+          const groupItems = (
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {filteredGroups.map((item) => {
+                  const href = pathname === item.url
+                    ? (searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname)
+                    : selectedNamespace && (item.url === "/ides" || item.url === "/pipelines")
+                      ? `${item.url}?namespace=${selectedNamespace}`
+                      : item.url
 
-                    return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
-                        tooltip={t(item.title)}
-                      >
-                        <Link href={href}>
-                          <item.icon />
-                          <span>{t(item.title)}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
+                  return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
+                      tooltip={t(item.title)}
+                    >
+                      <Link href={href}>
+                        <item.icon />
+                        <span>{t(item.title)}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  )
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )
+
+          return (
+          <Collapsible
+            key={group.title}
+            open={sidebarOpen ? groupExpanded : true}
+            onOpenChange={(expanded) => setGroupExpanded(group.title, expanded)}
+          >
+            <SidebarGroup className="py-1 px-2">
+              {sidebarOpen && (
+                <SidebarGroupLabel
+                  asChild
+                  className="w-full cursor-pointer justify-between pr-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <CollapsibleTrigger
+                    aria-label={`${groupExpanded ? t("sidebar.collapseGroup") : t("sidebar.expandGroup")}: ${t(group.title)}`}
+                  >
+                    <span className="truncate">{t(group.title)}</span>
+                    <ChevronRight className={`ml-auto transition-transform ${groupExpanded ? "rotate-90" : ""}`} />
+                  </CollapsibleTrigger>
+                </SidebarGroupLabel>
+              )}
+              {sidebarOpen ? (
+                <CollapsibleContent>
+                  {groupItems}
+                </CollapsibleContent>
+              ) : (
+                groupItems
+              )}
             </SidebarGroup>
-          </React.Fragment>
+          </Collapsible>
           )
         })}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
-          {open && (
+          {sidebarOpen && (
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={onOpenCommandPalette}
@@ -187,14 +222,14 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={toggleSidebar}
-              tooltip={open ? undefined : t("sidebar.expand")}
+              tooltip={sidebarOpen ? t("sidebar.collapse") : t("sidebar.expand")}
             >
-              {open ? <PanelLeftClose /> : <PanelLeftOpen />}
-              <span>{t("sidebar.collapse")}</span>
+              {sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}
+              <span>{sidebarOpen ? t("sidebar.collapse") : t("sidebar.expand")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            {open ? (
+            {sidebarOpen ? (
               <div className="flex items-center justify-between gap-1 pr-1">
                 <Link
                   href="/settings/profile"

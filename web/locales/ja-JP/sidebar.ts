@@ -1,6 +1,8 @@
 const sidebar = {
   "sidebar.collapse": "折りたたむ",
   "sidebar.expand": "サイドバーを展開",
+  "sidebar.collapseGroup": "グループを折りたたむ",
+  "sidebar.expandGroup": "グループを展開",
   "sidebar.more": "その他",
   "sidebar.theme": "テーマを切り替え",
   "sidebar.themeSystem": "システム",

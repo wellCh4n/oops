@@ -1,6 +1,8 @@
 const sidebar = {
   "sidebar.collapse": "折叠",
   "sidebar.expand": "展开侧边栏",
+  "sidebar.collapseGroup": "收起分组",
+  "sidebar.expandGroup": "展开分组",
   "sidebar.more": "更多",
   "sidebar.theme": "切换主题",
   "sidebar.themeSystem": "系统",

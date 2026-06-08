@@ -1,6 +1,8 @@
 const sidebar = {
   "sidebar.collapse": "折疊",
   "sidebar.expand": "展開側邊欄",
+  "sidebar.collapseGroup": "收合分組",
+  "sidebar.expandGroup": "展開分組",
   "sidebar.more": "更多",
   "sidebar.theme": "切換主題",
   "sidebar.themeSystem": "系統",
