@@ -436,10 +436,24 @@ function PipelinesContent() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("pipelines.rollbackConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("pipelines.rollbackConfirmDescPrefix")}<strong>{rollbackTarget?.artifact}</strong>{t("pipelines.rollbackConfirmDescSuffix")}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t("pipelines.rollbackConfirmDesc")}</AlertDialogDescription>
           </AlertDialogHeader>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-md border bg-muted/40 p-3 text-sm">
+            <dt className="text-muted-foreground">{t("pipelines.rollback.namespace")}</dt>
+            <dd className="font-medium break-all">{rollbackTarget?.namespace}</dd>
+            <dt className="text-muted-foreground">{t("pipelines.rollback.application")}</dt>
+            <dd className="font-medium break-all">{rollbackTarget?.applicationName}</dd>
+            <dt className="text-muted-foreground">{t("pipelines.rollback.environment")}</dt>
+            <dd className="font-medium break-all">{rollbackTarget?.environment}</dd>
+            <dt className="text-muted-foreground">{t("pipelines.rollback.image")}</dt>
+            <dd className="font-medium break-all">{rollbackTarget?.artifact}</dd>
+            <dt className="text-muted-foreground">{t("pipelines.rollback.publishedAt")}</dt>
+            <dd className="font-medium">
+              {rollbackTarget?.createdTime
+                ? new Date(rollbackTarget.createdTime).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : "-"}
+            </dd>
+          </dl>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={rolling}>{t("common.cancel")}</AlertDialogCancel>
             <Button onClick={confirmRollback} disabled={rolling}>
