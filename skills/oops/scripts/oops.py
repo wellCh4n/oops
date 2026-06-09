@@ -82,7 +82,7 @@ class Client:
             if exc.code == 401:
                 die("401 Unauthorized — check token (run `oops auth set`)")
             if exc.code == 405:
-                die("405 Method Not Allowed — DELETE is not exposed via /openapi")
+                die("405 Method Not Allowed — this endpoint is hidden from /openapi")
             snippet = body_text[:500]
             die(f"{method} {url} → {exc.code} {snippet}")
         except urllib.error.URLError as exc:
@@ -324,7 +324,16 @@ def cmd_app_runtime_get(client: Client, args: argparse.Namespace) -> None:
         )
         hc = s.get("healthCheck") or {}
         if hc:
-            print(f"Health: enabled={hc.get('enabled', False)}, path={dash(hc.get('path'))}")
+            for probe_name in ("liveness", "readiness"):
+                probe = hc.get(probe_name) or {}
+                print(
+                    f"{probe_name.title()}: enabled={bool(probe.get('enabled'))}, "
+                    f"path={dash(probe.get('path'))}, "
+                    f"delay={dash(probe.get('initialDelaySeconds'))}s, "
+                    f"period={dash(probe.get('periodSeconds'))}s, "
+                    f"timeout={dash(probe.get('timeoutSeconds'))}s, "
+                    f"failures={dash(probe.get('failureThreshold'))}"
+                )
     render(args.json, spec, human)
 
 
@@ -350,17 +359,31 @@ def _parse_env_runtime(entry: str) -> Dict[str, Any]:
 
 def cmd_app_runtime_set(client: Client, args: argparse.Namespace) -> None:
     env_configs = [_parse_env_runtime(entry) for entry in (args.env or [])]
+    liveness_enabled = args.health or args.liveness
+    readiness_enabled = args.health or args.readiness
+
+    def build_probe(probe_name: str, enabled: bool) -> Dict[str, Any]:
+        specific_path = getattr(args, f"{probe_name}_path")
+        specific_initial_delay = getattr(args, f"{probe_name}_initial_delay")
+        specific_period = getattr(args, f"{probe_name}_period")
+        specific_timeout = getattr(args, f"{probe_name}_timeout")
+        specific_failure_threshold = getattr(args, f"{probe_name}_failure_threshold")
+        return {
+            "enabled": enabled,
+            "path": specific_path or args.health_path,
+            "initialDelaySeconds": specific_initial_delay if specific_initial_delay is not None else args.health_initial_delay,
+            "periodSeconds": specific_period if specific_period is not None else args.health_period,
+            "timeoutSeconds": specific_timeout if specific_timeout is not None else args.health_timeout,
+            "failureThreshold": specific_failure_threshold if specific_failure_threshold is not None else args.health_failure_threshold,
+        }
+
     body = {
         "namespace": args.namespace,
         "applicationName": args.name,
         "environmentConfigs": env_configs,
         "healthCheck": {
-            "enabled": args.health,
-            "path": args.health_path,
-            "initialDelaySeconds": args.health_initial_delay,
-            "periodSeconds": args.health_period,
-            "timeoutSeconds": args.health_timeout,
-            "failureThreshold": args.health_failure_threshold,
+            "liveness": build_probe("liveness", liveness_enabled),
+            "readiness": build_probe("readiness", readiness_enabled),
         },
     }
     client.put(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/runtime-spec", body)
@@ -414,9 +437,9 @@ def cmd_pipeline_ls(client: Client, args: argparse.Namespace) -> None:
     total = result.get("total", len(items)) if isinstance(result, dict) else len(items)
     def human(lst):
         print_table(
-            ["ID", "STATUS", "ENV", "MODE", "OPERATOR", "CREATED"],
+            ["ID", "STATUS", "TYPE", "ENV", "MODE", "OPERATOR", "CREATED"],
             [[
-                dash(p.get("id")), dash(p.get("status")), dash(p.get("environment")),
+                dash(p.get("id")), dash(p.get("status")), dash(p.get("triggerType")), dash(p.get("environment")),
                 dash(p.get("deployMode")), dash(p.get("operatorName")), dash(p.get("createdTime")),
             ] for p in lst],
         )
@@ -433,6 +456,8 @@ def cmd_pipeline_get(client: Client, args: argparse.Namespace) -> None:
         print(f"Branch:   {dash(p.get('branch'))}")
         print(f"Artifact: {dash(p.get('artifact'))}")
         print(f"Mode:     {dash(p.get('deployMode'))}")
+        print(f"Type:     {dash(p.get('triggerType'))}")
+        print(f"Rollback: {dash(p.get('rollbackFromPipelineId'))}")
         print(f"Operator: {dash(p.get('operatorName'))}")
         print(f"Created:  {dash(p.get('createdTime'))}")
     render(args.json, pipeline, human)
@@ -446,6 +471,13 @@ def cmd_pipeline_stop(client: Client, args: argparse.Namespace) -> None:
 def cmd_pipeline_deploy(client: Client, args: argparse.Namespace) -> None:
     client.put(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/pipelines/{args.id}/deploy")
     render(args.json, {"deployed": args.id}, lambda _: print(f"Manual deploy triggered for pipeline {args.id}"))
+
+
+def cmd_pipeline_rollback(client: Client, args: argparse.Namespace) -> None:
+    pipeline_id = client.post(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/pipelines/{args.id}/rollback", {})
+    render(args.json, {"pipelineId": pipeline_id, "rollbackFromPipelineId": args.id}, lambda _: print(f"Rollback pipeline {pipeline_id} created from {args.id}"))
+    if args.wait:
+        watch_pipeline(client, args.namespace, args.name, pipeline_id, args.json, interval=3)
 
 
 def watch_pipeline(client: Client, namespace: str, name: str, pipeline_id: str, use_json: bool, interval: int = 3) -> Dict:
@@ -598,12 +630,24 @@ def build_parser() -> argparse.ArgumentParser:
     rt_set.add_argument("-n", "--namespace", required=True)
     rt_set.add_argument("name")
     rt_set.add_argument("--env", action="append", metavar="ENV=cpu:r/l,mem:r/l,replicas:n")
-    rt_set.add_argument("--health", action="store_true", default=False)
+    rt_set.add_argument("--health", action="store_true", default=False, help="enable both liveness and readiness probes")
     rt_set.add_argument("--health-path", default="/", dest="health_path")
     rt_set.add_argument("--health-initial-delay", type=int, default=10, dest="health_initial_delay")
     rt_set.add_argument("--health-period", type=int, default=10, dest="health_period")
     rt_set.add_argument("--health-timeout", type=int, default=1, dest="health_timeout")
     rt_set.add_argument("--health-failure-threshold", type=int, default=3, dest="health_failure_threshold")
+    rt_set.add_argument("--liveness", action="store_true", default=False, help="enable only the liveness probe unless --readiness is also set")
+    rt_set.add_argument("--liveness-path", dest="liveness_path")
+    rt_set.add_argument("--liveness-initial-delay", type=int, dest="liveness_initial_delay")
+    rt_set.add_argument("--liveness-period", type=int, dest="liveness_period")
+    rt_set.add_argument("--liveness-timeout", type=int, dest="liveness_timeout")
+    rt_set.add_argument("--liveness-failure-threshold", type=int, dest="liveness_failure_threshold")
+    rt_set.add_argument("--readiness", action="store_true", default=False, help="enable only the readiness probe unless --liveness is also set")
+    rt_set.add_argument("--readiness-path", dest="readiness_path")
+    rt_set.add_argument("--readiness-initial-delay", type=int, dest="readiness_initial_delay")
+    rt_set.add_argument("--readiness-period", type=int, dest="readiness_period")
+    rt_set.add_argument("--readiness-timeout", type=int, dest="readiness_timeout")
+    rt_set.add_argument("--readiness-failure-threshold", type=int, dest="readiness_failure_threshold")
 
     # app env
     appenv_p = app_sub.add_parser("env")
@@ -654,6 +698,12 @@ def build_parser() -> argparse.ArgumentParser:
     pl_deploy.add_argument("-n", "--namespace", required=True)
     pl_deploy.add_argument("name")
     pl_deploy.add_argument("id")
+
+    pl_rollback = pipeline_sub.add_parser("rollback")
+    pl_rollback.add_argument("-n", "--namespace", required=True)
+    pl_rollback.add_argument("name")
+    pl_rollback.add_argument("id")
+    pl_rollback.add_argument("--wait", action="store_true", default=False)
 
     pl_watch = pipeline_sub.add_parser("watch")
     pl_watch.add_argument("-n", "--namespace", required=True)
@@ -734,6 +784,7 @@ def main() -> None:
         ("pipeline", "get"): lambda: cmd_pipeline_get(client, args),
         ("pipeline", "stop"): lambda: cmd_pipeline_stop(client, args),
         ("pipeline", "deploy"): lambda: cmd_pipeline_deploy(client, args),
+        ("pipeline", "rollback"): lambda: cmd_pipeline_rollback(client, args),
         ("pipeline", "watch"): lambda: cmd_pipeline_watch(client, args),
         ("deploy", "git"): lambda: cmd_deploy_git(client, args),
         ("deploy", "zip"): lambda: cmd_deploy_zip(client, args),

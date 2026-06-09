@@ -149,11 +149,13 @@ For example if `example.com` is managed, set the host to `hello.example.com`.
 
 ```bash
 python skills/oops/scripts/oops.py app runtime set -n <ns> <app> \
-    --env "<env>=cpu:1/2,mem:64/128,replicas:1"
+    --env "<env>=cpu:1/2,mem:64/128,replicas:1" \
+    --health --health-path /health
 ```
 
 Strict format: `cpu:<request>/<limit>,mem:<request>/<limit>,replicas:<n>`.
 CPU is in cores, no unit suffix (e.g. `0.1`, `0.5`, `1`, `2`). Memory is a plain number in Mi, no suffix (e.g. `64`, `128`) — OOPS appends `Mi` automatically.
+`--health` enables both liveness and readiness probes using the same path/timing. For finer control, use `--liveness` / `--readiness` plus per-probe flags such as `--readiness-path`, `--readiness-initial-delay`, `--liveness-timeout`.
 **Skip this and replicas stays at 0 — the Pod never starts.** This is the
 most common cause of "deploy succeeded but I can't reach the app".
 
@@ -169,7 +171,7 @@ cd path/to/source && zip -r /tmp/<app>.zip .
 python skills/oops/scripts/oops.py deploy zip -n <ns> <app> --env <env> --file /tmp/<app>.zip --wait
 ```
 
-`--wait` polls pipeline status until `SUCCEEDED` / `FAILED` / `ERROR`.
+`--wait` polls pipeline status until `SUCCEEDED` / `BUILD_SUCCEEDED` / `ERROR` / `STOPPED`.
 **Without `--wait` the command returns immediately after triggering** and
 does not surface the build result.
 
@@ -188,6 +190,15 @@ python skills/oops/scripts/oops.py pipeline ls -n <ns> <app>   # recent runs
 python skills/oops/scripts/oops.py app get -n <ns> <app>       # app summary
 ```
 
+### Roll back to a previous successful pipeline
+
+```bash
+python skills/oops/scripts/oops.py pipeline rollback -n <ns> <app> <pipeline-id> --wait
+```
+
+Rollback is a write action. Confirm with the user first, and prefer showing
+`pipeline get` output for the target pipeline before running it.
+
 ## Read-only inspection commands
 
 ```bash
@@ -197,6 +208,7 @@ python skills/oops/scripts/oops.py app runtime get -n <ns> <app>              # 
 python skills/oops/scripts/oops.py app env ls -n <ns> <app>                   # env bindings
 python skills/oops/scripts/oops.py app config get -n <ns> <app> --env <env>   # ConfigMap entries
 python skills/oops/scripts/oops.py pipeline get -n <ns> <app> <pipeline-id>   # single pipeline detail
+python skills/oops/scripts/oops.py pipeline watch -n <ns> <app> <pipeline-id> # poll status until terminal
 ```
 
 ## Output format
@@ -215,18 +227,18 @@ python skills/oops/scripts/oops.py --json app ls -n default | jq '.[].name'
 | Symptom | Cause | Fix |
 |---|---|---|
 | `401 Unauthorized` | Token wrong or unset | Run `auth status`; re-run `auth set` |
-| `405 Method Not Allowed` | Tried to delete a non-sandbox resource | `/openapi` blocks DELETE on everything **except** `/openapi/sandbox/**`. Ask the user to delete in the UI. |
+| `405 Method Not Allowed` | Endpoint is hidden from `/openapi` | Use the UI for hidden operations such as application deletion. |
 | `Dockerfile content is required when type is USER` | Missing `--dockerfile-content` | See the hard constraint in step 3. |
 | `Application is being deployed` | Previous deploy still in flight | Wait; check `pipeline ls`; or `pipeline stop`. |
 | Pipeline `SUCCEEDED` but Pod count is 0 | Runtime spec never set (replicas=0) | Run step 6, then **re-deploy**. |
 | External request times out but `kubectl exec … wget localhost` works | Ingress / DNS issue, outside OOPS | Check DNS / Traefik — not in scope here. |
-| Second deploy reports `ERROR` but the Pod is healthy | Known OOPS edge case in rollout-state judgment | Check `kubectl get pod`; if `Running` you're fine. |
 
 ## Hard boundaries
 
-- **Do not try to delete applications via CLI** — `/openapi` deliberately
-  blocks DELETE for everything **except** `/openapi/sandbox/**` (sandbox
-  teardown is allowed). For apps, envs, users, let the user delete in the UI.
+- **Do not try to delete applications via CLI** — application deletion is
+  deliberately hidden from `/openapi` and must go through the UI Danger Zone.
+  Sandbox teardown is part of the sandbox lifecycle and remains available on
+  `/openapi/sandbox/**`.
 - **Do not pick namespace / env / host on behalf of the user** — list them
   with `ns ls` / `env ls` / `domain ls`, and ask if the user didn't say.
 - **Pre-deploy checklist**: build ✓ env ✓ service ✓ runtime ✓ — miss any

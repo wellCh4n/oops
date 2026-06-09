@@ -153,6 +153,20 @@ export default function ApplicationsDocPage() {
         </DocSubSection>
       </DocSection>
 
+      <DocSection title="高级配置">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/expert-config`} summary="获取高级部署配置。" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/expert-config`} summary="更新高级部署配置。" />
+        <DocSubSection title="请求体 (ApplicationConfigDto.ExpertConfig)">
+          <FieldTable
+            rows={[
+              { name: "environmentConfigs", type: "array", description: "每个环境的高级配置数组，元素结构见下方 ExpertEnvironmentConfig。" },
+              { name: "environmentConfigs[].environmentName", type: "string", required: true },
+              { name: "environmentConfigs[].serviceAccountName", type: "string", description: "部署到该环境时使用的 Kubernetes ServiceAccount 名称。" },
+            ]}
+          />
+        </DocSubSection>
+      </DocSection>
+
       <DocSection title="Service 与域名">
         <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/service`} summary="获取 Service/Ingress 配置。" />
         <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/service`} summary="更新 Service/Ingress 配置。" />
@@ -210,9 +224,30 @@ export default function ApplicationsDocPage() {
 
         <Endpoint
           method="GET"
+          path={`${PATH_PREFIX}/{name}/current-image?env={env}`}
+          summary="返回指定环境当前运行的镜像。"
+        />
+
+        <Endpoint
+          method="GET"
           path={`${PATH_PREFIX}/{name}/last-successful-pipeline`}
           summary="返回应用最近一次成功的流水线信息。"
         />
+
+        <Endpoint
+          method="GET"
+          path={`${PATH_PREFIX}/{name}/resources?env={env}`}
+          summary="返回应用拥有的 Kubernetes 资源清单，用于只读专家视图。"
+        />
+        <DocSubSection title="响应数组元素 (ApplicationResourceView)">
+          <FieldTable
+            rows={[
+              { name: "kind", type: "string", description: "资源类型，例如 StatefulSet / Service / IngressRoute。" },
+              { name: "name", type: "string", description: "资源名称。" },
+              { name: "data", type: "string", description: "YAML/JSON 形式的资源内容。" },
+            ]}
+          />
+        </DocSubSection>
 
         <Endpoint
           method="PUT"

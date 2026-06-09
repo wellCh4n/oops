@@ -54,6 +54,8 @@ oops:
         - "*/.DS_Store"
   pod-filesystem:
     max-download-size-bytes: 52428800
+    max-upload-size-bytes: 52428800
+    max-edit-size-bytes: 1048576
   feishu:
     enabled: false
     app-id: cli_xxx

@@ -47,11 +47,13 @@ export default function PipelinesDocPage() {
               { name: "operatorId", type: "string", description: "触发者 userId。" },
               { name: "operatorName", type: "string" },
               { name: "message", type: "string", description: "失败原因或状态备注。" },
+              { name: "triggerType", type: "string", description: "取值 RELEASE 或 ROLLBACK。" },
+              { name: "rollbackFromPipelineId", type: "string", description: "回滚来源流水线 ID，仅回滚流水线有值。" },
               { name: "createdTime", type: "string" },
             ]}
           />
           <DocParagraph>
-            <InlineCode>status</InlineCode> 取值：<InlineCode>RUNNING</InlineCode>、<InlineCode>BUILD_SUCCEEDED</InlineCode>、<InlineCode>DEPLOYING</InlineCode>、<InlineCode>ROLLING_OUT</InlineCode>、<InlineCode>SUCCEEDED</InlineCode>、<InlineCode>ERROR</InlineCode>、<InlineCode>STOPPED</InlineCode>。
+            <InlineCode>status</InlineCode> 取值：<InlineCode>INITIALIZED</InlineCode>、<InlineCode>RUNNING</InlineCode>、<InlineCode>BUILD_SUCCEEDED</InlineCode>、<InlineCode>DEPLOYING</InlineCode>、<InlineCode>ROLLING_OUT</InlineCode>、<InlineCode>SUCCEEDED</InlineCode>、<InlineCode>ERROR</InlineCode>、<InlineCode>STOPPED</InlineCode>。
           </DocParagraph>
         </DocSubSection>
       </DocSection>
@@ -63,7 +65,7 @@ export default function PipelinesDocPage() {
       <DocSection title="停止流水线">
         <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/stop`} summary="停止运行中的流水线。请求体为空。" />
         <DocParagraph>
-          只对处于 <InlineCode>RUNNING</InlineCode> / <InlineCode>DEPLOYING</InlineCode> 状态的流水线有效。已完成的流水线调用会得到业务错误响应。
+          只对处于 <InlineCode>RUNNING</InlineCode> / <InlineCode>BUILD_SUCCEEDED</InlineCode> / <InlineCode>DEPLOYING</InlineCode> 状态的流水线有效。已完成或正在发布生效的流水线调用会得到业务错误响应。
         </DocParagraph>
       </DocSection>
 
@@ -71,6 +73,13 @@ export default function PipelinesDocPage() {
         <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/deploy`} summary="对 deployMode=MANUAL 且已构建成功的流水线触发部署。请求体为空。" />
         <DocParagraph>
           仅对 <InlineCode>status=BUILD_SUCCEEDED</InlineCode> 的流水线生效。<InlineCode>IMMEDIATE</InlineCode> 模式的流水线会在构建结束后自动进入部署阶段，无需调用此接口。
+        </DocParagraph>
+      </DocSection>
+
+      <DocSection title="回滚到历史版本">
+        <Endpoint method="POST" path={`${PATH_PREFIX}/{id}/rollback`} summary="基于一条成功流水线创建回滚流水线并重新发布其 artifact。" />
+        <DocParagraph>
+          回滚流水线的 <InlineCode>triggerType</InlineCode> 为 <InlineCode>ROLLBACK</InlineCode>，会复用历史 artifact 并跳过构建阶段，直接进入部署流程。
         </DocParagraph>
       </DocSection>
     </DocLayout>

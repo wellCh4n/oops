@@ -123,7 +123,7 @@ export default function SandboxDocPage() {
           summary="销毁指定的持久沙箱实例，连带删除其 StatefulSet、Service。响应 data 为 null。"
         />
         <DocParagraph>
-          删除是沙箱生命周期的一部分，OpenAPI 对该路径开放 <InlineCode>DELETE</InlineCode>，其他资源仍受 405 限制（详见 <InlineCode>认证</InlineCode> 一章）。
+          删除是沙箱生命周期的一部分，OpenAPI 对该路径开放 <InlineCode>DELETE</InlineCode>；应用删除等危险操作仍会返回 405（详见 <InlineCode>认证</InlineCode> 一章）。
         </DocParagraph>
       </DocSection>
 
@@ -167,7 +167,7 @@ export default function SandboxDocPage() {
           summary="下载沙箱内文件。响应为二进制流，不是 Result 包裹结构。"
         />
         <DocParagraph>
-          单次下载受 <InlineCode>oops.pod-filesystem.max-download-size</InlineCode> 限制，超过会返回业务错误。
+          单次下载受 <InlineCode>oops.pod-filesystem.max-download-size-bytes</InlineCode> 限制，超过会返回业务错误。
         </DocParagraph>
       </DocSection>
 
@@ -175,7 +175,7 @@ export default function SandboxDocPage() {
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/instances/{id}/files/content?path=/path/to/file`}
-          summary="读取文本文件内容（UTF-8）。文件大小受 oops.pod-filesystem.max-edit-size 限制。"
+          summary="读取文本文件内容（UTF-8）。文件大小受 oops.pod-filesystem.max-edit-size-bytes 限制。"
         />
         <DocSubSection title="响应 (FileContentResponse)">
           <FieldTable
@@ -215,7 +215,7 @@ export default function SandboxDocPage() {
           />
         </DocSubSection>
         <DocParagraph>
-          单次上传大小受 <InlineCode>oops.pod-filesystem.max-upload-size</InlineCode> 限制（默认 50MB），同时受 Spring 的 <InlineCode>spring.servlet.multipart.max-file-size</InlineCode> 约束。文件名会做基本校验，禁止 <InlineCode>.</InlineCode>、<InlineCode>..</InlineCode> 与换行字符。
+          单次上传大小受 <InlineCode>oops.pod-filesystem.max-upload-size-bytes</InlineCode> 限制（默认 50MB），同时受 Spring 的 <InlineCode>spring.servlet.multipart.max-file-size</InlineCode> 约束。文件名会做基本校验，禁止 <InlineCode>.</InlineCode>、<InlineCode>..</InlineCode> 与换行字符。
         </DocParagraph>
       </DocSection>
 
@@ -226,7 +226,7 @@ export default function SandboxDocPage() {
           summary="删除沙箱内的文件或目录（递归）。响应 data 为 null。"
         />
         <DocParagraph>
-          OpenAPI 默认禁止 <InlineCode>DELETE</InlineCode>，但 <InlineCode>/openapi/sandbox/**</InlineCode> 例外（详见 <InlineCode>认证</InlineCode>）。
+          沙箱文件删除属于沙箱实例生命周期操作，因此在 <InlineCode>/openapi/sandbox/**</InlineCode> 下开放（详见 <InlineCode>认证</InlineCode>）。
         </DocParagraph>
 
         <Endpoint
