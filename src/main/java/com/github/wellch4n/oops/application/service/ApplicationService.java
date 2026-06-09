@@ -17,6 +17,7 @@ import com.github.wellch4n.oops.domain.identity.User;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
@@ -24,6 +25,7 @@ import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.dto.Page;
+import java.time.Instant;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Collections;
@@ -45,6 +47,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 @Service
 public class ApplicationService {
+
+    private static final String ENVIRONMENT_NOT_FOUND = "Environment not found: ";
 
     private final ApplicationRepository applicationRepository;
     private final EnvironmentRepository environmentRepository;
@@ -426,7 +430,7 @@ public class ApplicationService {
     public List<ApplicationResourceView> getApplicationResources(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationExpertConfigGateway.getApplicationResources(environment, namespace, name);
     }
@@ -506,15 +510,28 @@ public class ApplicationService {
     public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
+    }
+
+    public List<ApplicationEventView> getApplicationEvents(String namespace,
+                                                           String name,
+                                                           String environmentName,
+                                                           Instant since,
+                                                           Integer limit) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        int effectiveLimit = limit == null ? 200 : Math.max(1, Math.min(limit, 500));
+        return applicationRuntimeGateway.getEvents(environment, namespace, name, since, effectiveLimit);
     }
 
     public String getCurrentImage(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationRuntimeGateway.findCurrentImage(environment, namespace, name);
     }
@@ -522,7 +539,7 @@ public class ApplicationService {
     public SseEmitter watchApplicationStatus(String namespace, String name, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationRuntimeGateway.watchPodStatuses(environment, namespace, name);
     }
@@ -530,7 +547,7 @@ public class ApplicationService {
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
         Environment environment = environmentRepository.findFirstByName(environmentName);
         if (environment == null) {
-            throw new IllegalArgumentException("Environment not found: " + environmentName);
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         applicationRuntimeGateway.restartPod(environment, namespace, podName);
         return true;
@@ -540,7 +557,7 @@ public class ApplicationService {
         try {
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
-                throw new IllegalArgumentException("Environment not found: " + environmentName);
+                throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
             }
 
             String internalDomain = applicationRuntimeGateway.findInternalServiceDomain(environment, namespace, name);

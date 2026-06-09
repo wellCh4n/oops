@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, SseWatchOptions } from "./sse"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, ApplicationEnvironment, ApplicationPodStatus, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -283,6 +283,23 @@ export const getApplicationStatus = async (namespace: string, name: string, env:
     throw new Error("Failed to fetch application status")
   }
   return response.json() as Promise<ApiResponse<ApplicationPodStatus[]>>
+}
+
+export const getApplicationEvents = async (
+  namespace: string,
+  name: string,
+  env: string,
+  options?: { since?: string; limit?: number }
+): Promise<ApiResponse<ApplicationEvent[]>> => {
+  const params = new URLSearchParams({ env })
+  if (options?.since) params.set("since", options.since)
+  if (options?.limit !== undefined) params.set("limit", String(options.limit))
+
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/events?${params.toString()}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch application events")
+  }
+  return response.json() as Promise<ApiResponse<ApplicationEvent[]>>
 }
 
 // Events streamed by GET /api/namespaces/{ns}/applications/{name}/status/watch.

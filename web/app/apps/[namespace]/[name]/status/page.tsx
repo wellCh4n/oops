@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ApplicationResourceViewer } from "@/app/apps/components/application-resource-viewer"
+import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -300,6 +301,12 @@ function ApplicationStatusContent() {
           <ApplicationResourceViewer namespace={namespace} applicationName={name} environmentName={selectedEnv} />
         </CollapsibleContent>
       </Collapsible>
+
+      {selectedEnv && (
+        <div className="mt-4">
+          <ApplicationEventsPanel namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+        </div>
+      )}
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
         <AlertDialogContent>

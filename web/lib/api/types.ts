@@ -186,6 +186,16 @@ export interface ApplicationPodStatus {
   containers: ApplicationContainerStatus[]
 }
 
+export interface ApplicationEvent {
+  time: string
+  type?: string | null
+  resourceKind?: string | null
+  resourceName?: string | null
+  reason?: string | null
+  message?: string | null
+  count?: number | null
+}
+
 interface ApplicationContainerStatus {
   name: string
   image: string
