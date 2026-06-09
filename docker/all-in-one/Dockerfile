@@ -3,12 +3,12 @@
 # --- 阶段 1: 前端构建 ---
 FROM node:20-alpine AS web-deps
 WORKDIR /build/web
-RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
+RUN corepack enable && corepack prepare pnpm@8.15.9 --activate
 RUN pnpm config set registry https://registry.npmmirror.com
 
 COPY web/package.json web/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --no-frozen-lockfile
+    pnpm install --frozen-lockfile
 COPY web/ ./
 RUN pnpm build
 
