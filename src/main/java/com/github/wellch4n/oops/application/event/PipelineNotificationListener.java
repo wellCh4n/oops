@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -26,6 +27,7 @@ public class PipelineNotificationListener {
         this.userService = userService;
     }
 
+    @Async("notificationTaskExecutor")
     @EventListener
     public void onPipelineNotification(PipelineNotificationEvent event) {
         if (event == null || event.operatorId() == null || event.operatorId().isBlank()) {
@@ -33,7 +35,11 @@ public class PipelineNotificationListener {
             return;
         }
 
-        externalMessageService.sendToUser(event.operatorId(), buildMessage(event));
+        try {
+            externalMessageService.sendToUser(event.operatorId(), buildMessage(event));
+        } catch (Exception exception) {
+            log.warn("Failed to send pipeline notification for pipeline {}", event.pipelineId(), exception);
+        }
     }
 
     private ExternalUserMessage buildMessage(PipelineNotificationEvent event) {
