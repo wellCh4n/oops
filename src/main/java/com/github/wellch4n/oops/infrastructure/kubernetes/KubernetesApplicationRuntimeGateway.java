@@ -1,18 +1,23 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
-import com.github.wellch4n.oops.domain.shared.OopsTypes;
-import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.DeploymentHealth;
+import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
+import io.fabric8.kubernetes.api.model.Container;
+import io.fabric8.kubernetes.api.model.MicroTime;
+import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodCondition;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.events.v1.Event;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
 import io.fabric8.kubernetes.client.Watcher;
@@ -21,12 +26,15 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -38,6 +46,8 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
 
     private static final String CLUSTER_SUFFIX = "cluster.local";
     private static final String CLUSTER_DOMAIN_FORMAT = "%s.%s.svc.%s";
+    private static final String APPLICATION_TYPE_LABEL = "oops.type";
+    private static final String APPLICATION_NAME_LABEL = "oops.app.name";
 
     private final KubernetesClientPool clientPool;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -108,10 +118,42 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         var client = clientPool.get(environment.getKubernetesApiServer());
         var pods = client.pods()
                 .inNamespace(namespace)
-                .withLabel("oops.type", OopsTypes.APPLICATION.name())
-                .withLabel("oops.app.name", applicationName)
+                .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                .withLabel(APPLICATION_NAME_LABEL, applicationName)
                 .list();
         return pods.getItems().stream().map(this::toView).toList();
+    }
+
+    @Override
+    public List<ApplicationEventView> getEvents(Environment environment,
+                                                String namespace,
+                                                String applicationName,
+                                                Instant since,
+                                                int limit) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        Set<String> podNames = client.pods()
+                .inNamespace(namespace)
+                .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                .withLabel(APPLICATION_NAME_LABEL, applicationName)
+                .list()
+                .getItems()
+                .stream()
+                .map(pod -> pod.getMetadata() != null ? pod.getMetadata().getName() : null)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        return client.events().v1().events()
+                .inNamespace(namespace)
+                .list()
+                .getItems()
+                .stream()
+                .filter(event -> isApplicationEvent(event, applicationName, podNames))
+                .map(this::toEventView)
+                .filter(event -> event.time() != null)
+                .filter(event -> since == null || !event.time().isBefore(since))
+                .sorted(Comparator.comparing(ApplicationEventView::time).reversed())
+                .limit(limit)
+                .toList();
     }
 
     @Override
@@ -159,8 +201,8 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
             try {
                 var podsResource = client.pods()
                         .inNamespace(namespace)
-                        .withLabel("oops.type", OopsTypes.APPLICATION.name())
-                        .withLabel("oops.app.name", applicationName);
+                        .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                        .withLabel(APPLICATION_NAME_LABEL, applicationName);
 
                 var initial = podsResource.list();
                 for (Pod pod : initial.getItems()) {
@@ -251,6 +293,74 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         return view;
     }
 
+    private boolean isApplicationEvent(Event event, String applicationName, Set<String> podNames) {
+        return isApplicationObjectReference(event.getRegarding(), applicationName, podNames)
+                || isApplicationObjectReference(event.getRelated(), applicationName, podNames);
+    }
+
+    private boolean isApplicationObjectReference(ObjectReference reference, String applicationName, Set<String> podNames) {
+        if (reference == null || StringUtils.isBlank(reference.getKind()) || StringUtils.isBlank(reference.getName())) {
+            return false;
+        }
+        String kind = reference.getKind();
+        String name = reference.getName();
+        if ("Pod".equals(kind)) {
+            return podNames.contains(name) || name.startsWith(applicationName + "-");
+        }
+        if ("StatefulSet".equals(kind) || "Service".equals(kind) || "ConfigMap".equals(kind)) {
+            return applicationName.equals(name);
+        }
+        if ("IngressRoute".equals(kind)) {
+            return applicationName.equals(name) || name.startsWith(applicationName + "-");
+        }
+        return false;
+    }
+
+    private ApplicationEventView toEventView(Event event) {
+        ObjectReference reference = event.getRegarding();
+        String resourceKind = reference != null ? reference.getKind() : null;
+        String resourceName = reference != null ? reference.getName() : null;
+        return new ApplicationEventView(
+                eventInstant(event),
+                event.getType(),
+                resourceKind,
+                resourceName,
+                event.getReason(),
+                event.getNote(),
+                eventCount(event)
+        );
+    }
+
+    private Integer eventCount(Event event) {
+        if (event.getSeries() != null && event.getSeries().getCount() != null) {
+            return event.getSeries().getCount();
+        }
+        if (event.getDeprecatedCount() != null) {
+            return event.getDeprecatedCount();
+        }
+        return 1;
+    }
+
+    private Instant eventInstant(Event event) {
+        Instant seriesTime = event.getSeries() != null ? parseMicroTime(event.getSeries().getLastObservedTime()) : null;
+        if (seriesTime != null) {
+            return seriesTime;
+        }
+        Instant eventTime = parseMicroTime(event.getEventTime());
+        if (eventTime != null) {
+            return eventTime;
+        }
+        Instant deprecatedLastTimestamp = parseKubernetesInstant(event.getDeprecatedLastTimestamp());
+        if (deprecatedLastTimestamp != null) {
+            return deprecatedLastTimestamp;
+        }
+        return event.getMetadata() != null ? parseKubernetesInstant(event.getMetadata().getCreationTimestamp()) : null;
+    }
+
+    private Instant parseMicroTime(MicroTime microTime) {
+        return microTime != null ? parseKubernetesInstant(microTime.getTime()) : null;
+    }
+
     @Override
     public void restartPod(Environment environment, String namespace, String podName) {
         clientPool.get(environment.getKubernetesApiServer())
@@ -260,7 +370,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     @Override
     public String findInternalServiceDomain(Environment environment, String namespace, String applicationName) {
         var client = clientPool.get(environment.getKubernetesApiServer());
-        var services = client.services().inNamespace(namespace).withLabel("oops.app.name", applicationName).list().getItems();
+        var services = client.services().inNamespace(namespace).withLabel(APPLICATION_NAME_LABEL, applicationName).list().getItems();
         if (services.isEmpty()) {
             return null;
         }
@@ -287,13 +397,13 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         var containers = statefulSet.getSpec().getTemplate().getSpec().getContainers();
         return containers.stream()
                 .filter(container -> applicationName.equals(container.getName()))
-                .map(io.fabric8.kubernetes.api.model.Container::getImage)
+                .map(Container::getImage)
                 .findFirst()
                 .orElseGet(() -> containers.isEmpty() ? null : containers.getFirst().getImage());
     }
 
-    private static final java.util.Set<String> FATAL_WAITING_REASONS =
-            java.util.Set.of("ImagePullBackOff", "ErrImagePull", "CrashLoopBackOff");
+    private static final Set<String> FATAL_WAITING_REASONS =
+            Set.of("ImagePullBackOff", "ErrImagePull", "CrashLoopBackOff");
 
     @Override
     public DeploymentHealth getDeploymentHealth(Environment environment, String namespace, String applicationName) {
@@ -348,8 +458,8 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     private Optional<Instant> findOldestNotReadyPodTime(KubernetesClient client, String namespace, String applicationName) {
         var pods = client.pods()
                 .inNamespace(namespace)
-                .withLabel("oops.type", OopsTypes.APPLICATION.name())
-                .withLabel("oops.app.name", applicationName)
+                .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                .withLabel(APPLICATION_NAME_LABEL, applicationName)
                 .list();
         return pods.getItems().stream()
                 .map(this::notReadySince)
@@ -391,8 +501,8 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     private String findFatalPodWaitingReason(KubernetesClient client, String namespace, String applicationName) {
         var pods = client.pods()
                 .inNamespace(namespace)
-                .withLabel("oops.type", OopsTypes.APPLICATION.name())
-                .withLabel("oops.app.name", applicationName)
+                .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                .withLabel(APPLICATION_NAME_LABEL, applicationName)
                 .list();
         for (Pod pod : pods.getItems()) {
             if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) {

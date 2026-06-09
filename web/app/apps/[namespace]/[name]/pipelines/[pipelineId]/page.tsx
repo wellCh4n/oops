@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { shortImageName } from "@/lib/utils"
+import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
 
 // WebSocket message types
 interface StepsMessage {
@@ -347,6 +348,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const activeIndex = (pipeline?.status === "SUCCEEDED" || pipeline?.status === "BUILD_SUCCEEDED")
     ? steps.length
     : steps.indexOf(activeStep)
+  const applicationEventSince = pipeline?.createdTime ? dayjs(pipeline.createdTime).toISOString() : undefined
 
   return (
     <ContentPage title={t("apps.pipeline.title")} fullHeight>
@@ -504,6 +506,16 @@ export default function PipelineDetailPage({ params }: PageProps) {
               </div>
             )}
             <DataTable columns={statusColumns} data={podStatuses} loading={statusLoading} getRowId={(row) => row.name} renderExpandedRow={renderExpandedRow} />
+            {pipeline?.environment && (
+              <ApplicationEventsPanel
+                namespace={namespace}
+                applicationName={name}
+                environmentName={pipeline.environment}
+                since={applicationEventSince}
+                limit={100}
+                compact
+              />
+            )}
           </div>
         </div>
 

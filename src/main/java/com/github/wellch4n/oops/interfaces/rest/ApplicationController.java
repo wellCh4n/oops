@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
+import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
@@ -13,6 +14,7 @@ import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -217,9 +219,18 @@ public class ApplicationController {
 
     @GetMapping("/{name}/status")
     public Result<List<ApplicationPodStatusView>> getApplicationStatus(@PathVariable String namespace,
-                                                                           @PathVariable String name,
-                                                                           @RequestParam String env) {
+                                                                            @PathVariable String name,
+                                                                            @RequestParam String env) {
         return Result.success(applicationService.getApplicationStatus(namespace, name, env));
+    }
+
+    @GetMapping("/{name}/events")
+    public Result<List<ApplicationEventView>> getApplicationEvents(@PathVariable String namespace,
+                                                                   @PathVariable String name,
+                                                                   @RequestParam String env,
+                                                                   @RequestParam(required = false) Instant since,
+                                                                   @RequestParam(required = false) Integer limit) {
+        return Result.success(applicationService.getApplicationEvents(namespace, name, env, since, limit));
     }
 
     @GetMapping("/{name}/current-image")

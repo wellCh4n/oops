@@ -2,8 +2,10 @@ package com.github.wellch4n.oops.application.port;
 
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.DeploymentHealth;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -16,6 +18,8 @@ public interface ApplicationRuntimeGateway {
                           ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec);
 
     List<ApplicationPodStatusView> getPodStatuses(Environment environment, String namespace, String applicationName);
+
+    List<ApplicationEventView> getEvents(Environment environment, String namespace, String applicationName, Instant since, int limit);
 
     SseEmitter watchPodStatuses(Environment environment, String namespace, String applicationName);
 

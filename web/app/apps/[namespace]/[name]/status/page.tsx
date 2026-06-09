@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ApplicationResourceViewer } from "@/app/apps/components/application-resource-viewer"
+import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -291,15 +292,23 @@ function ApplicationStatusContent() {
         }
       />
 
-      <Collapsible open={resourcesOpen} onOpenChange={setResourcesOpen} className="mt-4">
-        <CollapsibleTrigger className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-          <ChevronRight className={`size-4 transition-transform ${resourcesOpen ? "rotate-90" : ""}`} />
-          {t("apps.status.resources")}
+      <Collapsible open={resourcesOpen} onOpenChange={setResourcesOpen} className="mt-4 min-w-0 rounded-md border">
+        <CollapsibleTrigger className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/50">
+          <ChevronRight className={`size-4 shrink-0 transition-transform ${resourcesOpen ? "rotate-90" : ""}`} />
+          <span className="font-semibold">{t("apps.status.resources")}</span>
         </CollapsibleTrigger>
-        <CollapsibleContent className="pt-2">
-          <ApplicationResourceViewer namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+        <CollapsibleContent>
+          <div className="border-t p-3">
+            <ApplicationResourceViewer namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+          </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {selectedEnv && (
+        <div className="mt-4">
+          <ApplicationEventsPanel namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+        </div>
+      )}
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
         <AlertDialogContent>
