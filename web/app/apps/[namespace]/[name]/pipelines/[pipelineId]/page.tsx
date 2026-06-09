@@ -513,6 +513,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                 environmentName={pipeline.environment}
                 since={applicationEventSince}
                 limit={100}
+                compact
               />
             )}
           </div>

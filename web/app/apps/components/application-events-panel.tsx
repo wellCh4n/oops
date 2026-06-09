@@ -16,6 +16,7 @@ interface ApplicationEventsPanelProps {
   since?: string
   limit?: number
   refreshIntervalMs?: number
+  compact?: boolean
 }
 
 export function ApplicationEventsPanel({
@@ -25,6 +26,7 @@ export function ApplicationEventsPanel({
   since,
   limit = 200,
   refreshIntervalMs = 5000,
+  compact = false,
 }: ApplicationEventsPanelProps) {
   const { t } = useLanguage()
   const [events, setEvents] = useState<ApplicationEvent[]>([])
@@ -70,6 +72,14 @@ export function ApplicationEventsPanel({
     return type || "-"
   }
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (nextOpen) {
+      setEvents([])
+      setLoading(true)
+    }
+  }
+
   const renderTypeBadge = (event: ApplicationEvent) => {
     const isWarning = event.type === "Warning"
     return (
@@ -80,8 +90,123 @@ export function ApplicationEventsPanel({
     )
   }
 
+  const renderEmptyState = () => {
+    if (loading && events.length === 0) {
+      return <div className="px-3 py-8 text-center text-muted-foreground">{t("common.loading")}</div>
+    }
+    if (events.length === 0) {
+      return <div className="px-3 py-8 text-center text-muted-foreground">{t("apps.events.empty")}</div>
+    }
+    return null
+  }
+
+  const renderCompactEvents = () => (
+    <div className="border-t">
+      {renderEmptyState()}
+      {events.map((event, index) => {
+        const resource = [event.resourceKind, event.resourceName].filter(Boolean).join("/")
+        return (
+          <div
+            key={`${event.time}-${event.resourceKind}-${event.resourceName}-${event.reason}-${index}`}
+            className="border-b px-3 py-3 transition-colors last:border-0 hover:bg-muted/50"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                {renderTypeBadge(event)}
+                <span className="text-xs text-muted-foreground">
+                  {dayjs(event.time).format("MM-DD HH:mm:ss")}
+                </span>
+                <span className="min-w-0 max-w-full break-all font-mono text-xs text-muted-foreground">
+                  {resource || "-"}
+                </span>
+              </div>
+              <Badge variant="outline" className="ml-auto shrink-0">
+                x{event.count ?? 1}
+              </Badge>
+            </div>
+            <div className="mt-2 min-w-0">
+              <div className="break-words font-medium [overflow-wrap:anywhere]">{event.reason || "-"}</div>
+              <div className="mt-1 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                {event.message || "-"}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  const renderTableEvents = () => (
+    <div className="border-t">
+      <table className="w-full table-fixed text-sm">
+        <colgroup>
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
+          <col className="w-[18%]" />
+          <col className="w-[14%]" />
+          <col className="w-[40%]" />
+          <col className="w-[8%]" />
+        </colgroup>
+        <thead>
+          <tr className="border-b">
+            <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.time")}</th>
+            <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.type")}</th>
+            <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.resource")}</th>
+            <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.reason")}</th>
+            <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.message")}</th>
+            <th className="h-10 whitespace-nowrap px-3 text-right align-middle font-medium">{t("apps.events.count")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading && events.length === 0 && (
+            <tr>
+              <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
+                {t("common.loading")}
+              </td>
+            </tr>
+          )}
+          {!loading && events.length === 0 && (
+            <tr>
+              <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
+                {t("apps.events.empty")}
+              </td>
+            </tr>
+          )}
+          {events.map((event, index) => {
+            const resource = [event.resourceKind, event.resourceName].filter(Boolean).join("/")
+            return (
+              <tr
+                key={`${event.time}-${event.resourceKind}-${event.resourceName}-${event.reason}-${index}`}
+                className="border-b transition-colors last:border-0 hover:bg-muted/50"
+              >
+                <td className="px-3 py-2 align-top text-xs text-muted-foreground">
+                  {dayjs(event.time).format("MM-DD HH:mm:ss")}
+                </td>
+                <td className="px-3 py-2 align-top">
+                  {renderTypeBadge(event)}
+                </td>
+                <td className="break-words px-3 py-2 align-top font-mono text-xs [overflow-wrap:anywhere]">
+                  {resource || "-"}
+                </td>
+                <td className="break-words px-3 py-2 align-top font-medium [overflow-wrap:anywhere]">
+                  {event.reason || "-"}
+                </td>
+                <td className="break-words px-3 py-2 align-top text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                  {event.message || "-"}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2 text-right align-top text-muted-foreground">
+                  {event.count ?? 1}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="min-w-0 rounded-md border">
+    <Collapsible open={open} onOpenChange={handleOpenChange} className="min-w-0 rounded-md border">
       <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50">
         <div className="flex min-w-0 items-center gap-2">
           <ChevronRight className={`size-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
@@ -132,72 +257,7 @@ export function ApplicationEventsPanel({
         </div>
       )}
       <CollapsibleContent>
-        <div className="border-t">
-          <table className="w-full table-fixed text-sm">
-            <colgroup>
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
-              <col className="w-[18%]" />
-              <col className="w-[14%]" />
-              <col className="w-[41%]" />
-              <col className="w-[7%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b">
-                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.time")}</th>
-                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.type")}</th>
-                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.resource")}</th>
-                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.reason")}</th>
-                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.message")}</th>
-                <th className="h-10 px-3 text-right align-middle font-medium">{t("apps.events.count")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && events.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              )}
-              {!loading && events.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
-                    {t("apps.events.empty")}
-                  </td>
-                </tr>
-              )}
-              {events.map((event, index) => {
-                const resource = [event.resourceKind, event.resourceName].filter(Boolean).join("/")
-                return (
-                  <tr
-                    key={`${event.time}-${event.resourceKind}-${event.resourceName}-${event.reason}-${index}`}
-                    className="border-b transition-colors last:border-0 hover:bg-muted/50"
-                  >
-                    <td className="px-3 py-2 align-top text-xs text-muted-foreground">
-                      {dayjs(event.time).format("MM-DD HH:mm:ss")}
-                    </td>
-                    <td className="px-3 py-2 align-top">
-                      {renderTypeBadge(event)}
-                    </td>
-                    <td className="break-words px-3 py-2 align-top font-mono text-xs">
-                      {resource || "-"}
-                    </td>
-                    <td className="break-words px-3 py-2 align-top font-medium">
-                      {event.reason || "-"}
-                    </td>
-                    <td className="break-words px-3 py-2 align-top text-sm text-muted-foreground">
-                      {event.message || "-"}
-                    </td>
-                    <td className="px-3 py-2 text-right align-top text-muted-foreground">
-                      {event.count ?? 1}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        {compact ? renderCompactEvents() : renderTableEvents()}
       </CollapsibleContent>
     </Collapsible>
   )
