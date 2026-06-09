@@ -7,14 +7,6 @@ import { getApplicationEvents } from "@/lib/api/applications"
 import { ApplicationEvent } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { useLanguage } from "@/contexts/language-context"
 
 interface ApplicationEventsPanelProps {
@@ -72,20 +64,25 @@ export function ApplicationEventsPanel({
   const warningCount = events.filter((event) => event.type === "Warning").length
   const latestEvent = events[0]
   const latestResource = latestEvent ? [latestEvent.resourceKind, latestEvent.resourceName].filter(Boolean).join("/") : ""
+  const eventTypeLabel = (type?: string | null) => {
+    if (type === "Warning") return t("apps.events.type.warning")
+    if (type === "Normal") return t("apps.events.type.normal")
+    return type || "-"
+  }
 
   const renderTypeBadge = (event: ApplicationEvent) => {
     const isWarning = event.type === "Warning"
     return (
       <Badge variant={isWarning ? "destructive" : "secondary"} className="gap-1">
         {isWarning ? <AlertCircle className="size-3" /> : <Info className="size-3" />}
-        {event.type || "-"}
+        {eventTypeLabel(event.type)}
       </Badge>
     )
   }
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className="min-w-0 rounded-md border">
-      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50">
+      <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50">
         <div className="flex min-w-0 items-center gap-2">
           <ChevronRight className={`size-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
           <span className="font-semibold">{t("apps.events.title")}</span>
@@ -96,12 +93,12 @@ export function ApplicationEventsPanel({
           )}
           {open && warningCount > 0 && (
             <Badge variant="destructive" className="shrink-0">
-              {warningCount} Warning
+              {warningCount} {t("apps.events.type.warning")}
             </Badge>
           )}
           {!open && latestEvent?.type === "Warning" && (
             <Badge variant="destructive" className="shrink-0">
-              Warning
+              {t("apps.events.type.warning")}
             </Badge>
           )}
         </div>
@@ -134,61 +131,72 @@ export function ApplicationEventsPanel({
           )}
         </div>
       )}
-      <CollapsibleContent className="pt-2">
-        <div className="border-t overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="h-9 px-3 w-36">{t("apps.events.time")}</TableHead>
-                <TableHead className="h-9 px-3 w-24">{t("apps.events.type")}</TableHead>
-                <TableHead className="h-9 px-3 w-40">{t("apps.events.resource")}</TableHead>
-                <TableHead className="h-9 px-3 w-36">{t("apps.events.reason")}</TableHead>
-                <TableHead className="h-9 px-3">{t("apps.events.message")}</TableHead>
-                <TableHead className="h-9 px-3 w-20 text-right">{t("apps.events.count")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+      <CollapsibleContent>
+        <div className="border-t">
+          <table className="w-full table-fixed text-sm">
+            <colgroup>
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[18%]" />
+              <col className="w-[14%]" />
+              <col className="w-[41%]" />
+              <col className="w-[7%]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b">
+                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.time")}</th>
+                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.type")}</th>
+                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.resource")}</th>
+                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.reason")}</th>
+                <th className="h-10 px-3 text-left align-middle font-medium">{t("apps.events.message")}</th>
+                <th className="h-10 px-3 text-right align-middle font-medium">{t("apps.events.count")}</th>
+              </tr>
+            </thead>
+            <tbody>
               {loading && events.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
+                <tr>
+                  <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
                     {t("common.loading")}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
               {!loading && events.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-20 text-center text-muted-foreground">
+                <tr>
+                  <td colSpan={6} className="h-20 px-3 text-center text-muted-foreground">
                     {t("apps.events.empty")}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
               {events.map((event, index) => {
                 const resource = [event.resourceKind, event.resourceName].filter(Boolean).join("/")
                 return (
-                  <TableRow key={`${event.time}-${event.resourceKind}-${event.resourceName}-${event.reason}-${index}`}>
-                    <TableCell className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">
+                  <tr
+                    key={`${event.time}-${event.resourceKind}-${event.resourceName}-${event.reason}-${index}`}
+                    className="border-b transition-colors last:border-0 hover:bg-muted/50"
+                  >
+                    <td className="px-3 py-2 align-top text-xs text-muted-foreground">
                       {dayjs(event.time).format("MM-DD HH:mm:ss")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">
+                    </td>
+                    <td className="px-3 py-2 align-top">
                       {renderTypeBadge(event)}
-                    </TableCell>
-                    <TableCell className="px-3 py-2 font-mono text-xs break-all">
+                    </td>
+                    <td className="break-words px-3 py-2 align-top font-mono text-xs">
                       {resource || "-"}
-                    </TableCell>
-                    <TableCell className="px-3 py-2 font-medium break-all">
+                    </td>
+                    <td className="break-words px-3 py-2 align-top font-medium">
                       {event.reason || "-"}
-                    </TableCell>
-                    <TableCell className="px-3 py-2 text-sm text-muted-foreground break-words min-w-64">
+                    </td>
+                    <td className="break-words px-3 py-2 align-top text-sm text-muted-foreground">
                       {event.message || "-"}
-                    </TableCell>
-                    <TableCell className="px-3 py-2 text-right text-muted-foreground">
+                    </td>
+                    <td className="px-3 py-2 text-right align-top text-muted-foreground">
                       {event.count ?? 1}
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                 )
               })}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </CollapsibleContent>
     </Collapsible>
