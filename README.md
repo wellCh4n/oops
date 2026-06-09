@@ -3,7 +3,7 @@
 
 <img src="web/public/icon.png" width="120" alt="OOPS logo">
 
-OOPS is a Kubernetes PaaS where **humans and AI Agents are equal first-class operators**. Deploy applications, manage multiple clusters, run sandboxed commands, and configure domains — all from a clean web UI, or driven programmatically through the bundled [Claude Code Skill](skills/oops/SKILL.md).
+OOPS is a Kubernetes PaaS where **humans and AI Agents are equal first-class operators**. Deploy applications, manage multiple clusters, run sandboxed commands, and configure domains — all from a clean web UI, or driven programmatically through the bundled [OOPS CLI Skill](skills/oops/SKILL.md).
 
 [中文](docs/README.zh.md)
 
@@ -22,16 +22,22 @@ KubeSphere, Rainbond, and ArgoCD each solve a real slice of the Kubernetes probl
 ## Features
 
 ### Deploy any app
-Push code or upload a ZIP, and OOPS builds the image and rolls it out to your Kubernetes cluster, with build logs streaming in real time.
+Push code or upload a ZIP, choose a repository Dockerfile or inline one, and OOPS builds the image and rolls it out to your Kubernetes cluster with build logs streaming in real time.
 
 ### Multi-cluster management
 Connect any number of clusters and manage them side by side from a single console — switch deployment targets without leaving the UI.
 
 ### Watch what's running
-Live logs, in-browser terminal, and a file browser for any running pod. Cluster nodes and pod status at a glance.
+Live logs, in-browser terminal, editable pod files, cluster nodes, and rollout status at a glance.
 
 ### A sandbox built for Agents
-Agent-grade sandbox capability built in (similar to [OpenSandbox](https://github.com/alibaba/OpenSandbox)) — give your Agent an isolated workspace to run commands, install tools, or debug. Results stream back live, and everything is torn down when it's done.
+Agent-grade sandbox capability built in (similar to [OpenSandbox](https://github.com/alibaba/OpenSandbox)) — give your Agent an isolated workspace to run commands, install tools, edit files, or debug. Use one-shot streamed executions or long-lived sandbox instances with a browser terminal.
+
+### Programmatic OpenAPI
+Use per-user access tokens with the `/openapi/**` surface, or let an Agent drive the repo-vendored Python CLI in [skills/oops](skills/oops/SKILL.md). The same deployment workflow is available from the UI and automation.
+
+### IDEs and static assets
+Launch optional code-server IDE instances for applications, and manage object-storage-backed static assets from the UI.
 
 ### Multi-domain management
 Manage multiple domains from a single console. Configure automatic HTTPS via certificate resolvers or upload your own TLS certificates; wildcard domains are supported.
@@ -44,7 +50,7 @@ Manage multiple domains from a single console. Configure automatic HTTPS via cer
 | MySQL 8.x | Yes | Persistence for OOPS metadata |
 | Container image registry | Yes | Pipeline image push / pull |
 | Traefik v3 | No | Ingress and HTTPS routing |
-| S3-compatible object storage | No | ZIP source uploads |
+| S3-compatible object storage | No | ZIP source uploads and static assets |
 
 ## Quick Start
 
@@ -102,16 +108,19 @@ flowchart TD
     Src -->|GIT| Clone["① Clone<br/>git clone"]
     Src -->|ZIP| Upload["Upload ZIP<br/>(presigned S3 URL)"]
     Upload --> CloneZ["① Clone<br/>curl from S3"]
-    Clone --> Build["② Build<br/>(optional)"]
-    CloneZ --> Build
-    Build --> Push["③ Push<br/>Buildah build & push"]
+    Clone --> Dockerfile["② Dockerfile<br/>(optional inline USER Dockerfile)"]
+    CloneZ --> Dockerfile
+    Dockerfile --> Build["③ Build<br/>(optional command)"]
+    Build --> Push["④ Push<br/>Buildah build & push"]
     Push --> Scan{"Job result<br/>(polled 5s)"}
     Scan -->|Failed| Err([ERROR ❌])
     Scan -->|Succeeded| Mode{Deploy mode}
     Mode -->|MANUAL| Wait([BUILD_SUCCEEDED ⏸️<br/>awaits trigger])
     Mode -->|IMMEDIATE| Deploy["Apply K8s<br/>StatefulSet · Service · IngressRoute"]
     Wait --> Deploy
-    Deploy --> Ok([SUCCEEDED ✅])
+    Deploy --> Rollout{"Rollout health<br/>(polled 5s)"}
+    Rollout -->|Ready| Ok([SUCCEEDED ✅])
+    Rollout -->|Failed / timeout| Err
 
     style Start fill:#4CAF50,color:#fff
     style Ok fill:#4CAF50,color:#fff
@@ -126,6 +135,7 @@ stateDiagram-v2
     direction TB
     [*] --> INITIALIZED: Pipeline created
     INITIALIZED --> RUNNING: K8s Job submitted
+    INITIALIZED --> DEPLOYING: Rollback skips build
 
     RUNNING --> BUILD_SUCCEEDED: Job succeeded<br/>(MANUAL mode)
     RUNNING --> DEPLOYING: Job succeeded<br/>(IMMEDIATE mode)
@@ -133,9 +143,14 @@ stateDiagram-v2
     RUNNING --> STOPPED: User cancels
 
     BUILD_SUCCEEDED --> DEPLOYING: User triggers deploy
+    BUILD_SUCCEEDED --> STOPPED: User cancels
 
-    DEPLOYING --> SUCCEEDED: Deploy completed
+    DEPLOYING --> ROLLING_OUT: K8s resources applied
     DEPLOYING --> ERROR: Deploy failed
+    DEPLOYING --> STOPPED: User cancels
+
+    ROLLING_OUT --> SUCCEEDED: Rollout ready
+    ROLLING_OUT --> ERROR: Rollout failed
 
     SUCCEEDED --> [*]
     ERROR --> [*]
