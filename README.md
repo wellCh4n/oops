@@ -22,13 +22,22 @@ KubeSphere, Rainbond, and ArgoCD each solve a real slice of the Kubernetes probl
 ## Features
 
 ### Deploy any app
-Push code or upload a ZIP, choose a repository Dockerfile or inline one, and OOPS builds the image and rolls it out to your Kubernetes cluster with build logs streaming in real time.
+Push code or upload a ZIP, choose a repository Dockerfile or inline one, and OOPS builds the image and rolls it out to your Kubernetes cluster with build logs streaming in real time. Roll back to any previous successful build in one click — it reuses the existing image and skips the build entirely.
+
+### Tune every deployment
+Set CPU and memory requests and limits, replica count, and liveness/readiness probes per environment, and inject configuration through ConfigMaps and environment variables — without hand-writing YAML.
 
 ### Multi-cluster management
 Connect any number of clusters and manage them side by side from a single console — switch deployment targets without leaving the UI.
 
+### Teams and access control
+Invite multiple users with ADMIN or USER roles. Every application has an owner who can share access with collaborators, while destructive actions stay restricted to owners and admins.
+
 ### Watch what's running
-Live logs, in-browser terminal, editable pod files, cluster nodes, and rollout status at a glance.
+Live logs, in-browser terminal, editable pod files, Kubernetes events, cluster nodes, and rollout status at a glance.
+
+### Pipeline notifications
+Get build and deploy status pushed straight to chat — created, build succeeded, deploying, succeeded, failed, or stopped. Delivered to Feishu (Lark) today.
 
 ### A sandbox built for Agents
 Agent-grade sandbox capability built in (similar to [OpenSandbox](https://github.com/alibaba/OpenSandbox)) — give your Agent an isolated workspace to run commands, install tools, edit files, or debug. Use one-shot streamed executions or long-lived sandbox instances with a browser terminal.
