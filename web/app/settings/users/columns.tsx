@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { KeyRound, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Copyable } from "@/components/ui/copyable"
 import { LocalTime } from "@/components/ui/local-time"
 import { User } from "@/lib/api/users"
@@ -43,6 +44,13 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
     cell: ({ row }) => (
       <span>{row.original.role === "ADMIN" ? t("users.role.admin") : t("users.role.user")}</span>
     ),
+  },
+  {
+    accessorKey: "enabled",
+    header: t("users.col.status"),
+    cell: ({ row }) => row.original.enabled === false
+      ? <Badge variant="secondary" className="text-muted-foreground">{t("users.status.disabled")}</Badge>
+      : <Badge variant="outline" className="text-emerald-600 border-emerald-200 dark:text-emerald-400 dark:border-emerald-900">{t("users.status.enabled")}</Badge>,
   },
   {
     accessorKey: "createdTime",

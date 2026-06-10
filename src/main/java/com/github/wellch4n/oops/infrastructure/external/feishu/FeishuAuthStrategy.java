@@ -121,6 +121,10 @@ public class FeishuAuthStrategy implements ExternalAuthStrategy {
             externalAccountRepository.save(account);
         }
 
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new IOException("Account is disabled");
+        }
+
         return jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
     }
 

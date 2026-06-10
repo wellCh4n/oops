@@ -66,6 +66,7 @@ public class UserService {
             user.setPassword(passwordEncoder.encode(rawPassword));
         }
         user.setRole(role);
+        user.setEnabled(true);
         return userRepository.save(user);
     }
 
@@ -102,12 +103,15 @@ public class UserService {
         userRepository.save(user);
     }
 
-    public void updateUser(String id, UserRole role, String email, String rawPassword) {
+    public void updateUser(String id, UserRole role, String email, String rawPassword, Boolean enabled) {
         userRepository.findById(id).ifPresent(user -> {
             user.setRole(role);
             user.setEmail(email);
             if (rawPassword != null && !rawPassword.isBlank()) {
                 user.setPassword(passwordEncoder.encode(rawPassword));
+            }
+            if (enabled != null) {
+                user.setEnabled(enabled);
             }
             userRepository.save(user);
         });

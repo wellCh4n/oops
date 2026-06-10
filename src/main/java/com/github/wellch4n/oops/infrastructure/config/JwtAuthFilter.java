@@ -57,15 +57,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (token != null && jwtUtils.isValid(token)) {
             String username = jwtUtils.getUsername(token);
             String userId = jwtUtils.getUserId(token);
-            if (userId == null || userId.isBlank()) {
-                userId = userRepository.findByUsername(username).map(User::getId).orElse(null);
+            User user = (userId != null && !userId.isBlank())
+                    ? userRepository.findById(userId).orElse(null)
+                    : userRepository.findByUsername(username).orElse(null);
+            // Re-check the user on every request so deleted or disabled accounts lose
+            // access immediately instead of staying valid until the JWT expires.
+            if (user != null && !Boolean.FALSE.equals(user.getEnabled())) {
+                String role = user.getRole() != null ? user.getRole().name() : "USER";
+                AuthUserPrincipal principal = new AuthUserPrincipal(user.getId(), user.getUsername());
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
-            String role = jwtUtils.getRole(token);
-            AuthUserPrincipal principal = new AuthUserPrincipal(userId, username);
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                    principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
-            );
-            SecurityContextHolder.getContext().setAuthentication(auth);
         }
         filterChain.doFilter(request, response);
     }

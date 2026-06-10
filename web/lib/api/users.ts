@@ -6,6 +6,7 @@ export interface User {
   username: string
   email: string | null
   role: string
+  enabled?: boolean
   createdTime?: string
 }
 
@@ -19,6 +20,7 @@ export interface UpdateUserRequest {
   role: string
   email: string | null
   password?: string
+  enabled?: boolean
 }
 
 export async function fetchUsers(): Promise<User[]> {

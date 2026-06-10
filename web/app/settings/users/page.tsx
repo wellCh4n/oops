@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
 import { toast } from "sonner"
@@ -38,6 +39,7 @@ export default function UsersPage() {
   const [editTarget, setEditTarget] = useState<User | null>(null)
   const [editRole, setEditRole] = useState<string>("USER")
   const [editEmail, setEditEmail] = useState<string>("")
+  const [editEnabled, setEditEnabled] = useState<boolean>(true)
   const [editLoading, setEditLoading] = useState(false)
   const [pwdTarget, setPwdTarget] = useState<User | null>(null)
   const [pwdNew, setPwdNew] = useState("")
@@ -95,13 +97,14 @@ export default function UsersPage() {
     setEditTarget(user)
     setEditRole(user.role)
     setEditEmail(user.email || "")
+    setEditEnabled(user.enabled ?? true)
   }
 
   async function confirmEdit() {
     if (!editTarget) return
     setEditLoading(true)
     try {
-      await updateUser(editTarget.id, { role: editRole, email: editEmail || null })
+      await updateUser(editTarget.id, { role: editRole, email: editEmail || null, enabled: editEnabled })
       toast.success(t("users.updateSuccess"))
       setEditTarget(null)
       loadUsers()
@@ -350,6 +353,15 @@ export default function UsersPage() {
                   <SelectItem value="ADMIN">{t("users.role.admin")}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-enabled">{t("users.col.status")}</Label>
+              <div className="flex items-center gap-2">
+                <Switch id="edit-enabled" checked={editEnabled} onCheckedChange={setEditEnabled} />
+                <span className="text-sm text-muted-foreground">
+                  {editEnabled ? t("users.status.enabled") : t("users.status.disabled")}
+                </span>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               {editTarget?.role !== "ADMIN" && (

@@ -72,7 +72,7 @@ public class UserController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserCommand request) {
-        userService.updateUser(id, request.role(), request.email(), request.password());
+        userService.updateUser(id, request.role(), request.email(), request.password(), request.enabled());
         return Result.success(true);
     }
 

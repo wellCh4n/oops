@@ -60,7 +60,7 @@ public class OpenApiAuthFilter extends OncePerRequestFilter {
             return;
         }
         User user = userRepository.findByAccessToken(token).orElse(null);
-        if (user == null) {
+        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
