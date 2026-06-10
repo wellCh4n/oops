@@ -16,20 +16,19 @@ interface TableMeta {
 
 export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
   {
-    accessorKey: "id",
-    header: "ID",
-    size: 300,
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">
-        <Copyable value={row.original.id} maxLength={Infinity} />
-      </div>
-    ),
-  },
-  {
     accessorKey: "username",
     header: t("users.col.username"),
-    size: 120,
-    cell: ({ row }) => <Copyable value={row.original.username} maxLength={20} />,
+    size: 240,
+    cell: ({ row }) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="font-medium">{row.original.username}</span>
+        <Copyable
+          value={row.original.id}
+          maxLength={Infinity}
+          className="text-xs text-muted-foreground whitespace-nowrap"
+        />
+      </div>
+    ),
   },
   {
     accessorKey: "email",
