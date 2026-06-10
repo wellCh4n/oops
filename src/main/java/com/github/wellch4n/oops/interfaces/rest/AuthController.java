@@ -31,6 +31,9 @@ public class AuthController {
             return Result.failure("Invalid username or password");
         }
         User user = userOpt.get();
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            return Result.failure("Account is disabled");
+        }
         String token = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole().name());
         return Result.success(new LoginResponse(token, user.getId(), user.getUsername(), user.getRole()));
     }

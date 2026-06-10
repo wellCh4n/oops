@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table"
 import { KeyRound, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Copyable } from "@/components/ui/copyable"
 import { LocalTime } from "@/components/ui/local-time"
 import { User } from "@/lib/api/users"
@@ -15,20 +16,19 @@ interface TableMeta {
 
 export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
   {
-    accessorKey: "id",
-    header: "ID",
-    size: 300,
-    cell: ({ row }) => (
-      <div className="whitespace-nowrap">
-        <Copyable value={row.original.id} maxLength={Infinity} />
-      </div>
-    ),
-  },
-  {
     accessorKey: "username",
     header: t("users.col.username"),
-    size: 120,
-    cell: ({ row }) => <Copyable value={row.original.username} maxLength={20} />,
+    size: 240,
+    cell: ({ row }) => (
+      <div className="flex flex-col gap-0.5">
+        <span className="font-medium">{row.original.username}</span>
+        <Copyable
+          value={row.original.id}
+          maxLength={Infinity}
+          className="text-xs text-muted-foreground whitespace-nowrap"
+        />
+      </div>
+    ),
   },
   {
     accessorKey: "email",
@@ -43,6 +43,13 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
     cell: ({ row }) => (
       <span>{row.original.role === "ADMIN" ? t("users.role.admin") : t("users.role.user")}</span>
     ),
+  },
+  {
+    accessorKey: "enabled",
+    header: t("users.col.status"),
+    cell: ({ row }) => row.original.enabled === false
+      ? <Badge variant="secondary" className="text-muted-foreground">{t("users.status.disabled")}</Badge>
+      : <Badge variant="outline" className="text-emerald-600 border-emerald-200 dark:text-emerald-400 dark:border-emerald-900">{t("users.status.enabled")}</Badge>,
   },
   {
     accessorKey: "createdTime",

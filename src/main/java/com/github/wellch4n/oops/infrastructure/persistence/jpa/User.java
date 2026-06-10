@@ -27,4 +27,7 @@ public class User extends BaseDataObject {
 
     @Column(name = "access_token", unique = true)
     private String accessToken;
+
+    @Column(nullable = false)
+    private Boolean enabled = true;
 }

@@ -13,4 +13,5 @@ public class User extends BaseAggregateRoot {
     private String password;
     private UserRole role;
     private String accessToken;
+    private Boolean enabled;
 }
