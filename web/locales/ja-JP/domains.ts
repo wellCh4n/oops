@@ -12,6 +12,7 @@ const domains = {
   "domains.col.createdTime": "作成時刻",
   "domains.field.host": "ホスト",
   "domains.field.hostPlaceholder": "example.com（すべてのサブドメインを含む）",
+  "domains.field.hostInvalid": "ドメイン形式が不正です：小文字、数字、ハイフン、ドットのみ使用できます",
   "domains.field.descriptionPlaceholder": "用途の説明（任意）",
   "domains.field.https": "HTTPS を有効化",
   "domains.field.certMode": "証明書モード",

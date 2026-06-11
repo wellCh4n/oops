@@ -10,13 +10,13 @@ import java.util.regex.Pattern;
 public class DomainPolicy {
 
     private static final Pattern HOST_PATTERN = Pattern.compile(
-            "^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)(\\.[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)+$");
+            "^([a-z0-9]([a-z0-9\\-]{0,61}[a-z0-9])?)(\\.[a-z0-9]([a-z0-9\\-]{0,61}[a-z0-9])?)+$");
 
     public String normalizeHost(String host) {
         if (host == null) {
             return "";
         }
-        String trimmed = host.trim().toLowerCase();
+        String trimmed = host.trim();
         if (trimmed.startsWith("*.")) {
             trimmed = trimmed.substring(2);
         }
@@ -26,6 +26,9 @@ public class DomainPolicy {
     public void validateHost(String host) {
         if (host == null || host.isBlank()) {
             throw new BizException("Domain host is required");
+        }
+        if (!host.equals(host.toLowerCase())) {
+            throw new BizException("Domain must be lowercase: " + host);
         }
         if (!HOST_PATTERN.matcher(host).matches()) {
             throw new BizException("Invalid domain format: " + host);

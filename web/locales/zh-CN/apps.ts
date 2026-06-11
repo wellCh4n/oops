@@ -158,6 +158,7 @@ const apps = {
   "apps.service.accessEntryRepublishNotice": "应用访问配置需要重新发布应用才会生效。",
   "apps.service.addHost": "添加域名",
   "apps.service.hostDuplicated": "域名已被环境 {environment} / 命名空间 {namespace} / 应用 {name} 占用",
+  "apps.service.hostInvalid": "域名格式不合法：只允许小写字母、数字、连字符和点",
   "apps.service.prefixPlaceholder": "子域名",
   "apps.service.apexConfirmTitle": "使用根域名？",
   "apps.service.apexConfirmDesc": "未填写子域名，确定要使用根域名 {host} 吗？",

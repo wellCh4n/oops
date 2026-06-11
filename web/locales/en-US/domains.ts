@@ -12,6 +12,7 @@ const domains = {
   "domains.col.createdTime": "Created",
   "domains.field.host": "Host",
   "domains.field.hostPlaceholder": "example.com (covers all subdomains)",
+  "domains.field.hostInvalid": "Invalid domain: only lowercase letters, digits, hyphens, and dots are allowed",
   "domains.field.descriptionPlaceholder": "Purpose (optional)",
   "domains.field.https": "Enable HTTPS",
   "domains.field.certMode": "Certificate Mode",

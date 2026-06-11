@@ -158,6 +158,7 @@ const apps = {
   "apps.service.accessEntryRepublishNotice": "Application access changes take effect after you republish the application.",
   "apps.service.addHost": "Add Host",
   "apps.service.hostDuplicated": "Host already used by environment {environment} / namespace {namespace} / application {name}",
+  "apps.service.hostInvalid": "Invalid host: only lowercase letters, digits, hyphens, and dots are allowed",
   "apps.service.prefixPlaceholder": "subdomain",
   "apps.service.apexConfirmTitle": "Use Apex Domain?",
   "apps.service.apexConfirmDesc": "No subdomain entered. Use the apex domain {host}?",

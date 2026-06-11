@@ -14,6 +14,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
 import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
@@ -57,6 +58,7 @@ public class ApplicationService {
     private final ApplicationExpertConfigGateway applicationExpertConfigGateway;
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
+    private final DomainPolicy domainPolicy;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               EnvironmentRepository environmentRepository,
@@ -64,7 +66,8 @@ public class ApplicationService {
                               ApplicationRuntimeGateway applicationRuntimeGateway,
                               ApplicationExpertConfigGateway applicationExpertConfigGateway,
                               ApplicationBuildConfigPolicy buildConfigPolicy,
-                              HealthCheckPolicy healthCheckPolicy) {
+                              HealthCheckPolicy healthCheckPolicy,
+                              DomainPolicy domainPolicy) {
         this.applicationRepository = applicationRepository;
         this.environmentRepository = environmentRepository;
         this.userService = userService;
@@ -72,6 +75,7 @@ public class ApplicationService {
         this.applicationExpertConfigGateway = applicationExpertConfigGateway;
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
+        this.domainPolicy = domainPolicy;
     }
 
     public Application getApplication(String namespace, String name) {
@@ -492,6 +496,7 @@ public class ApplicationService {
                 if (host == null || host.isBlank()) {
                     continue;
                 }
+                domainPolicy.validateHost(host);
                 ServiceHostConflictView conflict = findHostConflictApplication(namespace, name, host);
                 if (conflict != null) {
                     throw new BizException("Host " + host + " is already used by environment "

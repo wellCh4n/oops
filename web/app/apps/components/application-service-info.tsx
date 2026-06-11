@@ -18,6 +18,7 @@ import { Check, ExternalLink, Pencil, Plug, Globe, Info, Plus, Trash2, X, Networ
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
+import { isValidHost } from "@/lib/host-validation"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -216,6 +217,14 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     const key = hostErrorKey(environmentName, hostIndex)
     if (!trimmedHost) {
       clearHostError(environmentName, hostIndex)
+      return
+    }
+
+    if (!isValidHost(trimmedHost)) {
+      setHostErrors((current) => ({
+        ...current,
+        [key]: t("apps.service.hostInvalid"),
+      }))
       return
     }
 
@@ -445,6 +454,15 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     if (Object.keys(hostErrors).length > 0) {
       toast.error(Object.values(hostErrors)[0])
+      return false
+    }
+
+    const invalidHost = values.environmentConfigs
+      .flatMap((group) => group.hosts)
+      .map((host) => host.host.trim())
+      .find((host) => host && !isValidHost(host))
+    if (invalidHost) {
+      toast.error(t("apps.service.hostInvalid"))
       return false
     }
 
