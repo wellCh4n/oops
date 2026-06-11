@@ -158,6 +158,7 @@ const apps = {
   "apps.service.accessEntryRepublishNotice": "應用訪問配置需要重新發布應用才會生效。",
   "apps.service.addHost": "新增域名",
   "apps.service.hostDuplicated": "網域已被環境 {environment} / 命名空間 {namespace} / 應用 {name} 佔用",
+  "apps.service.hostInvalid": "網域格式不合法：只允許小寫字母、數字、連字號和點",
   "apps.service.prefixPlaceholder": "子網域",
   "apps.service.apexConfirmTitle": "使用根網域？",
   "apps.service.apexConfirmDesc": "未填寫子網域，確定要使用根網域 {host} 嗎？",

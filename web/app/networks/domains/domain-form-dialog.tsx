@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Domain, DomainCertMode, DomainRequest, createDomain, deleteDomain, updateDomain } from "@/lib/api/domains"
+import { isValidHost } from "@/lib/host-validation"
 import { useLanguage } from "@/contexts/language-context"
 
 interface Props {
@@ -79,10 +80,16 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    const trimmedHost = host.trim()
+    const bareHost = trimmedHost.startsWith("*.") ? trimmedHost.slice(2) : trimmedHost
+    if (!isValidHost(bareHost)) {
+      toast.error(t("domains.field.hostInvalid"))
+      return
+    }
     setSubmitting(true)
     try {
       const request: DomainRequest = {
-        host: host.trim(),
+        host: trimmedHost,
         description: description.trim() || undefined,
         https,
       }

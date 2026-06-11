@@ -157,6 +157,7 @@ const apps = {
   "apps.service.accessEntryRepublishNotice": "アプリケーションアクセス設定は、アプリを再公開すると反映されます。",
   "apps.service.addHost": "ドメインを追加",
   "apps.service.hostDuplicated": "このドメインは環境 {environment} / ネームスペース {namespace} / アプリ {name} によって使用されています",
+  "apps.service.hostInvalid": "ドメイン形式が不正です：小文字、数字、ハイフン、ドットのみ使用できます",
   "apps.service.prefixPlaceholder": "サブドメイン",
   "apps.service.apexConfirmTitle": "ルートドメインを使用しますか？",
   "apps.service.apexConfirmDesc": "サブドメインが未入力です。ルートドメイン {host} を使用しますか？",

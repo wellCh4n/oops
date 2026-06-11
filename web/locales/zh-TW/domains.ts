@@ -12,6 +12,7 @@ const domains = {
   "domains.col.createdTime": "建立時間",
   "domains.field.host": "網域",
   "domains.field.hostPlaceholder": "example.com（含所有子網域）",
+  "domains.field.hostInvalid": "網域格式不合法：只允許小寫字母、數字、連字號和點",
   "domains.field.descriptionPlaceholder": "用途說明（可選）",
   "domains.field.https": "啟用 HTTPS",
   "domains.field.certMode": "憑證模式",
