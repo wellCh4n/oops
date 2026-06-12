@@ -453,7 +453,11 @@ def cmd_pipeline_get(client: Client, args: argparse.Namespace) -> None:
         print(f"ID:       {dash(p.get('id'))}")
         print(f"Status:   {dash(p.get('status'))}")
         print(f"Env:      {dash(p.get('environment'))}")
-        print(f"Branch:   {dash(p.get('branch'))}")
+        publish_config = p.get("publishConfig") or {}
+        if publish_config.get("type") == "GIT":
+            print(f"Source:   {dash(publish_config.get('repository'))} @ {dash(publish_config.get('branch'))}")
+        elif publish_config.get("type") == "ZIP":
+            print(f"Source:   {dash(publish_config.get('objectKey') or publish_config.get('url'))}")
         print(f"Artifact: {dash(p.get('artifact'))}")
         print(f"Mode:     {dash(p.get('deployMode'))}")
         print(f"Type:     {dash(p.get('triggerType'))}")
@@ -535,7 +539,7 @@ def cmd_deploy_zip(client: Client, args: argparse.Namespace) -> None:
     extra_headers = upload_resp.get("headers") or {}
     print(f"Uploading {file_name} ({len(data)} bytes) → object {object_key}")
     client.put_raw_bytes(upload_url, data, {**extra_headers, "Content-Type": "application/zip"})
-    strategy = {"type": "ZIP", "repository": upload_resp.get("objectUrl", "")}
+    strategy = {"type": "ZIP", "objectKey": object_key}
     _trigger_deploy(client, args.namespace, args.name, args.env, args.mode, strategy, args.wait, args.json)
 
 

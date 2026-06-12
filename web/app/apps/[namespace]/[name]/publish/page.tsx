@@ -47,6 +47,10 @@ export default function PublishPage({ params }: PageProps) {
 
   const normalizeText = (value: string | null | undefined) => value ?? ""
 
+  const lastGitBranch = lastSuccessfulPipeline?.publishConfig?.type === "GIT"
+    ? normalizeText(lastSuccessfulPipeline.publishConfig.branch)
+    : ""
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -83,12 +87,12 @@ export default function PublishPage({ params }: PageProps) {
           setLastSuccessfulPipeline(lastPipelineRes.data)
           setDeployMode(lastPipelineRes.data.deployMode)
           const currentSourceType = buildConfigRes.data?.sourceType || "GIT"
-          const lastPublishType = lastPipelineRes.data.publishType || "GIT"
-          if (currentSourceType === "GIT" && lastPublishType === "GIT") {
-            setBranch(normalizeText(lastPipelineRes.data.branch) || "main")
+          const lastPublishConfig = lastPipelineRes.data.publishConfig
+          if (currentSourceType === "GIT" && lastPublishConfig?.type === "GIT") {
+            setBranch(normalizeText(lastPublishConfig.branch) || "main")
           }
-          if (currentSourceType === "ZIP" && lastPublishType === "ZIP") {
-            setPublishRepository(normalizeText(lastPipelineRes.data.publishRepository))
+          if (currentSourceType === "ZIP" && lastPublishConfig?.type === "ZIP") {
+            setPublishRepository(normalizeText(lastPublishConfig.objectKey) || normalizeText(lastPublishConfig.url))
           }
         }
       } catch {
@@ -110,8 +114,11 @@ export default function PublishPage({ params }: PageProps) {
 
     setLoading(true)
     try {
+      const zipSource = publishRepository.trim()
       const strategy: DeployStrategyParam = sourceType === "ZIP"
-        ? { type: "ZIP", repository: publishRepository.trim() }
+        ? (zipSource.startsWith("http://") || zipSource.startsWith("https://")
+            ? { type: "ZIP", url: zipSource }
+            : { type: "ZIP", objectKey: zipSource })
         : { type: "GIT", branch: branch.trim() || "main" }
       const res = await deployApplication(
         namespace,
@@ -301,15 +308,15 @@ export default function PublishPage({ params }: PageProps) {
           <div className="grid gap-2">
             <Label htmlFor="branch">
               {t("apps.publish.branch")}
-              {lastSuccessfulPipeline?.branch && (
+              {lastGitBranch && (
                 <button
                   type="button"
                   onClick={() => {
-                    setBranch(lastSuccessfulPipeline.branch || "main")
+                    setBranch(lastGitBranch)
                   }}
                   className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
                 >
-                  {t("apps.publish.lastBranch")}{lastSuccessfulPipeline.branch}
+                  {t("apps.publish.lastBranch")}{lastGitBranch}
                 </button>
               )}
             </Label>

@@ -36,7 +36,7 @@ export default function DeploymentsDocPage() {
         <DocSubSection title="响应 (ObjectStorageUploadResult)">
           <FieldTable
             rows={[
-              { name: "objectKey", type: "string", description: "对象存储中的 key，部署时填入 strategy.repository。" },
+              { name: "objectKey", type: "string", description: "对象存储中的 key，部署时填入 strategy.objectKey。" },
               { name: "objectUrl", type: "string", description: "对象的最终下载地址（仅展示用途）。" },
               { name: "uploadUrl", type: "string", description: "预签名 PUT URL，客户端用其上传文件。" },
               { name: "headers", type: "object", description: "上传时需要附带的请求头，键值均为字符串。" },
@@ -78,13 +78,15 @@ export default function DeploymentsDocPage() {
           <FieldTable
             rows={[
               { name: "strategy.type", type: "string", required: true, description: "固定为 ZIP。" },
-              { name: "strategy.repository", type: "string", required: true, description: "上一步返回的 objectKey。" },
+              { name: "strategy.objectKey", type: "string", description: "对象存储上传场景：上一步返回的 objectKey。与 url 二选一。" },
+              { name: "strategy.url", type: "string", description: "公共地址场景：可直接下载的 ZIP URL。与 objectKey 二选一。" },
+              { name: "strategy.repository", type: "string", description: "已废弃的旧字段。仍然兼容：http(s) 开头按 url 处理，否则按 objectKey 处理。" },
             ]}
           />
           <CodeBlock language="json">{`{
   "environment": "prod",
   "deployMode": "MANUAL",
-  "strategy": { "type": "ZIP", "repository": "uploads/build-2025-12-01.zip" }
+  "strategy": { "type": "ZIP", "objectKey": "uploads/build-2025-12-01.zip" }
 }`}</CodeBlock>
         </DocSubSection>
       </DocSection>

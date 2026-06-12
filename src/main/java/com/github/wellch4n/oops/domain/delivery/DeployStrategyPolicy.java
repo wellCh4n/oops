@@ -24,4 +24,33 @@ public class DeployStrategyPolicy {
             throw new BizException(message);
         }
     }
+
+    /**
+     * Resolves the ZIP publish config from the request. New clients send exactly one of
+     * {@code objectKey} / {@code url}; legacy clients send a single {@code repository} value,
+     * which is treated as a URL when it starts with http(s) and as an object key otherwise.
+     */
+    public ZipPublishConfig resolveZipPublishConfig(String objectKey, String url, String legacyRepository) {
+        objectKey = blankToNull(objectKey);
+        url = blankToNull(url);
+        if (objectKey != null && url != null) {
+            throw new BizException("Only one of objectKey and url is allowed for ZIP publish");
+        }
+        if (objectKey == null && url == null) {
+            String legacy = blankToNull(legacyRepository);
+            if (legacy == null) {
+                throw new BizException("Either objectKey or url is required for ZIP publish");
+            }
+            if (legacy.startsWith("http://") || legacy.startsWith("https://")) {
+                url = legacy;
+            } else {
+                objectKey = legacy;
+            }
+        }
+        return new ZipPublishConfig(objectKey, url);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
 }

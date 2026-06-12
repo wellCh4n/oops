@@ -18,9 +18,8 @@ public class Pipeline extends BaseAggregateRoot {
     private PipelineStatus status;
     private String artifact;
     private String environment;
-    private String branch;
     private ApplicationSourceType publishType;
-    private String publishRepository;
+    private PublishConfig publishConfig;
     private DeployMode deployMode;
     private String operatorId;
     private String message;
@@ -59,8 +58,7 @@ public class Pipeline extends BaseAggregateRoot {
         pipeline.setEnvironment(source.getEnvironment());
         pipeline.setArtifact(source.getArtifact());
         pipeline.setPublishType(source.getPublishType());
-        pipeline.setBranch(source.getBranch());
-        pipeline.setPublishRepository(source.getPublishRepository());
+        pipeline.setPublishConfig(source.getPublishConfig());
         pipeline.setDeployMode(DeployMode.IMMEDIATE);
         pipeline.setOperatorId(operatorId);
         pipeline.setStatus(PipelineStatus.INITIALIZED);

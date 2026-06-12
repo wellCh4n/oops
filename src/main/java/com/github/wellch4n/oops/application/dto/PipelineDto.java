@@ -1,6 +1,8 @@
 package com.github.wellch4n.oops.application.dto;
 
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.PublishConfig;
+import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
@@ -15,7 +17,8 @@ public record PipelineDto(
         PipelineStatus status,
         String artifact,
         String environment,
-        String branch,
+        ApplicationSourceType publishType,
+        PublishConfig publishConfig,
         DeployMode deployMode,
         String operatorId,
         String operatorName,
@@ -33,7 +36,8 @@ public record PipelineDto(
                 pipeline.getStatus(),
                 pipeline.getArtifact(),
                 pipeline.getEnvironment(),
-                pipeline.getBranch(),
+                pipeline.getPublishType(),
+                pipeline.getPublishConfig(),
                 pipeline.getDeployMode(),
                 pipeline.getOperatorId(),
                 operatorName,

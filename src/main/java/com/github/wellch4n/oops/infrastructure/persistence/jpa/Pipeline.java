@@ -1,9 +1,13 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import com.github.wellch4n.oops.domain.delivery.PublishConfig;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.PublishConfigConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -30,12 +34,12 @@ public class Pipeline extends BaseDataObject {
 
     private String environment;
 
-    private String branch;
-
     @Enumerated(EnumType.STRING)
     private ApplicationSourceType publishType;
 
-    private String publishRepository;
+    @Column(name = "publish_config", columnDefinition = "TEXT")
+    @Convert(converter = PublishConfigConverter.class)
+    private PublishConfig publishConfig;
 
     private DeployMode deployMode;
 

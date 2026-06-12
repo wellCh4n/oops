@@ -105,8 +105,23 @@ interface GitDeployStrategyParam {
 
 interface ZipDeployStrategyParam {
   type: 'ZIP'
-  repository: string
+  objectKey?: string
+  url?: string
 }
+
+export interface GitPublishConfig {
+  type: 'GIT'
+  repository?: string | null
+  branch?: string | null
+}
+
+export interface ZipPublishConfig {
+  type: 'ZIP'
+  objectKey?: string | null
+  url?: string | null
+}
+
+export type PublishConfig = GitPublishConfig | ZipPublishConfig
 
 export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam
 
@@ -209,10 +224,9 @@ type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING
 export type DeployMode = 'IMMEDIATE' | 'MANUAL'
 
 export interface LastSuccessfulPipelineInfo {
-  branch?: string | null
   deployMode: DeployMode
   publishType?: ApplicationSourceType | null
-  publishRepository?: string | null
+  publishConfig?: PublishConfig | null
 }
 
 export type PipelineTriggerType = 'RELEASE' | 'ROLLBACK'
@@ -224,6 +238,8 @@ export interface Pipeline {
   status: PipelineStatus
   artifact: string
   environment: string
+  publishType?: ApplicationSourceType | null
+  publishConfig?: PublishConfig | null
   createdTime: string
   deployMode?: DeployMode
   operatorId?: string

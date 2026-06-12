@@ -9,7 +9,9 @@ import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.ZipClo
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig.DockerFileConfig;
+import com.github.wellch4n.oops.domain.delivery.GitPublishConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.ZipPublishConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
@@ -39,7 +41,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
     private final PipelineImageProperties pipelineImageConfig;
 
-    private final String branch;
     private final String repositoryUrl;
 
     public PipelineExecuteTask(Pipeline pipeline,
@@ -56,8 +57,6 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         this.buildCommand = resolveBuildCommand(this.applicationBuildConfig, environment.getName()).orElse(null);
 
         this.environment = environment;
-        this.branch = pipeline.getBranch();
-
 
         this.pipelineImageConfig = SpringContext.getBean(PipelineImageProperties.class);
 
@@ -126,18 +125,30 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                         ? applicationBuildConfig.getSourceType()
                         : ApplicationSourceType.GIT;
         if (publishType == ApplicationSourceType.ZIP) {
-            ObjectStorage buildSourceStorage = SpringContext.getBean(ObjectStorage.class);
             if (StringUtils.isEmpty(pipelineImageConfig.getZip())) {
                 throw new IllegalStateException("ZIP source requires oops.pipeline.image.zip to be configured");
             }
+            if (!(pipeline.getPublishConfig() instanceof ZipPublishConfig zipPublishConfig)) {
+                throw new IllegalStateException("ZIP pipeline is missing its publish config: " + pipeline.getName());
+            }
             String sourceImage = pipelineImageConfig.getZip();
-            String sourceDownloadUrl = buildSourceStorage.resolveDownloadUrl(pipeline.getPublishRepository());
+            String sourceDownloadUrl;
+            if (StringUtils.isNotEmpty(zipPublishConfig.objectKey())) {
+                // presign at build time so a stored object key never goes stale, unlike a stored presigned URL
+                ObjectStorage buildSourceStorage = SpringContext.getBean(ObjectStorage.class);
+                sourceDownloadUrl = buildSourceStorage.resolveDownloadUrl(zipPublishConfig.objectKey());
+            } else {
+                sourceDownloadUrl = zipPublishConfig.url();
+            }
             return new ZipCloneParam(sourceImage, sourceDownloadUrl, pipelineImageConfig.getUnzipExcludes());
+        }
+        if (!(pipeline.getPublishConfig() instanceof GitPublishConfig gitPublishConfig)) {
+            throw new IllegalStateException("GIT pipeline is missing its publish config: " + pipeline.getName());
         }
         return new GitCloneParam(
                 pipelineImageConfig.getClone(),
-                pipeline.getPublishRepository(),
-                branch,
+                gitPublishConfig.repository(),
+                gitPublishConfig.branch(),
                 true
         );
     }

@@ -121,10 +121,9 @@ public class PipelineService {
             return null;
         }
         return new LastSuccessfulPipelineDto(
-                lastSuccessfulPipeline.getBranch(),
                 lastSuccessfulPipeline.getDeployMode(),
                 lastSuccessfulPipeline.getPublishType(),
-                lastSuccessfulPipeline.getPublishRepository()
+                lastSuccessfulPipeline.getPublishConfig()
         );
     }
 

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.application.event;
 
+import com.github.wellch4n.oops.domain.delivery.GitPublishConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import java.time.LocalDateTime;
@@ -24,7 +25,9 @@ public record PipelineNotificationEvent(
                 pipeline.getNamespace(),
                 pipeline.getApplicationName(),
                 pipeline.getEnvironment(),
-                pipeline.getBranch(),
+                pipeline.getPublishConfig() instanceof GitPublishConfig gitPublishConfig
+                        ? gitPublishConfig.branch()
+                        : null,
                 pipeline.getDeployMode(),
                 pipeline.getId(),
                 pipeline.getCreatedTime(),

@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.delivery.DeployStrategyPolicy;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
+import com.github.wellch4n.oops.domain.delivery.GitPublishConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
@@ -111,14 +112,11 @@ public class DeploymentService {
                 String gitBranch = deployStrategyPolicy.normalizeGitBranch(gitStrategy.branch());
                 String gitRepository = buildConfig != null ? buildConfig.getRepository() : null;
                 deployStrategyPolicy.ensureRepositoryPresent(gitRepository, "Repository is required for GIT publish");
-                pipeline.setBranch(gitBranch);
-                pipeline.setPublishRepository(gitRepository);
+                pipeline.setPublishConfig(new GitPublishConfig(gitRepository, gitBranch));
             }
-            case ZipDeployStrategyParam zipStrategy -> {
-                deployStrategyPolicy.ensureRepositoryPresent(zipStrategy.repository(), "Publish repository is required for ZIP publish");
-                pipeline.setBranch(null);
-                pipeline.setPublishRepository(zipStrategy.repository());
-            }
+            case ZipDeployStrategyParam zipStrategy -> pipeline.setPublishConfig(
+                    deployStrategyPolicy.resolveZipPublishConfig(
+                            zipStrategy.objectKey(), zipStrategy.url(), zipStrategy.repository()));
         }
     }
 }
