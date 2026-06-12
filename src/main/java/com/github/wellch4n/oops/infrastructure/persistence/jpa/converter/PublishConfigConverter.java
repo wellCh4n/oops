@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa.converter;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.domain.delivery.PublishConfig;
 import jakarta.persistence.AttributeConverter;
@@ -8,7 +9,9 @@ import jakarta.persistence.Converter;
 @Converter
 public class PublishConfigConverter implements AttributeConverter<PublishConfig, String> {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    // Ignore unknown properties so JSON written by an older schema still deserializes after fields are added.
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Override
     public String convertToDatabaseColumn(PublishConfig attribute) {
