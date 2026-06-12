@@ -2,8 +2,10 @@ package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.domain.application.SourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
+import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.SourceConfigConverter;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -28,7 +30,9 @@ public class ApplicationBuildConfig extends BaseDataObject {
     @Enumerated(EnumType.STRING)
     private ApplicationSourceType sourceType;
 
-    private String repository;
+    @Column(name = "source_config", columnDefinition = "TEXT")
+    @Convert(converter = SourceConfigConverter.class)
+    private SourceConfig sourceConfig;
 
     @Lob
     @Column(name = "docker_file_config")

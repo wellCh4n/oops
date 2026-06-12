@@ -110,7 +110,7 @@ public class DeploymentService {
         switch (strategy) {
             case GitDeployStrategyParam gitStrategy -> {
                 String gitBranch = deployStrategyPolicy.normalizeGitBranch(gitStrategy.branch());
-                String gitRepository = buildConfig != null ? buildConfig.getRepository() : null;
+                String gitRepository = buildConfig != null ? buildConfig.repository() : null;
                 deployStrategyPolicy.ensureRepositoryPresent(gitRepository, "Repository is required for GIT publish");
                 pipeline.setPublishConfig(new GitPublishConfig(gitRepository, gitBranch));
             }
