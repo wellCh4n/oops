@@ -23,8 +23,10 @@ public class ApplicationBuildConfigPolicy {
         }
     }
 
-    public String normalizeRepository(ApplicationSourceType sourceType, String repository) {
-        return normalizeSourceType(sourceType) == ApplicationSourceType.GIT ? repository : null;
+    public SourceConfig buildSourceConfig(ApplicationSourceType sourceType, String repository) {
+        return normalizeSourceType(sourceType) == ApplicationSourceType.GIT
+                ? new GitSourceConfig(repository)
+                : new ZipSourceConfig();
     }
 
     private boolean isBlank(String value) {

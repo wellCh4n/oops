@@ -45,11 +45,11 @@ public class Application extends BaseAggregateRoot {
         ApplicationSourceType sourceType = buildConfigPolicy.normalizeSourceType(request.getSourceType());
         buildConfigPolicy.validate(
                 sourceType,
-                request.getRepository(),
+                request.repository(),
                 dockerFileConfig != null ? dockerFileConfig.getType() : null,
                 dockerFileConfig != null ? dockerFileConfig.getContent() : null);
         target.setSourceType(sourceType);
-        target.setRepository(buildConfigPolicy.normalizeRepository(sourceType, request.getRepository()));
+        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, request.repository()));
         target.setDockerFileConfig(dockerFileConfig);
         target.setBuildImage(request.getBuildImage());
         target.setEnvironmentConfigs(request.getEnvironmentConfigs());

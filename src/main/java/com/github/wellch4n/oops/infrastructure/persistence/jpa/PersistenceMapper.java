@@ -2,12 +2,16 @@ package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.List;
 
 final class PersistenceMapper {
+    // FAIL_ON_EMPTY_BEANS is disabled so a SourceConfig variant with no fields yet (e.g. ZipSourceConfig)
+    // round-trips through convertValue() during domain/entity mapping.
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
             .findAndRegisterModules()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
     private PersistenceMapper() {
     }

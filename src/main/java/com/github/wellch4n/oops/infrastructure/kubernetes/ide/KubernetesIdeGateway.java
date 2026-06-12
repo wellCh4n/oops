@@ -262,7 +262,7 @@ public class KubernetesIdeGateway implements IdeGateway {
     private CloneStrategyParam buildCloneStrategyParam(ApplicationBuildConfig applicationBuildConfig, String branch) {
         return new GitCloneParam(
                 pipelineImageConfig.getClone(),
-                applicationBuildConfig != null ? applicationBuildConfig.getRepository() : null,
+                applicationBuildConfig != null ? applicationBuildConfig.repository() : null,
                 branch,
                 false
         );

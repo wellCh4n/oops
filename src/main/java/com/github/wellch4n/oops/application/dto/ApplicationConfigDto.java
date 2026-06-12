@@ -6,6 +6,8 @@ import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
 import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
+import com.github.wellch4n.oops.domain.application.GitSourceConfig;
+import com.github.wellch4n.oops.domain.application.ZipSourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.time.LocalDateTime;
@@ -58,7 +60,7 @@ public final class ApplicationConfigDto {
                     config.getNamespace(),
                     config.getApplicationName(),
                     config.getSourceType(),
-                    config.getRepository(),
+                    config.repository(),
                     DockerFileConfig.from(config.getDockerFileConfig()),
                     config.getBuildImage(),
                     map(config.getEnvironmentConfigs(), BuildEnvironmentConfig::from)
@@ -72,7 +74,9 @@ public final class ApplicationConfigDto {
             config.setNamespace(namespace);
             config.setApplicationName(applicationName);
             config.setSourceType(sourceType);
-            config.setRepository(repository);
+            config.setSourceConfig(sourceType == ApplicationSourceType.ZIP
+                    ? new ZipSourceConfig()
+                    : new GitSourceConfig(repository));
             config.setDockerFileConfig(dockerFileConfig != null ? dockerFileConfig.toDomain() : null);
             config.setBuildImage(buildImage);
             config.setEnvironmentConfigs(map(environmentConfigs, BuildEnvironmentConfig::toDomain));
