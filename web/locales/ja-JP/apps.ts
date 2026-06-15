@@ -23,6 +23,7 @@ const apps = {
   "apps.tab.runtimeSpec": "ランタイム仕様",
   "apps.tab.serviceConfig": "アクセス入口",
   "apps.tab.configMgmt": "アプリ設定",
+  "apps.tab.expertConfig": "エキスパート設定",
   "apps.tab.dangerZone": "危険区域",
   "apps.unsaved.title": "このタブには未保存の変更があります",
   "apps.unsaved.desc": "このタブに残る、変更を破棄する、保存して移動する、のいずれかを選択してください。",
