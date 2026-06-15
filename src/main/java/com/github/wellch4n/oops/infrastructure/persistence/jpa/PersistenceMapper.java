@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.util.List;
+import java.util.function.Function;
 
 final class PersistenceMapper {
     // FAIL_ON_EMPTY_BEANS is disabled so a SourceConfig variant with no fields yet (e.g. ZipSourceConfig)
@@ -156,7 +157,7 @@ final class PersistenceMapper {
         return OBJECT_MAPPER.convertValue(source, targetType);
     }
 
-    static <T, R> List<R> convertList(List<T> source, java.util.function.Function<T, R> mapper) {
+    static <T, R> List<R> convertList(List<T> source, Function<T, R> mapper) {
         if (source == null) {
             return List.of();
         }

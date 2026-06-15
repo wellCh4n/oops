@@ -7,7 +7,9 @@ import io.fabric8.kubernetes.client.NamespacedKubernetesClient;
 import io.fabric8.kubernetes.client.RequestConfigBuilder;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -256,7 +258,7 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
         byte[] payload;
         try {
             payload = inputStream.readAllBytes();
-        } catch (java.io.IOException ioe) {
+        } catch (IOException ioe) {
             throw new BizException("Upload failed: " + ioe.getMessage());
         }
 
@@ -272,7 +274,7 @@ public class KubernetesPodFileSystemGateway implements PodFileSystemGateway {
                         .call(scoped -> scoped.pods().inNamespace(namespace).withName(podName)
                                 .inContainer(container)
                                 .file(path)
-                                .upload(new java.io.ByteArrayInputStream(payload)));
+                                .upload(new ByteArrayInputStream(payload)));
                 if (Boolean.TRUE.equals(uploaded)) {
                     return;
                 }

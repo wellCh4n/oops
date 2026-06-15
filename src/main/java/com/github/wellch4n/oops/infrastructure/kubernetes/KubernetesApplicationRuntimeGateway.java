@@ -17,6 +17,7 @@ import io.fabric8.kubernetes.api.model.PodCondition;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.events.v1.Event;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.Watch;
@@ -25,6 +26,7 @@ import io.fabric8.kubernetes.client.WatcherException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -258,7 +260,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         return emitter;
     }
 
-    private void send(SseEmitter emitter, java.util.Collection<ApplicationPodStatusView> snapshot) {
+    private void send(SseEmitter emitter, Collection<ApplicationPodStatusView> snapshot) {
         try {
             emitter.send(SseEmitter.event().name("status").data(objectMapper.writeValueAsString(snapshot)));
         } catch (Exception e) {
@@ -442,7 +444,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
             KubernetesClient client,
             String namespace,
             String applicationName,
-            io.fabric8.kubernetes.api.model.apps.StatefulSet statefulSet
+            StatefulSet statefulSet
     ) {
         String rolloutStartedAt = statefulSet.getMetadata() != null
                 && statefulSet.getMetadata().getAnnotations() != null
