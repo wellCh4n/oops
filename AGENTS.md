@@ -203,7 +203,6 @@ IDE-specific `oops.ide.*` properties:
 - `https`: boolean, controls `websecure` vs `web` Traefik entrypoint
 - `image`: code-server image
 - `middleware`: comma-separated Traefik middleware names applied to IDE IngressRoute
-- `proxy-domain`: template for code-server port proxy (default `{{port}}-{{host}}`); must contain both placeholders or is ignored
 
 IDE StatefulSet name: `{applicationName}-ide-{ideId}`. On delete, only the StatefulSet is deleted — Service and IngressRoute are cascade-deleted by K8s via `ownerReference`. IDE IngressRoutes set `syntax: "v3"` (application IngressRoutes do not).
 

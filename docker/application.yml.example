@@ -69,7 +69,6 @@ oops:
     middlewares:
       - code-server-csp-fix
       - code-server-oss-redirect
-    proxy-domain: "{{port}}-{{host}}"
   object-storage:
     enabled: false
     endpoint: https://s3.oss-cn-hangzhou.aliyuncs.com
