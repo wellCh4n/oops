@@ -207,7 +207,7 @@ export function ApplicationEventsPanel({
 
   return (
     <Collapsible open={open} onOpenChange={handleOpenChange} className="min-w-0 rounded-md border">
-      <CollapsibleTrigger className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50">
+      <CollapsibleTrigger className="flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/50">
         <div className="flex min-w-0 items-center gap-2">
           <ChevronRight className={`size-4 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
           <span className="font-semibold">{t("apps.events.title")}</span>

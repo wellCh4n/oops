@@ -1,7 +1,7 @@
 "use client"
 
 import { use, useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
-import { getPipeline, deployPipeline } from "@/lib/api/pipelines"
+import { getPipeline, deployPipeline, stopPipeline } from "@/lib/api/pipelines"
 import { getApplicationStatus, getClusterDomain } from "@/lib/api/applications"
 import { Pipeline, ApplicationPodStatus, ClusterDomainInfo } from "@/lib/api/types"
 import { API_BASE_URL } from "@/lib/api/config"
@@ -24,7 +24,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, WifiOff } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, Ban, WifiOff } from "lucide-react"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
@@ -142,6 +142,20 @@ export default function PipelineDetailPage({ params }: PageProps) {
       fetchPipeline()
     } catch {
       toast.error(t("apps.pipeline.deployError"))
+    }
+  }
+
+  const [stopping, setStopping] = useState(false)
+  const handleStop = async () => {
+    setStopping(true)
+    try {
+      await stopPipeline(namespace, name, pipelineId)
+      toast.success(t("pipelines.stopSuccess"))
+      fetchPipeline()
+    } catch {
+      toast.error(t("pipelines.stopError"))
+    } finally {
+      setStopping(false)
     }
   }
 
@@ -399,7 +413,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               {pipeline?.operatorName && <>{t("apps.pipeline.operator")} <Badge variant="outline">{pipeline.operatorName}</Badge></>}
             </div>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
             {pipeline?.status === "BUILD_SUCCEEDED" && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -418,6 +432,28 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   <AlertDialogFooter>
                     <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDeploy}>{t("apps.pipeline.confirm")}</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            {(pipeline?.status === "RUNNING" || pipeline?.status === "DEPLOYING" || pipeline?.status === "BUILD_SUCCEEDED") && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={stopping}>
+                    <Ban className="size-4" />
+                    {stopping ? t("pipelines.stopping") : t("pipelines.col.stop")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("pipelines.stopConfirmTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("pipelines.stopConfirmDesc")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={stopping}>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleStop} disabled={stopping}>{t("pipelines.stopConfirm")}</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>

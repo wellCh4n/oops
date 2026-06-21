@@ -293,7 +293,7 @@ function ApplicationStatusContent() {
       />
 
       <Collapsible open={resourcesOpen} onOpenChange={setResourcesOpen} className="mt-4 min-w-0 rounded-md border">
-        <CollapsibleTrigger className="flex min-h-12 w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/50">
+        <CollapsibleTrigger className="flex min-h-12 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/50">
           <ChevronRight className={`size-4 shrink-0 transition-transform ${resourcesOpen ? "rotate-90" : ""}`} />
           <span className="font-semibold">{t("apps.status.resources")}</span>
         </CollapsibleTrigger>
