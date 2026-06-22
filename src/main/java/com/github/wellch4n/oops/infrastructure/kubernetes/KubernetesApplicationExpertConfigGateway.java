@@ -7,11 +7,8 @@ import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRoute;
 import io.fabric8.kubernetes.api.model.HasMetadata;
-import io.fabric8.kubernetes.api.model.scheduling.v1.PriorityClassBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
-import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.utils.Serialization;
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +50,7 @@ public class KubernetesApplicationExpertConfigGateway implements ApplicationExpe
         // Null clears any existing PriorityClass, letting the pod fall back to the cluster default
         // (normal tier). Editing the template triggers a rolling update, same as the service account.
         ApplicationPriority priority = ApplicationPriority.fromValue(expertConfig.getPriority());
-        ensurePriorityClass(client, priority);
+        KubernetesPriorityClasses.ensure(client, priority);
         String priorityClassName = priority.priorityClassName();
         client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
                 .edit(target -> {
@@ -62,38 +59,6 @@ public class KubernetesApplicationExpertConfigGateway implements ApplicationExpe
                             .setPriorityClassName(StringUtils.isNotBlank(priorityClassName) ? priorityClassName : null);
                     return target;
                 });
-    }
-
-    /**
-     * Create the cluster-scoped PriorityClass backing the tier if it requires one and is absent.
-     * Created only when missing and never overwritten — {@code value} is immutable and the object is
-     * a cluster-wide singleton an administrator may have pre-created with a deliberate value.
-     */
-    private void ensurePriorityClass(KubernetesClient client, ApplicationPriority priority) {
-        String name = priority.priorityClassName();
-        if (name == null) {
-            return;
-        }
-        if (client.scheduling().v1().priorityClasses().withName(name).get() != null) {
-            return;
-        }
-        log.info("Creating PriorityClass {} (value={})", name, priority.defaultValue());
-        try {
-            client.scheduling().v1().priorityClasses().resource(new PriorityClassBuilder()
-                            .withNewMetadata().withName(name).endMetadata()
-                            .withValue(priority.defaultValue())
-                            .withGlobalDefault(false)
-                            .withDescription("Managed by OOPS — " + priority.name().toLowerCase() + " priority applications")
-                            .build())
-                    .create();
-        } catch (KubernetesClientException exception) {
-            // A concurrent deploy may have created it between our get and create. A pre-existing
-            // PriorityClass is exactly the desired state, so swallow the conflict and rethrow anything else.
-            if (exception.getCode() != HttpURLConnection.HTTP_CONFLICT) {
-                throw exception;
-            }
-            log.debug("PriorityClass {} was created concurrently, leaving the existing object as-is", name);
-        }
     }
 
     @Override
