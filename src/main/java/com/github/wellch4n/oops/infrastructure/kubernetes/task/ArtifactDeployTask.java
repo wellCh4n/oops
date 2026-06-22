@@ -14,6 +14,7 @@ import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.DeployP
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.ImagePullSecretProcessor;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.IngressRouteProcessor;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.NamespaceProcessor;
+import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.PriorityClassProcessor;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.ServiceProcessor;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -67,6 +68,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
             List<DeployProcessor> processors = List.of(
                     new NamespaceProcessor(),
                     new ImagePullSecretProcessor(),
+                    new PriorityClassProcessor(),
                     new StatefulSetProcessor(),
                     new ServiceProcessor(),
                     new IngressRouteProcessor()

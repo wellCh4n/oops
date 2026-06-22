@@ -170,6 +170,7 @@ export interface ApplicationExpertConfig {
 export interface ApplicationExpertConfigEnvironmentConfig {
   environmentName: string
   serviceAccountName?: string
+  priority?: string
 }
 
 export interface ApplicationResource {

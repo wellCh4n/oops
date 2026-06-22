@@ -16,5 +16,6 @@ public class ApplicationExpertConfig extends BaseDomainObject {
     public static class EnvironmentConfig {
         private String environmentName;
         private String serviceAccountName;
+        private String priority;
     }
 }

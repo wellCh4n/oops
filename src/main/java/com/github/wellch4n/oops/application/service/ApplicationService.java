@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
 import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
@@ -411,7 +412,9 @@ public class ApplicationService {
 
             boolean serviceAccountChanged = !StringUtils.equals(
                     config.getServiceAccountName(), existing != null ? existing.getServiceAccountName() : null);
-            if (!serviceAccountChanged) continue;
+            boolean priorityChanged = ApplicationPriority.fromValue(config.getPriority())
+                    != ApplicationPriority.fromValue(existing != null ? existing.getPriority() : null);
+            if (!serviceAccountChanged && !priorityChanged) continue;
 
             try {
                 Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());

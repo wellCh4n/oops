@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.task.processor;
 
+import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -120,6 +121,12 @@ public class StatefulSetProcessor implements DeployProcessor {
         if (expertConfig != null && StringUtils.isNotBlank(expertConfig.getServiceAccountName())) {
             statefulSet.getSpec().getTemplate().getSpec()
                     .setServiceAccountName(expertConfig.getServiceAccountName());
+        }
+
+        String priorityClassName = ApplicationPriority.priorityClassNameOf(
+                expertConfig != null ? expertConfig.getPriority() : null);
+        if (StringUtils.isNotBlank(priorityClassName)) {
+            statefulSet.getSpec().getTemplate().getSpec().setPriorityClassName(priorityClassName);
         }
 
         StatefulSet created = ctx.getClient().apps().statefulSets()
