@@ -31,6 +31,8 @@ public class ApplicationExpertConfig extends BaseDataObject {
         private String environmentName;
 
         private String serviceAccountName;
+
+        private String priority;
     }
 
     @Converter

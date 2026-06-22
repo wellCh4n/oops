@@ -18,7 +18,8 @@ import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvi
 import { updateApplicationExpertConfig } from "@/lib/api/applications"
 import { fetchServiceAccounts } from "@/lib/api/service-accounts"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
-import { KeyRound, Wrench } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Gauge, KeyRound, Wrench } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useLanguage } from "@/contexts/language-context"
@@ -62,6 +63,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
       environmentName: config.environmentName,
       serviceAccountName: config.serviceAccountName ?? "",
+      priority: config.priority || "NORMAL",
     })),
   }), [form])
 
@@ -69,7 +71,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
     const currentConfigs = form.getValues("environmentConfigs") || []
     const newConfigs = envs.map((env) => {
       const existing = currentConfigs.find((c) => c.environmentName === env.environmentName)
-      return existing || { environmentName: env.environmentName, serviceAccountName: "" }
+      return existing || { environmentName: env.environmentName, serviceAccountName: "", priority: "NORMAL" }
     })
     replace(newConfigs)
     form.reset({ environmentConfigs: newConfigs })
@@ -210,6 +212,29 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
 
   return (
     <div className="flex flex-col gap-4">
+      <FormField
+        control={control}
+        name={`environmentConfigs.${index}.priority`}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel className="flex items-center gap-1"><Gauge className="size-3.5" />{t("apps.expertConfig.priority")}</FormLabel>
+            <FormControl>
+              <Select value={field.value || "NORMAL"} onValueChange={field.onChange}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="HIGH">{t("apps.expertConfig.priorityHigh")}</SelectItem>
+                  <SelectItem value="NORMAL">{t("apps.expertConfig.priorityNormal")}</SelectItem>
+                  <SelectItem value="LOW">{t("apps.expertConfig.priorityLow")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormControl>
+            <p className="text-xs text-muted-foreground">{t("apps.expertConfig.priorityHint")}</p>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
       <FormField
         control={control}
         name={`environmentConfigs.${index}.serviceAccountName`}

@@ -3,6 +3,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
 import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
 import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRoute;
 import io.fabric8.kubernetes.api.model.HasMetadata;
@@ -46,9 +47,16 @@ public class KubernetesApplicationExpertConfigGateway implements ApplicationExpe
         String serviceAccountName = StringUtils.isNotBlank(expertConfig.getServiceAccountName())
                 ? expertConfig.getServiceAccountName()
                 : DEFAULT_SERVICE_ACCOUNT;
+        // Null clears any existing PriorityClass, letting the pod fall back to the cluster default
+        // (normal tier). Editing the template triggers a rolling update, same as the service account.
+        ApplicationPriority priority = ApplicationPriority.fromValue(expertConfig.getPriority());
+        KubernetesPriorityClasses.ensure(client, priority);
+        String priorityClassName = priority.priorityClassName();
         client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
                 .edit(target -> {
                     target.getSpec().getTemplate().getSpec().setServiceAccountName(serviceAccountName);
+                    target.getSpec().getTemplate().getSpec()
+                            .setPriorityClassName(StringUtils.isNotBlank(priorityClassName) ? priorityClassName : null);
                     return target;
                 });
     }

@@ -367,19 +367,22 @@ public final class ApplicationConfigDto {
 
     public record ExpertEnvironmentConfig(
             String environmentName,
-            String serviceAccountName
+            String serviceAccountName,
+            String priority
     ) {
         public static ExpertEnvironmentConfig from(ApplicationExpertConfig.EnvironmentConfig config) {
             if (config == null) {
                 return null;
             }
-            return new ExpertEnvironmentConfig(config.getEnvironmentName(), config.getServiceAccountName());
+            return new ExpertEnvironmentConfig(
+                    config.getEnvironmentName(), config.getServiceAccountName(), config.getPriority());
         }
 
         public ApplicationExpertConfig.EnvironmentConfig toDomain() {
             ApplicationExpertConfig.EnvironmentConfig config = new ApplicationExpertConfig.EnvironmentConfig();
             config.setEnvironmentName(environmentName);
             config.setServiceAccountName(serviceAccountName);
+            config.setPriority(priority);
             return config;
         }
     }

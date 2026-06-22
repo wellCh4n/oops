@@ -94,6 +94,7 @@ export const applicationExpertConfigSchema = z.object({
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
     serviceAccountName: z.string().optional(),
+    priority: z.string().optional(),
   })),
 })
 
