@@ -47,7 +47,7 @@ export const getApplicationService = async (namespace: string, name: string): Pr
 export const updateApplicationService = async (
   namespace: string,
   name: string,
-  config: Pick<ApplicationServiceConfig, "port" | "environmentConfigs">
+  config: Pick<ApplicationServiceConfig, "port" | "internalPorts" | "environmentConfigs">
 ): Promise<ApiResponse<boolean>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service`, {
     method: "PUT",

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { TagsInput } from "@/components/ui/tags-input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -111,6 +112,7 @@ function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig)
 
   return {
     port: initialServiceConfig?.port != null ? String(initialServiceConfig.port) : "",
+    internalPorts: (initialServiceConfig?.internalPorts ?? []).map((port) => String(port)),
     environmentConfigs: Array.from(grouped.entries()).map(([environmentName, hosts]) => ({
       environmentName,
       hosts,
@@ -142,6 +144,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     name: "environmentConfigs",
   })
 
+  const internalPorts = useWatch({ control: form.control, name: "internalPorts" }) ?? []
+
   const environmentConfigsWatch = useWatch({ control: form.control, name: "environmentConfigs" })
   const environmentConfigs = useMemo(() => environmentConfigsWatch ?? [], [environmentConfigsWatch])
 
@@ -164,6 +168,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
   const buildSnapshot = useCallback((values: ApplicationServiceFormValues = form.getValues()) => JSON.stringify({
     port: values.port?.trim() ?? "",
+    internalPorts: (values.internalPorts ?? []).map((port) => port.trim()),
     environmentConfigs: (values.environmentConfigs ?? []).map((group) => ({
       environmentName: group.environmentName,
       hosts: group.hosts.map(normalizeHostForSnapshot),
@@ -376,6 +381,18 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     setHosts(environmentName, [...hosts, createEmptyHost()])
   }, [environmentIndexByName, form, setHosts])
 
+  const validateInternalPort = useCallback((value: string) => {
+    const portNumber = Number(value)
+    if (!Number.isInteger(portNumber) || portNumber <= 0 || portNumber > 65535) {
+      return t("apps.service.internalPortError")
+    }
+    return null
+  }, [t])
+
+  const setInternalPorts = useCallback((next: string[]) => {
+    form.setValue("internalPorts", next, { shouldDirty: true, shouldTouch: true })
+  }, [form])
+
   useEffect(() => {
     fetchDomains().then(setDomains).catch(() => setDomains([]))
   }, [])
@@ -402,6 +419,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     form.reset({
       port: built.port,
+      internalPorts: built.internalPorts,
       environmentConfigs: mergedConfigs,
     })
   }, [form, initialServiceConfig])
@@ -424,6 +442,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     form.reset({
       port: form.getValues("port"),
+      internalPorts: form.getValues("internalPorts"),
       environmentConfigs: nextConfigs,
     })
 
@@ -444,6 +463,22 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
         return false
       }
       portValue = portNumber
+    }
+
+    const internalPortsPayload: number[] = []
+    for (const entry of values.internalPorts) {
+      const trimmed = entry.trim()
+      if (!trimmed) {
+        continue
+      }
+      const portNumber = Number(trimmed)
+      if (!Number.isInteger(portNumber) || portNumber <= 0 || portNumber > 65535) {
+        toast.error(t("apps.service.internalPortError"))
+        return false
+      }
+      if (!internalPortsPayload.includes(portNumber)) {
+        internalPortsPayload.push(portNumber)
+      }
     }
 
     const hasPending = values.environmentConfigs.some((group) => group.hosts.some((host) => host.editing))
@@ -483,6 +518,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     try {
       const result = await updateApplicationService(namespace, applicationName, {
         port: portValue,
+        internalPorts: internalPortsPayload,
         environmentConfigs: environmentConfigsPayload,
       })
       if (!result.success) {
@@ -493,6 +529,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
       toast.success(t("apps.service.saveSuccess"))
       onSaved?.({
         port: portValue,
+        internalPorts: internalPortsPayload,
         environmentConfigs: environmentConfigsPayload,
       })
       form.reset(values)
@@ -570,6 +607,33 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                   <FormMessage />
                 </FormItem>
               )}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label className="flex items-center gap-1">
+              <Plug className="size-3.5" />
+              {t("apps.service.internalPorts")}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("apps.service.internalPortsHint")}>
+                    <Info className="size-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs text-xs">
+                  {t("apps.service.internalPortsHint")}
+                </TooltipContent>
+              </Tooltip>
+            </Label>
+            <TagsInput
+              values={internalPorts}
+              onValuesChange={setInternalPorts}
+              validate={validateInternalPort}
+              transform={(value) => String(Number(value))}
+              onError={(message) => toast.error(message)}
+              inputMode="numeric"
+              placeholder={t("apps.service.internalPortPlaceholder")}
+              removeAriaLabel={t("apps.service.removeInternalPort")}
             />
           </div>
 

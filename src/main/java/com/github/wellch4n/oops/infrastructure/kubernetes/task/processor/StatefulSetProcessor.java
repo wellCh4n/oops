@@ -59,6 +59,12 @@ public class StatefulSetProcessor implements DeployProcessor {
         if (appPort != null && appPort > 0) {
             containerBuilder.addNewPort().withName("http").withContainerPort(appPort).endPort();
         }
+        for (Integer internalPort : ctx.getApplicationServiceConfig().distinctInternalPorts()) {
+            if (appPort != null && internalPort.equals(appPort)) {
+                continue;
+            }
+            containerBuilder.addNewPort().withName("tcp-" + internalPort).withContainerPort(internalPort).endPort();
+        }
         if (ctx.getHealthCheck() != null && appPort != null && appPort > 0) {
             ApplicationRuntimeSpec.HealthCheck.Probe liveness = ctx.getHealthCheck().livenessOrDefault();
             if (liveness.probeEnabled()) {

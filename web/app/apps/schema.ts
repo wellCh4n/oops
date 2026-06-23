@@ -99,6 +99,7 @@ export const applicationExpertConfigSchema = z.object({
 
 export const applicationServiceSchema = z.object({
   port: z.string(),
+  internalPorts: z.array(z.string()),
   environmentConfigs: z.array(z.object({
     environmentName: z.string(),
     hosts: z.array(z.object({
