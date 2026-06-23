@@ -1,6 +1,6 @@
 "use client"
 
-import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useFieldArray, useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Label } from "@/components/ui/label"
@@ -146,6 +146,15 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
   const internalPorts = useWatch({ control: form.control, name: "internalPorts" }) ?? []
 
+  // In-progress (not yet committed) internal-port text. Tracked so it participates in the
+  // unsaved-changes snapshot and is flushed into the payload on save (avoids silent loss).
+  const [pendingInternalPort, setPendingInternalPort] = useState("")
+  const pendingInternalPortRef = useRef("")
+  const handleInternalPortInputChange = useCallback((value: string) => {
+    pendingInternalPortRef.current = value
+    setPendingInternalPort(value)
+  }, [])
+
   const environmentConfigsWatch = useWatch({ control: form.control, name: "environmentConfigs" })
   const environmentConfigs = useMemo(() => environmentConfigsWatch ?? [], [environmentConfigsWatch])
 
@@ -169,6 +178,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   const buildSnapshot = useCallback((values: ApplicationServiceFormValues = form.getValues()) => JSON.stringify({
     port: values.port?.trim() ?? "",
     internalPorts: (values.internalPorts ?? []).map((port) => port.trim()),
+    pendingInternalPort: pendingInternalPortRef.current.trim(),
     environmentConfigs: (values.environmentConfigs ?? []).map((group) => ({
       environmentName: group.environmentName,
       hosts: group.hosts.map(normalizeHostForSnapshot),
@@ -382,8 +392,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   }, [environmentIndexByName, form, setHosts])
 
   const validateInternalPort = useCallback((value: string) => {
-    const portNumber = Number(value)
-    if (!Number.isInteger(portNumber) || portNumber <= 0 || portNumber > 65535) {
+    // Require a plain decimal integer in range — reject "1e4", "9090.0", "+80", etc.
+    if (!/^\d+$/.test(value) || Number(value) <= 0 || Number(value) > 65535) {
       return t("apps.service.internalPortError")
     }
     return null
@@ -466,16 +476,18 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     }
 
     const internalPortsPayload: number[] = []
-    for (const entry of values.internalPorts) {
+    // Include any text typed but not yet committed to a tag, so a pending value isn't silently dropped.
+    const internalPortEntries = [...values.internalPorts, pendingInternalPortRef.current]
+    for (const entry of internalPortEntries) {
       const trimmed = entry.trim()
       if (!trimmed) {
         continue
       }
-      const portNumber = Number(trimmed)
-      if (!Number.isInteger(portNumber) || portNumber <= 0 || portNumber > 65535) {
+      if (!/^\d+$/.test(trimmed) || Number(trimmed) <= 0 || Number(trimmed) > 65535) {
         toast.error(t("apps.service.internalPortError"))
         return false
       }
+      const portNumber = Number(trimmed)
       if (!internalPortsPayload.includes(portNumber)) {
         internalPortsPayload.push(portNumber)
       }
@@ -532,7 +544,9 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
         internalPorts: internalPortsPayload,
         environmentConfigs: environmentConfigsPayload,
       })
-      form.reset(values)
+      pendingInternalPortRef.current = ""
+      setPendingInternalPort("")
+      form.reset({ ...values, internalPorts: internalPortsPayload.map(String) })
       return true
     } catch {
       toast.error(t("apps.service.saveError"))
@@ -582,7 +596,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
             </Tooltip>
           </div>
           <div className="flex flex-col gap-4 p-4">
-            <div className="grid gap-2">
+            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-3">
+            <div className="grid gap-2 sm:col-span-1">
             <Label htmlFor="service-port" className="flex items-center gap-1">
               <Plug className="size-3.5" />
               {t("apps.service.port")}
@@ -610,13 +625,13 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
             />
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid gap-2 sm:col-span-2">
             <Label className="flex items-center gap-1">
               <Plug className="size-3.5" />
               {t("apps.service.internalPorts")}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("apps.service.internalPortsHint")}>
+                  <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.internalPortsHint")}>
                     <Info className="size-3.5" />
                   </button>
                 </TooltipTrigger>
@@ -628,6 +643,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
             <TagsInput
               values={internalPorts}
               onValuesChange={setInternalPorts}
+              inputValue={pendingInternalPort}
+              onInputValueChange={handleInternalPortInputChange}
               validate={validateInternalPort}
               transform={(value) => String(Number(value))}
               onError={(message) => toast.error(message)}
@@ -635,6 +652,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
               placeholder={t("apps.service.internalPortPlaceholder")}
               removeAriaLabel={t("apps.service.removeInternalPort")}
             />
+          </div>
           </div>
 
           <Label className="flex items-center gap-1">

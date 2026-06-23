@@ -14,6 +14,10 @@ interface TagsInputProps {
   transform?: (value: string) => string
   /** Called with the validation error message when an entry is rejected. */
   onError?: (message: string) => void
+  /** Controlled value of the in-progress (not yet committed) input text. */
+  inputValue?: string
+  /** Notifies the parent of in-progress input text changes (enables controlled mode). */
+  onInputValueChange?: (value: string) => void
   placeholder?: string
   inputMode?: React.ComponentProps<"input">["inputMode"]
   removeAriaLabel?: string
@@ -27,13 +31,23 @@ export function TagsInput({
   validate,
   transform,
   onError,
+  inputValue: controlledInputValue,
+  onInputValueChange,
   placeholder,
   inputMode,
   removeAriaLabel = "Remove",
   className,
   disabled = false,
 }: TagsInputProps) {
-  const [inputValue, setInputValue] = React.useState("")
+  const [uncontrolledInputValue, setUncontrolledInputValue] = React.useState("")
+  const inputValue = controlledInputValue ?? uncontrolledInputValue
+  const setInputValue = React.useCallback((value: string) => {
+    if (onInputValueChange) {
+      onInputValueChange(value)
+    } else {
+      setUncontrolledInputValue(value)
+    }
+  }, [onInputValueChange])
 
   function commit() {
     const trimmed = inputValue.trim()
@@ -61,20 +75,20 @@ export function TagsInput({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs",
+        "flex min-h-9 flex-wrap items-center gap-1.5 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs",
         "focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-[3px]",
         disabled && "cursor-not-allowed opacity-50",
         className
       )}
     >
       {values.map((value, index) => (
-        <Badge key={`${value}-${index}`} variant="secondary" className="gap-1 pr-1 font-normal">
+        <Badge key={`${value}-${index}`} variant="secondary" className="h-5 gap-1 py-0 pr-1 font-normal">
           {value}
           <button
             type="button"
             aria-label={removeAriaLabel}
             disabled={disabled}
-            className="text-muted-foreground hover:text-foreground"
+            className="cursor-pointer text-muted-foreground hover:text-foreground disabled:cursor-not-allowed"
             onClick={() => removeAt(index)}
           >
             <X className="size-3" />

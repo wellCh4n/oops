@@ -63,6 +63,11 @@ public class StatefulSetProcessor implements DeployProcessor {
             if (appPort != null && internalPort.equals(appPort)) {
                 continue;
             }
+            // The Service's primary port number is reserved for the "web" port; ServiceProcessor skips
+            // internal ports equal to it, so skip them here too to avoid declaring a dangling container port.
+            if (internalPort.equals(ctx.getServicePort())) {
+                continue;
+            }
             containerBuilder.addNewPort().withName("tcp-" + internalPort).withContainerPort(internalPort).endPort();
         }
         if (ctx.getHealthCheck() != null && appPort != null && appPort > 0) {
