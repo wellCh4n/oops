@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1
 
 # --- 阶段 1: 前端构建 ---
-FROM node:20-alpine AS web-deps
+FROM node:22-slim AS web-deps
 WORKDIR /build/web
-RUN corepack enable && corepack prepare pnpm@8.15.9 --activate
+RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
 RUN pnpm config set registry https://registry.npmmirror.com
 
-COPY web/package.json web/pnpm-lock.yaml ./
+COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 COPY web/ ./

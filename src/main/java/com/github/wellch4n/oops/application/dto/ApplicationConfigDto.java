@@ -285,6 +285,7 @@ public final class ApplicationConfigDto {
             String namespace,
             String applicationName,
             Integer port,
+            List<Integer> internalPorts,
             List<ServiceEnvironmentConfig> environmentConfigs
     ) {
         public static ServiceConfig from(ApplicationServiceConfig config) {
@@ -297,6 +298,7 @@ public final class ApplicationConfigDto {
                     config.getNamespace(),
                     config.getApplicationName(),
                     config.getPort(),
+                    config.getInternalPorts(),
                     map(config.getEnvironmentConfigs(), ServiceEnvironmentConfig::from)
             );
         }
@@ -308,6 +310,7 @@ public final class ApplicationConfigDto {
             config.setNamespace(namespace);
             config.setApplicationName(applicationName);
             config.setPort(port);
+            config.setInternalPorts(internalPorts);
             config.setEnvironmentConfigs(map(environmentConfigs, ServiceEnvironmentConfig::toDomain));
             return config;
         }

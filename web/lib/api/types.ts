@@ -260,6 +260,7 @@ export interface ApplicationServiceConfig {
   namespace?: string
   applicationName?: string
   port?: number
+  internalPorts?: number[]
   environmentConfigs?: ApplicationServiceEnvironmentConfig[]
 }
 

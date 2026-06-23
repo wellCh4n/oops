@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.infrastructure.kubernetes.task.processor;
 
 import io.fabric8.kubernetes.api.model.IntOrString;
 import io.fabric8.kubernetes.api.model.ServiceBuilder;
+import io.fabric8.kubernetes.api.model.ServicePortBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -19,7 +20,7 @@ public class ServiceProcessor implements DeployProcessor {
 
         log.info("Applying service for application: {}/{}", namespace, applicationName);
 
-        var service = new ServiceBuilder()
+        var serviceBuilder = new ServiceBuilder()
                 .withNewMetadata()
                     .withName(applicationName)
                     .withNamespace(namespace)
@@ -34,9 +35,22 @@ public class ServiceProcessor implements DeployProcessor {
                         .withProtocol("TCP")
                         .withPort(ctx.getServicePort())
                         .withTargetPort(new IntOrString(appPort))
-                    .endPort()
-                .endSpec()
-                .build();
+                    .endPort();
+
+        // Extra cluster-internal ports, reachable via the internal domain at their own port number.
+        for (Integer internalPort : ctx.getApplicationServiceConfig().distinctInternalPorts()) {
+            if (internalPort.equals(ctx.getServicePort())) {
+                continue;
+            }
+            serviceBuilder.addToPorts(new ServicePortBuilder()
+                    .withName("tcp-" + internalPort)
+                    .withProtocol("TCP")
+                    .withPort(internalPort)
+                    .withTargetPort(new IntOrString(internalPort))
+                    .build());
+        }
+
+        var service = serviceBuilder.endSpec().build();
 
         ctx.getClient().services()
                 .inNamespace(namespace)

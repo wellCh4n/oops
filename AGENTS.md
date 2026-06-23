@@ -380,6 +380,7 @@ The project has focused backend tests under `src/test/java/com/github/wellch4n/o
 - Tailwind CSS for styling
 - Component imports use `@/components/` path alias
 - Try shadcn/ui components first. Use the auto-install feature: `npx shadcn add <component>`
+- **All interactive elements must show the pointer cursor on hover** — add `cursor-pointer` to every clickable element (`<button>`, icon buttons, clickable `<div>`/`<span>`, custom controls). Tailwind v4 no longer defaults buttons to `cursor: pointer`, so it must be explicit. Pair it with `disabled:cursor-not-allowed` for elements that can be disabled.
 
 ## Repo-Vendored Deploy CLI
 

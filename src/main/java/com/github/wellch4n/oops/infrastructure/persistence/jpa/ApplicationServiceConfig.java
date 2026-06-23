@@ -23,6 +23,10 @@ public class ApplicationServiceConfig extends BaseDataObject {
 
     private Integer port;
 
+    @Column(name = "internal_ports", columnDefinition = "TEXT")
+    @Convert(converter = InternalPortsConverter.class)
+    private List<Integer> internalPorts;
+
     @Column(name = "environment_configs", columnDefinition = "TEXT")
     @Convert(converter = EnvironmentConfigsConverter.class)
     private List<EnvironmentConfig> environmentConfigs;
@@ -73,6 +77,37 @@ public class ApplicationServiceConfig extends BaseDataObject {
                 return OBJECT_MAPPER.readValue(dbData, TYPE);
             } catch (Exception e) {
                 throw new IllegalArgumentException("Failed to deserialize environmentConfigs", e);
+            }
+        }
+    }
+
+    @Converter
+    public static class InternalPortsConverter implements AttributeConverter<List<Integer>, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+        private static final TypeReference<List<Integer>> TYPE = new TypeReference<>() {};
+
+        @Override
+        public String convertToDatabaseColumn(List<Integer> attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize internalPorts", e);
+            }
+        }
+
+        @Override
+        public List<Integer> convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, TYPE);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize internalPorts", e);
             }
         }
     }
