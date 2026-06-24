@@ -5,11 +5,20 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Rocket, Upload, ExternalLink, Check } from "lucide-react"
 import { toast } from "sonner"
-import { createApplicationBuildSourceUpload, getApplication, getApplicationBuildConfig, getApplicationEnvironments, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
-import { Application, ApplicationEnvironment, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
+import { createApplicationBuildSourceUpload, getApplication, getApplicationBuildConfig, getApplicationEnvironments, getApplicationRuntimeSpec, deployApplication, getLastSuccessfulPipeline } from "@/lib/api/applications"
+import { Application, ApplicationEnvironment, ApplicationRuntimeSpec, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import Link from "next/link"
@@ -37,6 +46,8 @@ export default function PublishPage({ params }: PageProps) {
   const [publishRepository, setPublishRepository] = useState<string>("")
   const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
+  const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | null>(null)
+  const [showZeroReplicaConfirm, setShowZeroReplicaConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -54,11 +65,12 @@ export default function PublishPage({ params }: PageProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [appRes, envRes, lastPipelineRes, buildConfigRes] = await Promise.all([
+        const [appRes, envRes, lastPipelineRes, buildConfigRes, runtimeSpecRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationEnvironments(namespace, name),
           getLastSuccessfulPipeline(namespace, name),
-          getApplicationBuildConfig(namespace, name)
+          getApplicationBuildConfig(namespace, name),
+          getApplicationRuntimeSpec(namespace, name)
         ])
 
         if (appRes.data) {
@@ -82,6 +94,9 @@ export default function PublishPage({ params }: PageProps) {
         }
         if (buildConfigRes.data?.sourceType) {
           setSourceType(buildConfigRes.data.sourceType)
+        }
+        if (runtimeSpecRes.data) {
+          setRuntimeSpec(runtimeSpecRes.data)
         }
         if (lastPipelineRes.data) {
           setLastSuccessfulPipeline(lastPipelineRes.data)
@@ -112,6 +127,35 @@ export default function PublishPage({ params }: PageProps) {
       return
     }
 
+    // Re-fetch the runtime spec so the replica check reflects the latest
+    // configuration at the moment of publishing, not the page-load snapshot.
+    setLoading(true)
+    let latestRuntimeSpec = runtimeSpec
+    try {
+      const runtimeSpecRes = await getApplicationRuntimeSpec(namespace, name)
+      if (runtimeSpecRes.data) {
+        latestRuntimeSpec = runtimeSpecRes.data
+        setRuntimeSpec(runtimeSpecRes.data)
+      }
+    } catch {
+      setLoading(false)
+      toast.error(t("apps.publish.fetchError"))
+      return
+    }
+
+    const replicas = latestRuntimeSpec?.environmentConfigs?.find(
+      (config) => config.environmentName === selectedEnv
+    )?.replicas
+    if (!replicas) {
+      setLoading(false)
+      setShowZeroReplicaConfirm(true)
+      return
+    }
+
+    void doPublish()
+  }
+
+  const doPublish = async () => {
     setLoading(true)
     try {
       const zipSource = publishRepository.trim()
@@ -429,6 +473,38 @@ export default function PublishPage({ params }: PageProps) {
         </div>
         </div>
       </div>
+
+      <AlertDialog open={showZeroReplicaConfirm} onOpenChange={setShowZeroReplicaConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("apps.publish.zeroReplicasTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("apps.publish.zeroReplicasDescPrefix")}
+              <strong>{selectedEnv}</strong>
+              {t("apps.publish.zeroReplicasDescSuffix")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              variant="outline"
+              onClick={() => {
+                setShowZeroReplicaConfirm(false)
+                void doPublish()
+              }}
+            >
+              {t("apps.publish.continueAnyway")}
+            </AlertDialogAction>
+            <AlertDialogAction
+              onClick={() => {
+                setShowZeroReplicaConfirm(false)
+                router.push(`/apps/${namespace}/${name}?tab=runtime-spec`)
+              }}
+            >
+              {t("apps.publish.goConfigReplicas")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ContentPage>
   )
 }
