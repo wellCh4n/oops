@@ -118,6 +118,7 @@ public class Application extends BaseAggregateRoot {
     public void updateServiceConfig(ApplicationServiceConfig request) {
         ApplicationServiceConfig target = ensureServiceConfig();
         target.setPort(request.getPort());
+        target.setInternalPorts(request.getInternalPorts());
         target.setEnvironmentConfigs(request.getEnvironmentConfigs());
     }
 
