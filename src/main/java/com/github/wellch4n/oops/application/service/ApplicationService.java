@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
+import com.github.wellch4n.oops.application.port.ApplicationMetricsGateway;
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
@@ -22,6 +23,7 @@ import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
@@ -57,6 +59,7 @@ public class ApplicationService {
     private final UserService userService;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
     private final ApplicationExpertConfigGateway applicationExpertConfigGateway;
+    private final ApplicationMetricsGateway applicationMetricsGateway;
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
     private final DomainPolicy domainPolicy;
@@ -66,6 +69,7 @@ public class ApplicationService {
                               UserService userService,
                               ApplicationRuntimeGateway applicationRuntimeGateway,
                               ApplicationExpertConfigGateway applicationExpertConfigGateway,
+                              ApplicationMetricsGateway applicationMetricsGateway,
                               ApplicationBuildConfigPolicy buildConfigPolicy,
                               HealthCheckPolicy healthCheckPolicy,
                               DomainPolicy domainPolicy) {
@@ -74,6 +78,7 @@ public class ApplicationService {
         this.userService = userService;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
         this.applicationExpertConfigGateway = applicationExpertConfigGateway;
+        this.applicationMetricsGateway = applicationMetricsGateway;
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
         this.domainPolicy = domainPolicy;
@@ -440,6 +445,14 @@ public class ApplicationService {
             throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationExpertConfigGateway.getApplicationResources(environment, namespace, name);
+    }
+
+    public List<PodMetricSnapshot> getApplicationMetrics(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationMetricsGateway.getCurrentMetrics(environment, namespace, name);
     }
 
     public List<ApplicationConfigDto.EnvironmentBinding> getApplicationEnvironments(String namespace, String name) {

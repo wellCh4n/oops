@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.NamespaceMigrationCommand;
 import com.github.wellch4n.oops.application.dto.NamespaceMigrationResult;
 import com.github.wellch4n.oops.application.dto.Page;
@@ -183,6 +184,13 @@ public class ApplicationController {
                                                                          @PathVariable String name,
                                                                          @RequestParam String env) {
         return Result.success(applicationService.getApplicationResources(namespace, name, env));
+    }
+
+    @GetMapping("/{name}/metrics")
+    public Result<List<PodMetricSnapshot>> getApplicationMetrics(@PathVariable String namespace,
+                                                                 @PathVariable String name,
+                                                                 @RequestParam String env) {
+        return Result.success(applicationService.getApplicationMetrics(namespace, name, env));
     }
 
     @GetMapping("/{name}/environments")
