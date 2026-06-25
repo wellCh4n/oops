@@ -59,4 +59,11 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
                                       @Param("target") PipelineStatus target,
                                       @Param("message") String message);
 
+    @Modifying
+    @Transactional
+    @Query("update Pipeline p set p.namespace = :target where p.namespace = :source and p.applicationName = :applicationName")
+    int updateNamespace(@Param("source") String source,
+                        @Param("target") String target,
+                        @Param("applicationName") String applicationName);
+
 }

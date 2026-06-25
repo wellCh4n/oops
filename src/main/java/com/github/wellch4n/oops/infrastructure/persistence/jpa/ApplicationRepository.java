@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -34,4 +35,8 @@ public interface ApplicationRepository extends JpaRepository<Application, String
     List<Application> findByNameContainingIgnoreCase(String keyword);
 
     void deleteByNamespaceAndName(String namespace, String name);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update Application a set a.namespace = :target where a.namespace = :source and a.name = :name")
+    void updateNamespace(@Param("source") String source, @Param("target") String target, @Param("name") String name);
 }

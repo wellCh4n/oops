@@ -101,6 +101,29 @@ export const deleteApplication = async (namespace: string, id: string): Promise<
   }
 }
 
+export interface NamespaceMigrationResult {
+  sourceNamespace: string
+  targetNamespace: string
+  migratedEnvironments: string[]
+  failedEnvironments: string[]
+}
+
+export const migrateApplicationNamespace = async (
+  namespace: string,
+  name: string,
+  targetNamespace: string
+): Promise<ApiResponse<NamespaceMigrationResult>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/namespace-migration`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetNamespace }),
+  })
+  if (!response.ok) {
+    throw new Error("Failed to migrate application namespace")
+  }
+  return response.json() as Promise<ApiResponse<NamespaceMigrationResult>>
+}
+
 export const getApplicationBuildConfig = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildConfig>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/build/config`)
   if (!response.ok) {

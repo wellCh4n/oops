@@ -8,10 +8,13 @@ import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.NamespaceMigrationCommand;
+import com.github.wellch4n.oops.application.dto.NamespaceMigrationResult;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
+import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.time.Instant;
@@ -36,11 +39,14 @@ public class ApplicationController {
 
     private final ApplicationService applicationService;
     private final PipelineService pipelineService;
+    private final NamespaceMigrationService namespaceMigrationService;
 
     public ApplicationController(ApplicationService applicationService,
-                                 PipelineService pipelineService) {
+                                 PipelineService pipelineService,
+                                 NamespaceMigrationService namespaceMigrationService) {
         this.applicationService = applicationService;
         this.pipelineService = pipelineService;
+        this.namespaceMigrationService = namespaceMigrationService;
     }
 
     @GetMapping("/{name}")
@@ -84,6 +90,18 @@ public class ApplicationController {
                                              Authentication authentication) {
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
         return Result.success(applicationService.deleteApplication(namespace, name, principal.userId()));
+    }
+
+    @PostMapping("/{name}/namespace-migration")
+    @OpenApiHidden
+    @PreAuthorize("isAuthenticated()")
+    public Result<NamespaceMigrationResult> migrateNamespace(@PathVariable String namespace,
+                                                             @PathVariable String name,
+                                                             @RequestBody NamespaceMigrationCommand command,
+                                                             Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(namespaceMigrationService.migrateNamespace(
+                namespace, name, command.targetNamespace(), principal.userId()));
     }
 
     @GetMapping("/{name}/build/config")
