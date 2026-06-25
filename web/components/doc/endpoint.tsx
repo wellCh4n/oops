@@ -5,6 +5,7 @@ import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useDocContext } from "./doc-context"
+import { useLanguage } from "@/contexts/language-context"
 
 type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
 
@@ -31,13 +32,14 @@ function buildCurl(method: Method, url: string, token: string): string {
   if (hasBody) {
     lines[lines.length - 1] += " \\"
     lines.push("  -H 'Content-Type: application/json' \\")
-    lines.push("  -d '<请求体>'")
+    lines.push("  -d '<request-body>'")
   }
   return lines.join("\n")
 }
 
 export function Endpoint({ method, path, summary }: EndpointProps) {
   const { accessToken, baseUrl } = useDocContext()
+  const { t } = useLanguage()
   const [copied, setCopied] = useState(false)
   const token = accessToken ?? "$OOPS_TOKEN"
   const url = `${baseUrl}${path}`
@@ -77,7 +79,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
           size="icon"
           className="absolute right-1 top-1 size-6 text-muted-foreground hover:text-foreground"
           onClick={onCopy}
-          aria-label="复制 curl"
+          aria-label={t("doc.copyCurl")}
         >
           {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
         </Button>

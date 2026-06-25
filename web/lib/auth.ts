@@ -1,3 +1,10 @@
+import {
+  AUTH_TOKEN_COOKIE,
+  AUTH_USER_ID_KEY,
+  AUTH_USERNAME_KEY,
+  AUTH_ROLE_KEY,
+} from "@/lib/auth-keys"
+
 interface JwtClaims {
   sub: string
   userId: string
@@ -23,7 +30,7 @@ function decodeJwt(token: string): JwtClaims | null {
 export function getToken(): string | null {
   if (typeof document === "undefined") return null
   const value = `; ${document.cookie}`
-  const parts = value.split(`; auth_token=`)
+  const parts = value.split(`; ${AUTH_TOKEN_COOKIE}=`)
   if (parts.length === 2) return parts.pop()!.split(";").shift() || null
   return null
 }
@@ -35,18 +42,18 @@ function getClaims(): JwtClaims | null {
 
 export function setAuth(token: string) {
   const maxAge = 7 * 24 * 3600
-  document.cookie = `auth_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax`
+  document.cookie = `${AUTH_TOKEN_COOKIE}=${token}; path=/; max-age=${maxAge}; SameSite=Lax`
 }
 
 export function clearAuth() {
   if (typeof document !== "undefined") {
-    document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    document.cookie = "auth_token=; path=/; max-age=0; SameSite=Lax"
+    document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Lax`
   }
   if (typeof localStorage !== "undefined") {
-    localStorage.removeItem("auth_user_id")
-    localStorage.removeItem("auth_username")
-    localStorage.removeItem("auth_role")
+    localStorage.removeItem(AUTH_USER_ID_KEY)
+    localStorage.removeItem(AUTH_USERNAME_KEY)
+    localStorage.removeItem(AUTH_ROLE_KEY)
   }
 }
 

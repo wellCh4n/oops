@@ -9,6 +9,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.DeployContext;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.DeployProcessor;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.ImagePullSecretProcessor;
@@ -56,8 +57,8 @@ public class ArtifactDeployTask implements Callable<Boolean> {
 
     @Override
     public Boolean call() {
-        try (KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
-            DeployContext ctx = new DeployContext(
+        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
+            DeployContext context = new DeployContext(
                     pipeline, application, environment, runtimeSpec, healthCheck,
                     applicationServiceConfig, expertConfig, ingressConfig, client, OopsConstants.PATCH_CONTEXT,
                     SERVICE_PORT, Map.of(
@@ -74,7 +75,7 @@ public class ArtifactDeployTask implements Callable<Boolean> {
                     new IngressRouteProcessor()
             );
 
-            processors.forEach(p -> p.process(ctx));
+            processors.forEach(processor -> processor.process(context));
         }
         return true;
     }

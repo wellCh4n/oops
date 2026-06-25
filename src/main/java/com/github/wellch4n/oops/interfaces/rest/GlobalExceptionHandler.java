@@ -13,13 +13,13 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(BizException.class)
-    public Result<Void> handleBizException(BizException e) {
-        return Result.failure(e.getMessage());
+    public Result<Void> handleBizException(BizException exception) {
+        return Result.failure(exception.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public Result<Void> handleException(Exception e) {
-        log.error("Unhandled exception", e);
+    public Result<Void> handleException(Exception exception) {
+        log.error("Unhandled exception", exception);
         return Result.failure("Internal server error");
     }
 }

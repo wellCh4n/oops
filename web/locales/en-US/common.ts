@@ -1,4 +1,7 @@
 const common = {
+  "common.copied": "Copied",
+  "settings.title": "System Settings",
+  "settings.selectSubmenu": "Please select a submenu on the left to configure.",
   "common.loading": "Loading...",
   "common.noData": "No data",
   "common.environment": "Environment:",
@@ -60,6 +63,24 @@ const common = {
   "terminal.files.newFolderTitle": "New folder",
   "terminal.files.newFolderPlaceholder": "Folder name",
   "terminal.files.newFolderSuccess": "Created",
+  "terminal.files.copyFailed": "Copy failed",
+  "terminal.files.downloadFailed": "Download failed",
+  "terminal.files.uploadFailed": "Upload failed",
+  "terminal.files.loadFailed": "Failed to load",
+  "terminal.files.loadFileFailed": "Failed to load file",
+  "terminal.files.saveFailed": "Save failed",
+  "terminal.files.renameFailed": "Rename failed",
+  "terminal.files.deleteFailed": "Delete failed",
+  "pods.missingEnv": "Missing env parameter",
+  "common.error": "Error",
+  "doc.field": "Field",
+  "doc.type": "Type",
+  "doc.description": "Description",
+  "doc.anchorCopied": "Anchor link copied",
+  "doc.anchorNavigated": "Jumped to section",
+  "doc.copyAnchor": "Copy anchor link",
+  "doc.copyCurl": "Copy curl",
+  "doc.title": "OpenAPI Docs",
 }
 
 export default common

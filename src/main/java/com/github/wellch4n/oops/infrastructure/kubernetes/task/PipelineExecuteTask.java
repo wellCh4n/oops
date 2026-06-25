@@ -15,6 +15,7 @@ import com.github.wellch4n.oops.domain.delivery.ZipPublishConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.application.port.ObjectStorage;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
@@ -109,7 +110,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
-        try (var client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer())) {
+        try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
             client.batch().v1().jobs().inNamespace(environment.getWorkNamespace()).resource(pipelineBuildPod).create();
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create pipeline job: " + pipeline.getName(), e);

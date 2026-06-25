@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Component;
  * @date 2025/7/8
  */
 
+@Slf4j
 @Component
 public class PipelineInstanceScanJob {
     private static final Duration ROLLOUT_TIMEOUT = Duration.ofMinutes(5);
@@ -130,7 +132,7 @@ public class PipelineInstanceScanJob {
 
                         completeDeployPhase(pipeline);
                     } else if (jobStatus == PipelineJobStatus.FAILED) {
-                        System.err.println("Error processing succeeded pipeline " + pipeline.getId());
+                        log.warn("Pipeline build failed: {}", pipeline.getId());
                         pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
                         String message = "镜像构建失败，请查看流水线日志。";
                         int updated = pipelineRepository.updateStatusAndMessageIfMatch(
@@ -144,7 +146,7 @@ public class PipelineInstanceScanJob {
                         }
                     }
                 } catch (Exception exception) {
-                    System.out.println("Error scanning pipeline instance: " + exception.getMessage());
+                    log.error("Error scanning pipeline instance {}: {}", pipeline.getId(), exception.getMessage(), exception);
                     String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
                     int deployingUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
                             pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message
@@ -198,7 +200,7 @@ public class PipelineInstanceScanJob {
                     }
                     // otherwise: still rolling out, leave ROLLING_OUT for the next tick
                 } catch (Exception exception) {
-                    System.out.println("Error rollingOut pipeline instance: " + exception.getMessage());
+                    log.error("Error rolling out pipeline instance {}: {}", pipeline.getId(), exception.getMessage(), exception);
                 }
             }
         } finally {

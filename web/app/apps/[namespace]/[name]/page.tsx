@@ -3,7 +3,7 @@
 
 import { Suspense, useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { ApplicationForm } from "../../application-form"
+import { ApplicationForm } from "@/app/apps/application-form"
 import {
   getApplication,
   getApplicationBuildConfig,

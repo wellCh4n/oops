@@ -22,7 +22,7 @@ export async function getFeishuLoginUrl(): Promise<string> {
   const res = await apiFetch("/api/auth/external/feishu/redirect")
   const data = await res.json() as ApiResponse<string>
   if (!data.success || !data.data) {
-    throw new Error(data.message || "获取飞书登录地址失败")
+    throw new Error(data.message || "Failed to get Feishu login URL")
   }
   return data.data
 }
@@ -57,7 +57,7 @@ export async function login(username: string, password: string): Promise<LoginRe
   })
   const data = await res.json() as ApiResponse<LoginResult>
   if (!data.success) {
-    throw new Error(data.message || "登录失败")
+    throw new Error(data.message || "Login failed")
   }
   setAuth(data.data.token)
   return data.data
@@ -69,7 +69,7 @@ export async function feishuCallback(code: string): Promise<string> {
   })
   const data = await res.json() as ApiResponse<string>
   if (!data.success || !data.data) {
-    throw new Error(data.message || "登录失败")
+    throw new Error(data.message || "Login failed")
   }
   return data.data
 }

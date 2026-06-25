@@ -42,8 +42,8 @@ final class WebSocketSessionSupport {
                 } catch (InterruptedException _) {
                     Thread.currentThread().interrupt();
                     break;
-                } catch (IOException e) {
-                    log.debug("WebSocket heartbeat failed for session {}", session.getId(), e);
+                } catch (IOException ioException) {
+                    log.debug("WebSocket heartbeat failed for session {}", session.getId(), ioException);
                     break;
                 }
             }
@@ -64,8 +64,8 @@ final class WebSocketSessionSupport {
         }
         try {
             closeable.close();
-        } catch (Exception e) {
-            log.debug("Failed to close {}", resourceName, e);
+        } catch (Exception exception) {
+            log.debug("Failed to close {}", resourceName, exception);
         }
     }
 }

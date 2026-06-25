@@ -574,7 +574,7 @@ function SandboxesContent() {
                     {t("sandbox.useDefaultKeepalive")}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("sandbox.useDefaultKeepaliveHint")}>
+                        <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("sandbox.useDefaultKeepaliveHint")}>
                           <Info className="size-3.5" />
                         </button>
                       </TooltipTrigger>

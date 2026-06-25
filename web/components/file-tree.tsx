@@ -215,13 +215,13 @@ export default function FileTree({
           [path]: {
             entries: prev[path]?.entries ?? null,
             loading: false,
-            error: err instanceof Error ? err.message : "Failed to load",
+            error: err instanceof Error ? err.message : t("terminal.files.loadFailed"),
             expanded: true,
           },
         }))
       }
     },
-    [listDirectory],
+    [listDirectory, t],
   )
 
   useEffect(() => {
@@ -252,7 +252,7 @@ export default function FileTree({
         toast.success(t("terminal.files.uploadSuccess"))
         await loadDirectory(parentDir)
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Upload failed")
+        toast.error(err instanceof Error ? err.message : t("terminal.files.uploadFailed"))
       } finally {
         setUploadingDirs((prev) => {
           const next = { ...prev }
@@ -315,11 +315,11 @@ export default function FileTree({
           draft: "",
           loading: false,
           saving: false,
-          error: err instanceof Error ? err.message : "Failed to load file",
+          error: err instanceof Error ? err.message : t("terminal.files.loadFileFailed"),
         })
       }
     },
-    [getFileContent],
+    [getFileContent, t],
   )
 
   const handleSaveEdit = useCallback(async () => {
@@ -331,7 +331,7 @@ export default function FileTree({
       setEdit(null)
     } catch (err) {
       setEdit((prev) =>
-        prev ? { ...prev, saving: false, error: err instanceof Error ? err.message : "Save failed" } : prev,
+        prev ? { ...prev, saving: false, error: err instanceof Error ? err.message : t("terminal.files.saveFailed") } : prev,
       )
     }
   }, [edit, saveFileContent, t])
@@ -375,7 +375,7 @@ export default function FileTree({
       refreshParent(rename.entry.path)
     } catch (err) {
       setRename((prev) =>
-        prev ? { ...prev, saving: false, error: err instanceof Error ? err.message : "Rename failed" } : prev,
+        prev ? { ...prev, saving: false, error: err instanceof Error ? err.message : t("terminal.files.renameFailed") } : prev,
       )
     }
   }, [rename, renamePath, t, refreshParent])
@@ -394,7 +394,7 @@ export default function FileTree({
       setDel(null)
       refreshParent(target.path)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Delete failed")
+      toast.error(err instanceof Error ? err.message : t("terminal.files.deleteFailed"))
       setDel((prev) => (prev ? { ...prev, deleting: false } : prev))
     }
   }, [del, deletePath, t, refreshParent])
@@ -453,7 +453,7 @@ export default function FileTree({
             <button
               type="button"
               onClick={() => openMkdir(rootPath)}
-              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
               title={t("terminal.files.newFolder")}
             >
               <FolderPlus className="size-3.5" />
@@ -462,7 +462,7 @@ export default function FileTree({
           <button
             type="button"
             onClick={() => loadDirectory(rootPath)}
-            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
             title={t("common.refresh")}
           >
             {rootState?.loading ? (
@@ -925,7 +925,7 @@ function TreeRow({
       await navigator.clipboard.writeText(text)
       toast.success(t("terminal.files.copied"))
     } catch {
-      toast.error("Copy failed")
+      toast.error(t("terminal.files.copyFailed"))
     }
   }
 
@@ -937,7 +937,7 @@ function TreeRow({
       a.click()
       a.remove()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Download failed")
+      toast.error(err instanceof Error ? err.message : t("terminal.files.downloadFailed"))
     }
   }
 

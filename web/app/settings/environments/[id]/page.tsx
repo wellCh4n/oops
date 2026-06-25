@@ -127,7 +127,7 @@ export default function EnvironmentEditPage() {
           router.push("/settings/environments")
         }
       } catch (error) {
-        toast.error("加载环境失败")
+        toast.error(t("env.loadError"))
         console.error(error)
         router.push("/settings/environments")
       } finally {
@@ -159,7 +159,7 @@ export default function EnvironmentEditPage() {
         }
     } catch {
         toast.dismiss()
-        toast.error("工作空间创建失败")
+        toast.error(t("env.workspaceCreateError"))
     }
   }
 
@@ -230,7 +230,7 @@ export default function EnvironmentEditPage() {
       }
     } catch (e) {
       console.error(e)
-      toast.error("环境更新失败")
+      toast.error(t("env.updateError"))
     }
   }
 
@@ -249,7 +249,7 @@ export default function EnvironmentEditPage() {
       }
     } catch (e) {
       console.error(e)
-      toast.error("环境删除失败")
+      toast.error(t("env.deleteError"))
     } finally {
       setIsDeleting(false)
       if (ok) {

@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.application.port.StreamSink;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -30,7 +31,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
     private static final String LOGS_EXPIRED_MESSAGE = "Logs expired: the build job has been cleaned up";
     private static final String MSG_TYPE = "type";
 
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -42,7 +43,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
 
     private void streamLogs(Pipeline pipeline, Environment environment, StreamSink sink, KubernetesStreamHandle handle) {
         try {
-            KubernetesClient client = com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients.from(environment.getKubernetesApiServer());
+            KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer());
             handle.add(client);
 
             String workNamespace = environment.getWorkNamespace();
@@ -184,10 +185,10 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
         var spec = job.getSpec().getTemplate().getSpec();
         List<String> containers = new ArrayList<>();
         if (spec.getInitContainers() != null) {
-            spec.getInitContainers().forEach(c -> containers.add(c.getName()));
+            spec.getInitContainers().forEach(container -> containers.add(container.getName()));
         }
         if (spec.getContainers() != null) {
-            spec.getContainers().forEach(c -> containers.add(c.getName()));
+            spec.getContainers().forEach(container -> containers.add(container.getName()));
         }
         return containers;
     }
@@ -206,7 +207,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
         return Stream.concat(
                 Optional.ofNullable(pod.getStatus().getInitContainerStatuses()).orElse(List.of()).stream(),
                 Optional.ofNullable(pod.getStatus().getContainerStatuses()).orElse(List.of()).stream()
-        ).anyMatch(s -> s.getName().equals(containerName) && s.getState().getTerminated() != null);
+        ).anyMatch(containerStatus -> containerStatus.getName().equals(containerName) && containerStatus.getState().getTerminated() != null);
     }
 
     private boolean isContainerReady(Pod pod, String containerName) {
