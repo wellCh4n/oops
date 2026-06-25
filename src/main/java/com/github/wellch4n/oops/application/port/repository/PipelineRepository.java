@@ -33,5 +33,7 @@ public interface PipelineRepository {
 
     int updateStatusAndMessageIfMatch(String id, PipelineStatus expected, PipelineStatus target, String message);
 
+    int migrateNamespace(String fromNamespace, String toNamespace, String applicationName);
+
     List<Pipeline> query(String namespace, String applicationName);
 }

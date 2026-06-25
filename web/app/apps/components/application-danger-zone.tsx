@@ -1,12 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Trash2 } from "lucide-react"
+import { ArrowRightLeft, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useLanguage } from "@/contexts/language-context"
-import { deleteApplication } from "@/lib/api/applications"
+import { deleteApplication, migrateApplicationNamespace } from "@/lib/api/applications"
+import { fetchNamespaces } from "@/lib/api/namespaces"
+import { Namespace } from "@/lib/api/types"
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -31,6 +40,22 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
   const [confirmInput, setConfirmInput] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
 
+  const [namespaces, setNamespaces] = useState<Namespace[]>([])
+  const [targetNamespace, setTargetNamespace] = useState("")
+  const [showMigrateDialog, setShowMigrateDialog] = useState(false)
+  const [migrateConfirmInput, setMigrateConfirmInput] = useState("")
+  const [isMigrating, setIsMigrating] = useState(false)
+
+  useEffect(() => {
+    fetchNamespaces()
+      .then((res) => {
+        if (res.success && res.data) {
+          setNamespaces(res.data.filter((ns) => ns.name !== namespace))
+        }
+      })
+      .catch((e) => console.error(e))
+  }, [namespace])
+
   const handleDelete = async () => {
     if (confirmInput !== name) return
     setIsDeleting(true)
@@ -52,11 +77,74 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
     }
   }
 
+  const handleMigrate = async () => {
+    if (migrateConfirmInput !== name || !targetNamespace) return
+    setIsMigrating(true)
+    let ok = false
+    try {
+      const res = await migrateApplicationNamespace(namespace, name, targetNamespace)
+      if (!res.success) {
+        toast.error(res.message || t("apps.danger.migrateError"))
+        return
+      }
+      ok = true
+      const failed = res.data?.failedEnvironments ?? []
+      if (failed.length > 0) {
+        toast.warning(`${t("apps.danger.migratePartial")}: ${failed.join(", ")}`)
+      } else {
+        toast.success(t("apps.danger.migrateSuccess"))
+      }
+      router.push(`/apps/${targetNamespace}/${name}?namespace=${targetNamespace}`)
+    } catch (e) {
+      console.error(e)
+      toast.error(t("apps.danger.migrateError"))
+    } finally {
+      setIsMigrating(false)
+      if (ok) {
+        setShowMigrateDialog(false)
+        setMigrateConfirmInput("")
+      }
+    }
+  }
+
   return (
     <div className="w-full space-y-6">
       <div className="space-y-2">
         <h3 className="text-base font-medium text-red-500">{t("apps.danger.title")}</h3>
         <p className="text-sm text-muted-foreground">{t("apps.danger.desc")}</p>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">{t("apps.danger.migrateBtn")}</p>
+          <p className="text-xs text-muted-foreground">{t("apps.danger.migrateDesc")}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Select value={targetNamespace} onValueChange={setTargetNamespace}>
+            <SelectTrigger className="w-44 cursor-pointer">
+              <SelectValue placeholder={t("apps.danger.migrateSelectPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {namespaces.map((ns) => (
+                <SelectItem key={ns.name} value={ns.name} className="cursor-pointer">
+                  {ns.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={!targetNamespace}
+            onClick={() => {
+              setMigrateConfirmInput("")
+              setShowMigrateDialog(true)
+            }}
+          >
+            <ArrowRightLeft className="size-4 mr-1" />
+            {t("apps.danger.migrateBtn")}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
@@ -80,6 +168,49 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
           {t("apps.danger.deleteBtn")}
         </Button>
       </div>
+
+      <AlertDialog open={showMigrateDialog} onOpenChange={setShowMigrateDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("apps.danger.migrateDialogTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("apps.danger.migrateDialogDescPrefix")}
+              <strong>{name}</strong>
+              {t("apps.danger.migrateDialogDescMiddle")}
+              <strong>{targetNamespace}</strong>
+              {t("apps.danger.migrateDialogDescSuffix")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Input
+              autoComplete="off"
+              value={migrateConfirmInput}
+              onChange={(e) => setMigrateConfirmInput(e.target.value)}
+              placeholder={t("apps.danger.migratePlaceholder")}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowMigrateDialog(false)
+                setMigrateConfirmInput("")
+              }}
+            >
+              {t("common.cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isMigrating || migrateConfirmInput !== name || !targetNamespace}
+              onClick={(e) => {
+                e.preventDefault()
+                handleMigrate()
+              }}
+            >
+              {isMigrating ? t("common.loading") : t("apps.danger.migrateConfirmBtn")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent>

@@ -112,6 +112,18 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
+    @Transactional
+    public void migrateNamespace(String fromNamespace, String toNamespace, String name) {
+        buildConfigRepository.updateNamespace(fromNamespace, toNamespace, name);
+        runtimeSpecRepository.updateNamespace(fromNamespace, toNamespace, name);
+        serviceConfigRepository.updateNamespace(fromNamespace, toNamespace, name);
+        expertConfigRepository.updateNamespace(fromNamespace, toNamespace, name);
+        environmentRepository.updateNamespace(fromNamespace, toNamespace, name);
+        collaboratorRepository.updateNamespace(fromNamespace, toNamespace, name);
+        applicationRepository.updateNamespace(fromNamespace, toNamespace, name);
+    }
+
+    @Override
     public List<com.github.wellch4n.oops.domain.application.ApplicationBuildConfig> findBuildConfigs(String namespace, Collection<String> applicationNames) {
         return PersistenceMapper.convertList(
                 buildConfigRepository.findByNamespaceAndApplicationNameIn(namespace, applicationNames),

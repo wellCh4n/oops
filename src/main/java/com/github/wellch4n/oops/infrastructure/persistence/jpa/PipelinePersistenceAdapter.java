@@ -98,6 +98,11 @@ public class PipelinePersistenceAdapter implements com.github.wellch4n.oops.appl
     }
 
     @Override
+    public int migrateNamespace(String fromNamespace, String toNamespace, String applicationName) {
+        return pipelineRepository.updateNamespace(fromNamespace, toNamespace, applicationName);
+    }
+
+    @Override
     public List<com.github.wellch4n.oops.domain.delivery.Pipeline> query(String namespace, String applicationName) {
         return PersistenceMapper.convertList(pipelineRepository.findAll((root, query, criteriaBuilder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();

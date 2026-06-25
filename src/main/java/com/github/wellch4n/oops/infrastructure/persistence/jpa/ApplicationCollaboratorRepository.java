@@ -13,4 +13,8 @@ public interface ApplicationCollaboratorRepository extends JpaRepository<Applica
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from ApplicationCollaborator c where c.namespace = :namespace and c.applicationName = :applicationName")
     void deleteByNamespaceAndApplicationName(String namespace, String applicationName);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update ApplicationCollaborator c set c.namespace = :target where c.namespace = :source and c.applicationName = :applicationName")
+    void updateNamespace(String source, String target, String applicationName);
 }

@@ -27,6 +27,12 @@ public interface ApplicationRepository {
 
     void deleteAggregate(String namespace, String name);
 
+    /**
+     * Moves the application and all of its child configuration rows from {@code fromNamespace}
+     * to {@code toNamespace}, keeping the application name unchanged.
+     */
+    void migrateNamespace(String fromNamespace, String toNamespace, String name);
+
     List<ApplicationBuildConfig> findBuildConfigs(String namespace, Collection<String> applicationNames);
 
     List<ApplicationBuildConfig> findBuildConfigs(Collection<String> namespaces, Collection<String> applicationNames);
