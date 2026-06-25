@@ -110,7 +110,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       onSaved()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error")
+      toast.error(err instanceof Error ? err.message : t("common.error"))
     } finally {
       setSubmitting(false)
     }
@@ -125,7 +125,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       onDeleted?.()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error")
+      toast.error(err instanceof Error ? err.message : t("common.error"))
     } finally {
       setSubmitting(false)
       setDeleteConfirmOpen(false)

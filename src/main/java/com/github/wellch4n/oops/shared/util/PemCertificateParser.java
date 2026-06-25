@@ -41,8 +41,8 @@ public final class PemCertificateParser {
         if (certPem == null || certPem.isBlank()) {
             throw new IllegalArgumentException("Certificate content is empty");
         }
-        Matcher m = CERT_BLOCK.matcher(certPem);
-        if (!m.find()) {
+        Matcher certBlockMatcher = CERT_BLOCK.matcher(certPem);
+        if (!certBlockMatcher.find()) {
             throw new IllegalArgumentException("Invalid certificate format, expected PEM (-----BEGIN CERTIFICATE-----)");
         }
         try {
@@ -60,9 +60,9 @@ public final class PemCertificateParser {
 
     private static List<String> extractDnsNames(X509Certificate cert, String subject) throws CertificateParsingException {
         List<String> names = new ArrayList<>();
-        Matcher cn = CN_PATTERN.matcher(subject);
-        if (cn.find()) {
-            names.add(cn.group(1).trim().toLowerCase());
+        Matcher cnMatcher = CN_PATTERN.matcher(subject);
+        if (cnMatcher.find()) {
+            names.add(cnMatcher.group(1).trim().toLowerCase());
         }
         var altNames = cert.getSubjectAlternativeNames();
         if (altNames != null) {
@@ -70,8 +70,8 @@ public final class PemCertificateParser {
                 // entry[0] = type (2 = dNSName), entry[1] = value
                 if (entry.size() >= 2 && Integer.valueOf(2).equals(entry.get(0))) {
                     Object value = entry.get(1);
-                    if (value instanceof String s) {
-                        String lower = s.trim().toLowerCase();
+                    if (value instanceof String dnsName) {
+                        String lower = dnsName.trim().toLowerCase();
                         if (!names.contains(lower)) {
                             names.add(lower);
                         }
@@ -85,15 +85,15 @@ public final class PemCertificateParser {
     public static boolean hostMatches(String host, List<String> certDnsNames) {
         if (host == null || certDnsNames == null || certDnsNames.isEmpty()) return false;
         String normalizedHost = stripWildcard(host);
-        for (String cn : certDnsNames) {
-            if (stripWildcard(cn).equals(normalizedHost)) return true;
+        for (String certDnsName : certDnsNames) {
+            if (stripWildcard(certDnsName).equals(normalizedHost)) return true;
         }
         return false;
     }
 
     private static String stripWildcard(String name) {
-        String s = name == null ? "" : name.trim().toLowerCase();
-        return s.startsWith("*.") ? s.substring(2) : s;
+        String normalized = name == null ? "" : name.trim().toLowerCase();
+        return normalized.startsWith("*.") ? normalized.substring(2) : normalized;
     }
 
     public static void validatePrivateKey(String keyPem) {
@@ -104,11 +104,11 @@ public final class PemCertificateParser {
             throw new IllegalArgumentException(
                     "PKCS#1 format is not supported, please convert to PKCS#8 using: openssl pkcs8 -topk8 -nocrypt (-----BEGIN PRIVATE KEY-----)");
         }
-        Matcher m = PKCS8_KEY_BLOCK.matcher(keyPem);
-        if (!m.find()) {
+        Matcher keyBlockMatcher = PKCS8_KEY_BLOCK.matcher(keyPem);
+        if (!keyBlockMatcher.find()) {
             throw new IllegalArgumentException("Invalid private key format, expected PKCS#8 PEM (-----BEGIN PRIVATE KEY-----)");
         }
-        byte[] der = Base64.getMimeDecoder().decode(m.group(1).trim());
+        byte[] der = Base64.getMimeDecoder().decode(keyBlockMatcher.group(1).trim());
         PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(der);
         if (isInvalidKeyFactory("RSA", keySpec) && isInvalidKeyFactory("EC", keySpec)) {
             throw new IllegalArgumentException("Failed to parse private key (neither RSA nor EC)");

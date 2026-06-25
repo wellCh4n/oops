@@ -1,4 +1,7 @@
 const common = {
+  "common.copied": "已複製",
+  "settings.title": "系統設定",
+  "settings.selectSubmenu": "請選擇左側子選單進行設定。",
   "common.loading": "載入中...",
   "common.noData": "暫無數據",
   "common.environment": "環境:",
@@ -60,6 +63,24 @@ const common = {
   "terminal.files.newFolderTitle": "新建資料夾",
   "terminal.files.newFolderPlaceholder": "資料夾名稱",
   "terminal.files.newFolderSuccess": "已建立",
+  "terminal.files.copyFailed": "複製失敗",
+  "terminal.files.downloadFailed": "下載失敗",
+  "terminal.files.uploadFailed": "上傳失敗",
+  "terminal.files.loadFailed": "載入失敗",
+  "terminal.files.loadFileFailed": "載入檔案失敗",
+  "terminal.files.saveFailed": "儲存失敗",
+  "terminal.files.renameFailed": "重新命名失敗",
+  "terminal.files.deleteFailed": "刪除失敗",
+  "pods.missingEnv": "缺少 env 參數",
+  "common.error": "操作失敗",
+  "doc.field": "欄位",
+  "doc.type": "類型",
+  "doc.description": "說明",
+  "doc.anchorCopied": "錨點連結已複製",
+  "doc.anchorNavigated": "已定位到該章節",
+  "doc.copyAnchor": "複製錨點連結",
+  "doc.copyCurl": "複製 curl",
+  "doc.title": "OpenAPI 文件",
 }
 
 export default common

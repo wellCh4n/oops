@@ -65,8 +65,8 @@ public class EnvironmentService {
     public Environment createEnvironment(Environment environment) {
         try {
             ResourceNameChecker.checkEnvironmentName(environment.getName());
-        } catch (IllegalArgumentException e) {
-            throw new BizException(e.getMessage(), e);
+        } catch (IllegalArgumentException exception) {
+            throw new BizException(exception.getMessage(), exception);
         }
         Environment existing = environmentRepository.findFirstByName(environment.getName());
         if (existing != null) {
@@ -94,8 +94,8 @@ public class EnvironmentService {
                 return new KubernetesValidationResult(false, "NAMESPACE_MISSING", "Work namespace does not exist");
             }
             return new KubernetesValidationResult(true, "VALID", "Validation passed");
-        } catch (Exception e) {
-            return new KubernetesValidationResult(false, "ERROR", "Validation failed: " + e.getMessage());
+        } catch (Exception exception) {
+            return new KubernetesValidationResult(false, "ERROR", "Validation failed: " + exception.getMessage());
         }
     }
 
@@ -106,8 +106,8 @@ public class EnvironmentService {
         try {
             environmentGateway.createNamespace(kubernetesApiServer, workNamespace);
             return true;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create work namespace: " + e.getMessage());
+        } catch (Exception exception) {
+            throw new BizException("Failed to create work namespace: " + exception.getMessage(), exception);
         }
     }
 
@@ -136,9 +136,9 @@ public class EnvironmentService {
         try {
             environmentGateway.syncImagePullSecret(environment);
             log.info("Synced dockerhub secret to namespace: {}", environment.getWorkNamespace());
-        } catch (Exception e) {
+        } catch (Exception exception) {
             throw new BizException("Failed to sync dockerhub secret to namespace "
-                    + environment.getWorkNamespace() + ": " + e.getMessage(), e);
+                    + environment.getWorkNamespace() + ": " + exception.getMessage(), exception);
         }
     }
 
@@ -146,9 +146,9 @@ public class EnvironmentService {
         try {
             environmentGateway.syncGitCredentialSecret(environment);
             log.info("Synced git-credential secret to namespace: {}", environment.getWorkNamespace());
-        } catch (Exception e) {
+        } catch (Exception exception) {
             throw new BizException("Failed to sync git-credential secret to namespace "
-                    + environment.getWorkNamespace() + ": " + e.getMessage(), e);
+                    + environment.getWorkNamespace() + ": " + exception.getMessage(), exception);
         }
     }
 

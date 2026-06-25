@@ -1,4 +1,7 @@
 const common = {
+  "common.copied": "コピーしました",
+  "settings.title": "システム設定",
+  "settings.selectSubmenu": "左のサブメニューを選択して設定してください。",
   "common.loading": "読み込み中...",
   "common.noData": "まだデータがありません",
   "common.environment": "環境：",
@@ -60,6 +63,24 @@ const common = {
   "terminal.files.newFolderTitle": "新規フォルダ",
   "terminal.files.newFolderPlaceholder": "フォルダ名",
   "terminal.files.newFolderSuccess": "作成しました",
+  "terminal.files.copyFailed": "コピーに失敗しました",
+  "terminal.files.downloadFailed": "ダウンロードに失敗しました",
+  "terminal.files.uploadFailed": "アップロードに失敗しました",
+  "terminal.files.loadFailed": "読み込みに失敗しました",
+  "terminal.files.loadFileFailed": "ファイルの読み込みに失敗しました",
+  "terminal.files.saveFailed": "保存に失敗しました",
+  "terminal.files.renameFailed": "名前の変更に失敗しました",
+  "terminal.files.deleteFailed": "削除に失敗しました",
+  "pods.missingEnv": "env パラメータがありません",
+  "common.error": "エラーが発生しました",
+  "doc.field": "フィールド",
+  "doc.type": "型",
+  "doc.description": "説明",
+  "doc.anchorCopied": "アンカーリンクをコピーしました",
+  "doc.anchorNavigated": "セクションに移動しました",
+  "doc.copyAnchor": "アンカーリンクをコピー",
+  "doc.copyCurl": "curl をコピー",
+  "doc.title": "OpenAPI ドキュメント",
 }
 
 export default common

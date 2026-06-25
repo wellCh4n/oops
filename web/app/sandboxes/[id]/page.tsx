@@ -185,7 +185,7 @@ export default function SandboxDetailPage() {
           <span className="text-xs text-muted-foreground font-mono">{sandbox.id}</span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center">
+              <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer">
                 <Info className="size-3.5" />
               </button>
             </TooltipTrigger>

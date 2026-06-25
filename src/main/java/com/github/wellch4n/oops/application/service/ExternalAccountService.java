@@ -20,15 +20,15 @@ public class ExternalAccountService {
     public ExternalAccountService(List<ExternalAuthStrategy> strategyList) {
         this.strategies = strategyList.stream()
                 .collect(Collectors.toMap(
-                        s -> s.getProvider().name().toLowerCase(),
-                        s -> s
+                        strategy -> strategy.getProvider().name().toLowerCase(),
+                        strategy -> strategy
                 ));
     }
 
     public List<String> getEnabledProviders() {
         return strategies.values().stream()
                 .filter(ExternalAuthStrategy::isEnabled)
-                .map(s -> s.getProvider().name().toLowerCase())
+                .map(strategy -> strategy.getProvider().name().toLowerCase())
                 .toList();
     }
 
@@ -39,13 +39,13 @@ public class ExternalAccountService {
     public String authenticate(String provider, String code) {
         try {
             return getEnabledStrategy(provider).authenticate(code);
-        } catch (IOException e) {
-            log.error("External authentication failed for provider {}", provider, e);
-            String detail = e.getMessage();
+        } catch (IOException exception) {
+            log.error("External authentication failed for provider {}", provider, exception);
+            String detail = exception.getMessage();
             String message = (detail == null || detail.isBlank())
                     ? "Authentication failed"
                     : "Authentication failed: " + detail;
-            throw new BizException(message, e);
+            throw new BizException(message, exception);
         }
     }
 

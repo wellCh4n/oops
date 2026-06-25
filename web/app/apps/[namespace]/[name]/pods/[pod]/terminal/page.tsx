@@ -37,7 +37,7 @@ function TerminalPageContent() {
   const namespace = params.namespace as string
   const name = params.name as string
   const pod = params.pod as string
-  const env = searchParams.get("env")
+  const env = searchParams.get("env") ?? ""
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting")
@@ -47,26 +47,26 @@ function TerminalPageContent() {
   const { t } = useLanguage()
 
   const listDirectory = useCallback(
-    (path: string) => listPodDirectory({ namespace, name, pod, env: env!, path }),
+    (path: string) => listPodDirectory({ namespace, name, pod, env: env, path }),
     [namespace, name, pod, env],
   )
 
   const getDownloadUrl = useCallback(
-    (path: string) => getPodFileDownloadUrl({ namespace, name, pod, env: env!, path }),
+    (path: string) => getPodFileDownloadUrl({ namespace, name, pod, env: env, path }),
     [namespace, name, pod, env],
   )
 
   const uploadFile = useCallback(
     (parentDir: string, file: File) => {
       const dirPath = parentDir.endsWith("/") ? parentDir : `${parentDir}/`
-      return uploadPodFile({ namespace, name, pod, env: env!, path: dirPath, file })
+      return uploadPodFile({ namespace, name, pod, env: env, path: dirPath, file })
     },
     [namespace, name, pod, env],
   )
 
   const getFileContent = useCallback(
     async (path: string) => {
-      const result = await getPodFileContent({ namespace, name, pod, env: env!, path })
+      const result = await getPodFileContent({ namespace, name, pod, env: env, path })
       return result.content
     },
     [namespace, name, pod, env],
@@ -74,23 +74,23 @@ function TerminalPageContent() {
 
   const saveFileContent = useCallback(
     (path: string, content: string) =>
-      savePodFileContent({ namespace, name, pod, env: env!, path, content }),
+      savePodFileContent({ namespace, name, pod, env: env, path, content }),
     [namespace, name, pod, env],
   )
 
   const deletePath = useCallback(
-    (path: string) => deletePodPath({ namespace, name, pod, env: env!, path }),
+    (path: string) => deletePodPath({ namespace, name, pod, env: env, path }),
     [namespace, name, pod, env],
   )
 
   const renamePath = useCallback(
     (fromPath: string, toPath: string) =>
-      renamePodPath({ namespace, name, pod, env: env!, fromPath, toPath }),
+      renamePodPath({ namespace, name, pod, env: env, fromPath, toPath }),
     [namespace, name, pod, env],
   )
 
   const createDirectory = useCallback(
-    (path: string) => createPodDirectory({ namespace, name, pod, env: env!, path }),
+    (path: string) => createPodDirectory({ namespace, name, pod, env: env, path }),
     [namespace, name, pod, env],
   )
 
@@ -126,7 +126,7 @@ function TerminalPageContent() {
   }, [fileTreeWidth])
 
   if (!env) {
-    return <div className="p-4">Missing env parameter</div>
+    return <div className="p-4">{t("pods.missingEnv")}</div>
   }
 
   const isConnected = connectionStatus === "connected"

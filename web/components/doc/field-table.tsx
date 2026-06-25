@@ -1,4 +1,7 @@
+"use client"
+
 import { ReactNode } from "react"
+import { useLanguage } from "@/contexts/language-context"
 
 export interface FieldRow {
   name: string
@@ -8,14 +11,15 @@ export interface FieldRow {
 }
 
 export function FieldTable({ rows }: { rows: FieldRow[] }) {
+  const { t } = useLanguage()
   return (
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full text-sm">
         <thead className="bg-muted/50">
           <tr className="text-left">
-            <th className="px-3 py-2 font-medium w-1/4">字段</th>
-            <th className="px-3 py-2 font-medium w-1/4">类型</th>
-            <th className="px-3 py-2 font-medium">说明</th>
+            <th className="px-3 py-2 font-medium w-1/4">{t("doc.field")}</th>
+            <th className="px-3 py-2 font-medium w-1/4">{t("doc.type")}</th>
+            <th className="px-3 py-2 font-medium">{t("doc.description")}</th>
           </tr>
         </thead>
         <tbody>

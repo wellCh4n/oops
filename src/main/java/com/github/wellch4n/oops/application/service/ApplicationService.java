@@ -125,7 +125,7 @@ public class ApplicationService {
         application.setOwner(normalizeOwner(creatorUserId));
         try {
             application = applicationRepository.saveAndFlush(application);
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException exception) {
             throw new BizException("Application name already exists");
         }
         return application.getId();
@@ -163,8 +163,8 @@ public class ApplicationService {
             }
             try {
                 applicationRuntimeGateway.deleteWorkload(environment, namespace, name);
-            } catch (Exception e) {
-                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), e.getMessage());
+            } catch (Exception exception) {
+                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), exception.getMessage());
                 throw new BizException("Application deletion failed");
             }
         }
@@ -359,7 +359,7 @@ public class ApplicationService {
                                                           List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs) {
         for (ApplicationRuntimeSpec.EnvironmentConfig config : configs) {
             ApplicationRuntimeSpec.EnvironmentConfig existing = existingConfigs.stream()
-                    .filter(c -> c.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
                     .findFirst().orElse(null);
 
             boolean replicasChanged = config.getReplicas() != null
@@ -375,8 +375,8 @@ public class ApplicationService {
                 Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
                 if (environment == null) continue;
                 applicationRuntimeGateway.applyRuntimeSpec(environment, namespace, appName, config);
-            } catch (Exception e) {
-                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
+            } catch (Exception exception) {
+                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
             }
         }
     }
@@ -407,7 +407,7 @@ public class ApplicationService {
                                           List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs) {
         for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
             ApplicationExpertConfig.EnvironmentConfig existing = existingConfigs.stream()
-                    .filter(c -> c.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
                     .findFirst().orElse(null);
 
             boolean serviceAccountChanged = !StringUtils.equals(
@@ -420,8 +420,8 @@ public class ApplicationService {
                 Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
                 if (environment == null) continue;
                 applicationExpertConfigGateway.applyExpertConfig(environment, namespace, appName, config);
-            } catch (Exception e) {
-                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), e.getMessage());
+            } catch (Exception exception) {
+                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
             }
         }
     }
@@ -451,7 +451,7 @@ public class ApplicationService {
                 .map(Environment::getName)
                 .collect(Collectors.toSet());
         return all.stream()
-                .filter(e -> existingEnvNames.contains(e.getEnvironmentName()))
+                .filter(binding -> existingEnvNames.contains(binding.getEnvironmentName()))
                 .map(ApplicationConfigDto.EnvironmentBinding::from)
                 .toList();
     }
@@ -582,8 +582,8 @@ public class ApplicationService {
                     : null;
 
             return new ClusterDomainView(internalDomain, externalDomains);
-        } catch (Exception e) {
-            log.error("Failed to get cluster domain: {}", e.getMessage(), e);
+        } catch (Exception exception) {
+            log.error("Failed to get cluster domain: {}", exception.getMessage(), exception);
         }
         return null;
     }

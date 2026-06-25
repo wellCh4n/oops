@@ -1,4 +1,7 @@
 const common = {
+  "common.copied": "已复制",
+  "settings.title": "系统设置",
+  "settings.selectSubmenu": "请选择左侧子菜单进行设置。",
   "common.loading": "加载中...",
   "common.noData": "暂无数据",
   "common.environment": "环境:",
@@ -60,6 +63,24 @@ const common = {
   "terminal.files.newFolderTitle": "新建文件夹",
   "terminal.files.newFolderPlaceholder": "文件夹名称",
   "terminal.files.newFolderSuccess": "已创建",
+  "terminal.files.copyFailed": "复制失败",
+  "terminal.files.downloadFailed": "下载失败",
+  "terminal.files.uploadFailed": "上传失败",
+  "terminal.files.loadFailed": "加载失败",
+  "terminal.files.loadFileFailed": "加载文件失败",
+  "terminal.files.saveFailed": "保存失败",
+  "terminal.files.renameFailed": "重命名失败",
+  "terminal.files.deleteFailed": "删除失败",
+  "pods.missingEnv": "缺少 env 参数",
+  "common.error": "操作失败",
+  "doc.field": "字段",
+  "doc.type": "类型",
+  "doc.description": "说明",
+  "doc.anchorCopied": "锚点链接已复制",
+  "doc.anchorNavigated": "已定位到该章节",
+  "doc.copyAnchor": "复制锚点链接",
+  "doc.copyCurl": "复制 curl",
+  "doc.title": "OpenAPI 文档",
 }
 
 export default common

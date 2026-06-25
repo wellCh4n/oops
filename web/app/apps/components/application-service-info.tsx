@@ -586,7 +586,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
             <span className="text-sm font-semibold">{t("apps.service.accessEntry")}</span>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center" aria-label={t("apps.service.accessEntryRepublishNotice")}>
+                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.accessEntryRepublishNotice")}>
                   <Info className="size-3.5" />
                 </button>
               </TooltipTrigger>

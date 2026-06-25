@@ -500,9 +500,9 @@ function IDEPageContent() {
                 ) : (
                   <Tabs defaultValue="env">
                     <TabsList className="w-full">
-                      <TabsTrigger value="env" className="flex-1">{t("ide.tabEnv")}</TabsTrigger>
-                      <TabsTrigger value="extensions" className="flex-1">{t("ide.tabExtensions")}</TabsTrigger>
-                      <TabsTrigger value="settings" className="flex-1">{t("ide.tabSettings")}</TabsTrigger>
+                      <TabsTrigger value="env" className="flex-1 cursor-pointer">{t("ide.tabEnv")}</TabsTrigger>
+                      <TabsTrigger value="extensions" className="flex-1 cursor-pointer">{t("ide.tabExtensions")}</TabsTrigger>
+                      <TabsTrigger value="settings" className="flex-1 cursor-pointer">{t("ide.tabSettings")}</TabsTrigger>
                     </TabsList>
                     <TabsContent value="env">
                       <Textarea

@@ -15,8 +15,8 @@ public class ExternalMessageService {
     public ExternalMessageService(List<ExternalMessageStrategy> strategyList) {
         this.strategies = strategyList.stream()
                 .collect(Collectors.toMap(
-                        s -> s.getProvider().name().toLowerCase(),
-                        s -> s
+                        strategy -> strategy.getProvider().name().toLowerCase(),
+                        strategy -> strategy
                 ));
     }
 

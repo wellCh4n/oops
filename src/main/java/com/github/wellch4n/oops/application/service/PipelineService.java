@@ -172,16 +172,16 @@ public class PipelineService {
             artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
             completeDeployPhase(pipeline, "正在等待新版本发布生效…");
-        } catch (Exception e) {
+        } catch (Exception exception) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            String message = StringUtils.defaultIfBlank(e.getMessage(), "发布任务执行失败，请查看日志。");
+            String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
             pipelineRepository.updateStatusAndMessageIfMatch(
                     pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
             pipeline.markFailed(message);
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                     pipeline, PipelineNotificationType.FAILED, message
             ));
-            throw new RuntimeException("Deploy failed: " + e.getMessage(), e);
+            throw new BizException("Deploy failed: " + exception.getMessage(), exception);
         }
         return true;
     }
@@ -233,16 +233,16 @@ public class PipelineService {
             artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
 
             completeDeployPhase(rollbackPipeline, "正在等待回滚版本发布生效…");
-        } catch (Exception e) {
+        } catch (Exception exception) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            String message = StringUtils.defaultIfBlank(e.getMessage(), "回滚任务执行失败，请查看日志。");
+            String message = StringUtils.defaultIfBlank(exception.getMessage(), "回滚任务执行失败，请查看日志。");
             pipelineRepository.updateStatusAndMessageIfMatch(
                     rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
             rollbackPipeline.markFailed(message);
             eventPublisher.publishEvent(PipelineNotificationEvent.of(
                     rollbackPipeline, PipelineNotificationType.FAILED, message
             ));
-            throw new RuntimeException("Rollback failed: " + e.getMessage(), e);
+            throw new BizException("Rollback failed: " + exception.getMessage(), exception);
         }
         return rollbackPipeline.getId();
     }

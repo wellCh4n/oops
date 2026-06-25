@@ -96,7 +96,7 @@ function ApplicationPodLogsContent() {
   }, [logs])
 
   if (!env) {
-    return <div className="p-4">Missing env parameter</div>
+    return <div className="p-4">{t("pods.missingEnv")}</div>
   }
 
   const isConnected = connectionStatus === "connected"

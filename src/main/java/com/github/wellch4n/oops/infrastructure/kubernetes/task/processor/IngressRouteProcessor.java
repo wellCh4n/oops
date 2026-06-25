@@ -36,7 +36,7 @@ public class IngressRouteProcessor implements DeployProcessor {
         List<ApplicationServiceConfig.EnvironmentConfig> envServiceConfigs = ctx.getApplicationServiceConfig()
                 .getEnvironmentConfigs(ctx.getEnvironment().getName())
                 .stream()
-                .filter(c -> StringUtils.isNotEmpty(c.getHost()))
+                .filter(config -> StringUtils.isNotEmpty(config.getHost()))
                 .toList();
 
         if (envServiceConfigs.isEmpty()) {

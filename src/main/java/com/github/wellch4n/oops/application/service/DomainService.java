@@ -114,8 +114,8 @@ public class DomainService {
             try {
                 meta = PemCertificateParser.parseCertificate(request.getCertPem());
                 PemCertificateParser.validatePrivateKey(request.getKeyPem());
-            } catch (IllegalArgumentException e) {
-                throw new BizException(e.getMessage(), e);
+            } catch (IllegalArgumentException exception) {
+                throw new BizException(exception.getMessage(), exception);
             }
             if (!PemCertificateParser.hostMatches(domain.getHost(), meta.getDnsNames())) {
                 throw new BizException("Certificate does not match domain, certificate is for: "

@@ -9,6 +9,7 @@ import { ContentPage } from "@/components/content-page"
 import { DOC_TOPICS } from "@/components/doc/doc-topics"
 import { DocProvider } from "@/components/doc/doc-context"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
 
 function slugify(title: string): string {
   return title
@@ -34,14 +35,15 @@ function AnchorHeading({
   className: string
   children: ReactNode
 }) {
+  const { t } = useLanguage()
   const handleCopy = async () => {
     const url = `${window.location.origin}${window.location.pathname}#${id}`
     try {
       await navigator.clipboard.writeText(url)
-      toast.success("锚点链接已复制")
+      toast.success(t("doc.anchorCopied"))
     } catch {
       window.location.hash = id
-      toast.success("已定位到该章节")
+      toast.success(t("doc.anchorNavigated"))
     }
   }
 
@@ -51,9 +53,9 @@ function AnchorHeading({
       <button
         type="button"
         onClick={handleCopy}
-        aria-label="复制锚点链接"
-        title="复制锚点链接"
-        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={t("doc.copyAnchor")}
+        title={t("doc.copyAnchor")}
+        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
       >
         <Link2 className="h-3.5 w-3.5" />
       </button>
@@ -68,9 +70,10 @@ interface DocLayoutProps {
 
 export function DocLayout({ title, children }: DocLayoutProps) {
   const pathname = usePathname()
+  const { t } = useLanguage()
 
   return (
-    <ContentPage title="OpenAPI 文档" documentTitle={title}>
+    <ContentPage title={t("doc.title")} documentTitle={title}>
       <DocProvider>
         <div className="flex gap-6 items-start">
           <aside className="hidden md:block w-48 shrink-0 sticky top-14">

@@ -2,6 +2,7 @@
 
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/language-context"
 
 interface CopyableProps {
   value: string
@@ -12,9 +13,10 @@ interface CopyableProps {
 }
 
 export function Copyable({ value, copyValue, maxLength = 10, className, displayClassName }: CopyableProps) {
+  const { t } = useLanguage()
   const handleCopy = async () => {
     await navigator.clipboard.writeText(copyValue ?? value)
-    toast.success("已复制")
+    toast.success(t("common.copied"))
   }
 
   const display =
