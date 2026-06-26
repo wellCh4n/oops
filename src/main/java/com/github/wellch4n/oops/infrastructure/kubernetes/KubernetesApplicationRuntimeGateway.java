@@ -11,6 +11,7 @@ import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.MicroTime;
+import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodCondition;
@@ -25,10 +26,12 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,6 +53,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     private static final String CLUSTER_DOMAIN_FORMAT = "%s.%s.svc.%s";
     private static final String APPLICATION_TYPE_LABEL = "oops.type";
     private static final String APPLICATION_NAME_LABEL = "oops.app.name";
+    private static final String RESTARTED_AT_ANNOTATION = "kubectl.kubernetes.io/restartedAt";
 
     private final KubernetesClientPool clientPool;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -367,6 +371,37 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
     public void restartPod(Environment environment, String namespace, String podName) {
         clientPool.get(environment.getKubernetesApiServer())
                 .pods().inNamespace(namespace).withName(podName).delete();
+    }
+
+    @Override
+    public void rolloutRestart(Environment environment, String namespace, String applicationName) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        var statefulSet = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(applicationName)
+                .get();
+        if (statefulSet == null) {
+            return;
+        }
+        // Truncate to the minute so concurrent triggers within the same minute (e.g. two app instances both
+        // running the scheduled-restart scan) write an identical annotation value. Kubernetes then sees an empty
+        // diff for the later writes, keeping the pod-template hash stable and rolling the StatefulSet only once.
+        String restartedAt = Instant.now().truncatedTo(ChronoUnit.MINUTES).toString();
+        client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
+                .edit(target -> {
+                    var template = target.getSpec().getTemplate();
+                    if (template.getMetadata() == null) {
+                        template.setMetadata(new ObjectMeta());
+                    }
+                    Map<String, String> annotations = template.getMetadata().getAnnotations();
+                    if (annotations == null) {
+                        annotations = new LinkedHashMap<>();
+                        template.getMetadata().setAnnotations(annotations);
+                    }
+                    annotations.put(RESTARTED_AT_ANNOTATION, restartedAt);
+                    return target;
+                });
+        log.info("Triggered rolling restart for {}/{}", namespace, applicationName);
     }
 
     @Override

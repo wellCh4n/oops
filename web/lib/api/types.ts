@@ -171,6 +171,8 @@ export interface ApplicationExpertConfigEnvironmentConfig {
   environmentName: string
   serviceAccountName?: string
   priority?: string
+  scheduledRestartEnabled?: boolean
+  scheduledRestartCron?: string
 }
 
 export interface ApplicationResource {

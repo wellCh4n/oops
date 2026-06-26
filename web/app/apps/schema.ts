@@ -95,6 +95,8 @@ export const applicationExpertConfigSchema = z.object({
     environmentName: z.string(),
     serviceAccountName: z.string().optional(),
     priority: z.string().optional(),
+    scheduledRestartEnabled: z.boolean().optional(),
+    scheduledRestartCron: z.string().optional(),
   })),
 })
 

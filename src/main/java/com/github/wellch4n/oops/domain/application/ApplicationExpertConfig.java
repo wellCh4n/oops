@@ -17,5 +17,7 @@ public class ApplicationExpertConfig extends BaseDomainObject {
         private String environmentName;
         private String serviceAccountName;
         private String priority;
+        private boolean scheduledRestartEnabled;
+        private String scheduledRestartCron;
     }
 }
