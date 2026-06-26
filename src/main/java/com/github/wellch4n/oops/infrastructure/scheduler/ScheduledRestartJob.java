@@ -9,10 +9,12 @@ import com.github.wellch4n.oops.shared.util.CronSchedule;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -34,7 +36,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ScheduledRestartJob {
 
-    private record DueRestart(String namespace, String applicationName, String environmentName) {
+    private record DueRestart(String namespace, String applicationName, Environment environment) {
     }
 
     private final AtomicBoolean scanInProgress = new AtomicBoolean(false);
@@ -68,6 +70,14 @@ public class ScheduledRestartJob {
     }
 
     private List<DueRestart> collectDueRestarts(ZonedDateTime now) {
+        // Resolve environments once here in the scan thread. The fan-out below must not touch the database: an
+        // unbounded burst of due restarts (e.g. many apps sharing a "daily at 03:00" schedule) would otherwise issue
+        // one concurrent getEnvironment() per virtual thread and exhaust the connection pool.
+        Map<String, Environment> environmentsByName = environmentService.getEnvironments().stream()
+                .collect(Collectors.toMap(
+                        environment -> environment.getName(),
+                        environment -> environment,
+                        (first, second) -> first));
         List<DueRestart> dueRestarts = new ArrayList<>();
         for (ApplicationExpertConfig expertConfig : expertConfigRepository.findAll()) {
             List<ApplicationExpertConfig.EnvironmentConfig> environmentConfigs = expertConfig.getEnvironmentConfigs();
@@ -75,12 +85,19 @@ public class ScheduledRestartJob {
                 continue;
             }
             for (ApplicationExpertConfig.EnvironmentConfig environmentConfig : environmentConfigs) {
-                if (isDue(environmentConfig, now)) {
-                    dueRestarts.add(new DueRestart(
-                            expertConfig.getNamespace(),
-                            expertConfig.getApplicationName(),
-                            environmentConfig.getEnvironmentName()));
+                if (!isDue(environmentConfig, now)) {
+                    continue;
                 }
+                Environment environment = environmentsByName.get(environmentConfig.getEnvironmentName());
+                if (environment == null) {
+                    log.warn("Scheduled restart skipped, environment not found: {}",
+                            environmentConfig.getEnvironmentName());
+                    continue;
+                }
+                dueRestarts.add(new DueRestart(
+                        expertConfig.getNamespace(),
+                        expertConfig.getApplicationName(),
+                        environment));
             }
         }
         return dueRestarts;
@@ -112,19 +129,15 @@ public class ScheduledRestartJob {
     }
 
     private void restart(DueRestart dueRestart) {
+        String environmentName = dueRestart.environment().getName();
         try {
-            Environment environment = environmentService.getEnvironment(dueRestart.environmentName());
-            if (environment == null) {
-                log.warn("Scheduled restart skipped, environment not found: {}", dueRestart.environmentName());
-                return;
-            }
             log.info("Scheduled restart firing for {}/{} on {}",
-                    dueRestart.namespace(), dueRestart.applicationName(), dueRestart.environmentName());
+                    dueRestart.namespace(), dueRestart.applicationName(), environmentName);
             applicationRuntimeGateway.rolloutRestart(
-                    environment, dueRestart.namespace(), dueRestart.applicationName());
+                    dueRestart.environment(), dueRestart.namespace(), dueRestart.applicationName());
         } catch (Exception exception) {
             log.error("Scheduled restart failed for {}/{} on {}: {}",
-                    dueRestart.namespace(), dueRestart.applicationName(), dueRestart.environmentName(),
+                    dueRestart.namespace(), dueRestart.applicationName(), environmentName,
                     exception.getMessage(), exception);
         }
     }
