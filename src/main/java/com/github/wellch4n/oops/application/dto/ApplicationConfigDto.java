@@ -371,14 +371,20 @@ public final class ApplicationConfigDto {
     public record ExpertEnvironmentConfig(
             String environmentName,
             String serviceAccountName,
-            String priority
+            String priority,
+            Boolean scheduledRestartEnabled,
+            String scheduledRestartCron
     ) {
         public static ExpertEnvironmentConfig from(ApplicationExpertConfig.EnvironmentConfig config) {
             if (config == null) {
                 return null;
             }
             return new ExpertEnvironmentConfig(
-                    config.getEnvironmentName(), config.getServiceAccountName(), config.getPriority());
+                    config.getEnvironmentName(),
+                    config.getServiceAccountName(),
+                    config.getPriority(),
+                    config.isScheduledRestartEnabled(),
+                    config.getScheduledRestartCron());
         }
 
         public ApplicationExpertConfig.EnvironmentConfig toDomain() {
@@ -386,6 +392,8 @@ public final class ApplicationConfigDto {
             config.setEnvironmentName(environmentName);
             config.setServiceAccountName(serviceAccountName);
             config.setPriority(priority);
+            config.setScheduledRestartEnabled(Boolean.TRUE.equals(scheduledRestartEnabled));
+            config.setScheduledRestartCron(scheduledRestartCron);
             return config;
         }
     }

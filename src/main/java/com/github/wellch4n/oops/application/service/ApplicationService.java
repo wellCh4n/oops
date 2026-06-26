@@ -20,6 +20,7 @@ import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.shared.util.CronSchedule;
 import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
@@ -400,10 +401,19 @@ public class ApplicationService {
         List<ApplicationExpertConfig.EnvironmentConfig> newConfigs = request.environmentConfigs() != null
                 ? request.environmentConfigs().stream().map(ApplicationConfigDto.ExpertEnvironmentConfig::toDomain).toList()
                 : Collections.emptyList();
+        validateScheduledRestartCrons(newConfigs);
         application.updateExpertEnvironmentConfigs(newConfigs);
         applicationRepository.saveAggregate(application);
         applyExpertConfigUpdates(namespace, appName, application.expertEnvironmentConfigs(), existingConfigs);
         return true;
+    }
+
+    private void validateScheduledRestartCrons(List<ApplicationExpertConfig.EnvironmentConfig> configs) {
+        for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
+            if (config.isScheduledRestartEnabled() && !CronSchedule.isValid(config.getScheduledRestartCron())) {
+                throw new BizException("Invalid cron expression: " + config.getScheduledRestartCron());
+            }
+        }
     }
 
     private void applyExpertConfigUpdates(String namespace,

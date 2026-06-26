@@ -33,6 +33,10 @@ public class ApplicationExpertConfig extends BaseDataObject {
         private String serviceAccountName;
 
         private String priority;
+
+        private boolean scheduledRestartEnabled;
+
+        private String scheduledRestartCron;
     }
 
     @Converter

@@ -10,16 +10,19 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Button } from "@/components/ui/button"
-import { useForm, useFieldArray, useFormContext } from "react-hook-form"
+import { useForm, useFieldArray, useFormContext, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ApplicationExpertConfigFormValues, applicationExpertConfigSchema } from "../schema"
 import { TabsContent } from "@/components/ui/tabs"
 import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationExpertConfig } from "@/lib/api/applications"
 import { fetchServiceAccounts } from "@/lib/api/service-accounts"
+import { fetchCronNextRuns } from "@/lib/api/cron"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Gauge, KeyRound, Wrench } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { CronScheduleBuilder } from "./cron-schedule-builder"
+import { Gauge, KeyRound, Timer, Wrench } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useLanguage } from "@/contexts/language-context"
@@ -64,6 +67,8 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
       environmentName: config.environmentName,
       serviceAccountName: config.serviceAccountName ?? "",
       priority: config.priority || "NORMAL",
+      scheduledRestartEnabled: config.scheduledRestartEnabled ?? false,
+      scheduledRestartCron: config.scheduledRestartCron ?? "",
     })),
   }), [form])
 
@@ -71,7 +76,13 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
     const currentConfigs = form.getValues("environmentConfigs") || []
     const newConfigs = envs.map((env) => {
       const existing = currentConfigs.find((c) => c.environmentName === env.environmentName)
-      return existing || { environmentName: env.environmentName, serviceAccountName: "", priority: "NORMAL" }
+      return existing || {
+        environmentName: env.environmentName,
+        serviceAccountName: "",
+        priority: "NORMAL",
+        scheduledRestartEnabled: false,
+        scheduledRestartCron: "",
+      }
     })
     replace(newConfigs)
     form.reset({ environmentConfigs: newConfigs })
@@ -186,9 +197,14 @@ interface SingleExpertEnvironmentConfigProps {
 
 function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: SingleExpertEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationExpertConfigFormValues>()
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
   const [serviceAccounts, setServiceAccounts] = useState<string[]>([])
   const [saLoading, setSaLoading] = useState(false)
+
+  const restartEnabled = useWatch({ control, name: `environmentConfigs.${index}.scheduledRestartEnabled` })
+  const restartCron = useWatch({ control, name: `environmentConfigs.${index}.scheduledRestartCron` })
+  const [nextRun, setNextRun] = useState<string | null>(null)
+  const [cronInvalid, setCronInvalid] = useState(false)
 
   useEffect(() => {
     if (!namespace || !environmentName) return
@@ -207,6 +223,34 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
     load()
     return () => { cancelled = true }
   }, [namespace, environmentName])
+
+  useEffect(() => {
+    if (!restartEnabled || !restartCron?.trim()) {
+      setNextRun(null)
+      setCronInvalid(false)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetchCronNextRuns(restartCron.trim(), 1)
+        if (cancelled) return
+        if (res.success && res.data && res.data.length > 0) {
+          setNextRun(res.data[0])
+          setCronInvalid(false)
+        } else {
+          setNextRun(null)
+          setCronInvalid(true)
+        }
+      } catch {
+        if (!cancelled) {
+          setNextRun(null)
+          setCronInvalid(true)
+        }
+      }
+    }, 300)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [restartEnabled, restartCron])
 
   const serviceAccountOptions = serviceAccounts.map((name) => ({ value: name, label: name }))
 
@@ -257,6 +301,52 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
           </FormItem>
         )}
       />
+      <FormField
+        control={control}
+        name={`environmentConfigs.${index}.scheduledRestartEnabled`}
+        render={({ field }) => (
+          <FormItem>
+            <div className="flex items-center gap-2">
+              <FormLabel className="flex items-center gap-1"><Timer className="size-3.5" />{t("apps.expertConfig.scheduledRestart")}</FormLabel>
+              <FormControl>
+                <Switch
+                  checked={!!field.value}
+                  onCheckedChange={field.onChange}
+                  className="cursor-pointer"
+                  aria-label={t("apps.expertConfig.scheduledRestart")}
+                />
+              </FormControl>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("apps.expertConfig.scheduledRestartHint")}</p>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      {restartEnabled && (
+        <FormField
+          control={control}
+          name={`environmentConfigs.${index}.scheduledRestartCron`}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("apps.expertConfig.scheduledRestartCron")}</FormLabel>
+              <FormControl>
+                <CronScheduleBuilder
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  locale={locale}
+                  t={t}
+                />
+              </FormControl>
+              {cronInvalid ? (
+                <p className="text-xs text-destructive">{t("apps.expertConfig.scheduledRestartCronInvalid")}</p>
+              ) : nextRun ? (
+                <p className="text-xs text-muted-foreground">{t("apps.expertConfig.scheduledRestartNextRun")}: {nextRun}</p>
+              ) : null}
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
     </div>
   )
 }
