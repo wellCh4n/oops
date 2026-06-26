@@ -179,6 +179,12 @@ export interface ApplicationResource {
   data: string
 }
 
+export interface PodMetric {
+  podName: string
+  cpuMillis: number
+  memoryBytes: number
+}
+
 interface ApplicationRuntimeSpecHealthCheck {
   liveness?: ApplicationRuntimeSpecProbe
   readiness?: ApplicationRuntimeSpecProbe

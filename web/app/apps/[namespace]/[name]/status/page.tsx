@@ -1,10 +1,10 @@
 "use client"
 
-import { Suspense, useState, useEffect, Fragment } from "react"
+import { Suspense, useState, useEffect, useCallback, Fragment } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
-import { restartApplicationPod, getClusterDomain, watchApplicationStatus } from "@/lib/api/applications"
+import { restartApplicationPod, getClusterDomain, watchApplicationStatus, getApplicationMetrics } from "@/lib/api/applications"
 import { fetchEnvironments } from "@/lib/api/environments"
-import { ApplicationPodStatus, Environment, ClusterDomainInfo } from "@/lib/api/types"
+import { ApplicationPodStatus, Environment, ClusterDomainInfo, PodMetric } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
@@ -81,6 +81,8 @@ function ApplicationStatusContent() {
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const [resourcesOpen, setResourcesOpen] = useState(false)
+  const [metricsByPod, setMetricsByPod] = useState<Record<string, PodMetric>>({})
+  const [metricsLoading, setMetricsLoading] = useState(false)
   const { t } = useLanguage()
   const { setRecentApp } = useRecentAppStore()
 
@@ -150,6 +152,34 @@ function ApplicationStatusContent() {
     return stopWatch
   }, [namespace, name, selectedEnv, t])
 
+  // Live resource usage (metrics-server), keyed by pod name for the status table.
+  const loadMetrics = useCallback(async () => {
+    if (!selectedEnv) {
+      setMetricsByPod({})
+      return
+    }
+    setMetricsLoading(true)
+    try {
+      const res = await getApplicationMetrics(namespace, name, selectedEnv)
+      const map: Record<string, PodMetric> = {}
+      for (const metric of res.data ?? []) {
+        map[metric.podName] = metric
+      }
+      setMetricsByPod(map)
+    } catch {
+      setMetricsByPod({})
+    } finally {
+      setMetricsLoading(false)
+    }
+  }, [namespace, name, selectedEnv])
+
+  // metrics-server samples roughly every 15s, so polling faster gains no fresher data.
+  useEffect(() => {
+    loadMetrics()
+    const timer = setInterval(loadMetrics, 15000)
+    return () => clearInterval(timer)
+  }, [loadMetrics])
+
   const handleTabChange = (value: string) => {
     setSelectedEnv(value)
     const newParams = new URLSearchParams(searchParams.toString())
@@ -182,7 +212,7 @@ function ApplicationStatusContent() {
     namespace,
     applicationName: name,
     env: selectedEnv,
-  })
+  }, metricsByPod, loadMetrics, metricsLoading)
 
   const renderExpandedRow = (pod: ApplicationPodStatus) => {
     const containers = pod.containers ?? []
