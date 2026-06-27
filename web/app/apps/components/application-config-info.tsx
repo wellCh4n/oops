@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2, Upload, Copy, Container } from "lucide-react"
+import { Plus, Trash2, Loader2, Upload, Copy, Container, KeyRound } from "lucide-react"
 import { toast } from "sonner"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -45,14 +45,20 @@ import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
+// Kubernetes env var names must be C identifiers; ConfigMap/Secret keys are more permissive. An env-only
+// item (no mount path) whose key fails this is silently dropped by the kubelet, so we warn (non-blocking).
+const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
+
 function ConfigValueTextarea({
   value,
   onChange,
   disabled,
+  masked,
 }: {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  masked?: boolean
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null)
 
@@ -71,7 +77,7 @@ function ConfigValueTextarea({
       autoComplete="off"
       placeholder="value"
       rows={1}
-      className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow] focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-hidden"
+      className={`border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs outline-none transition-[color,box-shadow,filter] focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-hidden${masked && value ? " blur-[4px] hover:blur-none focus:blur-none" : ""}`}
       onChange={(e) => {
         e.currentTarget.style.height = "auto"
         e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`
@@ -91,6 +97,8 @@ function serializeConfigMaps(configs: ApplicationConfigFormValues["configMaps"] 
     (configs ?? []).map((config) => ({
       key: config.key ?? "",
       value: config.value ?? "",
+      secret: config.secret ?? false,
+      mountPath: config.mountPath ?? "",
     }))
   )
 }
@@ -123,6 +131,11 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     control: form.control,
     name: "configMaps",
   })
+
+  // Each field carries its absolute index so FormField names and remove() stay correct after filtering.
+  const indexedFields = fields.map((field, index) => ({ field, index }))
+  const configMapFields = indexedFields.filter(({ field }) => !field.secret)
+  const secretFields = indexedFields.filter(({ field }) => field.secret)
 
   const buildSnapshot = useCallback(
     (configs = form.getValues("configMaps")) => serializeConfigMaps(configs),
@@ -200,21 +213,25 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }) => {
     const currentConfigs = form.getValues("configMaps")
     const newConfigs = [...currentConfigs]
-    const indexByKey = new Map(newConfigs.map((c, i) => [c.key, i]))
+    // Import only targets ConfigMap (non-secret) env entries.
+    const indexByKey = new Map<string, number>()
+    newConfigs.forEach((config, index) => {
+      if (!config.secret) {
+        indexByKey.set(config.key, index)
+      }
+    })
 
-    // 添加新配置
     for (const item of result.toAdd) {
       if (!indexByKey.has(item.key)) {
         indexByKey.set(item.key, newConfigs.length)
-        newConfigs.push(item)
+        newConfigs.push({ ...item, secret: false, mountPath: "" })
       }
     }
 
-    // 替换冲突配置
     for (const item of result.toReplace) {
       const index = indexByKey.get(item.old.key)
       if (index !== undefined) {
-        newConfigs[index] = item.new
+        newConfigs[index] = { ...newConfigs[index], ...item.new }
       }
     }
 
@@ -233,10 +250,10 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }
 
   const handleExportAll = async () => {
-    const configs = form.getValues("configMaps")
+    // Export ConfigMap (non-secret) entries only; secrets are never copied to the clipboard.
+    const configs = form.getValues("configMaps").filter((c) => !c.secret)
     const envContent = configs
       .map(c => {
-        // 如果值包含特殊字符，需要加引号
         if (c.value.includes(" ") || c.value.includes("\n") || c.value.includes('"')) {
           return `${c.key}="${c.value.replace(/"/g, '\\"')}"`
         }
@@ -254,6 +271,123 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
   const parsedImportContent = parseEnvContent(importContent)
 
+  const renderSection = (
+    rows: { field: (typeof fields)[number]; index: number }[],
+    isSecret: boolean
+  ) => (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[28%]">Key</TableHead>
+            <TableHead className="w-[34%]">Value</TableHead>
+            <TableHead className="w-[30%]">{t("apps.config.mountPath")}</TableHead>
+            <TableHead className="w-[8%]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map(({ field, index }) => (
+            <TableRow key={field.id}>
+              <TableCell>
+                <FormField
+                  control={form.control}
+                  name={`configMaps.${index}.key`}
+                  render={({ field }) => {
+                    const mountPath = form.watch(`configMaps.${index}.mountPath`)
+                    const showEnvNameWarning =
+                      !!field.value && !mountPath?.trim() && !ENV_NAME_PATTERN.test(field.value)
+                    return (
+                      <FormItem>
+                        <FormControl>
+                          <Input autoComplete="off" placeholder="key" {...field} />
+                        </FormControl>
+                        {showEnvNameWarning && (
+                          <p className="text-xs text-amber-600">{t("apps.config.envNameWarning")}</p>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )
+                  }}
+                />
+              </TableCell>
+              <TableCell>
+                <FormField
+                  control={form.control}
+                  name={`configMaps.${index}.value`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ConfigValueTextarea
+                          value={(field.value ?? "") as string}
+                          disabled={field.disabled}
+                          masked={isSecret}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TableCell>
+              <TableCell>
+                <FormField
+                  control={form.control}
+                  name={`configMaps.${index}.mountPath`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          autoComplete="off"
+                          placeholder={t("apps.config.mountPathPlaceholder")}
+                          className="font-mono text-xs"
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TableCell>
+              <TableCell>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="cursor-pointer"
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center text-muted-foreground h-12">
+                {isLoadingConfig ? t("common.loading") : t("apps.config.noConfig")}
+              </TableCell>
+            </TableRow>
+          )}
+          <TableRow>
+            <TableCell colSpan={4}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-center cursor-pointer"
+                onClick={() => append({ key: "", value: "", secret: isSecret, mountPath: "" })}
+                disabled={isLoadingConfig}
+              >
+                <Plus className="size-4" />
+                {t("apps.config.addItem")}
+              </Button>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  )
+
   return (
     <>
       {envsLoading && <ApplicationEditorTabSkeleton />}
@@ -265,7 +399,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
             <Container className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.config.title")}</span>
           </div>
-          <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-6 p-4">
             <ApplicationEnvironmentSelector
               namespace={namespace}
               applicationName={applicationName}
@@ -274,166 +408,108 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
               onEnvironmentsLoaded={handleEnvironmentsLoaded}
               onLoadingChange={setEnvsLoading}
             >
-                <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[45%]">Key</TableHead>
-                      <TableHead className="w-[45%]">Value</TableHead>
-                      <TableHead className="w-[10%]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fields.map((field, index) => (
-                      <TableRow key={field.id}>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name={`configMaps.${index}.key`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input autoComplete="off" placeholder="key" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <FormField
-                            control={form.control}
-                            name={`configMaps.${index}.value`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <ConfigValueTextarea
-                                    value={(field.value ?? "") as string}
-                                    disabled={field.disabled}
-                                    onChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => remove(index)}
-                          >
-                            <Trash2 className="size-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {fields.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground h-12">
-                          {isLoadingConfig ? t("common.loading") : t("apps.config.noConfig")}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    <TableRow>
-                      <TableCell colSpan={3}>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full justify-center"
-                          onClick={() => append({ key: "", value: "" })}
-                          disabled={isLoadingConfig}
-                        >
-                          <Plus className="size-4" />
-                          {t("apps.config.addItem")}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </ApplicationEnvironmentSelector>
+              {/* ConfigMap section */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <Container className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">{t("apps.config.configMapSection")}</span>
+                  <span className="text-xs text-muted-foreground">{t("apps.config.configMapHint")}</span>
+                </div>
+                {renderSection(configMapFields, false)}
 
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleExportAll}
-                disabled={isLoadingConfig}
-              >
-                <Copy className="size-4" />
-                {t("apps.config.copyAll")}
-              </Button>
-              <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
-                <DialogTrigger asChild>
+                <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
+                    className="cursor-pointer"
+                    onClick={handleExportAll}
                     disabled={isLoadingConfig}
                   >
-                    <Upload className="size-4" />
-                    {t("apps.config.import")}
+                    <Copy className="size-4" />
+                    {t("apps.config.copyAll")}
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
-                  <DialogHeader>
-                    <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
-                    <DialogDescription>
-                      {t("apps.config.importDesc")}
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-                    <div className="flex items-center gap-6 mb-4">
-                      <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
-                      <RadioGroup
-                        value={importMode}
-                        onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
-                        className="flex gap-4"
+                  <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer"
+                        disabled={isLoadingConfig}
                       >
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="key-value" id="key-value" />
-                          <Label htmlFor="key-value" className="cursor-pointer">
-                            {t("apps.config.importKeyValue")}
-                          </Label>
+                        <Upload className="size-4" />
+                        {t("apps.config.import")}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
+                      <DialogHeader>
+                        <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
+                        <DialogDescription>
+                          {t("apps.config.importDesc")}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+                        <div className="flex items-center gap-6 mb-4">
+                          <span className="text-sm font-medium">{t("apps.config.importMode")}:</span>
+                          <RadioGroup
+                            value={importMode}
+                            onValueChange={(v) => setImportMode(v as "key-only" | "key-value")}
+                            className="flex gap-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="key-value" id="key-value" />
+                              <Label htmlFor="key-value" className="cursor-pointer">
+                                {t("apps.config.importKeyValue")}
+                              </Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="key-only" id="key-only" />
+                              <Label htmlFor="key-only" className="cursor-pointer">
+                                {t("apps.config.importKeyOnly")}
+                              </Label>
+                            </div>
+                          </RadioGroup>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <RadioGroupItem value="key-only" id="key-only" />
-                          <Label htmlFor="key-only" className="cursor-pointer">
-                            {t("apps.config.importKeyOnly")}
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    <Textarea
-                      id="import-content"
-                      autoComplete="off"
-                      placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
-                      value={importContent}
-                      onChange={(e) => setImportContent(e.target.value)}
-                      className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setImportInputDialogOpen(false)}
-                    >
-                      {t("common.cancel")}
-                    </Button>
-                    <Button onClick={handleImportSubmit}>
-                      {t("apps.config.previewImport")}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+                        <Textarea
+                          id="import-content"
+                          autoComplete="off"
+                          placeholder={"KEY=value\nKEY2=value2\n# comment\nKEY3="}
+                          value={importContent}
+                          onChange={(e) => setImportContent(e.target.value)}
+                          className="font-mono text-sm flex-1 min-h-[300px] max-h-[60vh]"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          className="cursor-pointer"
+                          onClick={() => setImportInputDialogOpen(false)}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                        <Button className="cursor-pointer" onClick={handleImportSubmit}>
+                          {t("apps.config.previewImport")}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              {/* Secret section */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">{t("apps.config.secretSection")}</span>
+                  <span className="text-xs text-muted-foreground">{t("apps.config.secretHint")}</span>
+                </div>
+                {renderSection(secretFields, true)}
+              </div>
+            </ApplicationEnvironmentSelector>
           </div>
         </div>
 
         <div className="flex">
-          <Button type="submit" disabled={isSaving || isLoadingConfig}>
+          <Button type="submit" className="cursor-pointer" disabled={isSaving || isLoadingConfig}>
             {isSaving && <Loader2 className="size-4 animate-spin" />}
             {t("common.save")}
           </Button>
@@ -445,7 +521,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     <EnvImportDialog
       open={importConfirmDialogOpen}
       onOpenChange={setImportConfirmDialogOpen}
-      currentConfigs={form.getValues("configMaps")}
+      currentConfigs={form.getValues("configMaps").filter((c) => !c.secret)}
       parsedEnvContent={parsedImportContent}
       importMode={importMode}
       onConfirm={handleImportConfirm}

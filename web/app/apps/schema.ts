@@ -87,6 +87,11 @@ export const applicationConfigSchema = z.object({
   configMaps: z.array(z.object({
     key: z.string().min(1, "Key is required"),
     value: z.string().min(1, "Value is required"),
+    secret: z.boolean().optional(),
+    mountPath: z.string().optional().refine(
+      (path) => !path || path.startsWith("/"),
+      { message: "Mount path must start with /" }
+    ),
   })),
 })
 

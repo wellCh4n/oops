@@ -261,6 +261,10 @@ export interface Pipeline {
 export interface ConfigMap {
   key: string
   value: string
+  // When true the item is stored in the application Secret; otherwise the ConfigMap.
+  secret?: boolean
+  // Optional absolute file path. When set, the item is mounted as a file at this path.
+  mountPath?: string
 }
 
 export interface ApplicationServiceConfig {
