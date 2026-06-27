@@ -38,7 +38,7 @@ Key technologies:
 
 ### Frontend (Next.js)
 
-**Next.js:** 16.1.6  
+**Next.js:** 16.2.9  
 **React:** 19.2.3  
 **Package manager:** pnpm
 
@@ -189,11 +189,17 @@ The K8s client is created per-task and closed via try-with-resources in `Artifac
 - `ApplicationBuildConfig`: Stores source type (`GIT`/`ZIP`), repository/source key, build image/commands, and Dockerfile config (`BUILTIN` path or inline `USER` content). Frontend: `application-build-info.tsx`.
 - `ApplicationServiceConfig`: Stores container `port` and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.
 - `ApplicationRuntimeSpec`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`) plus global health check settings split into `liveness` and `readiness` probes. Frontend: `application-runtime-spec.tsx`.
-- `ApplicationExpertConfig`: Stores per-environment advanced deployment settings, currently the ServiceAccount name applied to the StatefulSet pod template. Frontend: `application-expert-config.tsx`; service account options come from `ServiceAccountController`.
+- `ApplicationExpertConfig`: Stores per-environment advanced deployment settings: the ServiceAccount name applied to the StatefulSet pod template, plus the scheduled-restart fields (`scheduledRestartEnabled`, `scheduledRestartCron`). Frontend: `application-expert-config.tsx` (the cron picker is `apps/components/cron-schedule-builder.tsx`); service account options come from `ServiceAccountController`.
 
 **Application resource viewer**: `GET /api/namespaces/{namespace}/applications/{name}/resources?env=...` returns read-only Kubernetes resources for expert inspection.
 
+**Application status & metrics**: `GET .../applications/{name}/status?env=...` returns per-pod status views and `GET .../applications/{name}/events?env=...` returns recent K8s events. `GET .../applications/{name}/metrics?env=...` returns `List<PodMetricSnapshot>` (`podName`, `cpuMillis`, `memoryBytes`) via `ApplicationMetricsGateway` → `KubernetesApplicationMetricsGateway`, which reads the K8s `PodMetrics` API (requires metrics-server). The status table renders per-pod CPU/memory from this. Frontend: `apps/[namespace]/[name]/status/page.tsx`.
+
+**Scheduled rolling restart**: `ScheduledRestartJob` (`infrastructure/scheduler/`, `@Scheduled(cron = "0 * * * * *")`) scans every minute for applications whose `ApplicationExpertConfig` has `scheduledRestartEnabled` for an environment, matches the per-environment `scheduledRestartCron` (5-field cron, evaluated via `shared/util/CronSchedule`), and calls `ApplicationRuntimeGateway.rolloutRestart()`. `CronController` exposes `GET /api/cron/next?expression=...&count=N` to preview upcoming fire times for the UI.
+
 **Application deletion**: The "Danger Zone" tab (`application-danger-zone.tsx`) provides cascade deletion that cleans up Kubernetes resources (StatefulSet, Service, IngressRoute) alongside the database record.
+
+**Namespace migration**: The Danger Zone also migrates an application to another namespace. `POST .../applications/{name}/namespace-migration` → `NamespaceMigrationService.migrateNamespace()` updates the `application` and `pipeline` tables (via the repositories' `migrateNamespace()`) and attempts to move the live K8s workloads per environment, returning a `NamespaceMigrationResult` with per-environment success/failure.
 
 ### IDE Integration
 Optional code-server integration (`oops.ide.enabled=true`) creates IDE instances as StatefulSets in the work namespace. `IDEConfig` and `IDEService` are both `@ConditionalOnProperty(prefix="oops.ide", name="enabled", havingValue="true")` — fully absent when disabled.
@@ -266,6 +272,7 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 - `POST /api/kubernetes/validations` — validate K8s connectivity
 - `POST /api/kubernetes/namespaces` — create a K8s namespace
 - `GET /api/namespaces/{namespace}/service-accounts?env={envName}` — list ServiceAccounts for application expert config
+- `GET /api/cron/next?expression=&count=` — preview upcoming fire times for a 5-field cron expression (scheduled-restart UI)
 - `POST /api/index/pipelines`, `POST /api/index/applications` — cross-namespace queries
 
 ### Entity Identity

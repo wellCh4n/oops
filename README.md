@@ -25,16 +25,16 @@ KubeSphere, Rainbond, and ArgoCD each solve a real slice of the Kubernetes probl
 Push code or upload a ZIP, choose a repository Dockerfile or inline one, and OOPS builds the image and rolls it out to your Kubernetes cluster with build logs streaming in real time. Roll back to any previous successful build in one click — it reuses the existing image and skips the build entirely.
 
 ### Tune every deployment
-Set CPU and memory requests and limits, replica count, and liveness/readiness probes per environment, and inject configuration through ConfigMaps and environment variables — without hand-writing YAML.
+Set CPU and memory requests and limits, replica count, and liveness/readiness probes per environment, and inject configuration through ConfigMaps and environment variables — without hand-writing YAML. Schedule an automatic rolling restart per environment with a simple cron picker.
 
 ### Multi-cluster management
-Connect any number of clusters and manage them side by side from a single console — switch deployment targets without leaving the UI.
+Connect any number of clusters and manage them side by side from a single console — switch deployment targets without leaving the UI. Migrate an application to another namespace when you need to reorganize.
 
 ### Teams and access control
 Invite multiple users with ADMIN or USER roles. Every application has an owner who can share access with collaborators, while destructive actions stay restricted to owners and admins.
 
 ### Watch what's running
-Live logs, in-browser terminal, editable pod files, Kubernetes events, cluster nodes, and rollout status at a glance.
+Live logs, in-browser terminal, editable pod files, Kubernetes events, cluster nodes, rollout status, and per-pod CPU/memory usage at a glance.
 
 ### Pipeline notifications
 Get build and deploy status pushed straight to chat — created, build succeeded, deploying, succeeded, failed, or stopped. Delivered to Feishu (Lark) today.
