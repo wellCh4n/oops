@@ -182,6 +182,7 @@ const apps = {
   "apps.config.secretSection": "Secret",
   "apps.config.secretHint": "機密設定。Secret として保存。マウントパス未指定なら環境変数として注入、指定するとファイルとしてマウント",
   "apps.config.envNameWarning": "有効な環境変数名ではありません（英字・数字・アンダースコア、先頭に数字は不可）。マウントパスを指定しない限り環境変数として注入されません。",
+  "apps.config.mountAsFile": "ファイルとしてマウント",
   "apps.service.port": "ポート",
   "apps.service.portPlaceholder": "例: 8080",
   "apps.service.portError": "ポートは 1 ～ 65535 の整数である必要があります",

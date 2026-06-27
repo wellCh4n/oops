@@ -182,6 +182,7 @@ const apps = {
   "apps.config.secretSection": "Secret",
   "apps.config.secretHint": "敏感設定，儲存為 Secret；未填掛載路徑則注入為環境變數，填寫則掛載為檔案",
   "apps.config.envNameWarning": "不是合法的環境變數名稱（字母、數字、底線，且不能以數字開頭）。除非填寫掛載路徑，否則不會被注入為環境變數。",
+  "apps.config.mountAsFile": "掛載為檔案",
   "apps.service.port": "連接埠",
   "apps.service.portPlaceholder": "例如 8080",
   "apps.service.portError": "連接埠必須是 1-65535 的整數",

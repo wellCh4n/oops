@@ -182,6 +182,7 @@ const apps = {
   "apps.config.secretSection": "Secret",
   "apps.config.secretHint": "敏感配置，存储为 Secret；未填挂载路径则注入为环境变量，填写则挂载为文件",
   "apps.config.envNameWarning": "不是合法的环境变量名（字母、数字、下划线，且不能数字开头）。除非填写挂载路径，否则不会被注入为环境变量。",
+  "apps.config.mountAsFile": "挂载为文件",
   "apps.service.port": "端口",
   "apps.service.portPlaceholder": "例如 8080",
   "apps.service.portError": "端口必须是 1-65535 的整数",

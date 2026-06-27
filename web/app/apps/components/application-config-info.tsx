@@ -25,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getApplicationConfigMaps, updateApplicationConfigMaps } from "@/lib/api/applications"
-import { ApplicationEnvironment } from "@/lib/api/types"
+import { ApplicationEnvironment, ConfigMap } from "@/lib/api/types"
 import { ApplicationConfigFormValues, applicationConfigSchema } from "../schema"
 import { useLanguage } from "@/contexts/language-context"
 import {
@@ -40,6 +40,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
@@ -98,9 +99,32 @@ function serializeConfigMaps(configs: ApplicationConfigFormValues["configMaps"] 
       key: config.key ?? "",
       value: config.value ?? "",
       secret: config.secret ?? false,
-      mountPath: config.mountPath ?? "",
+      // Effective mount path: only an explicitly-mounted item contributes one. This keeps dirty detection
+      // in sync with the mount toggle and matches what onSubmit sends.
+      mountPath: config.mounted ? (config.mountPath ?? "") : "",
     }))
   )
+}
+
+// Maps API items into form values, deriving the form-only `mounted` flag from the presence of a mount path.
+function toFormConfigMaps(items: ConfigMap[]): ApplicationConfigFormValues["configMaps"] {
+  return items.map((item) => ({
+    key: item.key ?? "",
+    value: item.value ?? "",
+    secret: item.secret ?? false,
+    mounted: !!item.mountPath?.trim(),
+    mountPath: item.mountPath ?? "",
+  }))
+}
+
+// Builds the API payload: drops the form-only `mounted` flag and blanks the mount path for env-only items.
+function toApiConfigMaps(configs: ApplicationConfigFormValues["configMaps"]): ConfigMap[] {
+  return (configs ?? []).map((config) => ({
+    key: config.key ?? "",
+    value: config.value ?? "",
+    secret: config.secret ?? false,
+    mountPath: config.mounted ? (config.mountPath?.trim() ?? "") : "",
+  }))
 }
 
 export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, ApplicationConfigInfoProps>(function ApplicationConfigInfo({
@@ -153,7 +177,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
     setIsSaving(true)
     try {
-      await updateApplicationConfigMaps(namespace, applicationName, activeTab, data.configMaps)
+      await updateApplicationConfigMaps(namespace, applicationName, activeTab, toApiConfigMaps(data.configMaps))
       toast.success(t("apps.config.updateSuccess"))
       form.reset(data)
       return true
@@ -191,7 +215,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
       try {
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
         if (res.data) {
-          form.reset({ configMaps: res.data })
+          form.reset({ configMaps: toFormConfigMaps(res.data) })
         } else {
           form.reset({ configMaps: [] })
         }
@@ -224,7 +248,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     for (const item of result.toAdd) {
       if (!indexByKey.has(item.key)) {
         indexByKey.set(item.key, newConfigs.length)
-        newConfigs.push({ ...item, secret: false, mountPath: "" })
+        newConfigs.push({ ...item, secret: false, mounted: false, mountPath: "" })
       }
     }
 
@@ -293,9 +317,9 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                   control={form.control}
                   name={`configMaps.${index}.key`}
                   render={({ field }) => {
-                    const mountPath = form.watch(`configMaps.${index}.mountPath`)
+                    const isMounted = form.watch(`configMaps.${index}.mounted`)
                     const showEnvNameWarning =
-                      !!field.value && !mountPath?.trim() && !ENV_NAME_PATTERN.test(field.value)
+                      !!field.value && !isMounted && !ENV_NAME_PATTERN.test(field.value)
                     return (
                       <FormItem>
                         <FormControl>
@@ -330,24 +354,53 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                 />
               </TableCell>
               <TableCell>
-                <FormField
-                  control={form.control}
-                  name={`configMaps.${index}.mountPath`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          autoComplete="off"
-                          placeholder={t("apps.config.mountPathPlaceholder")}
-                          className="font-mono text-xs"
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <div className="flex items-center gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`configMaps.${index}.mounted`}
+                    render={({ field }) => (
+                      <Checkbox
+                        id={`mount-${index}`}
+                        className="cursor-pointer"
+                        checked={!!field.value}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked === true)
+                          if (checked !== true) {
+                            // Leaving mount mode clears the path so the item becomes env-only on save.
+                            form.setValue(`configMaps.${index}.mountPath`, "", { shouldDirty: true })
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                  {form.watch(`configMaps.${index}.mounted`) ? (
+                    <FormField
+                      control={form.control}
+                      name={`configMaps.${index}.mountPath`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              autoComplete="off"
+                              placeholder={t("apps.config.mountPathPlaceholder")}
+                              className="font-mono text-xs"
+                              {...field}
+                              value={field.value ?? ""}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <Label
+                      htmlFor={`mount-${index}`}
+                      className="text-xs text-muted-foreground cursor-pointer"
+                    >
+                      {t("apps.config.mountAsFile")}
+                    </Label>
                   )}
-                />
+                </div>
               </TableCell>
               <TableCell>
                 <Button
@@ -375,7 +428,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                 type="button"
                 variant="outline"
                 className="w-full justify-center cursor-pointer"
-                onClick={() => append({ key: "", value: "", secret: isSecret, mountPath: "" })}
+                onClick={() => append({ key: "", value: "", secret: isSecret, mounted: false, mountPath: "" })}
                 disabled={isLoadingConfig}
               >
                 <Plus className="size-4" />

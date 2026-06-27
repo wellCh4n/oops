@@ -182,6 +182,7 @@ const apps = {
   "apps.config.secretSection": "Secret",
   "apps.config.secretHint": "Sensitive config stored as a Secret; injected as an env var, or mounted as a file when a mount path is set",
   "apps.config.envNameWarning": "Not a valid env var name (letters, digits, underscore; no leading digit). It won't be injected as an env var unless you set a mount path.",
+  "apps.config.mountAsFile": "Mount as file",
   "apps.service.port": "Port",
   "apps.service.portPlaceholder": "e.g. 8080",
   "apps.service.portError": "Port must be an integer (1-65535)",
