@@ -9,7 +9,6 @@ import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
-import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.MicroTime;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
@@ -157,7 +156,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 .map(this::toEventView)
                 .filter(event -> event.time() != null)
                 .filter(event -> since == null || !event.time().isBefore(since))
-                .sorted(Comparator.comparing(ApplicationEventView::time).reversed())
+                .sorted(Comparator.comparingLong((ApplicationEventView event) -> event.time().toEpochMilli()).reversed())
                 .limit(limit)
                 .toList();
     }
@@ -434,7 +433,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         var containers = statefulSet.getSpec().getTemplate().getSpec().getContainers();
         return containers.stream()
                 .filter(container -> applicationName.equals(container.getName()))
-                .map(Container::getImage)
+                .map(container -> container.getImage())
                 .findFirst()
                 .orElseGet(() -> containers.isEmpty() ? null : containers.getFirst().getImage());
     }
