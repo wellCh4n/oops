@@ -87,6 +87,20 @@ export const applicationConfigSchema = z.object({
   configMaps: z.array(z.object({
     key: z.string().min(1, "Key is required"),
     value: z.string().min(1, "Value is required"),
+    secret: z.boolean().optional(),
+    // Form-only flag: the backend derives "mounted" from a non-blank mountPath, but the UI needs an explicit
+    // toggle so a freshly-checked item with an empty path stays distinguishable from an env-only item.
+    mounted: z.boolean().optional(),
+    // The API returns null for env items, so accept null/undefined as well as string.
+    mountPath: z.string().nullish(),
+  }).superRefine((item, ctx) => {
+    if (item.mounted) {
+      if (!item.mountPath || !item.mountPath.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mountPath"], message: "Mount path is required" })
+      } else if (!item.mountPath.startsWith("/")) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["mountPath"], message: "Mount path must start with /" })
+      }
+    }
   })),
 })
 

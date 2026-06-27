@@ -198,6 +198,8 @@ public class NamespaceMigrationService {
             UpdateConfigMapCommand command = new UpdateConfigMapCommand();
             command.setKey(item.getKey());
             command.setValue(item.getValue());
+            command.setSecret(item.isSecret());
+            command.setMountPath(item.getMountPath());
             commands.add(command);
         }
         return commands;
