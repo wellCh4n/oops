@@ -24,7 +24,8 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, Ban, WifiOff } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, Ban, WifiOff, FileText, ChevronDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
@@ -120,6 +121,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [wsDisconnected, setWsDisconnected] = useState(false)
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
   const [statusLoading, setStatusLoading] = useState(false)
+  const [errorLogsMenuOpen, setErrorLogsMenuOpen] = useState(false)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
 
@@ -396,7 +398,53 @@ export default function PipelineDetailPage({ params }: PageProps) {
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
             <div className="min-w-0">
               <div className="font-medium">{t("apps.pipeline.message")}</div>
-              <div className="mt-1 whitespace-pre-wrap break-words">{pipeline.message}</div>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <span className="whitespace-pre-wrap break-words">{pipeline.message}</span>
+                {podStatuses.length === 1 && (
+                  <Button asChild variant="destructive" size="xs" className="shrink-0">
+                    <Link href={`/apps/${namespace}/${name}/pods/${podStatuses[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`}>
+                      <FileText className="size-3" />
+                      {t("apps.pipeline.viewLogs")}
+                    </Link>
+                  </Button>
+                )}
+                {podStatuses.length > 1 && (
+                  <Popover open={errorLogsMenuOpen} onOpenChange={setErrorLogsMenuOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="xs"
+                        className="shrink-0"
+                        onMouseEnter={() => setErrorLogsMenuOpen(true)}
+                        onMouseLeave={() => setErrorLogsMenuOpen(false)}
+                      >
+                        <FileText className="size-3" />
+                        {t("apps.pipeline.viewLogs")}
+                        <ChevronDown className="size-3" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="start"
+                      className="w-48 p-1"
+                      onMouseEnter={() => setErrorLogsMenuOpen(true)}
+                      onMouseLeave={() => setErrorLogsMenuOpen(false)}
+                    >
+                      <div className="flex flex-col">
+                        {podStatuses.map((pod) => (
+                          <Link
+                            key={pod.name}
+                            href={`/apps/${namespace}/${name}/pods/${pod.name}/logs?env=${encodeURIComponent(pipeline.environment)}`}
+                            className="cursor-pointer truncate rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-accent"
+                            onClick={() => setErrorLogsMenuOpen(false)}
+                          >
+                            {pod.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -325,6 +325,7 @@ const apps = {
   "apps.pipeline.deployMode": "發佈方式:",
   "apps.pipeline.operator": "操作人:",
   "apps.pipeline.message": "錯誤訊息",
+  "apps.pipeline.viewLogs": "查看日誌",
   "apps.pipeline.modeImmediate": "立即發布",
   "apps.pipeline.modeManual": "手動發布",
 }
