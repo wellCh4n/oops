@@ -325,6 +325,7 @@ const apps = {
   "apps.pipeline.deployMode": "公開方法:",
   "apps.pipeline.operator": "実行者:",
   "apps.pipeline.message": "エラーメッセージ",
+  "apps.pipeline.viewLogs": "ログを見る",
   "apps.pipeline.modeImmediate": "即時公開",
   "apps.pipeline.modeManual": "手動公開",
 }
