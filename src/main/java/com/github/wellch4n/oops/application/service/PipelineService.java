@@ -6,6 +6,7 @@ import com.github.wellch4n.oops.application.port.PipelineLogGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
 import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
@@ -46,6 +47,7 @@ public class PipelineService {
     private final PipelineLogGateway pipelineLogGateway;
     private final PipelineStateMachine pipelineStateMachine;
     private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
+    private final ApplicationAccessPolicy applicationAccessPolicy;
 
     public PipelineService(PipelineRepository pipelineRepository, EnvironmentService environmentService,
                            ApplicationRepository applicationRepository,
@@ -55,7 +57,8 @@ public class PipelineService {
                            PipelineJobGateway pipelineJobGateway,
                            PipelineLogGateway pipelineLogGateway,
                            PipelineStateMachine pipelineStateMachine,
-                           DeploymentConcurrencyPolicy deploymentConcurrencyPolicy) {
+                           DeploymentConcurrencyPolicy deploymentConcurrencyPolicy,
+                           ApplicationAccessPolicy applicationAccessPolicy) {
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
         this.applicationRepository = applicationRepository;
@@ -66,6 +69,7 @@ public class PipelineService {
         this.pipelineLogGateway = pipelineLogGateway;
         this.pipelineStateMachine = pipelineStateMachine;
         this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
+        this.applicationAccessPolicy = applicationAccessPolicy;
     }
 
     public Page<PipelineDto> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
@@ -136,11 +140,12 @@ public class PipelineService {
         return pipelineLogGateway.watch(pipeline, environment);
     }
 
-    public Boolean deployPipeline(String namespace, String applicationName, String id) {
+    public Boolean deployPipeline(String namespace, String applicationName, String id, String operatorUserId) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
             throw new BizException("Pipeline not found");
         }
+        Application application = requireOperableApplication(namespace, applicationName, operatorUserId);
         pipelineStateMachine.ensureManualDeployable(pipeline.getStatus());
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
                 namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
@@ -158,10 +163,6 @@ public class PipelineService {
 
         try {
             Environment environment = requireEnvironment(pipeline.getEnvironment());
-            Application application = applicationRepository.findAggregate(namespace, applicationName);
-            if (application == null) {
-                throw new BizException("Application not found");
-            }
             ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
                     application.runtimeEnvironmentConfigOrDefault(pipeline.getEnvironment());
             ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
@@ -197,6 +198,7 @@ public class PipelineService {
         if (StringUtils.isBlank(source.getArtifact())) {
             throw new BizException("Target pipeline has no artifact to deploy");
         }
+        Application application = requireOperableApplication(namespace, applicationName, operatorUserId);
 
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
                 namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
@@ -219,10 +221,6 @@ public class PipelineService {
 
         try {
             Environment environment = requireEnvironment(rollbackPipeline.getEnvironment());
-            Application application = applicationRepository.findAggregate(namespace, applicationName);
-            if (application == null) {
-                throw new BizException("Application not found");
-            }
             ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
                     application.runtimeEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
             ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
@@ -247,11 +245,12 @@ public class PipelineService {
         return rollbackPipeline.getId();
     }
 
-    public Boolean stopPipeline(String namespace, String applicationName, String id) {
+    public Boolean stopPipeline(String namespace, String applicationName, String id, String operatorUserId) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
             throw new BizException("Pipeline not found");
         }
+        requireOperableApplication(namespace, applicationName, operatorUserId);
         pipelineStateMachine.ensureCanTransition(pipeline.getStatus(), PipelineStatus.STOPPED);
 
         if (pipeline.getStatus() == PipelineStatus.BUILD_SUCCEEDED) {
@@ -295,5 +294,11 @@ public class PipelineService {
             throw new BizException("Environment not found: " + environmentName);
         }
         return environment;
+    }
+
+    private Application requireOperableApplication(String namespace, String applicationName, String operatorUserId) {
+        Application application = applicationRepository.findAggregate(namespace, applicationName);
+        applicationAccessPolicy.ensureCanOperate(application, userService.findOperatorById(operatorUserId));
+        return application;
     }
 }

@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
+import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
 import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
 import com.github.wellch4n.oops.domain.delivery.DeployStrategyPolicy;
@@ -11,6 +12,11 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class PolicyConfiguration {
+
+    @Bean
+    public ApplicationAccessPolicy applicationAccessPolicy() {
+        return new ApplicationAccessPolicy();
+    }
 
     @Bean
     public ApplicationBuildConfigPolicy applicationBuildConfigPolicy() {

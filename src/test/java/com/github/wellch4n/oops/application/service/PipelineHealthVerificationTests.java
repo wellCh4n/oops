@@ -14,11 +14,14 @@ import com.github.wellch4n.oops.application.port.PipelineLogGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.shared.Operator;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
+import com.github.wellch4n.oops.domain.shared.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -40,6 +43,7 @@ class PipelineHealthVerificationTests {
     private EnvironmentService environmentService;
     private ApplicationRepository applicationRepository;
     private ArtifactDeploymentExecutor artifactDeploymentExecutor;
+    private UserService userService;
     private PipelineService pipelineService;
 
     @BeforeEach
@@ -47,7 +51,7 @@ class PipelineHealthVerificationTests {
         pipelineRepository = Mockito.mock(PipelineRepository.class);
         environmentService = Mockito.mock(EnvironmentService.class);
         applicationRepository = Mockito.mock(ApplicationRepository.class);
-        UserService userService = Mockito.mock(UserService.class);
+        userService = Mockito.mock(UserService.class);
         ApplicationEventPublisher eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
         artifactDeploymentExecutor = Mockito.mock(ArtifactDeploymentExecutor.class);
         PipelineJobGateway pipelineJobGateway = Mockito.mock(PipelineJobGateway.class);
@@ -63,7 +67,8 @@ class PipelineHealthVerificationTests {
                 pipelineJobGateway,
                 pipelineLogGateway,
                 PipelineStateMachine.getInstance(),
-                new DeploymentConcurrencyPolicy()
+                new DeploymentConcurrencyPolicy(),
+                new ApplicationAccessPolicy()
         );
     }
 
@@ -99,7 +104,11 @@ class PipelineHealthVerificationTests {
         Application application = new Application();
         application.setName(APP_NAME);
         application.setNamespace(NAMESPACE);
+        application.setOwner("operator-1");
         when(applicationRepository.findAggregate(NAMESPACE, APP_NAME)).thenReturn(application);
+
+        when(userService.findOperatorById("operator-1"))
+                .thenReturn(new Operator("operator-1", UserRole.USER, true));
 
         String resultId = pipelineService.rollback(NAMESPACE, APP_NAME, SOURCE_ID, "operator-1");
 

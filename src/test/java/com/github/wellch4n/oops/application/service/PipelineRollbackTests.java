@@ -15,6 +15,7 @@ import com.github.wellch4n.oops.application.port.PipelineLogGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
 import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
@@ -22,8 +23,10 @@ import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
 import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.shared.Operator;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +70,8 @@ class PipelineRollbackTests {
                 pipelineJobGateway,
                 pipelineLogGateway,
                 PipelineStateMachine.getInstance(),
-                new DeploymentConcurrencyPolicy()
+                new DeploymentConcurrencyPolicy(),
+                new ApplicationAccessPolicy()
         );
     }
 
@@ -100,7 +104,13 @@ class PipelineRollbackTests {
         Application application = new Application();
         application.setName(APP_NAME);
         application.setNamespace(NAMESPACE);
+        application.setOwner("operator-1");
         when(applicationRepository.findAggregate(NAMESPACE, APP_NAME)).thenReturn(application);
+        when(userService.findOperatorById("operator-1")).thenReturn(operator());
+    }
+
+    private Operator operator() {
+        return new Operator("operator-1", UserRole.USER, true);
     }
 
     @Test
@@ -165,6 +175,12 @@ class PipelineRollbackTests {
     void rollbackBlockedByActivePipeline() {
         when(pipelineRepository.findByNamespaceAndApplicationNameAndId(NAMESPACE, APP_NAME, SOURCE_ID))
                 .thenReturn(succeededSource());
+        Application application = new Application();
+        application.setName(APP_NAME);
+        application.setNamespace(NAMESPACE);
+        application.setOwner("operator-1");
+        when(applicationRepository.findAggregate(NAMESPACE, APP_NAME)).thenReturn(application);
+        when(userService.findOperatorById("operator-1")).thenReturn(operator());
         when(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(eq(NAMESPACE), eq(APP_NAME), anyList()))
                 .thenReturn(true);
 

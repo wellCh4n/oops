@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.port.repository.PageResult;
 import com.github.wellch4n.oops.application.port.repository.UserRepository;
 import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.shared.Operator;
 import com.github.wellch4n.oops.domain.shared.UserRole;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.shared.util.NanoIdUtils;
@@ -34,6 +35,12 @@ public class UserService {
 
     public Optional<User> findById(String id) {
         return userRepository.findById(id);
+    }
+
+    public Operator findOperatorById(String userId) {
+        return userRepository.findById(userId)
+                .map(user -> new Operator(user.getId(), user.getRole(), !Boolean.FALSE.equals(user.getEnabled())))
+                .orElse(null);
     }
 
     public Optional<User> findByEmail(String email) {

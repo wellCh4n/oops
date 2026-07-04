@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.application.port.PipelineBuildSubmission;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.delivery.DeployStrategyPolicy;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
@@ -37,6 +38,8 @@ public class DeploymentService {
     private final PipelineBuildExecutor pipelineBuildExecutor;
     private final DeployStrategyPolicy deployStrategyPolicy;
     private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
+    private final ApplicationAccessPolicy applicationAccessPolicy;
+    private final UserService userService;
 
     public DeploymentService(ApplicationRepository applicationRepository,
                              PipelineRepository pipelineRepository,
@@ -44,7 +47,9 @@ public class DeploymentService {
                              PipelineBuildExecutor pipelineBuildExecutor,
                              ApplicationEventPublisher eventPublisher,
                              DeployStrategyPolicy deployStrategyPolicy,
-                             DeploymentConcurrencyPolicy deploymentConcurrencyPolicy) {
+                             DeploymentConcurrencyPolicy deploymentConcurrencyPolicy,
+                             ApplicationAccessPolicy applicationAccessPolicy,
+                             UserService userService) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
@@ -52,6 +57,8 @@ public class DeploymentService {
         this.eventPublisher = eventPublisher;
         this.deployStrategyPolicy = deployStrategyPolicy;
         this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
+        this.applicationAccessPolicy = applicationAccessPolicy;
+        this.userService = userService;
     }
 
     public String deployApplication(String namespace,
@@ -64,16 +71,18 @@ public class DeploymentService {
         if (request.strategy() == null) {
             throw new BizException("Deploy strategy is required");
         }
+        Application application = applicationRepository.findAggregate(namespace, applicationName);
+        if (application == null) {
+            throw new BizException("Application not found");
+        }
+        applicationAccessPolicy.ensureCanOperate(application, userService.findOperatorById(operatorUserId));
+
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
                 namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
 
         Environment environment = requireEnvironment(request.environment());
 
-        Application application = applicationRepository.findAggregate(namespace, applicationName);
-        if (application == null) {
-            throw new BizException("Application not found");
-        }
         ApplicationBuildConfig buildConfig = application.getBuildConfig();
         ApplicationSourceType sourceType = application.sourceType();
         ApplicationSourceType publishType = request.strategy().getType();
