@@ -47,16 +47,20 @@ public class PipelineController {
     @PreAuthorize("isAuthenticated()")
     public Result<Boolean> stopPipeline(@PathVariable String namespace,
                                         @PathVariable String name,
-                                        @PathVariable String id) {
-        return Result.success(pipelineService.stopPipeline(namespace, name, id));
+                                        @PathVariable String id,
+                                        Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(pipelineService.stopPipeline(namespace, name, id, principal.userId()));
     }
 
     @PutMapping("/{id}/deploy")
     @PreAuthorize("isAuthenticated()")
     public Result<Boolean> deployPipeline(@PathVariable String namespace,
                                           @PathVariable String name,
-                                          @PathVariable String id) {
-        return Result.success(pipelineService.deployPipeline(namespace, name, id));
+                                          @PathVariable String id,
+                                          Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(pipelineService.deployPipeline(namespace, name, id, principal.userId()));
     }
 
     @PostMapping("/{id}/rollback")
