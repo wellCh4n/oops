@@ -325,7 +325,7 @@ const apps = {
   "apps.pipeline.deployMode": "Mode:",
   "apps.pipeline.operator": "Operator:",
   "apps.pipeline.message": "Error Message",
-  "apps.pipeline.viewLogs": "View Logs",
+  "apps.pipeline.viewLogs": "App Logs",
   "apps.pipeline.modeImmediate": "Immediate",
   "apps.pipeline.modeManual": "Manual",
 }

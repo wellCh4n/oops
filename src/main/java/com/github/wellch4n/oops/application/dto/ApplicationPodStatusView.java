@@ -26,5 +26,6 @@ public class ApplicationPodStatusView {
         private Boolean ready;
         private Integer restartCount;
         private String startedAt;
+        private String reason;
     }
 }

@@ -304,6 +304,14 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
   const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, pipelineId), [t, namespace, name, pipelineId])
 
+  const crashLoopPods = useMemo(
+    () =>
+      podStatuses.filter((pod) =>
+        (pod.containers ?? []).some((container) => container.reason === "CrashLoopBackOff")
+      ),
+    [podStatuses]
+  )
+
   const renderExpandedRow = (pod: ApplicationPodStatus) => {
     const containers = pod.containers ?? []
     return (
@@ -400,15 +408,15 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <div className="font-medium">{t("apps.pipeline.message")}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="whitespace-pre-wrap break-words">{pipeline.message}</span>
-                {podStatuses.length === 1 && (
+                {crashLoopPods.length === 1 && (
                   <Button asChild variant="destructive" size="xs" className="shrink-0">
-                    <Link href={`/apps/${namespace}/${name}/pods/${podStatuses[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`}>
+                    <Link href={`/apps/${namespace}/${name}/pods/${crashLoopPods[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`}>
                       <FileText className="size-3" />
                       {t("apps.pipeline.viewLogs")}
                     </Link>
                   </Button>
                 )}
-                {podStatuses.length > 1 && (
+                {crashLoopPods.length > 1 && (
                   <Popover open={errorLogsMenuOpen} onOpenChange={setErrorLogsMenuOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -430,7 +438,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                       onMouseLeave={() => setErrorLogsMenuOpen(false)}
                     >
                       <div className="flex flex-col">
-                        {podStatuses.map((pod) => (
+                        {crashLoopPods.map((pod) => (
                           <Link
                             key={pod.name}
                             href={`/apps/${namespace}/${name}/pods/${pod.name}/logs?env=${encodeURIComponent(pipeline.environment)}`}

@@ -9,6 +9,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
+import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.MicroTime;
 import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.ObjectReference;
@@ -291,11 +292,26 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 if (containerStatus.getState() != null && containerStatus.getState().getRunning() != null) {
                     container.setStartedAt(containerStatus.getState().getRunning().getStartedAt());
                 }
+                container.setReason(resolveContainerReason(containerStatus));
                 containers.add(container);
             }
         }
         view.setContainers(containers);
         return view;
+    }
+
+    private String resolveContainerReason(ContainerStatus containerStatus) {
+        if (containerStatus == null || containerStatus.getState() == null) {
+            return null;
+        }
+        var state = containerStatus.getState();
+        if (state.getWaiting() != null) {
+            return state.getWaiting().getReason();
+        }
+        if (state.getTerminated() != null) {
+            return state.getTerminated().getReason();
+        }
+        return null;
     }
 
     private boolean isApplicationEvent(Event event, String applicationName, Set<String> podNames) {

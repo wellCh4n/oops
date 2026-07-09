@@ -212,6 +212,7 @@ export default function ApplicationsDocPage() {
               { name: "containers[].ready", type: "boolean" },
               { name: "containers[].restartCount", type: "int" },
               { name: "containers[].startedAt", type: "string" },
+              { name: "containers[].reason", type: "string" },
             ]}
           />
         </DocSubSection>

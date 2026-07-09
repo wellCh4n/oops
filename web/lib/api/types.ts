@@ -226,6 +226,7 @@ interface ApplicationContainerStatus {
   ready: boolean
   restartCount: number
   startedAt?: string | null
+  reason?: string | null
 }
 
 type PipelineStatus = 'INITIALIZED' | 'RUNNING' | 'BUILD_SUCCEEDED' | 'DEPLOYING' | 'ROLLING_OUT' | 'STOPPED' | 'SUCCEEDED' | 'ERROR'
