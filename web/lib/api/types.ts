@@ -265,6 +265,10 @@ export interface ConfigMap {
   secret?: boolean
   // Optional absolute file path. When set, the item is mounted as a file at this path.
   mountPath?: string
+  // Optional display group used to organize items in the config editor. Pure UI metadata.
+  group?: string
+  // Optional free-text note describing the item. Pure UI metadata.
+  comment?: string
 }
 
 export interface ApplicationServiceConfig {

@@ -174,6 +174,8 @@ Pipeline logs are streamed via WebSocket (`PipelineLogWebSocketHandler`). A `@Sc
 ### Application Deployment
 Applications deploy as **StatefulSets** (not Deployments) with `enableServiceLinks(false)` to prevent K8s env var pollution. Ingress uses **Traefik IngressRoute CRDs** (not standard Kubernetes Ingress) — the code checks for CRD existence and skips gracefully if absent. ConfigMap named after the application is injected via `envFrom: configMapRef`.
 
+**Config item metadata (no DB table)**: Env/file config items carry UI-only metadata — `mountPath` (file mounts), plus `group` and `comment` for organizing and documenting keys in the editor. Rather than a new table, `KubernetesConfigMapGateway` serializes this as JSON in resource annotations on each `{app}` / `{app}.files` ConfigMap/Secret: `oops.mounts` (`key → mountPath`) and `oops.config-meta` (`key → {group, comment}`). Each annotation only describes the keys in its own resource's `data`, so items moving between env/secret/mounted carry their metadata along on the next full-rewrite save. The metadata never enters the container. Frontend `application-config-info.tsx` renders collapsible per-group sections with key/comment search; `env-import-dialog.tsx` round-trips groups as `## group: xxx` markers and comments as `#` lines in the dotenv import/export format.
+
 Deployment triggering logic lives in `DeploymentService` (not `PipelineService`). The `DeploymentController` at `/api/namespaces/{namespace}/applications/{name}/deployments` handles deploy triggers and source uploads.
 
 **Deploy processor chain**: `ArtifactDeployTask` orchestrates deployment via a sequence of `DeployProcessor`s sharing a `DeployContext`:

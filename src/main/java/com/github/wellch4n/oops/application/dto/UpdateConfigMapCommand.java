@@ -22,4 +22,16 @@ public class UpdateConfigMapCommand {
      * container; when blank the item is exposed as an environment variable only.
      */
     private String mountPath;
+
+    /**
+     * Optional display group used to organize items in the UI. Stored as metadata in the
+     * {@code oops.config-meta} annotation, never in the resource data.
+     */
+    private String group;
+
+    /**
+     * Optional free-text note describing the item. Stored as metadata in the
+     * {@code oops.config-meta} annotation, never in the resource data.
+     */
+    private String comment;
 }
