@@ -93,6 +93,9 @@ export const applicationConfigSchema = z.object({
     mounted: z.boolean().optional(),
     // The API returns null for env items, so accept null/undefined as well as string.
     mountPath: z.string().nullish(),
+    // Optional UI metadata: display group and free-text note. The API returns null when unset.
+    group: z.string().nullish(),
+    comment: z.string().nullish(),
   }).superRefine((item, ctx) => {
     if (item.mounted) {
       if (!item.mountPath || !item.mountPath.trim()) {

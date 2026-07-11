@@ -23,6 +23,24 @@ public class ConfigMapItem {
      */
     private String mountPath;
 
+    /**
+     * Optional display group used to organize items in the UI. Stored as metadata in the
+     * {@code oops.config-meta} annotation, never in the resource data.
+     */
+    private String group;
+
+    /**
+     * Optional free-text note describing the item. Stored as metadata in the
+     * {@code oops.config-meta} annotation, never in the resource data.
+     */
+    private String comment;
+
+    /**
+     * Optional display position. Persisted in the {@code oops.config-meta} annotation so a manual ordering
+     * survives the unordered ConfigMap/Secret data map.
+     */
+    private Integer order;
+
     public String getName() {
         return toResourceName(key);
     }
