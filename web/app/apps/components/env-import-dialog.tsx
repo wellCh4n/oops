@@ -17,6 +17,8 @@ import { useLanguage } from "@/contexts/language-context"
 interface ConfigMapEntry {
   key: string
   value: string
+  mounted?: boolean
+  mountPath?: string | null
   group?: string | null
   comment?: string | null
 }
@@ -27,10 +29,22 @@ interface EnvImportDialogProps {
   currentConfigs: ConfigMapEntry[]
   parsedEnvContent: ConfigMapEntry[]
   importMode: "key-only" | "key-value"
+  // When true (YAML import), a key counts as changed if its value OR its group/comment/mount path differs,
+  // so lossless metadata edits are applied. Off (dotenv) keeps the value-only comparison.
+  compareMetadata?: boolean
   onConfirm: (result: {
     toAdd: ConfigMapEntry[]
     toReplace: { old: ConfigMapEntry; new: ConfigMapEntry }[]
   }) => void
+}
+
+// Trimmed, null-safe view of an entry's metadata used to detect meaningful changes. Mount path only counts
+// when the item is actually mounted, matching how the backend derives `mounted` from a non-blank path.
+function metadataFingerprint(entry: ConfigMapEntry): string {
+  const group = (entry.group ?? "").trim()
+  const comment = (entry.comment ?? "").trim()
+  const mountPath = entry.mounted ? (entry.mountPath ?? "").trim() : ""
+  return JSON.stringify([group, comment, mountPath])
 }
 
 export function EnvImportDialog({
@@ -39,6 +53,7 @@ export function EnvImportDialog({
   currentConfigs,
   parsedEnvContent,
   importMode,
+  compareMetadata = false,
   onConfirm,
 }: EnvImportDialogProps) {
   const [selectedReplaces, setSelectedReplaces] = useState<Set<string>>(new Set())
@@ -46,31 +61,35 @@ export function EnvImportDialog({
 
   // 分析哪些需要添加，哪些需要替换
   const { toAdd, toReplace, noConflict } = useMemo(() => {
-    const currentMap = new Map(currentConfigs.map(c => [c.key, c.value]))
+    const currentByKey = new Map(currentConfigs.map(c => [c.key, c]))
     const toAdd: ConfigMapEntry[] = []
     const toReplace: { old: ConfigMapEntry; new: ConfigMapEntry; hasConflict: boolean }[] = []
     const noConflict: ConfigMapEntry[] = []
 
     for (const entry of parsedEnvContent) {
-      const existingValue = currentMap.get(entry.key)
-      if (existingValue === undefined) {
+      const existing = currentByKey.get(entry.key)
+      if (existing === undefined) {
         // Key 不存在，需要添加
         toAdd.push(entry)
-      } else if (importMode === "key-value" && existingValue !== entry.value) {
-        // Key 存在但值不同，需要替换
+      } else if (
+        importMode === "key-value" &&
+        (existing.value !== entry.value ||
+          (compareMetadata && metadataFingerprint(existing) !== metadataFingerprint(entry)))
+      ) {
+        // Key 存在但值或元信息不同，需要替换
         toReplace.push({
-          old: { key: entry.key, value: existingValue },
+          old: { key: entry.key, value: existing.value },
           new: entry,
           hasConflict: true,
         })
       } else {
-        // Key 存在且值相同或只导入key，跳过
+        // Key 存在且值/元信息相同（或只导入 key），跳过
         noConflict.push(entry)
       }
     }
 
     return { toAdd, toReplace, noConflict }
-  }, [currentConfigs, parsedEnvContent, importMode])
+  }, [currentConfigs, parsedEnvContent, importMode, compareMetadata])
 
   const handleConfirm = () => {
     const selectedReplacesList: { old: ConfigMapEntry; new: ConfigMapEntry }[] = []
@@ -172,18 +191,48 @@ export function EnvImportDialog({
                         </Label>
                       </div>
                       <div className="ml-6 space-y-1 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{t("apps.config.currentValue")}：</span>
-                          <span className="font-mono text-red-600 dark:text-red-400 line-through">
-                            {entry.old.value || `(${t("common.empty")})`}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-muted-foreground">{t("apps.config.newValue")}：</span>
-                          <span className="font-mono text-green-600 dark:text-green-400">
-                            {entry.new.value || `(${t("common.empty")})`}
-                          </span>
-                        </div>
+                        {entry.old.value !== entry.new.value ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">{t("apps.config.currentValue")}：</span>
+                              <span className="font-mono text-red-600 dark:text-red-400 line-through">
+                                {entry.old.value || `(${t("common.empty")})`}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground">{t("apps.config.newValue")}：</span>
+                              <span className="font-mono text-green-600 dark:text-green-400">
+                                {entry.new.value || `(${t("common.empty")})`}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-muted-foreground">{t("apps.config.metadataOnlyChange")}</div>
+                        )}
+                        {(entry.new.group?.trim() ||
+                          entry.new.comment?.trim() ||
+                          (entry.new.mounted && entry.new.mountPath?.trim())) && (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+                            {entry.new.group?.trim() && (
+                              <span>
+                                {t("apps.config.group")}:{" "}
+                                <span className="text-foreground">{entry.new.group.trim()}</span>
+                              </span>
+                            )}
+                            {entry.new.mounted && entry.new.mountPath?.trim() && (
+                              <span>
+                                {t("apps.config.mountPath")}:{" "}
+                                <span className="font-mono text-foreground">{entry.new.mountPath.trim()}</span>
+                              </span>
+                            )}
+                            {entry.new.comment?.trim() && (
+                              <span>
+                                {t("apps.config.comment")}:{" "}
+                                <span className="text-foreground">{entry.new.comment.trim()}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

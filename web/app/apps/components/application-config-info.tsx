@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2, Upload, Copy, Container, KeyRound, ChevronDown, ChevronRight, Search, GripVertical, Tags } from "lucide-react"
+import { Plus, Trash2, Loader2, Upload, Copy, Container, KeyRound, ChevronDown, Search, GripVertical, Download, FileUp, FileDown, HardDrive, FileText, Variable, Info, MessageSquare, Tags } from "lucide-react"
 import { toast } from "sonner"
 import {
   DndContext,
@@ -17,14 +17,8 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
-  arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import {
@@ -47,13 +41,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
 import { EnvImportDialog, parseEnvContent } from "./env-import-dialog"
+import { parseYamlConfig, serializeYamlConfig } from "./config-yaml"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
@@ -88,7 +92,7 @@ function ConfigValueTextarea({
       value={value}
       disabled={disabled}
       autoComplete="off"
-      placeholder="value"
+      placeholder="Value"
       rows={1}
       className={`border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex min-h-9 w-full rounded-md border bg-transparent px-3 py-1.5 text-base shadow-xs outline-none transition-[color,box-shadow,filter] focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm resize-none overflow-hidden${masked && value ? " blur-[4px] hover:blur-none focus:blur-none" : ""}`}
       onChange={(e) => {
@@ -101,7 +105,10 @@ function ConfigValueTextarea({
 }
 
 // Shared grid template for the header and every row so columns stay aligned across groups.
-const CONFIG_GRID = "grid grid-cols-[24px_minmax(0,1.1fr)_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-start gap-3"
+const CONFIG_GRID = "grid grid-cols-[24px_minmax(0,1fr)_minmax(0,1.5fr)_auto] items-start gap-3"
+
+// Sentinel tab that shows every item regardless of group. Distinct from the ungrouped bucket ("").
+const ALL_GROUPS = "__all__"
 
 // A single draggable config row. Lives at module scope because it uses the useSortable hook, which cannot
 // run inside a render callback. It reads/writes form state by absolute index so reordering and grouping map
@@ -126,8 +133,14 @@ function SortableConfigRow({
   t: (key: string) => string
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const [mountOpen, setMountOpen] = useState(false)
+  const [commentOpen, setCommentOpen] = useState(false)
   const [groupOpen, setGroupOpen] = useState(false)
-  const [newGroup, setNewGroup] = useState("")
+  const [groupFocused, setGroupFocused] = useState(false)
+  // Dialog drafts: edits stay local until "confirm"; cancel / X / outside-click discards them.
+  const [mountDraft, setMountDraft] = useState("")
+  const [commentDraft, setCommentDraft] = useState("")
+  const [groupDraft, setGroupDraft] = useState("")
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -136,13 +149,10 @@ function SortableConfigRow({
   }
 
   const currentGroup = form.watch(`configMaps.${index}.group`)?.trim() ?? ""
+  const currentGroupValue = form.watch(`configMaps.${index}.group`) ?? ""
+  const currentMountPath = form.watch(`configMaps.${index}.mountPath`)
+  const currentComment = form.watch(`configMaps.${index}.comment`)
   const isMounted = form.watch(`configMaps.${index}.mounted`)
-
-  const applyGroup = (group: string) => {
-    onSetGroup(index, group)
-    setGroupOpen(false)
-    setNewGroup("")
-  }
 
   return (
     <div
@@ -172,7 +182,34 @@ function SortableConfigRow({
             return (
               <FormItem>
                 <FormControl>
-                  <Input autoComplete="off" placeholder="key" {...field} />
+                  <div className="relative">
+                    {/* Leading type indicator: file icon when mounted as a file, variable icon otherwise. */}
+                    <span
+                      className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      title={isMounted ? t("apps.config.mountAsFile") : t("apps.config.typeEnvVar")}
+                    >
+                      {isMounted ? <FileText className="size-3.5" /> : <Variable className="size-3.5" />}
+                    </span>
+                    <Input
+                      autoComplete="off"
+                      placeholder="Key"
+                      className={`pl-8 ${currentComment?.trim() ? "pr-8" : ""}`}
+                      {...field}
+                    />
+                    {/* Trailing comment hint: hover the "i" to read the comment. */}
+                    {currentComment?.trim() && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground cursor-help">
+                            <Info className="size-3.5" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs whitespace-pre-wrap break-words">
+                          {currentComment}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
                 </FormControl>
                 {showEnvNameWarning && (
                   <p className="mt-1 text-xs text-amber-600">{t("apps.config.envNameWarning")}</p>
@@ -205,131 +242,203 @@ function SortableConfigRow({
         />
       </div>
 
-      {/* Mount path */}
-      <div className="flex items-center gap-2">
-        <FormField
-          control={form.control}
-          name={`configMaps.${index}.mounted`}
-          render={({ field }) => (
-            <Checkbox
-              id={`mount-${index}`}
-              className="mt-1.5 cursor-pointer"
-              checked={!!field.value}
-              onCheckedChange={(checked) => {
-                field.onChange(checked === true)
-                if (checked !== true) {
-                  form.setValue(`configMaps.${index}.mountPath`, "", { shouldDirty: true })
-                }
-              }}
-            />
-          )}
-        />
-        {isMounted ? (
-          <FormField
-            control={form.control}
-            name={`configMaps.${index}.mountPath`}
-            render={({ field }) => (
-              <FormItem className="flex-1">
-                <FormControl>
-                  <Input
-                    autoComplete="off"
-                    placeholder={t("apps.config.mountPathPlaceholder")}
-                    className="font-mono text-xs"
-                    {...field}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ) : (
-          <Label htmlFor={`mount-${index}`} className="mt-1 text-xs text-muted-foreground cursor-pointer">
-            {t("apps.config.mountAsFile")}
-          </Label>
-        )}
-      </div>
-
-      {/* Comment (moved here from under the Key; keeps rows single-height and aligned) */}
-      <div>
-        <FormField
-          control={form.control}
-          name={`configMaps.${index}.comment`}
-          render={({ field }) => (
-            <Input
-              autoComplete="off"
-              placeholder={t("apps.config.commentPlaceholder")}
-              className="text-xs"
-              {...field}
-              value={field.value ?? ""}
-            />
-          )}
-        />
-      </div>
-
-      {/* Actions: group popover + delete */}
-      <div className="flex items-center gap-0.5">
-        <Popover open={groupOpen} onOpenChange={setGroupOpen}>
-          <PopoverTrigger asChild>
+      {/* Actions: mount / comment / group dialogs + delete. Each dialog edits a local draft; changes are
+          committed only on "confirm" — closing via X or clicking outside discards them. */}
+      <div className="flex items-center gap-0">
+        {/* Mount */}
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className={`cursor-pointer ${currentGroup ? "text-primary" : ""}`}
-              title={currentGroup || t("apps.config.setGroup")}
+              aria-label={t("apps.config.mountAsFile")}
+              className={`size-8 cursor-pointer ${isMounted ? "text-primary hover:text-primary" : ""}`}
+              onClick={() => {
+                setMountDraft(currentMountPath ?? "")
+                setMountOpen(true)
+              }}
+            >
+              <HardDrive className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("apps.config.mountAsFile")}</TooltipContent>
+        </Tooltip>
+        <Dialog open={mountOpen} onOpenChange={setMountOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("apps.config.mountPath")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 py-2">
+              <Input
+                autoComplete="off"
+                placeholder={t("apps.config.mountPathPlaceholder")}
+                className="font-mono text-xs"
+                value={mountDraft}
+                onChange={(event) => setMountDraft(event.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">{t("apps.config.mountPopoverHint")}</p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setMountOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                className="cursor-pointer"
+                onClick={() => {
+                  const path = mountDraft
+                  // A non-blank path makes it a file mount; empty reverts to an env var.
+                  form.setValue(`configMaps.${index}.mountPath`, path, { shouldDirty: true })
+                  form.setValue(`configMaps.${index}.mounted`, path.trim().length > 0, { shouldDirty: true })
+                  setMountOpen(false)
+                }}
+              >
+                {t("common.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Comment */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("apps.config.comment")}
+              className={`size-8 cursor-pointer ${currentComment?.trim() ? "text-primary hover:text-primary" : ""}`}
+              onClick={() => {
+                setCommentDraft(currentComment ?? "")
+                setCommentOpen(true)
+              }}
+            >
+              <MessageSquare className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t("apps.config.comment")}</TooltipContent>
+        </Tooltip>
+        <Dialog open={commentOpen} onOpenChange={setCommentOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("apps.config.comment")}</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <Textarea
+                autoComplete="off"
+                placeholder={t("apps.config.commentPlaceholder")}
+                className="min-h-24 text-xs"
+                value={commentDraft}
+                onChange={(event) => setCommentDraft(event.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setCommentOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                className="cursor-pointer"
+                onClick={() => {
+                  form.setValue(`configMaps.${index}.comment`, commentDraft, { shouldDirty: true })
+                  setCommentOpen(false)
+                }}
+              >
+                {t("common.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Group */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={t("apps.config.group")}
+              className={`size-8 cursor-pointer ${currentGroup ? "text-primary hover:text-primary" : ""}`}
+              onClick={() => {
+                setGroupDraft(currentGroupValue)
+                setGroupOpen(true)
+              }}
             >
               <Tags className="size-4" />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-56 p-2">
-            <div className="flex flex-col gap-1">
-              <p className="px-1 pb-1 text-xs font-medium text-muted-foreground">{t("apps.config.setGroup")}</p>
-              <button
+          </TooltipTrigger>
+          <TooltipContent>{t("apps.config.group")}</TooltipContent>
+        </Tooltip>
+        <Dialog open={groupOpen} onOpenChange={setGroupOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{t("apps.config.group")}</DialogTitle>
+            </DialogHeader>
+            <div className="relative py-2">
+              <Input
+                autoComplete="off"
+                placeholder={t("apps.config.groupPlaceholder")}
+                value={groupDraft}
+                onChange={(event) => setGroupDraft(event.target.value)}
+                onFocus={() => setGroupFocused(true)}
+                onBlur={() => setGroupFocused(false)}
+              />
+              {/* Suggestions: existing groups matching the typed text. Typing a name with no match keeps that
+                  value — it becomes a new group on confirm. */}
+              {groupFocused &&
+                (() => {
+                  const query = groupDraft.trim().toLowerCase()
+                  const matches = knownGroups.filter(
+                    (group) => group.toLowerCase() !== query && (!query || group.toLowerCase().includes(query))
+                  )
+                  if (matches.length === 0) return null
+                  return (
+                    <div className="absolute inset-x-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-md border bg-popover p-1 shadow-md">
+                      {matches.map((group) => (
+                        <button
+                          key={group}
+                          type="button"
+                          className="flex w-full items-center rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                          onMouseDown={(event) => {
+                            // mousedown (before blur) so the click registers before the list unmounts.
+                            event.preventDefault()
+                            setGroupDraft(group)
+                            setGroupFocused(false)
+                          }}
+                        >
+                          {group}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setGroupOpen(false)}>
+                {t("common.cancel")}
+              </Button>
+              <Button
                 type="button"
-                className={`flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer ${currentGroup === "" ? "font-medium" : ""}`}
-                onClick={() => applyGroup("")}
-              >
-                {t("apps.config.ungrouped")}
-                {currentGroup === "" && <span className="text-xs text-primary">✓</span>}
-              </button>
-              {knownGroups.map((group) => (
-                <button
-                  key={group}
-                  type="button"
-                  className={`flex items-center justify-between rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer ${currentGroup === group ? "font-medium" : ""}`}
-                  onClick={() => applyGroup(group)}
-                >
-                  {group}
-                  {currentGroup === group && <span className="text-xs text-primary">✓</span>}
-                </button>
-              ))}
-              <form
-                className="mt-1 flex gap-1 border-t pt-2"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  const trimmed = newGroup.trim()
-                  if (trimmed) applyGroup(trimmed)
+                className="cursor-pointer"
+                onClick={() => {
+                  // Commit + regroup so the row moves to its tab.
+                  onSetGroup(index, groupDraft.trim())
+                  setGroupOpen(false)
                 }}
               >
-                <Input
-                  autoComplete="off"
-                  placeholder={t("apps.config.newGroupPlaceholder")}
-                  className="h-8 text-xs"
-                  value={newGroup}
-                  onChange={(event) => setNewGroup(event.target.value)}
-                />
-                <Button type="submit" size="sm" className="h-8 cursor-pointer" disabled={!newGroup.trim()}>
-                  {t("apps.config.addGroup")}
-                </Button>
-              </form>
-            </div>
-          </PopoverContent>
-        </Popover>
+                {t("common.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete */}
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="cursor-pointer"
+          className="size-8 cursor-pointer"
           onClick={() => onRemove(index)}
         >
           <Trash2 className="size-4 text-destructive" />
@@ -400,12 +509,18 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   const [importConfirmDialogOpen, setImportConfirmDialogOpen] = useState(false)
   const [importContent, setImportContent] = useState("")
   const [importMode, setImportMode] = useState<"key-only" | "key-value">("key-value")
+  // Tracks which format fed the confirm dialog. YAML is lossless (carries mount/group/comment/order),
+  // so its confirm path applies those fields even when empty; dotenv keeps its non-destructive behavior.
+  const [importSource, setImportSource] = useState<"dotenv" | "yaml">("dotenv")
+  const [yamlImportEntries, setYamlImportEntries] = useState<
+    { key: string; value: string; mounted?: boolean; mountPath?: string | null; group?: string | null; comment?: string | null }[]
+  >([])
+  const yamlFileInputRef = useRef<HTMLInputElement>(null)
 
-  // Group sections state: collapsed group keys plus a tick that forces regrouping after a group input
-  // blurs. Regrouping only on blur keeps a row from jumping to another table (and losing focus) while
-  // its group name is being typed.
-  const [searchTerm, setSearchTerm] = useState("")
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  // Group tab state: the active group tab per section (keyed "config"/"secret"), plus a tick that forces
+  // regrouping after a group input blurs so a row does not jump tabs (and lose focus) mid-typing.
+  const [searchTerms, setSearchTerms] = useState<Record<string, string>>({})
+  const [activeGroups, setActiveGroups] = useState<Record<string, string>>({})
   const [, setGroupingTick] = useState(0)
 
   const form = useForm<ApplicationConfigFormValues>({
@@ -415,7 +530,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     },
   })
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control: form.control,
     name: "configMaps",
   })
@@ -496,12 +611,13 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }, [activeTab, applicationName, captureBaseline, form, namespace, t])
 
   const handleImportConfirm = (result: {
-    toAdd: { key: string; value: string; group?: string | null; comment?: string | null }[]
+    toAdd: { key: string; value: string; mounted?: boolean; mountPath?: string | null; group?: string | null; comment?: string | null }[]
     toReplace: {
       old: { key: string; value: string }
-      new: { key: string; value: string; group?: string | null; comment?: string | null }
+      new: { key: string; value: string; mounted?: boolean; mountPath?: string | null; group?: string | null; comment?: string | null }
     }[]
   }) => {
+    const isYaml = importSource === "yaml"
     const currentConfigs = form.getValues("configMaps")
     const newConfigs = [...currentConfigs]
     // Import only targets ConfigMap (non-secret) env entries.
@@ -519,8 +635,8 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
           key: item.key,
           value: item.value,
           secret: false,
-          mounted: false,
-          mountPath: "",
+          mounted: item.mounted ?? false,
+          mountPath: item.mountPath ?? "",
           group: item.group ?? "",
           comment: item.comment ?? "",
         })
@@ -530,14 +646,24 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     for (const item of result.toReplace) {
       const index = indexByKey.get(item.old.key)
       if (index !== undefined) {
-        // Only overwrite group/comment when the import actually supplies one, so a plain KEY=value
-        // import never wipes metadata the user set in the editor.
+        // YAML is lossless: it always carries mount/group/comment, so overwrite them (empty clears). A plain
+        // dotenv import only overwrites group/comment when supplied, so it never wipes editor-set metadata,
+        // and it leaves mount settings untouched (dotenv cannot express them).
         newConfigs[index] = {
           ...newConfigs[index],
           key: item.new.key,
           value: item.new.value,
-          ...(item.new.group ? { group: item.new.group } : {}),
-          ...(item.new.comment ? { comment: item.new.comment } : {}),
+          ...(isYaml
+            ? {
+                mounted: item.new.mounted ?? false,
+                mountPath: item.new.mountPath ?? "",
+                group: item.new.group ?? "",
+                comment: item.new.comment ?? "",
+              }
+            : {
+                ...(item.new.group ? { group: item.new.group } : {}),
+                ...(item.new.comment ? { comment: item.new.comment } : {}),
+              }),
         }
       }
     }
@@ -552,8 +678,62 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
       toast.error(t("apps.config.importNoValid"))
       return
     }
+    setImportSource("dotenv")
     setImportInputDialogOpen(false)
     setImportConfirmDialogOpen(true)
+  }
+
+  // Opens the OS file picker for a YAML import. Reset via ref click so the same file can be re-selected.
+  const handleImportYamlClick = () => {
+    yamlFileInputRef.current?.click()
+  }
+
+  const handleYamlFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    // Clear so selecting the same file again still fires onChange.
+    event.target.value = ""
+    if (!file) {
+      return
+    }
+    try {
+      const text = await file.text()
+      const entries = parseYamlConfig(text)
+      if (entries.length === 0) {
+        toast.error(t("apps.config.importNoValid"))
+        return
+      }
+      setYamlImportEntries(entries)
+      setImportSource("yaml")
+      setImportMode("key-value")
+      setImportConfirmDialogOpen(true)
+    } catch {
+      toast.error(t("apps.config.yamlParseError"))
+    }
+  }
+
+  // Downloads all non-secret config items as an OOPS YAML file. Secrets are excluded (matching the dotenv
+  // export) and list order preserves the manual arrangement.
+  const handleExportYaml = () => {
+    const configs = form.getValues("configMaps").filter((c) => !c.secret)
+    if (configs.length === 0) {
+      toast.error(t("apps.config.exportNoData"))
+      return
+    }
+    const content = serializeYamlConfig(configs, {
+      application: applicationName,
+      environment: activeTab || undefined,
+    })
+    const blob = new Blob([content], { type: "application/yaml;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement("a")
+    anchor.href = url
+    const envSuffix = activeTab ? `-${activeTab}` : ""
+    anchor.download = `${applicationName}${envSuffix}-config.yaml`
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    URL.revokeObjectURL(url)
+    toast.success(t("apps.config.exportSuccess"))
   }
 
   const handleExportAll = async () => {
@@ -607,6 +787,8 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }
 
   const parsedImportContent = parseEnvContent(importContent)
+  // The confirm dialog is shared by both import formats; feed it whichever source last triggered it.
+  const confirmDialogEntries = importSource === "yaml" ? yamlImportEntries : parsedImportContent
 
   // Distinct non-empty group names across all items, feeding the <datalist> autocomplete.
   const knownGroups = Array.from(
@@ -616,18 +798,6 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
         .filter((group) => group !== "")
     )
   ).sort()
-
-  const toggleGroup = (groupKey: string) => {
-    setCollapsedGroups((previous) => {
-      const next = new Set(previous)
-      if (next.has(groupKey)) {
-        next.delete(groupKey)
-      } else {
-        next.add(groupKey)
-      }
-      return next
-    })
-  }
 
   const sensors = useSensors(
     // A small activation distance so a click on the drag handle doesn't get swallowed as a drag.
@@ -641,38 +811,27 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   }
 
   // Reorders the underlying field array when a row is dropped. dnd ids are the field ids; we translate them
-  // to absolute indices, move within the full array, and write the array back so order persists on save.
+  // to absolute indices and use useFieldArray.move so each field id travels with its own values (including its
+  // group) — keeping dnd-kit's sortable ids in sync with row data (a whole-array setValue would desync them).
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const configs = form.getValues("configMaps") ?? []
     const fromIndex = fields.findIndex((field) => field.id === active.id)
     const toIndex = fields.findIndex((field) => field.id === over.id)
     if (fromIndex === -1 || toIndex === -1) return
 
-    // Dropping onto a row in another group also adopts that row's group (cross-group move).
-    const targetGroup = configs[toIndex]?.group?.trim() ?? ""
-    const moved = arrayMove(configs, fromIndex, toIndex).map((config, position) =>
-      position === toIndex ? { ...config, group: targetGroup } : config
-    )
-    form.setValue("configMaps", moved, { shouldDirty: true })
+    // Dragging only reorders — it never changes an item's group. Group is set explicitly via the group dialog.
+    move(fromIndex, toIndex)
     setGroupingTick((tick) => tick + 1)
   }
 
-  // A group's rows, rendered as a sortable list of grid rows preceded by the shared column header.
+  // A group's rows, rendered as a sortable list of grid rows. No column header: the key/value placeholders
+  // label empty rows, and the left-key / right-value layout is self-evident once filled.
   const renderRowsTable = (
     rows: { field: (typeof fields)[number]; index: number }[],
     isSecret: boolean
   ) => (
     <div className="flex flex-col gap-1.5">
-      <div className={`${CONFIG_GRID} px-2 text-sm font-medium text-muted-foreground`}>
-        <span />
-        <span>Key</span>
-        <span>Value</span>
-        <span>{t("apps.config.mountPath")}</span>
-        <span>{t("apps.config.comment")}</span>
-        <span />
-      </div>
       <SortableContext items={rows.map(({ field }) => field.id)} strategy={verticalListSortingStrategy}>
         {rows.map(({ field, index }) => (
           <SortableConfigRow
@@ -691,15 +850,37 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     </div>
   )
 
-  // Groups rows by their (trimmed) group name into collapsible sections. Grouping reads live form values,
-  // so it stays correct after imports, group changes, and drags (re-rendered via groupingTick). A non-empty
-  // search term filters rows by key/comment and overrides collapse so every match is visible. The whole
-  // section is wrapped in one DndContext so a row can be dragged from one group onto another.
+  // Per-section filter (key/comment) shown at the right of each section header. Each section keeps its own
+  // term, so ConfigMap and Secret filter independently.
+  const renderSectionFilter = (isSecret: boolean) => {
+    const sectionKey = isSecret ? "secret" : "config"
+    return (
+      <div className="relative w-56 shrink-0">
+        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          autoComplete="off"
+          placeholder={t("apps.config.searchPlaceholder")}
+          className="h-8 pl-8"
+          value={searchTerms[sectionKey] ?? ""}
+          onChange={(event) =>
+            setSearchTerms((previous) => ({ ...previous, [sectionKey]: event.target.value }))
+          }
+        />
+      </div>
+    )
+  }
+
+  // Groups rows by their (trimmed) group name and exposes each group as a horizontal tab, showing only the
+  // active group's rows at a time. Grouping reads live form values so it stays correct after imports, group
+  // changes, and drags (re-rendered via groupingTick). A non-empty search forces the flat "all" view so
+  // every key/comment match across groups is visible. The section is wrapped in one DndContext so a row can
+  // still be dragged onto another group's row while the "all" tab is active.
   const renderSection = (
     rows: { field: (typeof fields)[number]; index: number }[],
     isSecret: boolean
   ) => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
+    const sectionKey = isSecret ? "secret" : "config"
+    const normalizedSearch = (searchTerms[sectionKey] ?? "").trim().toLowerCase()
     const visibleRows = normalizedSearch
       ? rows.filter(({ index }) => {
           const key = form.getValues(`configMaps.${index}.key`) ?? ""
@@ -729,10 +910,52 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
     })
     const hasNamedGroups = groupNames.some((name) => name !== "")
 
+    const storedGroup = activeGroups[sectionKey] ?? ALL_GROUPS
+    // Fall back to "all" if the stored tab no longer exists (its group was renamed or emptied). Searching
+    // also forces "all" so matches from every group show together.
+    const activeGroup =
+      normalizedSearch || (storedGroup !== ALL_GROUPS && !groupNames.includes(storedGroup))
+        ? ALL_GROUPS
+        : storedGroup
+    const shownRows = activeGroup === ALL_GROUPS ? visibleRows : grouped.get(activeGroup) ?? []
+    // New rows adopt the active group so they land in the tab you are looking at.
+    const newRowGroup = activeGroup === ALL_GROUPS ? "" : activeGroup
+
+    const tabs = [ALL_GROUPS, ...groupNames]
+
     return (
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="flex flex-col gap-3">
-          {visibleRows.length === 0 && (
+          {hasNamedGroups && !normalizedSearch && (
+            <div className="flex flex-wrap items-center gap-x-1 border-b">
+              {tabs.map((name) => {
+                const count = name === ALL_GROUPS ? visibleRows.length : grouped.get(name)?.length ?? 0
+                const label =
+                  name === ALL_GROUPS
+                    ? t("apps.config.allGroups")
+                    : name === ""
+                      ? t("apps.config.ungrouped")
+                      : name
+                const isActive = activeGroup === name
+                return (
+                  <button
+                    key={name === "" ? "__ungrouped__" : name}
+                    type="button"
+                    onClick={() => setActiveGroups((previous) => ({ ...previous, [sectionKey]: name }))}
+                    className={`-mb-px flex items-center gap-1.5 border-b-2 px-3 py-1.5 text-sm cursor-pointer transition-colors ${
+                      isActive
+                        ? "border-primary font-medium text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>{label}</span>
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {shownRows.length === 0 ? (
             <div className="rounded-md border h-12 flex items-center justify-center text-sm text-muted-foreground">
               {isLoadingConfig
                 ? t("common.loading")
@@ -740,35 +963,14 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                   ? t("apps.config.noSearchResult")
                   : t("apps.config.noConfig")}
             </div>
+          ) : (
+            renderRowsTable(shownRows, isSecret)
           )}
-          {groupNames.map((groupName) => {
-            const groupRows = grouped.get(groupName) ?? []
-            const groupKey = `${isSecret ? "secret" : "config"}:${groupName}`
-            const collapsed = !normalizedSearch && collapsedGroups.has(groupKey)
-            // Without any named group, skip the header chrome entirely and render the flat list.
-            if (!hasNamedGroups) {
-              return <div key={groupKey}>{renderRowsTable(groupRows, isSecret)}</div>
-            }
-            return (
-              <div key={groupKey} className="flex flex-col gap-1.5">
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 py-1 text-sm font-semibold text-foreground hover:text-primary cursor-pointer w-fit"
-                  onClick={() => toggleGroup(groupKey)}
-                >
-                  {collapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
-                  <span>{groupName === "" ? t("apps.config.ungrouped") : groupName}</span>
-                  <span className="text-xs font-normal text-muted-foreground">({groupRows.length})</span>
-                </button>
-                {!collapsed && renderRowsTable(groupRows, isSecret)}
-              </div>
-            )
-          })}
           <Button
             type="button"
             variant="outline"
             className="w-full justify-center cursor-pointer"
-            onClick={() => append({ key: "", value: "", secret: isSecret, mounted: false, mountPath: "", group: "", comment: "" })}
+            onClick={() => append({ key: "", value: "", secret: isSecret, mounted: false, mountPath: "", group: newRowGroup, comment: "" })}
             disabled={isLoadingConfig}
           >
             <Plus className="size-4" />
@@ -798,41 +1000,55 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
               onValueChange={setActiveTab}
               onEnvironmentsLoaded={handleEnvironmentsLoaded}
               onLoadingChange={setEnvsLoading}
-            >
-              {/* Key/comment search across both sections. */}
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  autoComplete="off"
-                  placeholder={t("apps.config.searchPlaceholder")}
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                />
-              </div>
+            />
 
               {/* ConfigMap section */}
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Container className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">{t("apps.config.configMapSection")}</span>
-                  <span className="text-xs text-muted-foreground">{t("apps.config.configMapHint")}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Container className="size-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">{t("apps.config.configMapSection")}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-muted-foreground cursor-help">
+                          <Info className="size-3.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">{t("apps.config.configMapHint")}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  {renderSectionFilter(false)}
                 </div>
                 {renderSection(configMapFields, false)}
 
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="cursor-pointer"
-                    onClick={handleExportAll}
-                    disabled={isLoadingConfig}
-                  >
-                    <Copy className="size-4" />
-                    {t("apps.config.copyAll")}
-                  </Button>
-                  <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
-                    <DialogTrigger asChild>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="cursor-pointer"
+                        disabled={isLoadingConfig}
+                      >
+                        <Download className="size-4" />
+                        {t("apps.config.export")}
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem className="cursor-pointer" onClick={handleExportAll}>
+                        <Copy className="size-4" />
+                        {t("apps.config.copyAll")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={handleExportYaml}>
+                        <FileDown className="size-4" />
+                        {t("apps.config.exportYaml")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
                       <Button
                         type="button"
                         variant="outline"
@@ -841,8 +1057,36 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                       >
                         <Upload className="size-4" />
                         {t("apps.config.import")}
+                        <ChevronDown className="size-4" />
                       </Button>
-                    </DialogTrigger>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setImportSource("dotenv")
+                          setImportInputDialogOpen(true)
+                        }}
+                      >
+                        <Upload className="size-4" />
+                        {t("apps.config.importDotenv")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={handleImportYamlClick}>
+                        <FileUp className="size-4" />
+                        {t("apps.config.importYaml")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <input
+                    ref={yamlFileInputRef}
+                    type="file"
+                    accept=".yaml,.yml"
+                    className="hidden"
+                    onChange={handleYamlFileSelected}
+                  />
+
+                  <Dialog open={importInputDialogOpen} onOpenChange={setImportInputDialogOpen}>
                     <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] overflow-hidden">
                       <DialogHeader>
                         <DialogTitle>{t("apps.config.importTitle")}</DialogTitle>
@@ -898,16 +1142,27 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                 </div>
               </div>
 
+              <div className="border-t" />
+
               {/* Secret section */}
               <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <KeyRound className="size-4 text-muted-foreground" />
-                  <span className="text-sm font-semibold">{t("apps.config.secretSection")}</span>
-                  <span className="text-xs text-muted-foreground">{t("apps.config.secretHint")}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <KeyRound className="size-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">{t("apps.config.secretSection")}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="text-muted-foreground cursor-help">
+                          <Info className="size-3.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">{t("apps.config.secretHint")}</TooltipContent>
+                    </Tooltip>
+                  </div>
+                  {renderSectionFilter(true)}
                 </div>
                 {renderSection(secretFields, true)}
               </div>
-            </ApplicationEnvironmentSelector>
           </div>
         </div>
 
@@ -925,8 +1180,9 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
       open={importConfirmDialogOpen}
       onOpenChange={setImportConfirmDialogOpen}
       currentConfigs={form.getValues("configMaps").filter((c) => !c.secret)}
-      parsedEnvContent={parsedImportContent}
+      parsedEnvContent={confirmDialogEntries}
       importMode={importMode}
+      compareMetadata={importSource === "yaml"}
       onConfirm={handleImportConfirm}
     />
     </>
