@@ -59,7 +59,7 @@ export function EnvImportDialog({
   const [selectedReplaces, setSelectedReplaces] = useState<Set<string>>(new Set())
   const { t } = useLanguage()
 
-  // 分析哪些需要添加，哪些需要替换
+  // Classify each parsed entry as new, a replacement, or a no-op.
   const { toAdd, toReplace, noConflict } = useMemo(() => {
     const currentByKey = new Map(currentConfigs.map(c => [c.key, c]))
     const toAdd: ConfigMapEntry[] = []
@@ -69,21 +69,21 @@ export function EnvImportDialog({
     for (const entry of parsedEnvContent) {
       const existing = currentByKey.get(entry.key)
       if (existing === undefined) {
-        // Key 不存在，需要添加
+        // Key does not exist yet — add it.
         toAdd.push(entry)
       } else if (
         importMode === "key-value" &&
         (existing.value !== entry.value ||
           (compareMetadata && metadataFingerprint(existing) !== metadataFingerprint(entry)))
       ) {
-        // Key 存在但值或元信息不同，需要替换
+        // Key exists but its value or metadata differs — replace it.
         toReplace.push({
           old: { key: entry.key, value: existing.value },
           new: entry,
           hasConflict: true,
         })
       } else {
-        // Key 存在且值/元信息相同（或只导入 key），跳过
+        // Key exists with identical value/metadata (or key-only import) — skip.
         noConflict.push(entry)
       }
     }
@@ -141,7 +141,7 @@ export function EnvImportDialog({
 
         <div className="flex-1 min-h-0 overflow-y-auto pr-4 pb-4">
           <div className="space-y-6">
-            {/* 需要添加的新配置 */}
+            {/* New config items to add */}
             {toAdd.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-green-600">
@@ -168,7 +168,7 @@ export function EnvImportDialog({
               </div>
             )}
 
-            {/* 需要替换的配置（仅 key-value 模式） */}
+            {/* Config items to replace (key-value mode only) */}
             {importMode === "key-value" && toReplace.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-amber-600">
@@ -240,7 +240,7 @@ export function EnvImportDialog({
               </div>
             )}
 
-            {/* 无冲突的配置 */}
+            {/* Conflict-free config items */}
             {noConflict.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-muted-foreground">
@@ -261,7 +261,7 @@ export function EnvImportDialog({
               </div>
             )}
 
-            {/* 空状态 */}
+            {/* Empty state */}
             {parsedEnvContent.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 {t("apps.config.importNoValid")}
@@ -283,9 +283,9 @@ export function EnvImportDialog({
   )
 }
 
-// 解析 .env 格式内容。扩展了两类注释标记：
-//   ## group: xxx  —— 切换当前分组，作用于其后的所有条目（空组名重置为未分组）
-//   # comment      —— 作为紧随其后的那个条目的注释；被空行或新条目消费后清空
+// Parses .env format content. Two comment markers are recognized in addition to plain comments:
+//   ## group: xxx  -- switches the current group for all following entries (blank name resets to ungrouped)
+//   # comment      -- attached to the entry that immediately follows; cleared by a blank line or a new entry
 export function parseEnvContent(content: string): ConfigMapEntry[] {
   const lines = content.split(/\r?\n/)
   const entries: ConfigMapEntry[] = []
@@ -295,7 +295,7 @@ export function parseEnvContent(content: string): ConfigMapEntry[] {
   for (const line of lines) {
     const trimmed = line.trim()
 
-    // 空行断开注释与下一个条目的关联
+    // A blank line breaks the association between a comment and the next entry.
     if (!trimmed) {
       pendingComment = ""
       continue
@@ -307,17 +307,17 @@ export function parseEnvContent(content: string): ConfigMapEntry[] {
         currentGroup = groupMarker[1].trim()
         pendingComment = ""
       } else {
-        // 普通注释挂到下一个 key；多行注释合并为一条
+        // A plain comment attaches to the next key; consecutive comment lines merge into one.
         const commentText = trimmed.replace(/^#+\s?/, "")
         pendingComment = pendingComment ? `${pendingComment} ${commentText}` : commentText
       }
       continue
     }
 
-    // 解析 KEY=VALUE 格式
+    // Parse KEY=VALUE format
     const equalIndex = trimmed.indexOf("=")
     if (equalIndex === -1) {
-      // 没有 =，只导入 key
+      // No "=", import key only
       if (trimmed.match(/^[A-Za-z_][A-Za-z0-9_]*$/)) {
         entries.push({ key: trimmed, value: "", group: currentGroup, comment: pendingComment })
         pendingComment = ""
@@ -328,7 +328,7 @@ export function parseEnvContent(content: string): ConfigMapEntry[] {
     const key = trimmed.substring(0, equalIndex).trim()
     let value = trimmed.substring(equalIndex + 1).trim()
 
-    // 去除引号
+    // Strip surrounding quotes
     if ((value.startsWith('"') && value.endsWith('"')) ||
         (value.startsWith("'") && value.endsWith("'"))) {
       value = value.slice(1, -1)
