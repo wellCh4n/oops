@@ -193,6 +193,9 @@ public class NamespaceMigrationService {
     }
 
     private List<UpdateConfigMapCommand> toUpdateCommands(List<ConfigMapItem> items) {
+        // The snapshot from getConfigMaps() is already sorted by display order, and updateConfigMap()
+        // re-derives each item's order from its position in this list, so preserving the iteration order
+        // here carries the manual ordering across the migration. Group and comment must be copied explicitly.
         List<UpdateConfigMapCommand> commands = new ArrayList<>();
         for (ConfigMapItem item : items) {
             UpdateConfigMapCommand command = new UpdateConfigMapCommand();
@@ -200,6 +203,8 @@ public class NamespaceMigrationService {
             command.setValue(item.getValue());
             command.setSecret(item.isSecret());
             command.setMountPath(item.getMountPath());
+            command.setGroup(item.getGroup());
+            command.setComment(item.getComment());
             commands.add(command);
         }
         return commands;
