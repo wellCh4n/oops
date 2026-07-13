@@ -3,7 +3,7 @@
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useForm, useFieldArray, type UseFormReturn } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2, Upload, Copy, Container, KeyRound, ChevronDown, Search, GripVertical, Download, FileUp, FileDown, HardDrive, FileText, Variable, Info, MessageSquare, Tags } from "lucide-react"
+import { Plus, Trash2, Loader2, Upload, Copy, Container, KeyRound, ChevronDown, Search, GripVertical, Download, FileUp, FileDown, HardDrive, FileText, Variable, Info, MessageSquare, Tags, Hash } from "lucide-react"
 import { toast } from "sonner"
 import {
   DndContext,
@@ -143,7 +143,9 @@ function SortableConfigRow({
   const [groupDraft, setGroupDraft] = useState("")
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    // Only translate — not CSS.Transform, which would also apply scaleX/scaleY for the height-transition
+    // animation and squash rows that are taller (e.g. carry an inline comment) during drag.
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 10 : undefined,
   }
@@ -193,22 +195,9 @@ function SortableConfigRow({
                     <Input
                       autoComplete="off"
                       placeholder="Key"
-                      className={`pl-8 ${currentComment?.trim() ? "pr-8" : ""}`}
+                      className="pl-8"
                       {...field}
                     />
-                    {/* Trailing comment hint: hover the "i" to read the comment. */}
-                    {currentComment?.trim() && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground cursor-help">
-                            <Info className="size-3.5" />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs whitespace-pre-wrap break-words">
-                          {currentComment}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
                   </div>
                 </FormControl>
                 {showEnvNameWarning && (
@@ -444,6 +433,14 @@ function SortableConfigRow({
           <Trash2 className="size-4 text-destructive" />
         </Button>
       </div>
+
+      {/* Inline comment: dim, small, prefixed with a "#" icon, spanning the key + value columns. */}
+      {currentComment?.trim() && (
+        <div className="col-start-2 col-span-2 -mt-1 flex items-start gap-1 text-muted-foreground/70">
+          <Hash className="mt-0.5 size-3 shrink-0" />
+          <span className="text-xs whitespace-pre-wrap break-words">{currentComment}</span>
+        </div>
+      )}
     </div>
   )
 }
