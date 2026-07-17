@@ -144,21 +144,21 @@ export function EnvImportDialog({
             {/* New config items to add */}
             {toAdd.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-green-600">
+                <Label className="text-sm font-medium text-success">
                   {t("apps.config.newEntries")} ({toAdd.length})
                 </Label>
-                <div className="rounded-md border bg-green-50 dark:bg-green-950/20 p-3 space-y-2">
+                <div className="rounded-md border bg-success/10 p-3 space-y-2">
                   {toAdd.map(entry => (
                     <div key={entry.key} className="flex items-center gap-2 text-sm">
-                      <span className="font-mono text-green-700 dark:text-green-400">{entry.key}</span>
+                      <span className="font-mono text-success">{entry.key}</span>
                       {importMode === "key-value" && (
                         <>
                           <span className="text-muted-foreground">=</span>
-                          <span className="font-mono text-green-600 dark:text-green-500 truncate">{entry.value}</span>
+                          <span className="font-mono text-success truncate">{entry.value}</span>
                         </>
                       )}
                       {entry.group && (
-                        <span className="rounded bg-green-100 dark:bg-green-900/40 px-1.5 py-0.5 text-xs text-green-700 dark:text-green-400">
+                        <span className="rounded-sm bg-success/15 px-1.5 py-0.5 text-xs text-success">
                           {entry.group}
                         </span>
                       )}
@@ -171,10 +171,10 @@ export function EnvImportDialog({
             {/* Config items to replace (key-value mode only) */}
             {importMode === "key-value" && toReplace.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-amber-600">
+                <Label className="text-sm font-medium text-warning">
                   {t("apps.config.valueConflict")} ({toReplace.length})
                 </Label>
-                <div className="rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 p-3 space-y-3">
+                <div className="rounded-md border border-warning/30 bg-warning/10 p-3 space-y-3">
                   {toReplace.map(entry => (
                     <div key={entry.new.key} className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -195,13 +195,13 @@ export function EnvImportDialog({
                           <>
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">{t("apps.config.currentValue")}：</span>
-                              <span className="font-mono text-red-600 dark:text-red-400 line-through">
+                              <span className="font-mono text-destructive line-through">
                                 {entry.old.value || `(${t("common.empty")})`}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-muted-foreground">{t("apps.config.newValue")}：</span>
-                              <span className="font-mono text-green-600 dark:text-green-400">
+                              <span className="font-mono text-success">
                                 {entry.new.value || `(${t("common.empty")})`}
                               </span>
                             </div>
@@ -251,7 +251,7 @@ export function EnvImportDialog({
                     {noConflict.map(entry => (
                       <span
                         key={entry.key}
-                        className="font-mono text-xs px-2 py-1 bg-muted rounded text-muted-foreground"
+                        className="font-mono text-xs px-2 py-1 bg-muted rounded-sm text-muted-foreground"
                       >
                         {entry.key}
                       </span>

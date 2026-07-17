@@ -110,11 +110,11 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
   return (
     <div className="w-full space-y-6">
       <div className="space-y-2">
-        <h3 className="text-base font-medium text-red-500">{t("apps.danger.title")}</h3>
+        <h3 className="text-base font-medium text-destructive">{t("apps.danger.title")}</h3>
         <p className="text-sm text-muted-foreground">{t("apps.danger.desc")}</p>
       </div>
 
-      <div className="flex items-center justify-between gap-4 rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <div className="space-y-1">
           <p className="text-sm font-medium">{t("apps.danger.migrateBtn")}</p>
           <p className="text-xs text-muted-foreground">{t("apps.danger.migrateDesc")}</p>
@@ -147,7 +147,7 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4">
+      <div className="flex items-center justify-between rounded-lg border border-destructive/30 bg-destructive/5 p-4">
         <div className="space-y-1">
           <p className="text-sm font-medium">{t("apps.danger.deleteBtn")}</p>
           <p className="text-xs text-muted-foreground">

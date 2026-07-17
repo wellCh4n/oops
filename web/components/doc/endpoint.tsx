@@ -60,7 +60,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
       <div className="flex items-center gap-2 flex-wrap">
         <span
           className={cn(
-            "inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-semibold font-mono",
+            "inline-flex items-center justify-center rounded-sm px-2 py-0.5 text-xs font-semibold font-mono",
             methodStyles[method]
           )}
         >
@@ -70,7 +70,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
       </div>
       {summary && <div className="text-sm text-muted-foreground">{summary}</div>}
       <div className="relative">
-        <pre className="overflow-x-auto rounded border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono [font-variant-ligatures:none] [font-feature-settings:'liga'_0,'clig'_0,'calt'_0]">
+        <pre className="overflow-x-auto rounded-md border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono [font-variant-ligatures:none] [font-feature-settings:'liga'_0,'clig'_0,'calt'_0]">
           <code>{curl}</code>
         </pre>
         <Button

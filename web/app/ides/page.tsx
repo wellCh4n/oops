@@ -426,7 +426,7 @@ function IDEPageContent() {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className={`shrink-0 size-2 rounded-full ${ide.ready ? "bg-green-500" : "bg-yellow-400 animate-pulse"}`}
+                          className={`shrink-0 size-2 rounded-full ${ide.ready ? "bg-success" : "bg-warning animate-pulse"}`}
                           title={ide.ready ? t("ide.statusReady") : t("ide.statusPending")}
                         />
                         <div className="flex flex-col gap-0.5 min-w-0">

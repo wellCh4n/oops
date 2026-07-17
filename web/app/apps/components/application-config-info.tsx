@@ -201,7 +201,7 @@ function SortableConfigRow({
                   </div>
                 </FormControl>
                 {showEnvNameWarning && (
-                  <p className="mt-1 text-xs text-amber-600">{t("apps.config.envNameWarning")}</p>
+                  <p className="mt-1 text-xs text-warning">{t("apps.config.envNameWarning")}</p>
                 )}
                 <FormMessage />
               </FormItem>
@@ -388,7 +388,7 @@ function SortableConfigRow({
                         <button
                           key={group}
                           type="button"
-                          className="flex w-full items-center rounded px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
+                          className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer"
                           onMouseDown={(event) => {
                             // mousedown (before blur) so the click registers before the list unmounts.
                             event.preventDefault()

@@ -21,10 +21,10 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
   const tag = firstImage.includes(":") ? firstImage.split(":").pop()! : ""
   const versionMached = tag === pipelineId
   const icon = !tag ? null : versionMached ? (
-    <Check className="size-4 text-green-500" />
+    <Check className="size-4 text-success" />
   ) : (
     <Link href={`/apps/${namespace}/${appName}/pipelines/${tag}`}>
-      <X className="size-4 text-red-500 cursor-pointer" />
+      <X className="size-4 text-destructive cursor-pointer" />
     </Link>
   )
   return (

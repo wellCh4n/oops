@@ -8,6 +8,7 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ConnectionLostBanner } from "@/components/connection-lost-banner"
 import { Copyable } from "@/components/ui/copyable"
 import {
   AlertDialog,
@@ -24,7 +25,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, RefreshCw, Rocket, Ban, WifiOff, FileText, ChevronDown } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -378,32 +379,19 @@ export default function PipelineDetailPage({ params }: PageProps) {
     <ContentPage title={t("apps.pipeline.title")} fullHeight>
       <div className="flex flex-1 min-h-0 flex-col gap-4">
         {wsDisconnected && (
-          <div
-            role="status"
-            className="flex shrink-0 items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-          >
-            <div className="flex min-w-0 items-center gap-2 text-sm">
-              <WifiOff className="size-4 shrink-0" />
-              <span className="truncate">{t("common.disconnected")}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => window.location.reload()}
-              className="shrink-0 bg-background/80 text-foreground hover:bg-background"
-            >
-              <RefreshCw className="size-3" />
-              {t("common.refresh")}
-            </Button>
-          </div>
+          <ConnectionLostBanner
+            className="rounded-md"
+            message={t("common.disconnected")}
+            retryLabel={t("common.refresh")}
+          />
         )}
 
         {pipeline?.status === "ERROR" && pipeline.message && (
           <div
             role="alert"
-            className="flex shrink-0 items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-100"
+            className="flex shrink-0 items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
           >
-            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
             <div className="min-w-0">
               <div className="font-medium">{t("apps.pipeline.message")}</div>
               <div className="mt-1 flex flex-wrap items-center gap-2">

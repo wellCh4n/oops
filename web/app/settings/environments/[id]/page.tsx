@@ -307,7 +307,7 @@ export default function EnvironmentEditPage() {
                         size="sm"
                         onClick={handleValidateK8s}
                         disabled={isValidatingK8s || isK8sValidated}
-                        className={isK8sValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
+                        className={isK8sValidated ? "text-success border-success hover:text-success" : ""}
                       >
                         {isValidatingK8s && <Loader2 className="size-3 animate-spin" />}
                         {isK8sValidated ? (
@@ -412,7 +412,7 @@ export default function EnvironmentEditPage() {
                         size="sm"
                         onClick={handleValidateRepo}
                         disabled={isValidatingRepo || isRepoValidated}
-                        className={isRepoValidated ? "text-green-600 border-green-600 hover:text-green-600" : ""}
+                        className={isRepoValidated ? "text-success border-success hover:text-success" : ""}
                       >
                         {isValidatingRepo && <Loader2 className="size-3 animate-spin" />}
                         {isRepoValidated ? (
@@ -588,12 +588,12 @@ export default function EnvironmentEditPage() {
                   </div>
 
                   {/* Danger Zone Block */}
-                  <div className="border border-red-200 dark:border-red-900 rounded-lg overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900">
-                      <AlertTriangle className="size-4 text-red-500" />
-                      <span className="text-sm font-semibold text-red-500">{t("env.dangerZone")}</span>
+                  <div className="border border-destructive/30 rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border-b border-destructive/30">
+                      <AlertTriangle className="size-4 text-destructive" />
+                      <span className="text-sm font-semibold text-destructive">{t("env.dangerZone")}</span>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-red-50/50 dark:bg-red-950/20">
+                    <div className="flex items-center justify-between p-4 bg-destructive/5">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{t("env.delete")}</p>
                         <p className="text-xs text-muted-foreground">

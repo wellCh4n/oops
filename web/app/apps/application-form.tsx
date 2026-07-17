@@ -234,7 +234,7 @@ function ApplicationFormContent({
               <TabsTrigger value="config-info" className="px-6 cursor-pointer">{t("apps.tab.configMgmt")}</TabsTrigger>
               <TabsTrigger value="expert-config" className="px-6 cursor-pointer">{t("apps.tab.expertConfig")}</TabsTrigger>
               {canSeeDangerZone && (
-                <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-red-600 data-[state=active]:text-white dark:data-[state=active]:bg-red-600 dark:data-[state=active]:text-white dark:data-[state=active]:border-red-600">{t("apps.tab.dangerZone")}</TabsTrigger>
+                <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-[state=active]:bg-destructive data-[state=active]:text-white dark:data-[state=active]:border-destructive">{t("apps.tab.dangerZone")}</TabsTrigger>
               )}
             </TabsList>
           )}
@@ -316,7 +316,7 @@ function ApplicationFormContent({
         </TabsContent>
 
         {canSeeDangerZone && (
-          <TabsContent value="danger-zone" className="rounded-md border border-red-200 dark:border-red-900 bg-background p-4">
+          <TabsContent value="danger-zone" className="rounded-md border border-destructive/30 bg-background p-4">
             <ApplicationDangerZone
               namespace={formState.application?.namespace ?? ""}
               name={formState.application?.name ?? ""}

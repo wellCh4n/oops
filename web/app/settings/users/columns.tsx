@@ -49,7 +49,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<User>[] => [
     header: t("users.col.status"),
     cell: ({ row }) => row.original.enabled === false
       ? <Badge variant="secondary" className="text-muted-foreground">{t("users.status.disabled")}</Badge>
-      : <Badge variant="outline" className="text-emerald-600 border-emerald-200 dark:text-emerald-400 dark:border-emerald-900">{t("users.status.enabled")}</Badge>,
+      : <Badge variant="outline" className="text-success border-success/40">{t("users.status.enabled")}</Badge>,
   },
   {
     accessorKey: "createdTime",
