@@ -215,7 +215,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
               >
                 <Keyboard className="size-4" />
                 <span>{t("cmd.hint")}</span>
-                <kbd className="bg-sidebar-border px-1.5 py-0.5 rounded text-[10px] font-mono ml-auto">/</kbd>
+                <kbd className="bg-sidebar-border px-1.5 py-0.5 rounded-sm text-[10px] font-mono ml-auto">/</kbd>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}

@@ -55,7 +55,7 @@ function AnchorHeading({
         onClick={handleCopy}
         aria-label={t("doc.copyAnchor")}
         title={t("doc.copyAnchor")}
-        className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
+        className="inline-flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
       >
         <Link2 className="h-3.5 w-3.5" />
       </button>

@@ -328,11 +328,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                           <span className="font-medium truncate">
                             {recentApp.name}
                           </span>
-                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
                             {t("common.namespace")}: {recentApp.namespace}
                           </span>
                           {recentApp.ownerName && (
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
                               {t("common.owner")}: {recentApp.ownerName}
                             </span>
                           )}
@@ -367,11 +367,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             <span className="font-medium truncate">
                               {app.name}
                             </span>
-                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
                               {t("common.namespace")}: {app.namespace}
                             </span>
                             {app.ownerName && (
-                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
                                 {t("common.owner")}: {app.ownerName}
                               </span>
                             )}
@@ -402,22 +402,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <div className="flex items-center justify-between px-3 py-2 border-t text-xs text-muted-foreground">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1">
-                  <kbd className="bg-muted px-1.5 py-0.5 rounded">/</kbd>
+                  <kbd className="bg-muted px-1.5 py-0.5 rounded-sm">/</kbd>
                   {t("cmd.toggle")}
                 </span>
                 {selectedCommand && (
                   <span className="flex items-center gap-1">
-                    <kbd className="bg-muted px-1.5 py-0.5 rounded">←</kbd>
+                    <kbd className="bg-muted px-1.5 py-0.5 rounded-sm">←</kbd>
                     {t("cmd.back")}
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <kbd className="bg-muted px-1.5 py-0.5 rounded">esc</kbd>
+                  <kbd className="bg-muted px-1.5 py-0.5 rounded-sm">esc</kbd>
                   {t("cmd.close")}
                 </span>
               </div>
               <span className="flex items-center gap-1">
-                <kbd className="bg-muted px-1.5 py-0.5 rounded">↵</kbd>
+                <kbd className="bg-muted px-1.5 py-0.5 rounded-sm">↵</kbd>
                 {t("cmd.select")}
               </span>
             </div>

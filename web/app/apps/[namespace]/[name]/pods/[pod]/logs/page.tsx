@@ -4,12 +4,11 @@ import { Suspense, useEffect, useRef, useState } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { ConnectionLostBanner } from "@/components/connection-lost-banner"
 import { API_BASE_URL } from "@/lib/api/config"
 import { getToken } from "@/lib/auth"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
-import { RefreshCw, WifiOff } from "lucide-react"
 
 interface LogLine {
   id: number
@@ -110,7 +109,7 @@ function ApplicationPodLogsContent() {
       actions={
         <div className="flex items-center gap-3">
           <span
-            className={`size-2 rounded-full ${isConnected ? "bg-green-500" : "bg-gray-400"}`}
+            className={`size-2 rounded-full ${isConnected ? "bg-success" : "bg-muted-foreground"}`}
           />
           <Badge className="bg-orange-500 text-white">{env}</Badge>
         </div>
@@ -118,24 +117,10 @@ function ApplicationPodLogsContent() {
     >
       <div className="flex h-full min-h-0 flex-col">
         {connectionStatus === "disconnected" && (
-          <div
-            role="status"
-            className="flex shrink-0 items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100"
-          >
-            <div className="flex min-w-0 items-center gap-2 text-sm">
-              <WifiOff className="size-4 shrink-0" />
-              <span className="truncate">{t("common.disconnected")}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={() => window.location.reload()}
-              className="shrink-0 bg-background/80 text-foreground hover:bg-background"
-            >
-              <RefreshCw className="size-3" />
-              {t("common.refresh")}
-            </Button>
-          </div>
+          <ConnectionLostBanner
+            message={t("common.disconnected")}
+            retryLabel={t("common.refresh")}
+          />
         )}
 
         <div className="flex-1 min-h-0 bg-zinc-950 p-4 overflow-hidden font-mono text-xs text-white">

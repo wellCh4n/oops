@@ -56,7 +56,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<AssetEntry>[] 
               width={32}
               height={32}
               unoptimized
-              className="size-8 rounded object-cover border"
+              className="size-8 rounded-sm object-cover border"
             />
           ) : (
             <FileText className="size-4 text-muted-foreground" />

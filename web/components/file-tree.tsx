@@ -453,7 +453,7 @@ export default function FileTree({
             <button
               type="button"
               onClick={() => openMkdir(rootPath)}
-              className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
               title={t("terminal.files.newFolder")}
             >
               <FolderPlus className="size-3.5" />
@@ -462,7 +462,7 @@ export default function FileTree({
           <button
             type="button"
             onClick={() => loadDirectory(rootPath)}
-            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+            className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
             title={t("common.refresh")}
           >
             {rootState?.loading ? (
@@ -521,7 +521,7 @@ export default function FileTree({
               {edit?.path}
             </DialogDescription>
           </DialogHeader>
-          <div className="h-[60vh] overflow-hidden rounded border">
+          <div className="h-[60vh] overflow-hidden rounded-md border">
             {edit?.loading ? (
               <div className="flex h-full items-center justify-center text-muted-foreground gap-2 text-sm">
                 <Loader2 className="size-4 animate-spin" />
