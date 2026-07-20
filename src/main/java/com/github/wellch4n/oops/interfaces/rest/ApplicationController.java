@@ -17,6 +17,7 @@ import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
+import com.github.wellch4n.oops.shared.log.Loggable;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.time.Instant;
 import java.util.List;
@@ -68,6 +69,7 @@ public class ApplicationController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "CREATE_APP", resourceType = "Application")
     public Result<String> createApplication(@PathVariable String namespace,
                                             @RequestBody ApplicationConfigDto.Profile application,
                                             Authentication authentication) {
@@ -78,6 +80,7 @@ public class ApplicationController {
 
     @PutMapping("/{name}")
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "UPDATE_APP", resourceType = "Application")
     public Result<Boolean> updateApplication(@PathVariable String namespace,
                                              @PathVariable String name,
                                              @RequestBody ApplicationConfigDto.Profile application) {
@@ -87,6 +90,7 @@ public class ApplicationController {
     @DeleteMapping("/{name}")
     @OpenApiHidden
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "DELETE_APP", resourceType = "Application")
     public Result<Boolean> deleteApplication(@PathVariable String namespace, @PathVariable String name,
                                              Authentication authentication) {
         AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
@@ -96,6 +100,7 @@ public class ApplicationController {
     @PostMapping("/{name}/namespace-migration")
     @OpenApiHidden
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "MIGRATE_APP_NAMESPACE", resourceType = "Application")
     public Result<NamespaceMigrationResult> migrateNamespace(@PathVariable String namespace,
                                                              @PathVariable String name,
                                                              @RequestBody NamespaceMigrationCommand command,

@@ -12,6 +12,7 @@ const nav = {
   "nav.users": "Users",
   "nav.environments": "Environments",
   "nav.namespaces": "Namespaces",
+  "nav.logs": "Logs",
   "nav.domains": "Domains",
   "nav.help": "Help",
   "nav.docs": "OpenAPI Docs",

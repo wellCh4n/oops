@@ -286,3 +286,22 @@ export interface ApplicationServiceEnvironmentConfig {
   host?: string
   https?: boolean
 }
+
+export type OperationSource = 'USER' | 'OPENAPI' | 'SYSTEM';
+
+export interface Log {
+  id: string;
+  userId: string;
+  username?: string;
+  operation: string;
+  resourceType?: string;
+  resourceId?: string;
+  namespace?: string;
+  environmentName?: string;
+  source: OperationSource;
+  clientIp?: string;
+  success: boolean;
+  errorMessage?: string;
+  details?: string;
+  timestamp: string;
+}

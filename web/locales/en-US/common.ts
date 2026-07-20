@@ -29,6 +29,7 @@ const common = {
   "common.status": "Status",
   "common.prevPage": "Previous",
   "common.nextPage": "Next",
+  "common.page": "Page",
   "common.pagePrefix": "Page ",
   "common.pageSuffix": "",
   "common.totalPages": "of ${total}",

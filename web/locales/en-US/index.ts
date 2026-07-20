@@ -1,5 +1,6 @@
 import apps from "./apps"
 import assets from "./assets"
+import log from "./log"
 import cmd from "./cmd"
 import common from "./common"
 import domains from "./domains"
@@ -20,6 +21,7 @@ import validation from "./validation"
 const translations: Record<string, string> = {
   ...apps,
   ...assets,
+  ...log,
   ...cmd,
   ...common,
   ...domains,
