@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.application.dto.PipelineDto;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
+import com.github.wellch4n.oops.shared.log.Loggable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -45,6 +46,7 @@ public class PipelineController {
 
     @PutMapping("/{id}/stop")
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "STOP_PIPELINE", resourceType = "Pipeline")
     public Result<Boolean> stopPipeline(@PathVariable String namespace,
                                         @PathVariable String name,
                                         @PathVariable String id,
@@ -55,6 +57,7 @@ public class PipelineController {
 
     @PutMapping("/{id}/deploy")
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "DEPLOY_PIPELINE", resourceType = "Pipeline")
     public Result<Boolean> deployPipeline(@PathVariable String namespace,
                                           @PathVariable String name,
                                           @PathVariable String id,
@@ -65,6 +68,7 @@ public class PipelineController {
 
     @PostMapping("/{id}/rollback")
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "ROLLBACK", resourceType = "Pipeline")
     public Result<String> rollbackPipeline(@PathVariable String namespace,
                                            @PathVariable String name,
                                            @PathVariable String id,

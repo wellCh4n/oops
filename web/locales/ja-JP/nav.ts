@@ -12,6 +12,7 @@ const nav = {
   "nav.users": "ユーザー",
   "nav.environments": "環境",
   "nav.namespaces": "名前空間",
+  "nav.logs": "ログ",
   "nav.domains": "ドメイン",
   "nav.help": "ヘルプ",
   "nav.docs": "OpenAPI ドキュメント",

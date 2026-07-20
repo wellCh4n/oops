@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.application.dto.DeployCommand;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.port.ObjectStorage;
 import com.github.wellch4n.oops.application.service.DeploymentService;
+import com.github.wellch4n.oops.shared.log.Loggable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -41,6 +42,7 @@ public class DeploymentController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "DEPLOY", resourceType = "Application")
     public Result<String> deployApplication(@PathVariable String namespace,
                                             @PathVariable String name,
                                             @RequestBody DeployCommand request,

@@ -29,6 +29,7 @@ const common = {
   "common.status": "ステータス",
   "common.prevPage": "前のページ",
   "common.nextPage": "次のページ",
+  "common.page": "ページ",
   "common.pagePrefix": "",
   "common.pageSuffix": "ページ",
   "common.totalPages": "合計 ${total} ページ",

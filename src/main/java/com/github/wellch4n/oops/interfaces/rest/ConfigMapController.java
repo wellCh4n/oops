@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.dto.ConfigMapItem;
 import com.github.wellch4n.oops.application.dto.UpdateConfigMapCommand;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.ConfigMapService;
+import com.github.wellch4n.oops.shared.log.Loggable;
 import java.util.List;
 import org.springframework.data.repository.query.Param;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +37,7 @@ public class ConfigMapController {
 
     @PutMapping
     @PreAuthorize("isAuthenticated()")
+    @Loggable(operation = "UPDATE_CONFIG", resourceType = "Application")
     public Result<Boolean> updateConfigMap(@PathVariable String namespace,
                                            @PathVariable String applicationName,
                                            @RequestBody List<UpdateConfigMapCommand> request,

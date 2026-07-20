@@ -10,6 +10,7 @@ import com.github.wellch4n.oops.application.dto.UpdateUserCommand;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.UserService;
+import com.github.wellch4n.oops.shared.log.Loggable;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,6 +59,7 @@ public class UserController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Loggable(operation = "CREATE_USER", resourceType = "User")
     public Result<Boolean> createUser(@RequestBody CreateUserCommand request) {
         if (request.username() == null || request.username().isBlank()) {
             return Result.failure("Username is required");
@@ -71,6 +73,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Loggable(operation = "UPDATE_USER", resourceType = "User")
     public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserCommand request) {
         userService.updateUser(id, request.role(), request.email(), request.password(), request.enabled());
         return Result.success(true);
@@ -103,6 +106,7 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Loggable(operation = "DELETE_USER", resourceType = "User")
     public Result<Boolean> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
         return Result.success(true);

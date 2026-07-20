@@ -1,0 +1,21 @@
+CREATE TABLE operation_log (
+    id VARCHAR(24) PRIMARY KEY,
+    user_id VARCHAR(24),
+    username VARCHAR(100),
+    source VARCHAR(20) NOT NULL,
+    operation VARCHAR(50) NOT NULL,
+    resource_type VARCHAR(50),
+    resource_id VARCHAR(24),
+    namespace VARCHAR(63),
+    environment_name VARCHAR(100),
+    timestamp DATETIME NOT NULL,
+    client_ip VARCHAR(45),
+    details TEXT,
+    success BOOLEAN NOT NULL DEFAULT TRUE,
+    error_message TEXT,
+    INDEX idx_resource (resource_type, resource_id),
+    INDEX idx_user (user_id),
+    INDEX idx_namespace (namespace),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_source (source)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

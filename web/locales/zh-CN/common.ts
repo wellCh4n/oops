@@ -29,6 +29,7 @@ const common = {
   "common.status": "状态",
   "common.prevPage": "上一页",
   "common.nextPage": "下一页",
+  "common.page": "第",
   "common.pagePrefix": "第 ",
   "common.pageSuffix": " 页",
   "common.totalPages": "共 ${total} 页",
