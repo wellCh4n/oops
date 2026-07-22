@@ -6,9 +6,11 @@ import lombok.Data;
 public class NodeStatusView {
 
     private String name;
+    private String hostname;
     private Boolean ready;
     private String roles;
     private String internalIP;
+    private String externalIP;
     private String kubeletVersion;
     private String osImage;
     private String containerRuntimeVersion;

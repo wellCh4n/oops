@@ -19,5 +19,6 @@ public class ApplicationExpertConfig extends BaseDomainObject {
         private String priority;
         private boolean scheduledRestartEnabled;
         private String scheduledRestartCron;
+        private List<String> nodeNames;
     }
 }

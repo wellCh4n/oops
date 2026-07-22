@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.dto.ConfigMapItem;
 import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesConfigMapGateway;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesNodeAffinities;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -153,6 +154,12 @@ public class StatefulSetProcessor implements DeployProcessor {
                 expertConfig != null ? expertConfig.getPriority() : null);
         if (StringUtils.isNotBlank(priorityClassName)) {
             statefulSet.getSpec().getTemplate().getSpec().setPriorityClassName(priorityClassName);
+        }
+
+        var nodeAffinity = KubernetesNodeAffinities.requireNodes(
+                expertConfig != null ? expertConfig.getNodeNames() : null);
+        if (nodeAffinity != null) {
+            statefulSet.getSpec().getTemplate().getSpec().setAffinity(nodeAffinity);
         }
 
         StatefulSet created = ctx.getClient().apps().statefulSets()

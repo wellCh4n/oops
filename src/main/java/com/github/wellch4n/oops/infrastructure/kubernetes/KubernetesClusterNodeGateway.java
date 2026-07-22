@@ -37,11 +37,13 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
     private NodeStatusView toResponse(Node node) {
         NodeStatusView response = new NodeStatusView();
         response.setName(node.getMetadata() != null ? node.getMetadata().getName() : null);
+        response.setHostname(extractHostname(node));
         response.setCreationTimestamp(node.getMetadata() != null ? node.getMetadata().getCreationTimestamp() : null);
 
         response.setReady(isNodeReady(node));
         response.setRoles(extractRoles(node));
         response.setInternalIP(extractInternalIP(node));
+        response.setExternalIP(extractExternalIP(node));
 
         if (node.getStatus() != null && node.getStatus().getNodeInfo() != null) {
             response.setKubeletVersion(node.getStatus().getNodeInfo().getKubeletVersion());
@@ -92,6 +94,28 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
         }
         var first = addresses.stream().findFirst().orElse(null);
         return first != null && first.getAddress() != null && !first.getAddress().isEmpty() ? first.getAddress() : "-";
+    }
+
+    private String extractHostname(Node node) {
+        if (node.getMetadata() != null && node.getMetadata().getLabels() != null) {
+            String hostname = node.getMetadata().getLabels().get(KubernetesNodeAffinities.HOSTNAME_LABEL);
+            if (hostname != null && !hostname.isEmpty()) {
+                return hostname;
+            }
+        }
+        // Fallback: kubelet virtually always sets kubernetes.io/hostname, but if it is somehow absent
+        // use the node object name so node affinity still has a value to match on.
+        return node.getMetadata() != null ? node.getMetadata().getName() : null;
+    }
+
+    private String extractExternalIP(Node node) {
+        if (node.getStatus() == null || node.getStatus().getAddresses() == null) return "-";
+        List<NodeAddress> addresses = node.getStatus().getAddresses().stream().filter(Objects::nonNull).toList();
+        var external = addresses.stream().filter(address -> "ExternalIP".equals(address.getType())).findFirst().orElse(null);
+        if (external != null && external.getAddress() != null && !external.getAddress().isEmpty()) {
+            return external.getAddress();
+        }
+        return "-";
     }
 
     private String quantityToString(Quantity quantity) {

@@ -52,11 +52,14 @@ public class KubernetesApplicationExpertConfigGateway implements ApplicationExpe
         ApplicationPriority priority = ApplicationPriority.fromValue(expertConfig.getPriority());
         KubernetesPriorityClasses.ensure(client, priority);
         String priorityClassName = priority.priorityClassName();
+        var nodeAffinity = KubernetesNodeAffinities.requireNodes(expertConfig.getNodeNames());
         client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
                 .edit(target -> {
                     target.getSpec().getTemplate().getSpec().setServiceAccountName(serviceAccountName);
                     target.getSpec().getTemplate().getSpec()
                             .setPriorityClassName(StringUtils.isNotBlank(priorityClassName) ? priorityClassName : null);
+                    // Null clears any existing node affinity, letting pods schedule freely again.
+                    target.getSpec().getTemplate().getSpec().setAffinity(nodeAffinity);
                     return target;
                 });
     }
