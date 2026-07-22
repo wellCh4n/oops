@@ -280,8 +280,11 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
   // Node affinity matches on the kubernetes.io/hostname label (node.hostname), which can differ from
   // the display name (node.name) when kubelet was started with --hostname-override. Bind on hostname,
   // show name.
-  const nodeOptions = nodes.map((node) => ({ value: node.hostname, label: node.name }))
-  const nodeByHostname = new Map(nodes.map((node) => [node.hostname, node]))
+  const nodeOptions = nodes.map((node) => ({
+    value: node.hostname,
+    label: node.name,
+    description: [node.internalIP, node.cpu && `CPU ${node.cpu}`, node.memory && `内存 ${node.memory}`].filter(Boolean).join(" · "),
+  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -351,35 +354,6 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
                 />
               </FormControl>
               <p className="text-xs text-muted-foreground">{t("apps.expertConfig.nodeAffinityHint")}</p>
-              {selected.length > 0 && (
-                <div className="mt-1 rounded-md border overflow-hidden max-w-2xl">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="bg-muted/50 text-muted-foreground">
-                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.name")}</th>
-                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.ip")}</th>
-                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.externalIp")}</th>
-                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.cpu")}</th>
-                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.memory")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selected.map((hostname) => {
-                        const node = nodeByHostname.get(hostname)
-                        return (
-                          <tr key={hostname} className="border-t">
-                            <td className="px-2 py-1.5 font-medium">{node?.name || hostname}</td>
-                            <td className="px-2 py-1.5">{node?.internalIP || "-"}</td>
-                            <td className="px-2 py-1.5">{node?.externalIP || "-"}</td>
-                            <td className="px-2 py-1.5">{node?.cpu || "-"}</td>
-                            <td className="px-2 py-1.5">{node?.memory || "-"}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
               <FormMessage />
             </FormItem>
           )

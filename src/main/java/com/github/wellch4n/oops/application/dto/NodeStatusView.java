@@ -10,7 +10,6 @@ public class NodeStatusView {
     private Boolean ready;
     private String roles;
     private String internalIP;
-    private String externalIP;
     private String kubeletVersion;
     private String osImage;
     private String containerRuntimeVersion;

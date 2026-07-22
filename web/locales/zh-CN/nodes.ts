@@ -6,7 +6,6 @@ const nodes = {
   "nodes.col.status": "状态",
   "nodes.col.role": "角色",
   "nodes.col.ip": "内网IP",
-  "nodes.col.externalIp": "外网IP",
   "nodes.col.cpu": "CPU",
   "nodes.col.memory": "内存",
   "nodes.col.pods": "Pods",

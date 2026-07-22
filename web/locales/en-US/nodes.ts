@@ -6,7 +6,6 @@ const nodes = {
   "nodes.col.status": "Status",
   "nodes.col.role": "Role",
   "nodes.col.ip": "Internal IP",
-  "nodes.col.externalIp": "External IP",
   "nodes.col.cpu": "CPU",
   "nodes.col.memory": "Memory",
   "nodes.col.pods": "Pods",

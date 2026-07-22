@@ -22,6 +22,7 @@ import {
 interface Option {
   value: string
   label: string
+  description?: string
 }
 
 interface MultiSelectWithSearchProps {
@@ -144,6 +145,9 @@ export function MultiSelectWithSearch({
                         {checked && <span className="size-2 rounded-sm bg-current" />}
                       </span>
                       <span className="flex-1 truncate">{option.label}</span>
+                      {option.description && (
+                        <span className="text-xs text-muted-foreground shrink-0">{option.description}</span>
+                      )}
                     </CommandItem>
                   )
                 })}

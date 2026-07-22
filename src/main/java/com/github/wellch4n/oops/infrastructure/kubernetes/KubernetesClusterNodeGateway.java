@@ -43,8 +43,6 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
         response.setReady(isNodeReady(node));
         response.setRoles(extractRoles(node));
         response.setInternalIP(extractInternalIP(node));
-        response.setExternalIP(extractExternalIP(node));
-
         if (node.getStatus() != null && node.getStatus().getNodeInfo() != null) {
             response.setKubeletVersion(node.getStatus().getNodeInfo().getKubeletVersion());
             response.setOsImage(node.getStatus().getNodeInfo().getOsImage());
@@ -106,16 +104,6 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
         // Fallback: kubelet virtually always sets kubernetes.io/hostname, but if it is somehow absent
         // use the node object name so node affinity still has a value to match on.
         return node.getMetadata() != null ? node.getMetadata().getName() : null;
-    }
-
-    private String extractExternalIP(Node node) {
-        if (node.getStatus() == null || node.getStatus().getAddresses() == null) return "-";
-        List<NodeAddress> addresses = node.getStatus().getAddresses().stream().filter(Objects::nonNull).toList();
-        var external = addresses.stream().filter(address -> "ExternalIP".equals(address.getType())).findFirst().orElse(null);
-        if (external != null && external.getAddress() != null && !external.getAddress().isEmpty()) {
-            return external.getAddress();
-        }
-        return "-";
     }
 
     private String quantityToString(Quantity quantity) {

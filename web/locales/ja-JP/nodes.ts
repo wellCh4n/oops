@@ -6,7 +6,6 @@ const nodes = {
   "nodes.col.status": "ステータス",
   "nodes.col.role": "役割",
   "nodes.col.ip": "内部IP",
-  "nodes.col.externalIp": "外部IP",
   "nodes.col.cpu": "CPU",
   "nodes.col.memory": "メモリ",
   "nodes.col.pods": "ポッド",

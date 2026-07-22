@@ -55,7 +55,6 @@ export interface NodeStatus {
   ready: boolean
   roles: string
   internalIP: string
-  externalIP: string
   kubeletVersion: string
   osImage: string
   containerRuntimeVersion: string
