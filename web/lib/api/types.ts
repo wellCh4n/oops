@@ -51,9 +51,11 @@ export interface Namespace {
 
 export interface NodeStatus {
   name: string
+  hostname: string
   ready: boolean
   roles: string
   internalIP: string
+  externalIP: string
   kubeletVersion: string
   osImage: string
   containerRuntimeVersion: string
@@ -173,6 +175,7 @@ export interface ApplicationExpertConfigEnvironmentConfig {
   priority?: string
   scheduledRestartEnabled?: boolean
   scheduledRestartCron?: string
+  nodeNames?: string[]
 }
 
 export interface ApplicationResource {

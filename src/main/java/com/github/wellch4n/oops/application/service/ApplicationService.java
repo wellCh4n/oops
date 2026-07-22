@@ -36,6 +36,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
@@ -429,7 +430,10 @@ public class ApplicationService {
                     config.getServiceAccountName(), existing != null ? existing.getServiceAccountName() : null);
             boolean priorityChanged = ApplicationPriority.fromValue(config.getPriority())
                     != ApplicationPriority.fromValue(existing != null ? existing.getPriority() : null);
-            if (!serviceAccountChanged && !priorityChanged) continue;
+            boolean nodeNamesChanged = !Objects.equals(
+                    normalizeNodeNames(config.getNodeNames()),
+                    normalizeNodeNames(existing != null ? existing.getNodeNames() : null));
+            if (!serviceAccountChanged && !priorityChanged && !nodeNamesChanged) continue;
 
             try {
                 Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
@@ -439,6 +443,22 @@ public class ApplicationService {
                 log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
             }
         }
+    }
+
+    /**
+     * Normalizes a node-name list for change detection: null and empty both collapse to an empty list
+     * (both mean "no node constraint"), and ordering is ignored so reordering the same set of nodes
+     * is not treated as a change.
+     */
+    private List<String> normalizeNodeNames(List<String> nodeNames) {
+        if (nodeNames == null) {
+            return Collections.emptyList();
+        }
+        return nodeNames.stream()
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private ApplicationExpertConfig defaultExpertConfig(String namespace, String name) {

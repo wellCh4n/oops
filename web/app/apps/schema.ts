@@ -114,6 +114,7 @@ export const applicationExpertConfigSchema = z.object({
     priority: z.string().optional(),
     scheduledRestartEnabled: z.boolean().optional(),
     scheduledRestartCron: z.string().optional(),
+    nodeNames: z.array(z.string()).optional(),
   })),
 })
 

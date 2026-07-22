@@ -14,15 +14,17 @@ import { useForm, useFieldArray, useFormContext, useWatch } from "react-hook-for
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ApplicationExpertConfigFormValues, applicationExpertConfigSchema } from "../schema"
 import { TabsContent } from "@/components/ui/tabs"
-import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvironment } from "@/lib/api/types"
+import { ApplicationExpertConfig as ApplicationExpertConfigType, ApplicationEnvironment, NodeStatus } from "@/lib/api/types"
 import { updateApplicationExpertConfig } from "@/lib/api/applications"
 import { fetchServiceAccounts } from "@/lib/api/service-accounts"
+import { fetchNodes } from "@/lib/api/nodes"
 import { fetchCronNextRuns } from "@/lib/api/cron"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
+import { MultiSelectWithSearch } from "@/components/ui/multi-select-with-search"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { CronScheduleBuilder } from "./cron-schedule-builder"
-import { Gauge, KeyRound, Timer, Wrench } from "lucide-react"
+import { Gauge, KeyRound, Server, Timer, Wrench } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useLanguage } from "@/contexts/language-context"
@@ -69,6 +71,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
       priority: config.priority || "NORMAL",
       scheduledRestartEnabled: config.scheduledRestartEnabled ?? false,
       scheduledRestartCron: config.scheduledRestartCron ?? "",
+      nodeNames: [...(config.nodeNames ?? [])].sort(),
     })),
   }), [form])
 
@@ -82,6 +85,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
         priority: "NORMAL",
         scheduledRestartEnabled: false,
         scheduledRestartCron: "",
+        nodeNames: [],
       }
     })
     replace(newConfigs)
@@ -200,6 +204,8 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
   const { t, locale } = useLanguage()
   const [serviceAccounts, setServiceAccounts] = useState<string[]>([])
   const [saLoading, setSaLoading] = useState(false)
+  const [nodes, setNodes] = useState<NodeStatus[]>([])
+  const [nodesLoading, setNodesLoading] = useState(false)
 
   const restartEnabled = useWatch({ control, name: `environmentConfigs.${index}.scheduledRestartEnabled` })
   const restartCron = useWatch({ control, name: `environmentConfigs.${index}.scheduledRestartCron` })
@@ -223,6 +229,24 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
     load()
     return () => { cancelled = true }
   }, [namespace, environmentName])
+
+  useEffect(() => {
+    if (!environmentName) return
+    let cancelled = false
+    const load = async () => {
+      setNodesLoading(true)
+      try {
+        const res = await fetchNodes(environmentName)
+        if (!cancelled) setNodes(res.data ?? [])
+      } catch {
+        if (!cancelled) setNodes([])
+      } finally {
+        if (!cancelled) setNodesLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [environmentName])
 
   useEffect(() => {
     if (!restartEnabled || !restartCron?.trim()) {
@@ -253,6 +277,11 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
   }, [restartEnabled, restartCron])
 
   const serviceAccountOptions = serviceAccounts.map((name) => ({ value: name, label: name }))
+  // Node affinity matches on the kubernetes.io/hostname label (node.hostname), which can differ from
+  // the display name (node.name) when kubelet was started with --hostname-override. Bind on hostname,
+  // show name.
+  const nodeOptions = nodes.map((node) => ({ value: node.hostname, label: node.name }))
+  const nodeByHostname = new Map(nodes.map((node) => [node.hostname, node]))
 
   return (
     <div className="flex flex-col gap-4">
@@ -300,6 +329,61 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
             <FormMessage />
           </FormItem>
         )}
+      />
+      <FormField
+        control={control}
+        name={`environmentConfigs.${index}.nodeNames`}
+        render={({ field }) => {
+          const selected = field.value ?? []
+          return (
+            <FormItem>
+              <FormLabel className="flex items-center gap-1"><Server className="size-3.5" />{t("apps.expertConfig.nodeAffinity")}</FormLabel>
+              <FormControl>
+                <MultiSelectWithSearch
+                  values={selected}
+                  onValuesChange={field.onChange}
+                  options={nodeOptions}
+                  disabled={nodesLoading}
+                  placeholder={t("apps.expertConfig.nodeAffinityPlaceholder")}
+                  searchPlaceholder={t("apps.expertConfig.nodeAffinitySearch")}
+                  emptyText={t("apps.expertConfig.nodeAffinityEmpty")}
+                  className="w-full max-w-2xl"
+                />
+              </FormControl>
+              <p className="text-xs text-muted-foreground">{t("apps.expertConfig.nodeAffinityHint")}</p>
+              {selected.length > 0 && (
+                <div className="mt-1 rounded-md border overflow-hidden max-w-2xl">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50 text-muted-foreground">
+                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.name")}</th>
+                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.ip")}</th>
+                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.externalIp")}</th>
+                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.cpu")}</th>
+                        <th className="text-left font-medium px-2 py-1.5">{t("nodes.col.memory")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.map((hostname) => {
+                        const node = nodeByHostname.get(hostname)
+                        return (
+                          <tr key={hostname} className="border-t">
+                            <td className="px-2 py-1.5 font-medium">{node?.name || hostname}</td>
+                            <td className="px-2 py-1.5">{node?.internalIP || "-"}</td>
+                            <td className="px-2 py-1.5">{node?.externalIP || "-"}</td>
+                            <td className="px-2 py-1.5">{node?.cpu || "-"}</td>
+                            <td className="px-2 py-1.5">{node?.memory || "-"}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <FormMessage />
+            </FormItem>
+          )
+        }}
       />
       <FormField
         control={control}

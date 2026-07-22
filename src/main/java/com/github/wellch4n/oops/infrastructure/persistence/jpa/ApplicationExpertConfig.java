@@ -37,6 +37,8 @@ public class ApplicationExpertConfig extends BaseDataObject {
         private boolean scheduledRestartEnabled;
 
         private String scheduledRestartCron;
+
+        private List<String> nodeNames;
     }
 
     @Converter

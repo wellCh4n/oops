@@ -30,6 +30,11 @@ export const getColumns = (t: (key: string) => string): ColumnDef<NodeStatus>[] 
     cell: ({ row }) => row.original.internalIP || "-",
   },
   {
+    accessorKey: "externalIP",
+    header: t("nodes.col.externalIp"),
+    cell: ({ row }) => row.original.externalIP || "-",
+  },
+  {
     accessorKey: "cpu",
     header: t("nodes.col.cpu"),
     cell: ({ row }) => row.original.cpu || "-",
