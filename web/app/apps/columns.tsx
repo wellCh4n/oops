@@ -23,6 +23,20 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
   {
     accessorKey: "description",
     header: t("apps.col.description"),
+    cell: ({ row }) => {
+      const desc = row.original.description
+      if (!desc) return null
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="block max-w-48 truncate cursor-default">{desc}</span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="max-w-sm whitespace-pre-wrap">{desc}</p>
+          </TooltipContent>
+        </Tooltip>
+      )
+    },
   },
   {
     accessorKey: "namespace",
