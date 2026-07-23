@@ -26,6 +26,7 @@ export const getColumns = (
     {
       id: "status",
       header: t("nodes.col.status"),
+      size: 100,
       cell: ({ row }) => (
         <Badge variant={row.original.ready ? "default" : "destructive"}>
           {row.original.ready ? t("nodes.status.ready") : t("nodes.status.notReady")}
@@ -35,6 +36,7 @@ export const getColumns = (
     {
       id: "scheduling",
       header: t("nodes.col.scheduling"),
+      size: 100,
       cell: ({ row }) => (
         <Badge variant={row.original.schedulable ? "success" : "warning"}>
           {row.original.schedulable
@@ -56,17 +58,14 @@ export const getColumns = (
     {
       accessorKey: "cpu",
       header: t("nodes.col.cpu"),
+      size: 80,
       cell: ({ row }) => row.original.cpu || "-",
     },
     {
       accessorKey: "memory",
       header: t("nodes.col.memory"),
+      size: 120,
       cell: ({ row }) => row.original.memory || "-",
-    },
-    {
-      accessorKey: "pods",
-      header: t("nodes.col.pods"),
-      cell: ({ row }) => row.original.pods || "-",
     },
     {
       accessorKey: "kubeletVersion",
