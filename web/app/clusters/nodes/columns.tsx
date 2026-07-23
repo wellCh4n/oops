@@ -28,7 +28,7 @@ export const getColumns = (
       header: t("nodes.col.status"),
       size: 100,
       cell: ({ row }) => (
-        <Badge variant={row.original.ready ? "default" : "destructive"}>
+        <Badge variant={row.original.ready ? "success" : "destructive"}>
           {row.original.ready ? t("nodes.status.ready") : t("nodes.status.notReady")}
         </Badge>
       ),

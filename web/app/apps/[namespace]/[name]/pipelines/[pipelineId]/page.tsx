@@ -345,7 +345,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                     </Tooltip>
                   </TableCell>
                   <TableCell className="px-3 py-2">
-                    <Badge variant={container.ready ? "default" : "destructive"}>
+                    <Badge variant={container.ready ? "info" : "destructive"}>
                       {container.ready ? "Ready" : "Not Ready"}
                     </Badge>
                   </TableCell>

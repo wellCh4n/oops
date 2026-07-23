@@ -26,7 +26,7 @@ export const getPipelineColumns = (
         <div className="flex items-center gap-1.5 whitespace-nowrap">
           <Copyable value={row.original.id} maxLength={Infinity} />
           {isCurrent && (
-            <Badge variant="default" className="gap-1">
+            <Badge variant="info" className="gap-1">
               <CircleDot className="size-3" />
               {t("pipelines.col.currentVersion")}
             </Badge>

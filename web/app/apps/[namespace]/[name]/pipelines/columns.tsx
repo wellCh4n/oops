@@ -71,7 +71,7 @@ export const getPipelineStatusColumns = (
     cell: ({ row }) => {
       const status = row.getValue("status") as string
       return (
-        <Badge variant={status === "Running" ? "default" : "destructive"}>
+        <Badge variant={status === "Running" ? "info" : "destructive"}>
           {status}
         </Badge>
       )

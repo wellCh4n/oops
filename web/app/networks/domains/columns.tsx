@@ -30,7 +30,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
     accessorKey: "https",
     header: "HTTPS",
     cell: ({ row }) => row.original.https
-      ? <Badge variant="default">ON</Badge>
+      ? <Badge variant="success">ON</Badge>
       : <Badge variant="secondary">OFF</Badge>,
   },
   {
