@@ -26,4 +26,12 @@ public class NodeService {
         }
         return clusterNodeGateway.getNodes(environment);
     }
+
+    public void setSchedulable(String environmentName, String nodeName, boolean schedulable) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException("Environment not found: " + environmentName);
+        }
+        clusterNodeGateway.setSchedulable(environment, nodeName, schedulable);
+    }
 }

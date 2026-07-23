@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.application.dto.NodeStatusView;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
+import io.fabric8.kubernetes.api.model.NodeBuilder;
 import io.fabric8.kubernetes.api.model.Quantity;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -34,6 +35,18 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
                 .toList();
     }
 
+    @Override
+    public void setSchedulable(Environment environment, String nodeName, boolean schedulable) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        client.nodes().withName(nodeName).edit(node ->
+                new NodeBuilder(node)
+                        .editOrNewSpec()
+                        // Kubernetes treats a null/absent unschedulable flag as schedulable; only set true to cordon.
+                        .withUnschedulable(schedulable ? null : Boolean.TRUE)
+                        .endSpec()
+                        .build());
+    }
+
     private NodeStatusView toResponse(Node node) {
         NodeStatusView response = new NodeStatusView();
         response.setName(node.getMetadata() != null ? node.getMetadata().getName() : null);
@@ -41,6 +54,7 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
         response.setCreationTimestamp(node.getMetadata() != null ? node.getMetadata().getCreationTimestamp() : null);
 
         response.setReady(isNodeReady(node));
+        response.setSchedulable(isSchedulable(node));
         response.setRoles(extractRoles(node));
         response.setInternalIP(extractInternalIP(node));
         if (node.getStatus() != null && node.getStatus().getNodeInfo() != null) {
@@ -61,6 +75,11 @@ public class KubernetesClusterNodeGateway implements ClusterNodeGateway {
         return node.getStatus().getConditions().stream()
                 .filter(Objects::nonNull)
                 .anyMatch(condition -> "Ready".equals(condition.getType()) && "True".equals(condition.getStatus()));
+    }
+
+    private boolean isSchedulable(Node node) {
+        Boolean unschedulable = node.getSpec() != null ? node.getSpec().getUnschedulable() : null;
+        return unschedulable == null || !unschedulable;
     }
 
     private String extractRoles(Node node) {

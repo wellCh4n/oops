@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface ClusterNodeGateway {
     List<NodeStatusView> getNodes(Environment environment);
+
+    void setSchedulable(Environment environment, String nodeName, boolean schedulable);
 }
