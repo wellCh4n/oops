@@ -2,8 +2,12 @@ const nodes = {
   "nodes.title": "Nodes",
   "nodes.fetchEnvError": "Failed to fetch environments",
   "nodes.fetchError": "Failed to fetch nodes",
+  "nodes.updateError": "Failed to update node scheduling",
+  "nodes.cordonSuccess": "Scheduling paused",
+  "nodes.uncordonSuccess": "Scheduling resumed",
   "nodes.col.name": "Node",
   "nodes.col.status": "Status",
+  "nodes.col.scheduling": "Scheduling",
   "nodes.col.role": "Role",
   "nodes.col.ip": "Internal IP",
   "nodes.col.cpu": "CPU",
@@ -12,6 +16,14 @@ const nodes = {
   "nodes.col.version": "Version",
   "nodes.status.ready": "Ready",
   "nodes.status.notReady": "NotReady",
+  "nodes.scheduling.enabled": "Schedulable",
+  "nodes.scheduling.disabled": "Paused",
+  "nodes.action.cordon": "Pause scheduling",
+  "nodes.action.uncordon": "Resume scheduling",
+  "nodes.cordonConfirmTitle": "Pause scheduling?",
+  "nodes.cordonConfirmDesc": "New pods will no longer be scheduled to node \"{name}\". Existing pods keep running.",
+  "nodes.uncordonConfirmTitle": "Resume scheduling?",
+  "nodes.uncordonConfirmDesc": "Node \"{name}\" will become schedulable again for new pods.",
 }
 
 export default nodes

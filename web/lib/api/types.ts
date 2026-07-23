@@ -53,6 +53,7 @@ export interface NodeStatus {
   name: string
   hostname: string
   ready: boolean
+  schedulable: boolean
   roles: string
   internalIP: string
   kubeletVersion: string

@@ -8,6 +8,7 @@ public class NodeStatusView {
     private String name;
     private String hostname;
     private Boolean ready;
+    private Boolean schedulable;
     private String roles;
     private String internalIP;
     private String kubeletVersion;

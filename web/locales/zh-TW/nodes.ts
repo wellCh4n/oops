@@ -2,8 +2,12 @@ const nodes = {
   "nodes.title": "節點",
   "nodes.fetchEnvError": "取得環境列表失敗",
   "nodes.fetchError": "取得節點狀態失敗",
+  "nodes.updateError": "更新節點調度狀態失敗",
+  "nodes.cordonSuccess": "已暫停調度",
+  "nodes.uncordonSuccess": "已恢復調度",
   "nodes.col.name": "節點",
   "nodes.col.status": "狀態",
+  "nodes.col.scheduling": "調度",
   "nodes.col.role": "角色",
   "nodes.col.ip": "內網IP",
   "nodes.col.cpu": "中央處理器",
@@ -12,6 +16,14 @@ const nodes = {
   "nodes.col.version": "版本",
   "nodes.status.ready": "準備好",
   "nodes.status.notReady": "未準備好",
+  "nodes.scheduling.enabled": "可調度",
+  "nodes.scheduling.disabled": "已暫停",
+  "nodes.action.cordon": "暫停調度",
+  "nodes.action.uncordon": "恢復調度",
+  "nodes.cordonConfirmTitle": "暫停調度？",
+  "nodes.cordonConfirmDesc": "新的 Pod 將不再被調度到節點「{name}」，已有 Pod 會繼續執行。",
+  "nodes.uncordonConfirmTitle": "恢復調度？",
+  "nodes.uncordonConfirmDesc": "節點「{name}」將重新接受新的 Pod 調度。",
 }
 
 export default nodes

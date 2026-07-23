@@ -4,12 +4,17 @@ import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Server } from "lucide-react"
 import { fetchEnvironments } from "@/lib/api/environments"
-import { fetchNodes } from "@/lib/api/nodes"
+import { fetchNodes, setNodeSchedulable } from "@/lib/api/nodes"
 import { Environment, NodeStatus } from "@/lib/api/types"
+import { isAdmin } from "@/lib/auth"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { DataTable } from "@/components/ui/data-table"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { getColumns } from "./columns"
 
@@ -18,8 +23,36 @@ export default function NodesPage() {
   const [selectedEnv, setSelectedEnv] = useState("")
   const [nodes, setNodes] = useState<NodeStatus[]>([])
   const [loading, setLoading] = useState(false)
+  const [pendingNode, setPendingNode] = useState<NodeStatus | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [canManage, setCanManage] = useState(false)
   const { t } = useLanguage()
-  const columns = useMemo(() => getColumns(t), [t])
+
+  useEffect(() => {
+    setCanManage(isAdmin())
+  }, [])
+
+  const loadNodes = useMemo(
+    () => async (env: string) => {
+      if (!env) return
+      setLoading(true)
+      try {
+        const res = await fetchNodes(env)
+        setNodes(res.data ?? [])
+      } catch {
+        toast.error(t("nodes.fetchError"))
+        setNodes([])
+      } finally {
+        setLoading(false)
+      }
+    },
+    [t]
+  )
+
+  const columns = useMemo(
+    () => getColumns(t, { canManage, onToggleSchedulable: (node) => setPendingNode(node) }),
+    [t, canManage]
+  )
 
   useEffect(() => {
     void (async () => {
@@ -37,20 +70,24 @@ export default function NodesPage() {
   }, [t])
 
   useEffect(() => {
-    if (!selectedEnv) return
-    void (async () => {
-      setLoading(true)
-      try {
-        const res = await fetchNodes(selectedEnv)
-        setNodes(res.data ?? [])
-      } catch {
-        toast.error(t("nodes.fetchError"))
-        setNodes([])
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [selectedEnv, t])
+    void loadNodes(selectedEnv)
+  }, [selectedEnv, loadNodes])
+
+  const confirmToggle = async () => {
+    if (!pendingNode) return
+    const nextSchedulable = !pendingNode.schedulable
+    setSubmitting(true)
+    try {
+      await setNodeSchedulable(selectedEnv, pendingNode.name, nextSchedulable)
+      toast.success(nextSchedulable ? t("nodes.uncordonSuccess") : t("nodes.cordonSuccess"))
+      setPendingNode(null)
+      await loadNodes(selectedEnv)
+    } catch {
+      toast.error(t("nodes.updateError"))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <ContentPage title={t("nodes.title")}>
@@ -78,6 +115,26 @@ export default function NodesPage() {
           />
         }
       />
+
+      <AlertDialog open={!!pendingNode} onOpenChange={(open) => { if (!open) setPendingNode(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingNode?.schedulable ? t("nodes.cordonConfirmTitle") : t("nodes.uncordonConfirmTitle")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {(pendingNode?.schedulable ? t("nodes.cordonConfirmDesc") : t("nodes.uncordonConfirmDesc"))
+                .replace("{name}", pendingNode?.name ?? "")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting} className="cursor-pointer">{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction disabled={submitting} onClick={(e) => { e.preventDefault(); void confirmToggle() }} className="cursor-pointer">
+              {t("common.confirm")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ContentPage>
   )
 }

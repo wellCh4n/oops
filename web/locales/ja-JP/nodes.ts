@@ -2,8 +2,12 @@ const nodes = {
   "nodes.title": "ノード",
   "nodes.fetchEnvError": "環境リストの取得に失敗しました",
   "nodes.fetchError": "ノードステータスの取得に失敗しました",
+  "nodes.updateError": "ノードのスケジューリング更新に失敗しました",
+  "nodes.cordonSuccess": "スケジューリングを一時停止しました",
+  "nodes.uncordonSuccess": "スケジューリングを再開しました",
   "nodes.col.name": "ノード",
   "nodes.col.status": "ステータス",
+  "nodes.col.scheduling": "スケジューリング",
   "nodes.col.role": "役割",
   "nodes.col.ip": "内部IP",
   "nodes.col.cpu": "CPU",
@@ -12,6 +16,14 @@ const nodes = {
   "nodes.col.version": "バージョン",
   "nodes.status.ready": "Ready",
   "nodes.status.notReady": "NotReady",
+  "nodes.scheduling.enabled": "スケジュール可能",
+  "nodes.scheduling.disabled": "一時停止",
+  "nodes.action.cordon": "スケジューリング停止",
+  "nodes.action.uncordon": "スケジューリング再開",
+  "nodes.cordonConfirmTitle": "スケジューリングを一時停止しますか？",
+  "nodes.cordonConfirmDesc": "新しいPodはノード「{name}」にスケジュールされなくなります。既存のPodは実行を継続します。",
+  "nodes.uncordonConfirmTitle": "スケジューリングを再開しますか？",
+  "nodes.uncordonConfirmDesc": "ノード「{name}」は新しいPodのスケジュール対象に戻ります。",
 }
 
 export default nodes
