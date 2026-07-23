@@ -54,6 +54,14 @@ public class PipelineBuildPod extends Job {
                 .withInitContainers(stepContainers)
                 .withContainers(finishContainer)
                 .withRestartPolicy("Never")
+                .withTopologySpreadConstraints(new TopologySpreadConstraintBuilder()
+                        .withMaxSkew(1)
+                        .withTopologyKey("kubernetes.io/hostname")
+                        .withWhenUnsatisfiable("ScheduleAnyway")
+                        .withLabelSelector(new LabelSelectorBuilder()
+                                .addToMatchLabels("oops.type", OopsTypes.PIPELINE.name())
+                                .build())
+                        .build())
                 .endSpec()
                 .build();
 
