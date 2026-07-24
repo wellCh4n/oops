@@ -41,7 +41,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
-import { useNamespaceStore } from "@/store/namespace"
+import { useWorkContextStore } from "@/store/work-context"
+import { workContextHref } from "@/lib/work-context-url"
 import { usePathname, useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { clearAuth, isAdmin } from "@/lib/auth"
@@ -71,7 +72,9 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const { locale, setLocale, t } = useLanguage()
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
-  const selectedNamespace = useNamespaceStore((s) => s.selectedNamespace)
+  const contextNamespace = useWorkContextStore((s) => s.namespace)
+  const contextApp = useWorkContextStore((s) => s.app)
+  const contextEnv = useWorkContextStore((s) => s.env)
   const expandedGroups = useSidebarNavStore((s) => s.expandedGroups)
   const setGroupExpanded = useSidebarNavStore((s) => s.setGroupExpanded)
 
@@ -148,11 +151,11 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
             <SidebarGroupContent>
               <SidebarMenu>
                 {filteredGroups.map((item) => {
+                  // Every cross-page link carries the whole work context, so the
+                  // destination never has to guess which app/env you meant.
                   const href = pathname === item.url
                     ? (searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname)
-                    : selectedNamespace && (item.url === "/ides" || item.url === "/pipelines")
-                      ? `${item.url}?namespace=${selectedNamespace}`
-                      : item.url
+                    : workContextHref(item.url, { namespace: contextNamespace, app: contextApp, env: contextEnv })
 
                   return (
                   <SidebarMenuItem key={item.title}>

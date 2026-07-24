@@ -30,7 +30,7 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { DataTable } from "@/components/ui/data-table"
 import { useLanguage } from "@/contexts/language-context"
-import { useNamespaceStore } from "@/store/namespace"
+import { useWorkContextStore } from "@/store/work-context"
 import { NAME_MAX_LENGTH, NAME_REGEX } from "@/lib/utils"
 import { getColumns } from "./columns"
 
@@ -97,7 +97,7 @@ export default function NamespacesPage() {
         setDialogOpen(false)
         form.reset()
         loadNamespaces()
-        useNamespaceStore.getState().reload()
+        useWorkContextStore.getState().reload()
       } else {
         toast.error(res.message)
       }
@@ -126,7 +126,7 @@ export default function NamespacesPage() {
         setEditingNamespace(null)
         editForm.reset()
         loadNamespaces()
-        useNamespaceStore.getState().reload()
+        useWorkContextStore.getState().reload()
       } else {
         toast.error(res.message)
       }

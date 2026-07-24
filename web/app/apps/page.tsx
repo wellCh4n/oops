@@ -22,15 +22,14 @@ import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
-import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
+import { useWorkContext } from "@/contexts/work-context"
+import { ALL_NAMESPACES } from "@/store/work-context"
 import { useOwnerFilterStore } from "@/store/owner-filter"
 
 export default function AppsPage() {
   return (
     <Suspense>
-      <NamespaceParamProvider>
-        <AppsContent />
-      </NamespaceParamProvider>
+      <AppsContent />
     </Suspense>
   )
 }
@@ -39,7 +38,7 @@ function AppsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
+  const { namespaces, loadNamespaces, namespace: selectedNamespace, selectNamespace } = useWorkContext()
 
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -88,10 +87,6 @@ function AppsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace, page, size, ownerOnly])
 
-  const handleNamespaceChange = (ns: string) => {
-    updateParams({ namespace: ns, page: "1" })
-  }
-
   const handleSearch = () => {
     updateParams({ page: "1" })
     fetchData()
@@ -129,8 +124,8 @@ function AppsContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="size-4" />{t("apps.namespaceFilter")}</span>
                 <SelectWithSearch
                   value={selectedNamespace}
-                  onValueChange={handleNamespaceChange}
-                  options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
+                  onValueChange={(namespace: string) => selectNamespace(namespace, { page: "1" })}
+                  options={[{ value: ALL_NAMESPACES, label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("common.selectNamespace")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -256,7 +251,7 @@ function AppsContent() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         namespaces={namespaces}
-        defaultNamespace={selectedNamespace === "all" ? (namespaces[0]?.name ?? "") : selectedNamespace}
+        defaultNamespace={selectedNamespace === ALL_NAMESPACES ? (namespaces[0]?.name ?? "") : selectedNamespace}
       />
     </ContentPage>
   )

@@ -21,6 +21,7 @@ const pipelines = {
   "pipelines.col.deployBtn": "應用此發布",
   "pipelines.col.stop": "停止",
   "pipelines.fetchNsError": "取得命名空間失敗",
+  "pipelines.selectAppHint": "請先選擇應用程式",
   "pipelines.fetchAppsError": "取得應用程式清單失敗",
   "pipelines.fetchError": "取得管線失敗",
   "pipelines.stopSuccess": "已請求停止",

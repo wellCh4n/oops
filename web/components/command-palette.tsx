@@ -21,7 +21,8 @@ import { Application } from "@/lib/api/types"
 import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { useRecentAppStore } from "@/store/recent-app"
+import { useWorkContextStore } from "@/store/work-context"
+import { workContextHref } from "@/lib/work-context-url"
 import { toast } from "sonner"
 
 type CommandType = "status" | "deploy" | "ide" | "pipeline" | "app" | null
@@ -48,7 +49,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter()
   const { t } = useLanguage()
   const inputRef = useRef<HTMLInputElement>(null)
-  const { recentApp, setRecentApp } = useRecentAppStore()
+  const recentApp = useWorkContextStore((state) => state.app)
+  const enterApp = useWorkContextStore((state) => state.enterApp)
 
   const commands: CommandOption[] = [
     {
@@ -186,35 +188,39 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const handleAppSelect = (app: Application) => {
     if (!selectedCommand) return
 
-    // Save to store
-    setRecentApp({
+    const appRef = {
       namespace: app.namespace,
       name: app.name,
       description: app.description,
       ownerName: app.ownerName,
-    })
+    }
+    enterApp(appRef)
 
     onOpenChange(false)
 
+    // Cross-page destinations go through the shared href builder so they arrive
+    // with the full context, exactly like the sidebar links.
+    const context = { namespace: app.namespace, app: appRef, env: useWorkContextStore.getState().env }
+
     switch (selectedCommand) {
       case "status":
-        router.push(`/apps/${app.namespace}/${app.name}/status`)
+        router.push(workContextHref(`/apps/${app.namespace}/${app.name}/status`, context))
         break
       case "deploy":
-        router.push(`/apps/${app.namespace}/${app.name}/publish`)
+        router.push(workContextHref(`/apps/${app.namespace}/${app.name}/publish`, context))
         break
       case "ide":
         if (app.sourceType === "ZIP") {
           toast.error(t("ide.zipUnsupported"))
           return
         }
-        router.push(`/ides?namespace=${app.namespace}&app=${app.name}`)
+        router.push(workContextHref("/ides", context))
         break
       case "pipeline":
-        router.push(`/pipelines?namespace=${app.namespace}&app=${app.name}`)
+        router.push(workContextHref("/pipelines", context))
         break
       case "app":
-        router.push(`/apps/${app.namespace}/${app.name}`)
+        router.push(workContextHref(`/apps/${app.namespace}/${app.name}`, context))
         break
     }
   }

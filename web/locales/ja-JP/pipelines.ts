@@ -21,6 +21,7 @@ const pipelines = {
   "pipelines.col.deployBtn": "この公開を適用",
   "pipelines.col.stop": "停止",
   "pipelines.fetchNsError": "名前空間の取得に失敗しました",
+  "pipelines.selectAppHint": "先にアプリを選択してください",
   "pipelines.fetchAppsError": "アプリ一覧の取得に失敗しました",
   "pipelines.fetchError": "パイプラインの取得に失敗しました",
   "pipelines.stopSuccess": "停止をリクエストしました",

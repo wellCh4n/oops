@@ -31,16 +31,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
-import { NamespaceParamProvider, useNamespace } from "@/contexts/namespace-context"
-import { useRecentAppStore } from "@/store/recent-app"
+import { useWorkContext } from "@/contexts/work-context"
+import { ALL_NAMESPACES } from "@/store/work-context"
 import { appIdentityBackground } from "@/lib/app-color"
 
 export default function PipelinesPage() {
   return (
     <Suspense>
-      <NamespaceParamProvider>
-        <PipelinesContent />
-      </NamespaceParamProvider>
+      <PipelinesContent />
     </Suspense>
   )
 }
@@ -49,7 +47,18 @@ function PipelinesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const { namespaces, selectedNamespace, loadNamespaces } = useNamespace()
+  const {
+    namespaces,
+    loadNamespaces,
+    namespace: selectedNamespace,
+    appName: selectedApp,
+    appNamespace,
+    env: selectedEnv,
+    selectNamespace,
+    selectApp,
+    selectEnv,
+    resolveApp,
+  } = useWorkContext()
 
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
   const [loading, setLoading] = useState(false)
@@ -67,19 +76,16 @@ function PipelinesContent() {
 
   const [initialized, setInitialized] = useState(false)
   const { t } = useLanguage()
-  const { recentApp, setRecentApp } = useRecentAppStore()
 
-  const selectedApp = searchParams.get("app") ?? ""
-  const selectedEnv = searchParams.get("env") ?? "all"
   const page = Number(searchParams.get("page") ?? "1")
   const size = Number(searchParams.get("size") ?? "10")
+  // An empty context environment means "no filter" here, which this page spells "all".
+  const effectiveEnv = selectedEnv || "all"
   const selectedApplication = applications.find(app => app.name === selectedApp)
   const selectedAppValue = selectedApplication?.id ?? selectedApp
-  // In "all" mode we still need a concrete namespace to fetch pipelines for the
-  // chosen app — derive it from the selected app instead of rewriting the URL.
-  const activeNamespace = selectedNamespace === "all"
-    ? (selectedApplication?.namespace ?? "")
-    : selectedNamespace
+  // Under the "all" scope the app carries its own namespace — the context knows
+  // it, and the loaded list refines it. The scope itself is never rewritten.
+  const activeNamespace = selectedApplication?.namespace || appNamespace
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -100,11 +106,9 @@ function PipelinesContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleNamespaceChange = (ns: string) => {
-    updateParams({ namespace: ns, app: "", env: "all" })
-  }
-
-  // Load applications when namespace changes
+  // Load applications when namespace changes. Nothing is auto-selected here:
+  // if the context has no app, the user picks one rather than landing on an
+  // arbitrary first entry that only looks like it was remembered.
   useEffect(() => {
     if (!selectedNamespace) {
       setApplications([])
@@ -115,19 +119,14 @@ function PipelinesContent() {
         const res = await getApplications(selectedNamespace)
         const apps = res.data?.data ?? []
         setApplications(apps)
-        if (!searchParams.get("app") && apps.length > 0) {
-          const recent = recentApp
-            ? apps.find(a => a.name === recentApp.name && a.namespace === recentApp.namespace)
-            : undefined
-          const targetApp = recent ?? apps[0]
-          if (selectedNamespace === "all") {
-            updateParams({ app: targetApp.name })
-          } else {
-            updateParams({
-              namespace: targetApp.namespace,
-              app: targetApp.name,
-            })
-          }
+        const contextApp = apps.find(app => app.name === selectedApp)
+        if (contextApp) {
+          resolveApp({
+            namespace: contextApp.namespace,
+            name: contextApp.name,
+            description: contextApp.description,
+            ownerName: contextApp.ownerName,
+          })
         }
       } catch {
         toast.error(t("pipelines.fetchAppsError"))
@@ -136,7 +135,7 @@ function PipelinesContent() {
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace])
+  }, [selectedNamespace, selectedApp])
 
   // Load environments when app changes
   useEffect(() => {
@@ -169,7 +168,7 @@ function PipelinesContent() {
     }
     setLoading(true)
     try {
-      const res = await getPipelines(activeNamespace, selectedApp, selectedEnv, page, size)
+      const res = await getPipelines(activeNamespace, selectedApp, effectiveEnv, page, size)
       if (res.data) {
         setPipelines(res.data.data)
         setTotalPages(res.data.totalPages)
@@ -180,7 +179,7 @@ function PipelinesContent() {
       setLoading(false)
       setInitialLoad(false)
     }
-  }, [activeNamespace, selectedApp, selectedEnv, page, size, t])
+  }, [activeNamespace, selectedApp, effectiveEnv, page, size, t])
 
   useEffect(() => {
     if (initialized) fetchPipelines()
@@ -189,13 +188,13 @@ function PipelinesContent() {
   // Load the current live image to highlight which pipeline is deployed.
   // Only meaningful when a concrete environment is selected.
   useEffect(() => {
-    if (!activeNamespace || !selectedApp || selectedEnv === "all") {
+    if (!activeNamespace || !selectedApp || effectiveEnv === "all") {
       setCurrentPipelineId(null)
       return
     }
     const load = async () => {
       try {
-        const res = await getCurrentImage(activeNamespace, selectedApp, selectedEnv)
+        const res = await getCurrentImage(activeNamespace, selectedApp, effectiveEnv)
         const image = res.data
         setCurrentPipelineId(image ? image.split(":").pop() ?? null : null)
       } catch {
@@ -203,7 +202,7 @@ function PipelinesContent() {
       }
     }
     load()
-  }, [activeNamespace, selectedApp, selectedEnv])
+  }, [activeNamespace, selectedApp, effectiveEnv])
 
   const handleStop = (pipeline: Pipeline) => {
     setStopTarget(pipeline)
@@ -270,8 +269,8 @@ function PipelinesContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="size-4" />{t("pipelines.nsLabel")}</span>
                 <SelectWithSearch
                   value={selectedNamespace}
-                  onValueChange={handleNamespaceChange}
-                  options={[{ value: "all", label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
+                  onValueChange={(namespace: string) => selectNamespace(namespace, { page: "1" })}
+                  options={[{ value: ALL_NAMESPACES, label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("pipelines.selectNs")}
                   searchPlaceholder={t("common.search")}
                   emptyText={t("common.noResults")}
@@ -285,29 +284,14 @@ function PipelinesContent() {
                   onOptionSelect={(option) => {
                     if (!option.namespace || !option.name) return
                     const app = applications.find(a => a.id === option.value)
-                    if (app) {
-                      setRecentApp({
-                        namespace: app.namespace,
-                        name: app.name,
-                        description: app.description,
-                        ownerName: app.ownerName,
-                      })
-                    } else {
-                      setRecentApp({
-                        namespace: option.namespace,
-                        name: option.name,
-                      })
-                    }
-                    updateParams({
-                      namespace: option.namespace,
-                      app: option.name,
-                      env: "all",
-                      page: "1",
-                    })
+                    selectApp(app
+                      ? { namespace: app.namespace, name: app.name, description: app.description, ownerName: app.ownerName }
+                      : { namespace: option.namespace, name: option.name },
+                      { page: "1" })
                   }}
                   options={applications.map(app => ({
                     value: app.id,
-                    label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                    label: selectedNamespace === ALL_NAMESPACES ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
                     colorBackground: appIdentityBackground(app),
@@ -316,7 +300,7 @@ function PipelinesContent() {
                     const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
                     return (res.data?.data ?? []).map(app => ({
                       value: app.id,
-                      label: selectedNamespace === "all" ? `${app.name} (${app.namespace})` : app.name,
+                      label: selectedNamespace === ALL_NAMESPACES ? `${app.name} (${app.namespace})` : app.name,
                       namespace: app.namespace,
                       name: app.name,
                       colorBackground: appIdentityBackground(app),
@@ -332,8 +316,8 @@ function PipelinesContent() {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Server className="size-4" />{t("pipelines.envLabel")}</span>
                 <SelectWithSearch
-                  value={selectedEnv}
-                  onValueChange={(v: string) => updateParams({ env: v, page: "1" })}
+                  value={effectiveEnv}
+                  onValueChange={(env: string) => selectEnv(env === "all" ? "" : env, { page: "1" })}
                   options={[{ value: "all", label: t("pipelines.allEnv") }, ...environments.map(env => ({ value: env, label: env }))]}
                   placeholder={t("pipelines.selectEnv")}
                   searchPlaceholder={t("common.search")}
@@ -350,6 +334,11 @@ function PipelinesContent() {
           </div>
         }
         table={
+          !selectedApp ? (
+            <div className="py-16 text-center text-muted-foreground text-sm border rounded-md border-dashed">
+              {t("pipelines.selectAppHint")}
+            </div>
+          ) : (
           <>
             <div className="overflow-x-auto">
               <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId)} data={pipelines} loading={initialLoad} />
@@ -400,6 +389,7 @@ function PipelinesContent() {
               </div>
             )}
           </>
+          )
         }
       />
       <AlertDialog open={!!deployTarget} onOpenChange={(open) => { if (!open) setDeployTarget(null) }}>

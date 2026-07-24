@@ -21,6 +21,7 @@ const pipelines = {
   "pipelines.col.deployBtn": "Apply",
   "pipelines.col.stop": "Stop",
   "pipelines.fetchNsError": "Failed to fetch namespaces",
+  "pipelines.selectAppHint": "Select an application first",
   "pipelines.fetchAppsError": "Failed to fetch applications",
   "pipelines.fetchError": "Failed to fetch pipelines",
   "pipelines.stopSuccess": "Stop requested",

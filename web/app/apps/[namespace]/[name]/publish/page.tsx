@@ -23,7 +23,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import Link from "next/link"
-import { useRecentAppStore } from "@/store/recent-app"
+import { useWorkContextStore } from "@/store/work-context"
 import { useFeaturesStore } from "@/store/features"
 import { cn } from "@/lib/utils"
 
@@ -41,7 +41,12 @@ export default function PublishPage({ params }: PageProps) {
 
   const [application, setApplication] = useState<Application | null>(null)
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
-  const [selectedEnv, setSelectedEnv] = useState<string>("")
+  const [selectedEnv, setSelectedEnvState] = useState<string>("")
+  // Keep the shared work context in step so the chosen env carries to other pages.
+  const setSelectedEnv = (env: string) => {
+    setSelectedEnvState(env)
+    useWorkContextStore.getState().setContext({ env })
+  }
   const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
   const [branch, setBranch] = useState<string>("main")
   const [publishRepository, setPublishRepository] = useState<string>("")
@@ -54,7 +59,7 @@ export default function PublishPage({ params }: PageProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const envInitialized = useRef(false)
   const { t } = useLanguage()
-  const { setRecentApp } = useRecentAppStore()
+  const enterApp = useWorkContextStore((state) => state.enterApp)
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
 
   const normalizeText = (value: string | null | undefined) => value ?? ""
@@ -76,7 +81,7 @@ export default function PublishPage({ params }: PageProps) {
 
         if (appRes.data) {
           setApplication(appRes.data)
-          setRecentApp({
+          enterApp({
             namespace: appRes.data.namespace,
             name: appRes.data.name,
             description: appRes.data.description,
@@ -86,9 +91,14 @@ export default function PublishPage({ params }: PageProps) {
         if (envRes.data) {
           setEnvironments(envRes.data)
           if (!envInitialized.current && envRes.data.length > 0) {
-            const firstEnv = envRes.data[0].environmentName
-            if (firstEnv) {
-              setSelectedEnv(firstEnv)
+            // Prefer the environment carried in the work context so publishing
+            // lands on the same env the user was just looking at.
+            const carried = useWorkContextStore.getState().env
+            const initialEnv = envRes.data.some((env) => env.environmentName === carried)
+              ? carried
+              : envRes.data[0].environmentName
+            if (initialEnv) {
+              setSelectedEnv(initialEnv)
               envInitialized.current = true
             }
           }
@@ -116,7 +126,7 @@ export default function PublishPage({ params }: PageProps) {
       }
     }
     fetchData()
-  }, [namespace, name, t, setRecentApp])
+  }, [namespace, name, t, enterApp])
 
   const handlePublish = async () => {
     if (!selectedEnv) {
