@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { ContentPage } from "@/components/content-page"
+import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import { TableForm } from "@/components/ui/table-form"
 import {
   Table,
@@ -274,7 +275,10 @@ function ApplicationStatusContent() {
   }
 
   return (
-    <ContentPage title={t("apps.status.title")}>
+    <ContentPage
+      title={t("apps.status.title")}
+      actions={<AppDetailNav namespace={namespace} name={name} active="status" />}
+    >
       <TableForm
         options={
           <div className="space-y-2">

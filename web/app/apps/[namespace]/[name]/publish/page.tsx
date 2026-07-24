@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import Link from "next/link"
 import { useRecentAppStore } from "@/store/recent-app"
 import { useFeaturesStore } from "@/store/features"
@@ -245,7 +246,10 @@ export default function PublishPage({ params }: PageProps) {
 
   if (!application) {
     return (
-      <ContentPage title={name}>
+      <ContentPage
+        title={name}
+        actions={<AppDetailNav namespace={namespace} name={name} active="publish" />}
+      >
         <div className="rounded-md border p-4">
           <div className="space-y-6">
             <div className="grid gap-2">
@@ -285,7 +289,10 @@ export default function PublishPage({ params }: PageProps) {
   }
 
   return (
-    <ContentPage title={application.name}>
+    <ContentPage
+      title={application.name}
+      actions={<AppDetailNav namespace={namespace} name={name} active="publish" />}
+    >
       <div className="rounded-md border bg-card p-4">
         <div className="space-y-4">
         <div className="grid gap-2">

@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import { useRecentAppStore } from "@/store/recent-app"
 
 export default function EditAppPage() {
@@ -100,7 +101,10 @@ export default function EditAppPage() {
   }
 
   return (
-    <ContentPage title={application?.name ?? name}>
+    <ContentPage
+      title={application?.name ?? name}
+      actions={<AppDetailNav namespace={namespace} name={name} active="edit" />}
+    >
       <Suspense fallback={null}>
         <ApplicationForm
           key={`${namespace}/${name}`}
