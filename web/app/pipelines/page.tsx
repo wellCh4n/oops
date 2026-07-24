@@ -9,15 +9,9 @@ import { Pipeline, Application } from "@/lib/api/types"
 import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
-import { RotateCcw, ChevronLeft, ChevronRight, Layers, LayoutGrid, Server } from "lucide-react"
+import { RotateCcw, Layers, LayoutGrid, Server } from "lucide-react"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Pagination } from "@/components/ui/pagination"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import {
@@ -33,6 +27,7 @@ import {
 import { useLanguage } from "@/contexts/language-context"
 import { useWorkContext } from "@/contexts/work-context"
 import { ALL_NAMESPACES } from "@/store/work-context"
+import { usePageSize } from "@/store/page-size"
 import { appIdentityBackground } from "@/lib/app-color"
 
 export default function PipelinesPage() {
@@ -64,6 +59,7 @@ function PipelinesContent() {
   const [loading, setLoading] = useState(false)
   const [initialLoad, setInitialLoad] = useState(true)
   const [totalPages, setTotalPages] = useState(0)
+  const [total, setTotal] = useState(0)
   const [deployTarget, setDeployTarget] = useState<Pipeline | null>(null)
   const [stopTarget, setStopTarget] = useState<Pipeline | null>(null)
   const [stopping, setStopping] = useState(false)
@@ -78,7 +74,7 @@ function PipelinesContent() {
   const { t } = useLanguage()
 
   const page = Number(searchParams.get("page") ?? "1")
-  const size = Number(searchParams.get("size") ?? "10")
+  const { size, rememberSize } = usePageSize(searchParams.get("size"))
   // An empty context environment means "no filter" here, which this page spells "all".
   const effectiveEnv = selectedEnv || "all"
   const selectedApplication = applications.find(app => app.name === selectedApp)
@@ -172,6 +168,7 @@ function PipelinesContent() {
       if (res.data) {
         setPipelines(res.data.data)
         setTotalPages(res.data.totalPages)
+        setTotal(res.data.total)
       }
     } catch {
       toast.error(t("pipelines.fetchError"))
@@ -344,49 +341,18 @@ function PipelinesContent() {
               <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId)} data={pipelines} loading={initialLoad} />
             </div>
             {selectedApp && (
-              <div className="flex items-center justify-end gap-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
-                  <Select
-                    value={String(size)}
-                    onValueChange={(v) => updateParams({ size: v, page: "1" })}
-                    disabled={loading}
-                  >
-                    <SelectTrigger className="w-[70px] h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="20">20</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-sm text-muted-foreground">{t("common.pageSizeSuffix")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page === 1 || loading}
-                    onClick={() => updateParams({ page: String(page - 1) })}
-                  >
-                    <ChevronLeft className="size-4" />
-                    {t("pipelines.prevPage")}
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {t("pipelines.pagePrefix")}{page}{t("pipelines.pageSuffix")} / {t("common.totalPages").replace("${total}", String(totalPages))}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={page >= totalPages || loading}
-                    onClick={() => updateParams({ page: String(page + 1) })}
-                  >
-                    {t("pipelines.nextPage")}
-                    <ChevronRight className="ml-2 size-4" />
-                  </Button>
-                </div>
-              </div>
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                onPageChange={(next) => updateParams({ page: String(next) })}
+                size={size}
+                onSizeChange={(next) => {
+                  rememberSize(next)
+                  updateParams({ size: String(next), page: "1" })
+                }}
+                loading={loading}
+              />
             )}
           </>
           )

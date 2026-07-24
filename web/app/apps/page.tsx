@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
-import { Plus, Search, Layers, LayoutGrid, ChevronLeft, ChevronRight, User } from "lucide-react"
+import { Plus, Search, Layers, LayoutGrid, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
@@ -10,13 +10,7 @@ import { Application } from "@/lib/api/types"
 import { getApplications } from "@/lib/api/applications"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Pagination } from "@/components/ui/pagination"
 import { Input } from "@/components/ui/input"
 import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
@@ -25,6 +19,7 @@ import { useLanguage } from "@/contexts/language-context"
 import { useWorkContext } from "@/contexts/work-context"
 import { ALL_NAMESPACES } from "@/store/work-context"
 import { useOwnerFilterStore } from "@/store/owner-filter"
+import { usePageSize } from "@/store/page-size"
 
 export default function AppsPage() {
   return (
@@ -44,12 +39,13 @@ function AppsContent() {
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [totalPages, setTotalPages] = useState(0)
+  const [total, setTotal] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const { t } = useLanguage()
   const columns = useMemo(() => getColumns(t), [t])
 
   const page = Number(searchParams.get("page") ?? "1")
-  const size = Number(searchParams.get("size") ?? "10")
+  const { size, rememberSize } = usePageSize(searchParams.get("size"))
   const ownerOnlyUrl = searchParams.get("ownerOnly")
   const { ownerOnly: ownerOnlyStore, setOwnerOnly } = useOwnerFilterStore()
 
@@ -104,6 +100,7 @@ function AppsContent() {
       if (res.data) {
         setApplications(res.data.data)
         setTotalPages(res.data.totalPages)
+        setTotal(res.data.total)
       }
     } catch (error) {
       console.error("Failed to fetch applications:", error)
@@ -200,49 +197,18 @@ function AppsContent() {
               data={applications}
               loading={loading}
             />
-            <div className="flex items-center justify-end gap-4 mt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
-                <Select
-                  value={String(size)}
-                  onValueChange={(v) => updateParams({ size: v, page: "1" })}
-                  disabled={loading}
-                >
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">{t("common.pageSizeSuffix")}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1 || loading}
-                  onClick={() => updateParams({ page: String(page - 1) })}
-                >
-                  <ChevronLeft className="size-4" />
-                  {t("common.prevPage")}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t("common.pagePrefix")}{page}{t("common.pageSuffix")} / {t("common.totalPages").replace("${total}", String(totalPages))}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || loading}
-                  onClick={() => updateParams({ page: String(page + 1) })}
-                >
-                  {t("common.nextPage")}
-                  <ChevronRight className="ml-2 size-4" />
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={(next) => updateParams({ page: String(next) })}
+              size={size}
+              onSizeChange={(next) => {
+                rememberSize(next)
+                updateParams({ size: String(next), page: "1" })
+              }}
+              loading={loading}
+            />
           </>
         }
       />

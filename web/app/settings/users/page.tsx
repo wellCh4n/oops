@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Plus, Eye, EyeOff, Search, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Eye, EyeOff, Search, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
+import { Pagination } from "@/components/ui/pagination"
 import { toast } from "sonner"
 import { isAdmin } from "@/lib/auth"
 import { getColumns } from "./columns"
@@ -17,12 +18,14 @@ import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
 import { fetchUsersPage, createUser, updateUser, deleteUser, User } from "@/lib/api/users"
+import { usePageSize } from "@/store/page-size"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [page, setPage] = useState(1)
-  const [size, setSize] = useState(10)
+  const { size, rememberSize } = usePageSize()
   const [totalPages, setTotalPages] = useState(0)
+  const [total, setTotal] = useState(0)
   const [open, setOpen] = useState(false)
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
@@ -59,6 +62,7 @@ export default function UsersPage() {
       const result = await fetchUsersPage(appliedSearch || undefined, page, size)
       setUsers(result.data)
       setTotalPages(result.totalPages)
+      setTotal(result.total)
     } catch {
       toast.error(t("users.fetchError"))
     } finally {
@@ -274,49 +278,15 @@ export default function UsersPage() {
               loading={tableLoading}
               meta={{ onEdit: handleEdit, onChangePassword: handleChangePassword, isAdmin: admin }}
             />
-            <div className="flex items-center justify-end gap-4 mt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{t("common.pageSize")}</span>
-                <Select
-                  value={String(size)}
-                  onValueChange={(v) => { setPage(1); setSize(Number(v)) }}
-                  disabled={tableLoading}
-                >
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">{t("common.pageSizeSuffix")}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 1 || tableLoading}
-                  onClick={() => setPage(p => p - 1)}
-                >
-                  <ChevronLeft className="size-4" />
-                  {t("common.prevPage")}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {t("common.pagePrefix")}{page}{t("common.pageSuffix")} / {t("common.totalPages").replace("${total}", String(totalPages))}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || tableLoading}
-                  onClick={() => setPage(p => p + 1)}
-                >
-                  {t("common.nextPage")}
-                  <ChevronRight className="ml-2 size-4" />
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+              size={size}
+              onSizeChange={(next) => { setPage(1); rememberSize(next) }}
+              loading={tableLoading}
+            />
           </>
         }
       />
