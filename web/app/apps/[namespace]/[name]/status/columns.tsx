@@ -112,17 +112,13 @@ export const getStatusColumns = (
             <RotateCw className="size-4" />
             <span className="hidden lg:inline">{t("apps.status.col.restart")}</span>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`${podPath}/logs${query}`}>
-              <FileText className="size-4" />
-              <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
-            </Link>
+          <Button render={<Link href={`${podPath}/logs${query}`} />} variant="outline" size="sm">
+            <FileText className="size-4" />
+            <span className="hidden lg:inline">{t("apps.status.col.logs")}</span>
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`${podPath}/terminal${query}`}>
-              <Terminal className="size-4" />
-              <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
-            </Link>
+          <Button render={<Link href={`${podPath}/terminal${query}`} />} variant="outline" size="sm">
+            <Terminal className="size-4" />
+            <span className="hidden lg:inline">{t("apps.status.col.terminal")}</span>
           </Button>
         </div>
       )

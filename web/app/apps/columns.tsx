@@ -28,8 +28,8 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
       if (!desc) return null
       return (
         <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="block max-w-48 truncate cursor-default">{desc}</span>
+          <TooltipTrigger render={<span className="block max-w-48 truncate cursor-default" />}>
+            {desc}
           </TooltipTrigger>
           <TooltipContent>
             <p className="max-w-sm whitespace-pre-wrap">{desc}</p>
@@ -71,32 +71,30 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
       const base = `/apps/${application.namespace}/${application.name}`
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={base} title={t("apps.col.edit")}>
-              <Pencil className="size-4" />
-              {t("apps.col.edit")}
-            </Link>
+          <Button render={<Link href={base} title={t("apps.col.edit")} />} variant="outline" size="sm">
+            <Pencil className="size-4" />
+            {t("apps.col.edit")}
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`${base}/publish`} title={t("apps.col.publish")}>
-              <Rocket className="size-4" />
-              {t("apps.col.publish")}
-            </Link>
+          <Button render={<Link href={`${base}/publish`} title={t("apps.col.publish")} />} variant="outline" size="sm">
+            <Rocket className="size-4" />
+            {t("apps.col.publish")}
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href={`${base}/status`} title={t("apps.col.status")}>
-              <Activity className="size-4" />
-              {t("apps.col.status")}
-            </Link>
+          <Button render={<Link href={`${base}/status`} title={t("apps.col.status")} />} variant="outline" size="sm">
+            <Activity className="size-4" />
+            {t("apps.col.status")}
           </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={`/pipelines?namespace=${application.namespace}&app=${application.name}`}
-              title={t("apps.col.pipelines")}
-            >
-              <GitBranch className="size-4" />
-              {t("apps.col.pipelines")}
-            </Link>
+          <Button
+            render={
+              <Link
+                href={`/pipelines?namespace=${application.namespace}&app=${application.name}`}
+                title={t("apps.col.pipelines")}
+              />
+            }
+            variant="outline"
+            size="sm"
+          >
+            <GitBranch className="size-4" />
+            {t("apps.col.pipelines")}
           </Button>
         </div>
       )

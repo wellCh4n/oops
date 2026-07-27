@@ -162,15 +162,12 @@ export default function AssetsPage() {
                         {t("assets.title")}
                       </BreadcrumbPage>
                     ) : (
-                      <BreadcrumbLink asChild>
-                        <button
+                      <BreadcrumbLink render={<button
                           type="button"
                           onClick={() => navigateTo(-1)}
-                          className="flex items-center gap-1.5"
-                        >
-                          <FolderOpen className="size-4 text-sky-500" />
-                          {t("assets.title")}
-                        </button>
+                          className="flex items-center gap-1.5" />}>
+                        <FolderOpen className="size-4 text-sky-500" />
+                        {t("assets.title")}
                       </BreadcrumbLink>
                     )}
                   </BreadcrumbItem>
@@ -181,13 +178,10 @@ export default function AssetsPage() {
                         {index === segments.length - 1 ? (
                           <BreadcrumbPage className="font-medium">{segment}</BreadcrumbPage>
                         ) : (
-                          <BreadcrumbLink asChild>
-                            <button
+                          <BreadcrumbLink render={<button
                               type="button"
-                              onClick={() => navigateTo(index)}
-                            >
-                              {segment}
-                            </button>
+                              onClick={() => navigateTo(index)} />}>
+                            {segment}
                           </BreadcrumbLink>
                         )}
                       </BreadcrumbItem>

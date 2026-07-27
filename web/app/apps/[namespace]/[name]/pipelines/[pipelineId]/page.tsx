@@ -336,8 +336,8 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   <TableCell className="px-3 py-2 font-medium">{container.name}</TableCell>
                   <TableCell className="px-3 py-2 text-muted-foreground max-w-xs">
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="truncate inline-block max-w-full align-bottom">{shortImageName(container.image)}</span>
+                      <TooltipTrigger render={<span className="truncate inline-block max-w-full align-bottom" />}>
+                        {shortImageName(container.image)}
                       </TooltipTrigger>
                       <TooltipContent className="max-w-160 break-all font-mono text-xs">
                         {container.image}
@@ -397,27 +397,22 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="whitespace-pre-wrap break-words">{pipeline.message}</span>
                 {crashLoopPods.length === 1 && (
-                  <Button asChild variant="destructive" size="xs" className="shrink-0">
-                    <Link href={`/apps/${namespace}/${name}/pods/${crashLoopPods[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`}>
-                      <FileText className="size-3" />
-                      {t("apps.pipeline.viewLogs")}
-                    </Link>
+                  <Button render={<Link href={`/apps/${namespace}/${name}/pods/${crashLoopPods[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`} />} variant="destructive" size="xs" className="shrink-0">
+                    <FileText className="size-3" />
+                    {t("apps.pipeline.viewLogs")}
                   </Button>
                 )}
                 {crashLoopPods.length > 1 && (
                   <Popover open={errorLogsMenuOpen} onOpenChange={setErrorLogsMenuOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
+                    <PopoverTrigger render={<Button
                         variant="destructive"
                         size="xs"
                         className="shrink-0"
                         onMouseEnter={() => setErrorLogsMenuOpen(true)}
-                        onMouseLeave={() => setErrorLogsMenuOpen(false)}
-                      >
-                        <FileText className="size-3" />
-                        {t("apps.pipeline.viewLogs")}
-                        <ChevronDown className="size-3" />
-                      </Button>
+                        onMouseLeave={() => setErrorLogsMenuOpen(false)} />}>
+                      <FileText className="size-3" />
+                      {t("apps.pipeline.viewLogs")}
+                      <ChevronDown className="size-3" />
                     </PopoverTrigger>
                     <PopoverContent
                       align="start"
@@ -460,11 +455,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-2">
             {pipeline?.status === "BUILD_SUCCEEDED" && (
               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="default" size="sm">
-                    <Rocket className="size-4" />
-                    {t("apps.pipeline.deployBtn")}
-                  </Button>
+                <AlertDialogTrigger render={<Button variant="default" size="sm" />}>
+                  <Rocket className="size-4" />
+                  {t("apps.pipeline.deployBtn")}
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -482,11 +475,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
             )}
             {(pipeline?.status === "RUNNING" || pipeline?.status === "DEPLOYING" || pipeline?.status === "BUILD_SUCCEEDED") && (
               <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={stopping}>
-                    <Ban className="size-4" />
-                    {stopping ? t("pipelines.stopping") : t("pipelines.col.stop")}
-                  </Button>
+                <AlertDialogTrigger render={<Button variant="destructive" size="sm" disabled={stopping} />}>
+                  <Ban className="size-4" />
+                  {stopping ? t("pipelines.stopping") : t("pipelines.col.stop")}
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
@@ -598,7 +589,6 @@ export default function PipelineDetailPage({ params }: PageProps) {
             )}
           </div>
         </div>
-
       </div>
     </ContentPage>
   )

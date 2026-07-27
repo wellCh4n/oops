@@ -249,8 +249,8 @@ function ApplicationStatusContent() {
                   <TableCell className="px-3 py-2 font-medium">{container.name}</TableCell>
                   <TableCell className="px-3 py-2 text-muted-foreground max-w-xs">
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="truncate inline-block max-w-full align-bottom">{shortImageName(container.image)}</span>
+                      <TooltipTrigger render={<span className="truncate inline-block max-w-full align-bottom" />}>
+                        {shortImageName(container.image)}
                       </TooltipTrigger>
                       <TooltipContent className="max-w-160 break-all font-mono text-xs">
                         {container.image}

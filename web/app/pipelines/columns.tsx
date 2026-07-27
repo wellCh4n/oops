@@ -69,9 +69,7 @@ export const getPipelineColumns = (
           {t("pipelines.col.rollbackTag")}
           {fromId && (
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="size-3.5 text-muted-foreground cursor-help" />
-              </TooltipTrigger>
+              <TooltipTrigger render={<Info className="size-3.5 text-muted-foreground cursor-help" />}></TooltipTrigger>
               <TooltipContent>
                 {t("pipelines.col.rollbackFrom")}{fromId}
               </TooltipContent>
@@ -130,11 +128,9 @@ export const getPipelineColumns = (
     cell: ({ row }) => {
       return (
         <div className="flex items-center justify-end gap-1.5">
-          <Button asChild variant="outline" size="sm" className="h-8 px-2 gap-1">
-            <Link href={`/apps/${row.original.namespace}/${row.original.applicationName}/pipelines/${row.original.id}`}>
-              <Eye className="size-4" />
-              {t("pipelines.col.view")}
-            </Link>
+          <Button render={<Link href={`/apps/${row.original.namespace}/${row.original.applicationName}/pipelines/${row.original.id}`} />} variant="outline" size="sm" className="h-8 px-2 gap-1">
+            <Eye className="size-4" />
+            {t("pipelines.col.view")}
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" className="h-8 px-2 gap-1" onClick={() => onDeploy(row.original)}>
