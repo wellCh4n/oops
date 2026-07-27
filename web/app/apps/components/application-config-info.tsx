@@ -236,8 +236,7 @@ function SortableConfigRow({
       <div className="flex items-center gap-0">
         {/* Mount */}
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
+          <TooltipTrigger render={<Button
               type="button"
               variant="ghost"
               size="icon"
@@ -246,10 +245,8 @@ function SortableConfigRow({
               onClick={() => {
                 setMountDraft(currentMountPath ?? "")
                 setMountOpen(true)
-              }}
-            >
-              <HardDrive className="size-4" />
-            </Button>
+              }} />}>
+            <HardDrive className="size-4" />
           </TooltipTrigger>
           <TooltipContent>{t("apps.config.mountAsFile")}</TooltipContent>
         </Tooltip>
@@ -291,8 +288,7 @@ function SortableConfigRow({
 
         {/* Comment */}
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
+          <TooltipTrigger render={<Button
               type="button"
               variant="ghost"
               size="icon"
@@ -301,10 +297,8 @@ function SortableConfigRow({
               onClick={() => {
                 setCommentDraft(currentComment ?? "")
                 setCommentOpen(true)
-              }}
-            >
-              <MessageSquare className="size-4" />
-            </Button>
+              }} />}>
+            <MessageSquare className="size-4" />
           </TooltipTrigger>
           <TooltipContent>{t("apps.config.comment")}</TooltipContent>
         </Tooltip>
@@ -342,8 +336,7 @@ function SortableConfigRow({
 
         {/* Group */}
         <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
+          <TooltipTrigger render={<Button
               type="button"
               variant="ghost"
               size="icon"
@@ -352,10 +345,8 @@ function SortableConfigRow({
               onClick={() => {
                 setGroupDraft(currentGroupValue)
                 setGroupOpen(true)
-              }}
-            >
-              <Tags className="size-4" />
-            </Button>
+              }} />}>
+            <Tags className="size-4" />
           </TooltipTrigger>
           <TooltipContent>{t("apps.config.group")}</TooltipContent>
         </Tooltip>
@@ -1006,10 +997,8 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                     <Container className="size-4 text-muted-foreground" />
                     <span className="text-sm font-semibold">{t("apps.config.configMapSection")}</span>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="text-muted-foreground cursor-help">
-                          <Info className="size-3.5" />
-                        </span>
+                      <TooltipTrigger render={<span className="text-muted-foreground cursor-help" />}>
+                        <Info className="size-3.5" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">{t("apps.config.configMapHint")}</TooltipContent>
                     </Tooltip>
@@ -1020,17 +1009,14 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
                 <div className="flex gap-2">
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
+                    <DropdownMenuTrigger render={<Button
                         type="button"
                         variant="outline"
                         className="cursor-pointer"
-                        disabled={isLoadingConfig}
-                      >
-                        <Download className="size-4" />
-                        {t("apps.config.export")}
-                        <ChevronDown className="size-4" />
-                      </Button>
+                        disabled={isLoadingConfig} />}>
+                      <Download className="size-4" />
+                      {t("apps.config.export")}
+                      <ChevronDown className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem className="cursor-pointer" onClick={handleExportAll}>
@@ -1045,17 +1031,14 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                   </DropdownMenu>
 
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
+                    <DropdownMenuTrigger render={<Button
                         type="button"
                         variant="outline"
                         className="cursor-pointer"
-                        disabled={isLoadingConfig}
-                      >
-                        <Upload className="size-4" />
-                        {t("apps.config.import")}
-                        <ChevronDown className="size-4" />
-                      </Button>
+                        disabled={isLoadingConfig} />}>
+                      <Upload className="size-4" />
+                      {t("apps.config.import")}
+                      <ChevronDown className="size-4" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem
@@ -1148,10 +1131,8 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
                     <KeyRound className="size-4 text-muted-foreground" />
                     <span className="text-sm font-semibold">{t("apps.config.secretSection")}</span>
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="text-muted-foreground cursor-help">
-                          <Info className="size-3.5" />
-                        </span>
+                      <TooltipTrigger render={<span className="text-muted-foreground cursor-help" />}>
+                        <Info className="size-3.5" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">{t("apps.config.secretHint")}</TooltipContent>
                     </Tooltip>

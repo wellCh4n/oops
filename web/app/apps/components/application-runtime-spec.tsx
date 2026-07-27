@@ -370,11 +370,13 @@ function ProbeConfig({ probeName, titleKey }: { probeName: ProbeName, titleKey: 
             )}
           />
           <Collapsible className="contents">
-            <CollapsibleTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="w-fit px-0">
-                <ChevronDown className="size-4" />
-                {t("apps.runtimeSpec.advanced")}
-              </Button>
+            <CollapsibleTrigger
+              render={
+                <Button type="button" variant="ghost" size="sm" className="w-fit px-0" />
+              }
+            >
+              <ChevronDown className="size-4" />
+              {t("apps.runtimeSpec.advanced")}
             </CollapsibleTrigger>
             <CollapsibleContent className="w-full">
               <div className="flex flex-wrap gap-x-6 gap-y-4 pt-3">

@@ -31,10 +31,8 @@ const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: Deplo
     <div className="flex items-center gap-1.5">
       {tag && (
         <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Copyable value={tag} copyValue={firstImage} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
-            </span>
+          <TooltipTrigger render={<span />}>
+            <Copyable value={tag} copyValue={firstImage} maxLength={tag.length} displayClassName="text-xs text-muted-foreground" />
           </TooltipTrigger>
           <TooltipContent className="w-fit max-w-160 break-all">
             <div className="flex flex-col gap-1">

@@ -73,11 +73,9 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Environment>[]
       const environment = row.original
       return (
         <div className="flex items-center justify-end gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/settings/environments/${environment.id}`}>
-              <Pencil className="size-4" />
-              {t("common.edit")}
-            </Link>
+          <Button render={<Link href={`/settings/environments/${environment.id}`} />} variant="outline" size="sm">
+            <Pencil className="size-4" />
+            {t("common.edit")}
           </Button>
         </div>
       )

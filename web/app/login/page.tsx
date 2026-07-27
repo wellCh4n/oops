@@ -71,10 +71,8 @@ export default function LoginPage() {
             </div>
             <div className="flex items-center gap-1">
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-muted-foreground px-2">
-                    {theme === "dark" ? <Moon className="size-4" /> : theme === "light" ? <Sun className="size-4" /> : <Monitor className="size-4" />}
-                  </Button>
+                <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="text-muted-foreground px-2" />}>
+                  {theme === "dark" ? <Moon className="size-4" /> : theme === "light" ? <Sun className="size-4" /> : <Monitor className="size-4" />}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
@@ -85,11 +83,9 @@ export default function LoginPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-                    <Languages className="size-4" />
-                    {localeLabels[locale]}
-                  </Button>
+                <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" />}>
+                  <Languages className="size-4" />
+                  {localeLabels[locale]}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {(Object.keys(localeLabels) as Locale[]).map((l) => (

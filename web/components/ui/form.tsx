@@ -1,8 +1,7 @@
 "use client"
 
 import * as React from "react"
-import type * as LabelPrimitive from "@radix-ui/react-label"
-import { Slot } from "@radix-ui/react-slot"
+import { useRender } from "@base-ui/react/use-render"
 import {
   Controller,
   FormProvider,
@@ -87,10 +86,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function FormLabel({
-  className,
-  ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function FormLabel({ className, ...props }: React.ComponentProps<"label">) {
   const { error, formItemId } = useFormField()
 
   return (
@@ -104,22 +100,27 @@ function FormLabel({
   )
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+// Base UI has no `Slot`; `useRender` is its equivalent — it merges the props
+// below onto whatever single element is passed as children, so the 50-odd
+// `<FormControl><Input /></FormControl>` call sites keep working unchanged.
+function FormControl({
+  children,
+  ...props
+}: { children: React.ReactElement } & Record<string, unknown>) {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
-  return (
-    <Slot
-      data-slot="form-control"
-      id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
-      aria-invalid={!!error}
-      {...props}
-    />
-  )
+  return useRender({
+    render: children,
+    props: {
+      "data-slot": "form-control",
+      id: formItemId,
+      "aria-describedby": !error
+        ? `${formDescriptionId}`
+        : `${formDescriptionId} ${formMessageId}`,
+      "aria-invalid": !!error,
+      ...props,
+    },
+  })
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {

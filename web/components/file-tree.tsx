@@ -959,8 +959,7 @@ function TreeRow({
   return (
     <li>
       <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div
+        <ContextMenuTrigger render={<div
             className={cn("group/ctx", dragOver && "bg-primary/10")}
             onDragEnter={(e) => {
               if (isDir && canUpload && e.dataTransfer.types.includes("Files")) {
@@ -981,68 +980,62 @@ function TreeRow({
                 setDragOver(false)
               }
             }}
-            onDrop={handleDirDrop}
-          >
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onToggle(entry)}
-                    onDoubleClick={() => {
-                      if (isFile && canEdit) onEdit(entry)
-                    }}
-                    className={cn(
-                      "group flex w-full items-center gap-1.5 px-2 py-0.5 text-left transition-colors hover:bg-muted group-data-[state=open]/ctx:bg-muted",
-                      isDir ? "cursor-pointer" : "cursor-default text-muted-foreground",
-                    )}
-                    style={{ paddingLeft: indent }}
-                  >
-                    <span className="flex w-3.5 shrink-0 items-center justify-center">
-                      {isDir ? (
-                        state?.loading || dirUploading ? (
-                          <Loader2 className="size-3 animate-spin text-muted-foreground" />
-                        ) : (
-                          <ChevronRight
-                            className={cn(
-                              "size-3 text-muted-foreground transition-transform",
-                              expanded && "rotate-90",
-                            )}
-                          />
-                        )
-                      ) : null}
-                    </span>
-                    <span className="flex w-4 shrink-0 items-center justify-center">
-                      {entry.type === "SYMLINK_DIRECTORY" ? (
-                        <FolderSymlink className="size-3.5 text-violet-500" />
-                      ) : entry.type === "SYMLINK_FILE" ? (
-                        <FileSymlink className="size-3.5 text-violet-500" />
-                      ) : isDir ? (
-                        <Folder className="size-3.5 text-sky-500" />
-                      ) : (
-                        <FileIcon className="size-3.5 text-muted-foreground" />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                    {showSize ? (
-                      <span className="shrink-0 pl-2 tabular-nums text-[11px] text-muted-foreground/70">
-                        {formatBytes(entry.size!)}
-                      </span>
-                    ) : null}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="right"
-                  align="center"
-                  avoidCollisions={false}
-                  className="max-w-md break-all whitespace-normal"
-                >
-                  <div className="font-medium">{entry.name}</div>
-                  <div className="text-[11px] opacity-70">{entry.path}</div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
+            onDrop={handleDirDrop} />}>
+          <TooltipProvider delay={300}>
+            <Tooltip>
+              <TooltipTrigger render={<button
+                  type="button"
+                  onClick={() => onToggle(entry)}
+                  onDoubleClick={() => {
+                    if (isFile && canEdit) onEdit(entry)
+                  }}
+                  className={cn(
+                    "group flex w-full items-center gap-1.5 px-2 py-0.5 text-left transition-colors hover:bg-muted group-data-open/ctx:bg-muted",
+                    isDir ? "cursor-pointer" : "cursor-default text-muted-foreground",
+                  )}
+                  style={{ paddingLeft: indent }} />}>
+                <span className="flex w-3.5 shrink-0 items-center justify-center">
+                  {isDir ? (
+                    state?.loading || dirUploading ? (
+                      <Loader2 className="size-3 animate-spin text-muted-foreground" />
+                    ) : (
+                      <ChevronRight
+                        className={cn(
+                          "size-3 text-muted-foreground transition-transform",
+                          expanded && "rotate-90",
+                        )}
+                      />
+                    )
+                  ) : null}
+                </span>
+                <span className="flex w-4 shrink-0 items-center justify-center">
+                  {entry.type === "SYMLINK_DIRECTORY" ? (
+                    <FolderSymlink className="size-3.5 text-violet-500" />
+                  ) : entry.type === "SYMLINK_FILE" ? (
+                    <FileSymlink className="size-3.5 text-violet-500" />
+                  ) : isDir ? (
+                    <Folder className="size-3.5 text-sky-500" />
+                  ) : (
+                    <FileIcon className="size-3.5 text-muted-foreground" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                {showSize ? (
+                  <span className="shrink-0 pl-2 tabular-nums text-[11px] text-muted-foreground/70">
+                    {formatBytes(entry.size!)}
+                  </span>
+                ) : null}
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                align="center"
+                className="max-w-md break-all whitespace-normal"
+              >
+                <div className="font-medium">{entry.name}</div>
+                <div className="text-[11px] opacity-70">{entry.path}</div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </ContextMenuTrigger>
         <ContextMenuContent>
           {isFile && canEdit && (

@@ -101,8 +101,7 @@ export function SelectWithSearch({
         if (!o) setQuery("")
       }}
     >
-      <PopoverTrigger asChild>
-        <Button
+      <PopoverTrigger render={<Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
@@ -111,16 +110,14 @@ export function SelectWithSearch({
           className={cn(
             "w-[200px] justify-between bg-transparent border-input hover:bg-transparent hover:border-input font-normal",
             className
-          )}
+          )} />}>
+        <span
+          className={cn("truncate flex items-center gap-2 min-w-0", !value && "text-muted-foreground")}
         >
-          <span
-            className={cn("truncate flex items-center gap-2 min-w-0", !value && "text-muted-foreground")}
-          >
-            <OptionColorMark option={selectedOption} />
-            <span className="truncate">{selectedOption?.label || value || placeholder}</span>
-          </span>
-          <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
+          <OptionColorMark option={selectedOption} />
+          <span className="truncate">{selectedOption?.label || value || placeholder}</span>
+        </span>
+        <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent
         className="w-auto min-w-[var(--radix-popover-trigger-width)] max-w-[min(480px,calc(var(--radix-popover-content-available-width)-8px))] p-0"

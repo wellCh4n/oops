@@ -585,10 +585,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
             <Network className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold">{t("apps.service.accessEntry")}</span>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.accessEntryRepublishNotice")}>
-                  <Info className="size-3.5" />
-                </button>
+              <TooltipTrigger render={<button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.accessEntryRepublishNotice")} />}>
+                <Info className="size-3.5" />
               </TooltipTrigger>
               <TooltipContent className="max-w-xs text-xs">
                 {t("apps.service.accessEntryRepublishNotice")}
@@ -630,10 +628,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
               <Plug className="size-3.5" />
               {t("apps.service.internalPorts")}
               <Tooltip>
-                <TooltipTrigger asChild>
-                  <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.internalPortsHint")}>
-                    <Info className="size-3.5" />
-                  </button>
+                <TooltipTrigger render={<button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("apps.service.internalPortsHint")} />}>
+                  <Info className="size-3.5" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs text-xs">
                   {t("apps.service.internalPortsHint")}
@@ -725,7 +721,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                       <Select
                                         value={hostConfig.suffix}
                                         onValueChange={(value) => {
-                                          updateHost(group.environmentName, hostIndex, { suffix: value })
+                                          updateHost(group.environmentName, hostIndex, { suffix: value ?? undefined })
                                         }}
                                       >
                                         <SelectTrigger className="flex-1">

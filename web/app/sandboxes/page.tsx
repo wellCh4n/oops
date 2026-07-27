@@ -267,8 +267,8 @@ function SandboxesContent() {
         const fullImage = row.original.image
         return (
           <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="font-mono text-xs truncate inline-block max-w-full">{shortImageName(fullImage)}</span>
+            <TooltipTrigger render={<span className="font-mono text-xs truncate inline-block max-w-full" />}>
+              {shortImageName(fullImage)}
             </TooltipTrigger>
             <TooltipContent className="max-w-160 break-all font-mono text-xs">
               {fullImage}
@@ -305,11 +305,9 @@ function SandboxesContent() {
       size: 180,
       cell: ({ row }) => (
         <div className="flex items-center justify-end gap-1.5">
-          <Button asChild variant="outline" size="sm" className="h-8 px-2 gap-1">
-            <Link href={`/sandboxes/${row.original.id}`}>
-              <SquareTerminal className="size-4" />
-              {t("sandbox.terminal")}
-            </Link>
+          <Button render={<Link href={`/sandboxes/${row.original.id}`} />} variant="outline" size="sm" className="h-8 px-2 gap-1">
+            <SquareTerminal className="size-4" />
+            {t("sandbox.terminal")}
           </Button>
           <Button
             variant="destructive"
@@ -573,10 +571,8 @@ function SandboxesContent() {
                   <Label htmlFor="sandbox-keepalive" className="flex items-center gap-1.5 text-sm font-medium">
                     {t("sandbox.useDefaultKeepalive")}
                     <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("sandbox.useDefaultKeepaliveHint")}>
-                          <Info className="size-3.5" />
-                        </button>
+                      <TooltipTrigger render={<button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" aria-label={t("sandbox.useDefaultKeepaliveHint")} />}>
+                        <Info className="size-3.5" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-xs">
                         {t("sandbox.useDefaultKeepaliveHint")}

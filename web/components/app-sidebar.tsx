@@ -159,15 +159,12 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
 
                   return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
+                    <SidebarMenuButton render={<Link href={href} />}
                       isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                       tooltip={t(item.title)}
                     >
-                      <Link href={href}>
-                        <item.icon />
-                        <span>{t(item.title)}</span>
-                      </Link>
+                      <item.icon />
+                      <span>{t(item.title)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   )
@@ -184,16 +181,12 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           >
             <SidebarGroup className="py-1 px-2">
               {sidebarOpen && (
-                <SidebarGroupLabel
-                  asChild
+                <SidebarGroupLabel render={<CollapsibleTrigger
+                    aria-label={`${groupExpanded ? t("sidebar.collapseGroup") : t("sidebar.expandGroup")}: ${t(group.title)}`} />}
                   className="w-full cursor-pointer justify-between pr-1 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 >
-                  <CollapsibleTrigger
-                    aria-label={`${groupExpanded ? t("sidebar.collapseGroup") : t("sidebar.expandGroup")}: ${t(group.title)}`}
-                  >
-                    <span className="truncate">{t(group.title)}</span>
-                    <ChevronRight className={`ml-auto transition-transform ${groupExpanded ? "rotate-90" : ""}`} />
-                  </CollapsibleTrigger>
+                  <span className="truncate">{t(group.title)}</span>
+                  <ChevronRight className={`ml-auto transition-transform ${groupExpanded ? "rotate-90" : ""}`} />
                 </SidebarGroupLabel>
               )}
               {sidebarOpen ? (
@@ -245,10 +238,8 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                   )}
                 </Link>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="size-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")}>
-                      <MoreHorizontal className="size-4" />
-                    </Button>
+                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="size-7 ml-2 shrink-0 text-muted-foreground hover:text-foreground" aria-label={t("sidebar.more")} />}>
+                    <MoreHorizontal className="size-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" side="top">
                     <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
@@ -274,11 +265,9 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/settings/profile">
-                        <UserCog className="size-4" />
-                        {t("sidebar.profile")}
-                      </Link>
+                    <DropdownMenuItem render={<Link href="/settings/profile" />}>
+                      <UserCog className="size-4" />
+                      {t("sidebar.profile")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                       <LogOut className="size-4 text-destructive" />
@@ -289,10 +278,8 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
               </div>
             ) : (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuButton tooltip={t("sidebar.more")}>
-                    <MoreHorizontal />
-                  </SidebarMenuButton>
+                <DropdownMenuTrigger render={<SidebarMenuButton tooltip={t("sidebar.more")} />}>
+                  <MoreHorizontal />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="right" align="end">
                   <DropdownMenuRadioGroup value={locale} onValueChange={(v) => setLocale(v as Locale)}>
@@ -318,11 +305,9 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings/profile">
-                      <UserCog className="size-4" />
-                      {t("sidebar.profile")}
-                    </Link>
+                  <DropdownMenuItem render={<Link href="/settings/profile" />}>
+                    <UserCog className="size-4" />
+                    {t("sidebar.profile")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLogoutOpen(true)} className="text-destructive focus:text-destructive">
                     <LogOut className="size-4 text-destructive" />

@@ -89,17 +89,14 @@ function AppDetailNavInner({ namespace, name, active }: AppDetailNavProps) {
       {/* Edit: click goes to the default (basic info) tab; hover reveals the sub-tabs. */}
       <DropdownMenu open={editOpen} onOpenChange={setEditOpen} modal={false}>
         <div onMouseEnter={openEditMenu} onMouseLeave={scheduleCloseEditMenu}>
-          <DropdownMenuTrigger asChild>
-            <Link
+          <DropdownMenuTrigger render={<Link
               href={`${base}${withEnv("")}`}
               aria-current={active === "edit" ? "page" : undefined}
               onClick={() => setEditOpen(false)}
-              className={itemClass(active === "edit")}
-            >
-              <Pencil className="size-3.5" />
-              <span className="hidden sm:inline">{t("apps.col.edit")}</span>
-              <ChevronDown className={cn("size-3 opacity-60 transition-transform", editOpen && "rotate-180")} />
-            </Link>
+              className={itemClass(active === "edit")} />}>
+            <Pencil className="size-3.5" />
+            <span className="hidden sm:inline">{t("apps.col.edit")}</span>
+            <ChevronDown className={cn("size-3 opacity-60 transition-transform", editOpen && "rotate-180")} />
           </DropdownMenuTrigger>
         </div>
         <DropdownMenuContent
@@ -107,12 +104,12 @@ function AppDetailNavInner({ namespace, name, active }: AppDetailNavProps) {
           sideOffset={4}
           onMouseEnter={openEditMenu}
           onMouseLeave={scheduleCloseEditMenu}
-          onCloseAutoFocus={(event) => event.preventDefault()}
+          finalFocus={false}
           className="min-w-36"
         >
           {EDIT_TABS.map(({ tab, labelKey }) => (
-            <DropdownMenuItem key={tab} asChild className="text-xs cursor-pointer">
-              <Link href={`${base}${withEnv(`tab=${tab}`)}`}>{t(labelKey)}</Link>
+            <DropdownMenuItem render={<Link href={`${base}${withEnv(`tab=${tab}`)}`} />} key={tab} className="text-xs cursor-pointer">
+              {t(labelKey)}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

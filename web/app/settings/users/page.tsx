@@ -182,11 +182,9 @@ export default function UsersPage() {
             </div>
             {admin && (
               <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setUsername(""); setEmail(""); setPassword(""); setConfirmPassword(""); setShowPassword(false); setShowConfirm(false) } }}>
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="size-4" />
-                    {t("users.createBtn")}
-                  </Button>
+                <DialogTrigger render={<Button />}>
+                  <Plus className="size-4" />
+                  {t("users.createBtn")}
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
@@ -314,7 +312,7 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-role">{t("users.col.role")}</Label>
-              <Select value={editRole} onValueChange={setEditRole}>
+              <Select value={editRole} onValueChange={(value) => setEditRole(value ?? "")}>
                 <SelectTrigger id="edit-role">
                   <SelectValue />
                 </SelectTrigger>
@@ -334,7 +332,10 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              {editTarget?.role !== "ADMIN" && (
+              {/* Guard on `editTarget` itself: on close it becomes null, and a bare
+                  `editTarget?.role !== "ADMIN"` is then true, flashing the delete
+                  button for the duration of the dialog's exit animation. */}
+              {editTarget && editTarget.role !== "ADMIN" && (
                 <Button
                   variant="destructive"
                   className="mr-auto"

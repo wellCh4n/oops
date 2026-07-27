@@ -67,8 +67,7 @@ export function MultiSelectWithSearch({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
+      <PopoverTrigger render={<Button
           type="button"
           variant="outline"
           role="combobox"
@@ -78,38 +77,36 @@ export function MultiSelectWithSearch({
           className={cn(
             "w-full justify-between bg-transparent border-input hover:bg-transparent hover:border-input font-normal min-h-9 h-auto py-1.5",
             className
-          )}
-        >
-          <div className="flex flex-wrap gap-1 flex-1 min-w-0">
-            {selectedOptions.length === 0 ? (
-              <span className="text-muted-foreground">{placeholder}</span>
-            ) : (
-              selectedOptions.map((option) => (
-                <Badge
-                  key={option.value}
-                  variant="secondary"
-                  className="gap-1 font-normal"
+          )} />}>
+        <div className="flex flex-wrap gap-1 flex-1 min-w-0">
+          {selectedOptions.length === 0 ? (
+            <span className="text-muted-foreground">{placeholder}</span>
+          ) : (
+            selectedOptions.map((option) => (
+              <Badge
+                key={option.value}
+                variant="secondary"
+                className="gap-1 font-normal"
+              >
+                <span className="truncate max-w-[160px]">{option.label}</span>
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  aria-label={`Remove ${option.label}`}
+                  onPointerDown={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    remove(option.value)
+                  }}
+                  className="rounded-sm hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
                 >
-                  <span className="truncate max-w-[160px]">{option.label}</span>
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    aria-label={`Remove ${option.label}`}
-                    onPointerDown={(event) => {
-                      event.preventDefault()
-                      event.stopPropagation()
-                      remove(option.value)
-                    }}
-                    className="rounded-sm hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
-                  >
-                    <X className="size-3" />
-                  </span>
-                </Badge>
-              ))
-            )}
-          </div>
-          <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
-        </Button>
+                  <X className="size-3" />
+                </span>
+              </Badge>
+            ))
+          )}
+        </div>
+        <ChevronDown className="ml-2 size-4 shrink-0 opacity-50" />
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
         <Command>

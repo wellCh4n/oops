@@ -184,10 +184,8 @@ export default function SandboxDetailPage() {
           <span className="font-mono">{sandbox.name}</span>
           <span className="text-xs text-muted-foreground font-mono">{sandbox.id}</span>
           <Tooltip>
-            <TooltipTrigger asChild>
-              <button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer">
-                <Info className="size-3.5" />
-              </button>
+            <TooltipTrigger render={<button type="button" className="text-muted-foreground hover:text-foreground inline-flex items-center cursor-pointer" />}>
+              <Info className="size-3.5" />
             </TooltipTrigger>
             <TooltipContent className="text-xs font-mono space-y-0.5">
               <div>{t("sandbox.col.environment")}: {sandbox.environment}</div>

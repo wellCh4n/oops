@@ -120,7 +120,7 @@ export function ApplicationDangerZone({ namespace, name }: ApplicationDangerZone
           <p className="text-xs text-muted-foreground">{t("apps.danger.migrateDesc")}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Select value={targetNamespace} onValueChange={setTargetNamespace}>
+          <Select value={targetNamespace} onValueChange={(value) => setTargetNamespace(value ?? "")}>
             <SelectTrigger className="w-44 cursor-pointer">
               <SelectValue placeholder={t("apps.danger.migrateSelectPlaceholder")} />
             </SelectTrigger>
