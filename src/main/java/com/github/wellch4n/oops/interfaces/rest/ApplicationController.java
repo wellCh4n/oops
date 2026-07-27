@@ -8,6 +8,7 @@ import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodMetricHistory;
 import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.NamespaceMigrationCommand;
 import com.github.wellch4n.oops.application.dto.NamespaceMigrationResult;
@@ -17,6 +18,7 @@ import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
+import com.github.wellch4n.oops.application.service.PodMetricHistoryService;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.time.Instant;
 import java.util.List;
@@ -41,13 +43,16 @@ public class ApplicationController {
     private final ApplicationService applicationService;
     private final PipelineService pipelineService;
     private final NamespaceMigrationService namespaceMigrationService;
+    private final PodMetricHistoryService podMetricHistoryService;
 
     public ApplicationController(ApplicationService applicationService,
                                  PipelineService pipelineService,
-                                 NamespaceMigrationService namespaceMigrationService) {
+                                 NamespaceMigrationService namespaceMigrationService,
+                                 PodMetricHistoryService podMetricHistoryService) {
         this.applicationService = applicationService;
         this.pipelineService = pipelineService;
         this.namespaceMigrationService = namespaceMigrationService;
+        this.podMetricHistoryService = podMetricHistoryService;
     }
 
     @GetMapping("/{name}")
@@ -191,6 +196,16 @@ public class ApplicationController {
                                                                  @PathVariable String name,
                                                                  @RequestParam String env) {
         return Result.success(applicationService.getApplicationMetrics(namespace, name, env));
+    }
+
+    @GetMapping("/{name}/metrics/history")
+    public Result<PodMetricHistory> getApplicationMetricsHistory(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            @RequestParam String env,
+            @RequestParam(required = false, defaultValue = "1h") String range,
+            @RequestParam(required = false, defaultValue = "avg") String agg) {
+        return Result.success(podMetricHistoryService.getHistory(namespace, name, env, range, agg));
     }
 
     @GetMapping("/{name}/environments")

@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, SseWatchOptions } from "./sse"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -214,6 +214,26 @@ export const getApplicationMetrics = async (namespace: string, name: string, env
     throw new Error("Failed to fetch application metrics")
   }
   return response.json() as Promise<ApiResponse<PodMetric[]>>
+}
+
+export type MetricHistoryRange = "30m" | "1h" | "6h" | "24h"
+export type MetricAggregation = "avg" | "max"
+
+export const getApplicationMetricsHistory = async (
+  namespace: string,
+  name: string,
+  env: string,
+  range: MetricHistoryRange,
+  agg: MetricAggregation
+): Promise<ApiResponse<PodMetricHistory>> => {
+  const query = new URLSearchParams({ env, range, agg })
+  const response = await apiFetch(
+    `/api/namespaces/${namespace}/applications/${name}/metrics/history?${query.toString()}`
+  )
+  if (!response.ok) {
+    throw new Error("Failed to fetch application metrics history")
+  }
+  return response.json() as Promise<ApiResponse<PodMetricHistory>>
 }
 
 export const getApplicationEnvironments = async (namespace: string, name: string): Promise<ApiResponse<ApplicationEnvironment[]>> => {

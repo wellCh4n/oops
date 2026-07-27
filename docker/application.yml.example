@@ -1,6 +1,10 @@
 spring:
   application:
     name: oops
+  task:
+    scheduling:
+      pool:
+        size: 3
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   datasource:
@@ -52,6 +56,12 @@ oops:
         - "*/__MACOSX/*"
         - .DS_Store
         - "*/.DS_Store"
+  metrics:
+    history:
+      enabled: true
+      interval-seconds: 30
+      retention-hours: 24
+      max-series: 2000
   pod-filesystem:
     max-download-size-bytes: 52428800
     max-upload-size-bytes: 52428800

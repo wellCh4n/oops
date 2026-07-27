@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes;
 
+import com.github.wellch4n.oops.application.dto.ClusterPodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.port.ApplicationMetricsGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
@@ -8,6 +9,7 @@ import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.ContainerMetrics;
 import io.fabric8.kubernetes.api.model.metrics.v1beta1.PodMetrics;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +60,52 @@ public class KubernetesApplicationMetricsGateway implements ApplicationMetricsGa
             log.warn("Failed to read pod metrics for {}/{}: {}", namespace, applicationName, exception.getMessage());
             return List.of();
         }
+    }
+
+    @Override
+    public List<ClusterPodMetricSnapshot> getClusterMetrics(Environment environment) {
+        var client = clientPool.get(environment.getKubernetesApiServer());
+
+        // One list call for the whole cluster gives both the set of pods worth sampling and their owning
+        // application, since the deploy path stamps oops.app.name onto every pod template.
+        Map<PodIdentity, String> applicationNameByPod = client.pods()
+                .inAnyNamespace()
+                .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
+                .list().getItems().stream()
+                .filter(pod -> pod.getMetadata().getLabels() != null
+                        && pod.getMetadata().getLabels().get(APPLICATION_NAME_LABEL) != null)
+                .collect(Collectors.toMap(
+                        pod -> new PodIdentity(pod.getMetadata().getNamespace(), pod.getMetadata().getName()),
+                        pod -> pod.getMetadata().getLabels().get(APPLICATION_NAME_LABEL),
+                        (first, second) -> first));
+        if (applicationNameByPod.isEmpty()) {
+            return List.of();
+        }
+
+        try {
+            List<ClusterPodMetricSnapshot> snapshots = new ArrayList<>(applicationNameByPod.size());
+            for (PodMetrics podMetrics : client.top().pods().metrics().getItems()) {
+                PodIdentity identity = new PodIdentity(
+                        podMetrics.getMetadata().getNamespace(), podMetrics.getMetadata().getName());
+                String applicationName = applicationNameByPod.get(identity);
+                if (applicationName == null) {
+                    continue;
+                }
+                PodMetricSnapshot usage = toSnapshot(podMetrics);
+                snapshots.add(new ClusterPodMetricSnapshot(
+                        identity.namespace(), applicationName, identity.podName(),
+                        usage.cpuMillis(), usage.memoryBytes()));
+            }
+            return snapshots;
+        } catch (Exception exception) {
+            // metrics-server may be absent on this cluster — degrade to an empty reading.
+            log.warn("Failed to sweep pod metrics on environment {}: {}",
+                    environment.getName(), exception.getMessage());
+            return List.of();
+        }
+    }
+
+    private record PodIdentity(String namespace, String podName) {
     }
 
     private PodMetricSnapshot toSnapshot(PodMetrics podMetrics) {

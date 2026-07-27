@@ -9,12 +9,13 @@ import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { toast } from "sonner"
-import { ChevronRight, ExternalLink } from "lucide-react"
+import { ChevronRight, ExternalLink, LineChart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ApplicationResourceViewer } from "@/app/apps/components/application-resource-viewer"
 import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
+import { ApplicationMetricsDrawer } from "@/app/apps/components/application-metrics-drawer"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
 import { useWorkContextStore } from "@/store/work-context"
 import { shortImageName } from "@/lib/utils"
@@ -84,6 +86,7 @@ function ApplicationStatusContent() {
   const [resourcesOpen, setResourcesOpen] = useState(false)
   const [metricsByPod, setMetricsByPod] = useState<Record<string, PodMetric>>({})
   const [metricsLoading, setMetricsLoading] = useState(false)
+  const [metricsDrawerOpen, setMetricsDrawerOpen] = useState(false)
   const { t } = useLanguage()
   const enterApp = useWorkContextStore((state) => state.enterApp)
   const setWorkContext = useWorkContextStore((state) => state.setContext)
@@ -293,15 +296,26 @@ function ApplicationStatusContent() {
         options={
           <div className="space-y-2">
             {environments.length > 0 && (
-              <Tabs value={selectedEnv} onValueChange={handleTabChange} className="w-full">
-                <TabsList>
-                  {environments.map((env) => (
-                    <TabsTrigger key={env.id} value={env.name} className="px-8">
-                      {env.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+              <div className="flex items-center justify-between gap-2">
+                <Tabs value={selectedEnv} onValueChange={handleTabChange}>
+                  <TabsList>
+                    {environments.map((env) => (
+                      <TabsTrigger key={env.id} value={env.name} className="px-8">
+                        {env.name}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMetricsDrawerOpen(true)}
+                  disabled={!selectedEnv}
+                >
+                  <LineChart />
+                  {t("apps.metrics.open")}
+                </Button>
+              </div>
             )}
             {clusterDomain?.internalDomain && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -352,6 +366,16 @@ function ApplicationStatusContent() {
         <div className="mt-4">
           <ApplicationEventsPanel namespace={namespace} applicationName={name} environmentName={selectedEnv} />
         </div>
+      )}
+
+      {selectedEnv && (
+        <ApplicationMetricsDrawer
+          open={metricsDrawerOpen}
+          onOpenChange={setMetricsDrawerOpen}
+          namespace={namespace}
+          applicationName={name}
+          environmentName={selectedEnv}
+        />
       )}
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>
