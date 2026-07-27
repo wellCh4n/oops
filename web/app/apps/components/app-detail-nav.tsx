@@ -89,7 +89,12 @@ function AppDetailNavInner({ namespace, name, active }: AppDetailNavProps) {
       {/* Edit: click goes to the default (basic info) tab; hover reveals the sub-tabs. */}
       <DropdownMenu open={editOpen} onOpenChange={setEditOpen} modal={false}>
         <div onMouseEnter={openEditMenu} onMouseLeave={scheduleCloseEditMenu}>
-          <DropdownMenuTrigger render={<Link
+          {/* Deliberately an anchor, not a button: this is a real navigation link
+              that additionally opens the sub-tab menu on hover. Base UI assumes a
+              native <button> for menu triggers, so opt out explicitly. */}
+          <DropdownMenuTrigger
+            nativeButton={false}
+            render={<Link
               href={`${base}${withEnv("")}`}
               aria-current={active === "edit" ? "page" : undefined}
               onClick={() => setEditOpen(false)}
