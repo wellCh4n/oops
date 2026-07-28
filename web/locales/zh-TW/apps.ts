@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 小時",
   "apps.metrics.agg.avg": "平均值",
   "apps.metrics.agg.max": "最大值",
+  "apps.metrics.notAvailable": "該叢集沒有可用的監控資料來源",
+  "apps.metrics.notAvailableAdmin": "請確認叢集已安裝 Prometheus，或調整 oops.metrics.history.backend 設定",
   "apps.metrics.request": "請求",
   "apps.metrics.limit": "限制",
   "apps.status.title": "運作狀態",

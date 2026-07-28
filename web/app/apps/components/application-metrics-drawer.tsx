@@ -29,8 +29,12 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
+import { isAdmin } from "@/lib/auth"
 
 const RANGES: MetricHistoryRange[] = ["30m", "1h", "6h", "24h"]
+
+/** Error code the backend returns when the cluster has no Prometheus-compatible backend to query. */
+const NOT_AVAILABLE = "MONITORING_NOT_AVAILABLE"
 
 /** Matches the sampling interval, so the chart gains a point roughly as soon as one exists. */
 const REFRESH_INTERVAL_MS = 30_000
@@ -276,6 +280,14 @@ export function ApplicationMetricsDrawer({
       )
     }
     if (rows.length === 0) {
+      if (error === NOT_AVAILABLE) {
+        return (
+          <div className="flex h-64 flex-col items-center justify-center gap-2 px-6 text-center text-sm text-muted-foreground">
+            <span>{t("apps.metrics.notAvailable")}</span>
+            {isAdmin() && <span className="text-xs">{t("apps.metrics.notAvailableAdmin")}</span>}
+          </div>
+        )
+      }
       return (
         <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-muted-foreground">
           {error ?? t("apps.metrics.empty")}

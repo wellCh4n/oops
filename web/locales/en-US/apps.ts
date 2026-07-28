@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 hours",
   "apps.metrics.agg.avg": "Average",
   "apps.metrics.agg.max": "Maximum",
+  "apps.metrics.notAvailable": "No monitoring backend is available on this cluster",
+  "apps.metrics.notAvailableAdmin": "Check that Prometheus is installed, or adjust oops.metrics.history.backend",
   "apps.metrics.request": "Request",
   "apps.metrics.limit": "Limit",
   "apps.status.title": "Runtime Status",
