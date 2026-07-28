@@ -29,6 +29,8 @@ import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
 import { AppWindow, Layers, AlignLeft, Server, Check, User as UserIcon, LayoutGrid, Users as UsersIcon } from "lucide-react"
+import { AppIconPicker } from "@/components/ui/app-icon-picker"
+import { AppIdentityMark } from "@/components/app-identity-mark"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
 import { ApplicationTabHandle } from "./application-tab-handle"
@@ -83,12 +85,14 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
       name: initialData.name,
       namespace: initialData.namespace,
       description: initialData.description,
+      icon: initialData.icon ?? "",
       owner: initialData.owner ?? "",
       collaborators: initialData.collaborators ?? [],
     } : {
       name: "",
       namespace: "",
       description: "",
+      icon: "",
       owner: "",
       collaborators: [],
     },
@@ -104,6 +108,9 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
     values: {
       ...values,
       owner: values.owner ?? "",
+      // Clearing the picker yields undefined while the baseline holds "" — collapse
+      // both so an untouched form is not reported as dirty.
+      icon: values.icon ?? "",
       collaborators: (values.collaborators ?? []).toSorted(),
     },
     selectedEnvNames: envNames.toSorted(),
@@ -183,15 +190,30 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
             <span className="text-sm font-semibold">{t("apps.basic.appInfoSection")}</span>
           </div>
           <div className="flex flex-col gap-4 p-4">
+            {/* The icon picker rides inside the name field rather than carrying its own
+                label — it is an adornment on the app's identity, not a separate question. */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center gap-1"><AppWindow className="size-3.5" />{t("common.appName")}</FormLabel>
-                  <FormControl>
-                    <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
-                  </FormControl>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="icon"
+                      render={({ field: iconField }) => (
+                        <AppIconPicker
+                          value={iconField.value}
+                          onValueChange={iconField.onChange}
+                          fallback={<AppIdentityMark seed={{ ...form.getValues(), icon: undefined }} />}
+                        />
+                      )}
+                    />
+                    <FormControl>
+                      <Input autoComplete="off" placeholder={t("apps.basic.namePlaceholder")} {...field} disabled={!!initialData} />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { AppIconPicker } from "@/components/ui/app-icon-picker"
 import { createApplication } from "@/lib/api/applications"
 import { getCreateApplicationSchema, CreateApplicationFormValues } from "../schema"
 import { useLanguage } from "@/contexts/language-context"
@@ -57,6 +58,7 @@ export function ApplicationCreateDialog({
       name: "",
       namespace: defaultNamespace || "",
       description: "",
+      icon: "",
     },
   })
 
@@ -109,15 +111,26 @@ export function ApplicationCreateDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmitCreate)} className="space-y-4">
+            {/* The icon picker rides inside the name field rather than carrying its own
+                label — it is an adornment on the app's identity, not a separate question. */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>{t("common.appName")}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={t("apps.create.namePlaceholder")} {...field} />
-                  </FormControl>
+                  <div className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name="icon"
+                      render={({ field: iconField }) => (
+                        <AppIconPicker value={iconField.value} onValueChange={iconField.onChange} />
+                      )}
+                    />
+                    <FormControl>
+                      <Input placeholder={t("apps.create.namePlaceholder")} {...field} />
+                    </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

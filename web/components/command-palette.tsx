@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Application } from "@/lib/api/types"
+import { AppIdentityMark } from "@/components/app-identity-mark"
 import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
@@ -193,6 +194,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       name: app.name,
       description: app.description,
       ownerName: app.ownerName,
+      icon: app.icon,
     }
     enterApp(appRef)
 
@@ -326,11 +328,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             description: recentApp.description,
                             namespace: recentApp.namespace,
                             ownerName: recentApp.ownerName,
+                            icon: recentApp.icon,
                           })
                         }
                         className="flex flex-col items-start gap-1 py-3 cursor-pointer"
                       >
                         <div className="flex items-center gap-2 w-full">
+                          <AppIdentityMark seed={recentApp} />
                           <span className="font-medium truncate">
                             {recentApp.name}
                           </span>
@@ -370,6 +374,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                           className="flex flex-col items-start gap-1 py-3 cursor-pointer"
                         >
                           <div className="flex items-center gap-2 w-full">
+                            <AppIdentityMark seed={app} />
                             <span className="font-medium truncate">
                               {app.name}
                             </span>

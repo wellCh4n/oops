@@ -23,6 +23,7 @@ public final class ApplicationConfigDto {
             LocalDateTime createdTime,
             String name,
             String description,
+            String icon,
             String namespace,
             String owner,
             List<String> collaborators
@@ -33,6 +34,7 @@ public final class ApplicationConfigDto {
             application.setCreatedTime(createdTime);
             application.setName(name);
             application.setDescription(description);
+            application.changeIcon(icon);
             application.setNamespace(namespace);
             application.setOwner(owner);
             return application;

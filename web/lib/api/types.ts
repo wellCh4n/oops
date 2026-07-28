@@ -70,6 +70,8 @@ export interface Application {
   workspaceId?: string
   name: string
   description?: string
+  // Emoji standing in for the derived identity color block. Absent means "use the color block".
+  icon?: string
   namespace: string
   owner?: string
   ownerName?: string

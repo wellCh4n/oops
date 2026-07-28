@@ -23,6 +23,8 @@ export interface AppRef {
   name: string
   description?: string
   ownerName?: string
+  /** Carried so the remembered app renders the same mark as everywhere else. */
+  icon?: string
 }
 
 export interface NamespaceItem {

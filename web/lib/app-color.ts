@@ -2,6 +2,8 @@ export type AppColorSeed = string | {
   id?: string | null
   namespace?: string | null
   name?: string | null
+  // When set, consumers show this emoji instead of the derived color block.
+  icon?: string | null
 }
 
 interface AppIdentityColor {

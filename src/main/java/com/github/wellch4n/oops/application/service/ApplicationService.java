@@ -141,7 +141,7 @@ public class ApplicationService {
     @Transactional
     public Boolean updateApplication(String namespace, String name, ApplicationConfigDto.Profile request) {
         Application exist = requireAggregate(namespace, name);
-        exist.changeProfile(request.description(), normalizeOwner(request.owner()));
+        exist.changeProfile(request.description(), normalizeOwner(request.owner()), request.icon());
         exist.changeCollaborators(normalizeCollaborators(request.collaborators(), exist.getOwner()));
         applicationRepository.saveAggregate(exist);
         return true;
