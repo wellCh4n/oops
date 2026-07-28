@@ -144,6 +144,7 @@ Key properties to configure:
 - `oops.ide.*`: code-server IDE configuration (optional)
 - `oops.sandbox.*`: Sandbox runtime image allowlist and execution defaults
 - `oops.pod-filesystem.*`: Pod file browser limits, especially max download size
+- `oops.metrics.history.*`: usage-chart data source — `backend.namespace` / `backend.service-name` / `backend.port` locate the cluster's Prometheus-compatible Service (one convention for every environment, defaulting to kube-prometheus-stack's `monitoring/prometheus-operated:9090`; blank the namespace to hide the charts), plus `interval-seconds` and `max-range-hours` which shape the chart buckets
 
 ## Key Concepts
 
@@ -195,7 +196,14 @@ The K8s client is created per-task and closed via try-with-resources in `Artifac
 
 **Application resource viewer**: `GET /api/namespaces/{namespace}/applications/{name}/resources?env=...` returns read-only Kubernetes resources for expert inspection.
 
-**Application status & metrics**: `GET .../applications/{name}/status?env=...` returns per-pod status views and `GET .../applications/{name}/events?env=...` returns recent K8s events. `GET .../applications/{name}/metrics?env=...` returns `List<PodMetricSnapshot>` (`podName`, `cpuMillis`, `memoryBytes`) via `ApplicationMetricsGateway` → `KubernetesApplicationMetricsGateway`, which reads the K8s `PodMetrics` API (requires metrics-server). The status table renders per-pod CPU/memory from this. Frontend: `apps/[namespace]/[name]/status/page.tsx`.
+**Application status & metrics**: `GET .../applications/{name}/status?env=...` returns per-pod status views and `GET .../applications/{name}/events?env=...` returns recent K8s events. Resource usage comes from two independent sources:
+
+- **Live readings** — `GET .../applications/{name}/metrics?env=...` returns `List<PodMetricSnapshot>` (`podName`, `cpuMillis`, `memoryBytes`) via `ApplicationMetricsGateway` → `KubernetesApplicationMetricsGateway`, which reads the K8s `PodMetrics` API (requires metrics-server). The status table renders per-pod CPU/memory from this.
+- **History** — `GET .../applications/{name}/metrics/history?env=&range=&agg=` returns `PodMetricHistory` for the usage charts. **OOPS stores no history of its own**: `PodMetricHistoryService` resolves the window and bucket width (snapping both ends to the bucket grid, so refreshing does not shift every point), then `PodMetricHistoryProvider` → `PrometheusPodMetricHistoryProvider` runs a `query_range` against whatever Prometheus-compatible backend the cluster already runs. `ApiServerProxyPrometheusTransport` reaches that in-cluster ClusterIP through the API server service proxy, so no ingress or second credential is needed — but the environment's token needs `services/proxy`. Pods are matched by StatefulSet naming (`{app}-[0-9]+`) rather than the `oops.app.name` label, because kubelet/cAdvisor metrics carry no pod labels; namespace and application names are validated before being interpolated into the PromQL matcher. With no backend reachable the service throws `MONITORING_NOT_AVAILABLE`, which the drawer renders as a setup prompt rather than an empty chart.
+
+Frontend: `apps/[namespace]/[name]/status/page.tsx`; the charts live in `apps/components/application-metrics-drawer.tsx`, which also draws the environment's `ApplicationRuntimeSpec` request/limit as reference lines.
+
+`resources/vmsingle.yaml` is a minimal VictoriaMetrics manifest for clusters with no monitoring installed — one pod scraping the kubelet `/metrics/resource` endpoint, which carries exactly the two series the charts read.
 
 **Scheduled rolling restart**: `ScheduledRestartJob` (`infrastructure/scheduler/`, `@Scheduled(cron = "0 * * * * *")`) scans every minute for applications whose `ApplicationExpertConfig` has `scheduledRestartEnabled` for an environment, matches the per-environment `scheduledRestartCron` (5-field cron, evaluated via `shared/util/CronSchedule`), and calls `ApplicationRuntimeGateway.rolloutRestart()`. `CronController` exposes `GET /api/cron/next?expression=...&count=N` to preview upcoming fire times for the UI.
 
