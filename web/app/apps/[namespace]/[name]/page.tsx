@@ -24,7 +24,6 @@ import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
-import { AppIdentityMark } from "@/components/app-identity-mark"
 import { useWorkContextStore } from "@/store/work-context"
 
 export default function EditAppPage() {
@@ -104,13 +103,7 @@ export default function EditAppPage() {
 
   return (
     <ContentPage
-      title={
-        <span className="flex items-center gap-2">
-          <AppIdentityMark seed={application ?? { namespace, name }} />
-          {application?.name ?? name}
-        </span>
-      }
-      documentTitle={application?.name ?? name}
+      title={application?.name ?? name}
       actions={<AppDetailNav namespace={namespace} name={name} active="edit" />}
     >
       <Suspense fallback={null}>
