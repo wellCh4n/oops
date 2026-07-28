@@ -58,10 +58,18 @@ oops:
         - "*/.DS_Store"
   metrics:
     history:
-      enabled: true
+      # Assumed scrape interval of the monitoring backend; decides the chart bucket width.
       interval-seconds: 30
-      retention-hours: 24
-      max-series: 2000
+      # Longest range the usage charts may request.
+      max-range-hours: 24
+      # Every cluster is expected to run a Prometheus-compatible backend at the same address, queried through
+      # that environment's API server proxy (its token needs services/proxy). The defaults below are where
+      # kube-prometheus-stack installs itself; VictoriaMetrics is usually monitoring/vmsingle:8428.
+      # Blank the namespace to hide the usage charts entirely.
+      backend:
+        namespace: monitoring
+        service-name: prometheus-operated
+        port: 9090
   pod-filesystem:
     max-download-size-bytes: 52428800
     max-upload-size-bytes: 52428800

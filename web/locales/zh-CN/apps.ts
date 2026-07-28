@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 小时",
   "apps.metrics.agg.avg": "平均值",
   "apps.metrics.agg.max": "最大值",
+  "apps.metrics.notAvailable": "该集群没有可用的监控数据源",
+  "apps.metrics.notAvailableAdmin": "请确认集群已安装 Prometheus，或调整 oops.metrics.history.backend 配置",
   "apps.metrics.request": "请求",
   "apps.metrics.limit": "限制",
   "apps.status.title": "运行状态",
