@@ -33,6 +33,8 @@
     <properties>
         <java.version>25</java.version>
         <kubernetes.client.version>25.0.0</kubernetes.client.version>
+        <jgit.version>7.7.1.202607240634-r</jgit.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
     </properties>
     <dependencies>
         <dependency>
@@ -152,6 +154,23 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
             <version>2.31.63</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit</artifactId>
+            <version>${jgit.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jgit</groupId>
+            <artifactId>org.eclipse.jgit.ssh.apache</artifactId>
+            <version>${jgit.version}</version>
+        </dependency>
+        <!-- Security provider Apache MINA sshd needs to read OpenSSH ed25519 private keys. -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+            <scope>runtime</scope>
         </dependency>
     </dependencies>
 

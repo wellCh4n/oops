@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { BranchPicker } from "@/components/branch-picker"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import Link from "next/link"
 import { useWorkContextStore } from "@/store/work-context"
@@ -381,10 +382,13 @@ export default function PublishPage({ params }: PageProps) {
                 </button>
               )}
             </Label>
-            <Input
+            <BranchPicker
               id="branch"
               value={branch}
-              onChange={(e) => setBranch(e.target.value)}
+              onValueChange={setBranch}
+              namespace={namespace}
+              applicationName={name}
+              env={selectedEnv}
               placeholder="main"
             />
           </div>
