@@ -145,6 +145,7 @@ Key properties to configure:
 - `oops.sandbox.*`: Sandbox runtime image allowlist and execution defaults
 - `oops.pod-filesystem.*`: Pod file browser limits, especially max download size
 - `oops.metrics.history.*`: usage-chart data source — `backend.namespace` / `backend.service-name` / `backend.port` locate the cluster's Prometheus-compatible Service (one convention for every environment, defaulting to kube-prometheus-stack's `monitoring/prometheus-operated:9090`; blank the namespace to hide the charts), plus `interval-seconds` and `max-range-hours` which shape the chart buckets
+- `oops.metrics.alert.*`: resource alert thresholds — `enabled`, `cpu.{threshold-percent,sustained-minutes}`, `memory.{threshold-percent,sustained-minutes}`, `repeat-interval-minutes`. One set for the whole installation; there is no per-application alert config
 
 ## Key Concepts
 
@@ -204,6 +205,12 @@ The K8s client is created per-task and closed via try-with-resources in `Artifac
 Frontend: `apps/[namespace]/[name]/status/page.tsx`; the charts live in `apps/components/application-metrics-drawer.tsx`, which also draws the environment's `ApplicationRuntimeSpec` request/limit as reference lines.
 
 `resources/vmsingle.yaml` is a minimal VictoriaMetrics manifest for clusters with no monitoring installed — one pod scraping the kubelet `/metrics/resource` endpoint, which carries exactly the two series the charts read.
+
+**Resource alerts**: `ResourceAlertScanJob` (`infrastructure/scheduler/`, `@Scheduled(cron = "0 * * * * *")`) warns an application's owner when CPU or memory sits against its limit. **Off unless `oops.metrics.alert.enabled` is set** — it messages real people and queries a backend not every cluster runs, so it is opt-in. Configured **only globally** under `oops.metrics.alert` (`ResourceAlertProperties`) — there is no per-application alert setting; once on, an application becomes alertable by having limits in its `ApplicationRuntimeSpec` for that environment, and one without limits is skipped because `/metrics/resource` carries no limits series to take a percentage of (that would need kube-state-metrics). Thresholds differ per metric by design: memory 90%/5min (an OOMKill is fatal, so warn early), CPU 95%/10min (throttling only degrades latency, and `container_cpu_cfs_throttled_seconds_total` — the metric that would really show it — is cAdvisor-only, so "sitting against the limit" is a proxy that needs headroom).
+
+The whole "sustained for N minutes" condition lives in PromQL: `ResourceAlertProbe` → `PrometheusResourceAlertProbe` runs one instant query per target of the form `min_over_time((…)[Ns:Is]) > threshold`, so a returned row *is* a pod that never dropped below the line — OOPS keeps no time series and no rolling buffer. `PrometheusSelectors` holds the pod matcher shared with the charts.
+
+The scan is three phases and only the middle one fans out: targets and previous state are each read in one query on the scan thread, the network-bound probes run on virtual threads touching no database, and transitions are written back in one batch. `application_alert_state` (one row per app + environment + metric) makes it edge-triggered — notify on OK→FIRING, repeat every `repeat-interval-minutes`, notify once on recovery; a failed probe leaves state untouched so an unreachable backend neither repeats nor falsely resolves. Transitions publish `ApplicationAlertEvent`, and `ApplicationAlertListener` (`@Async("notificationTaskExecutor")`) resolves the owner and sends via `ExternalMessageService` — one message per application listing the offending pods, not one per pod.
 
 **Scheduled rolling restart**: `ScheduledRestartJob` (`infrastructure/scheduler/`, `@Scheduled(cron = "0 * * * * *")`) scans every minute for applications whose `ApplicationExpertConfig` has `scheduledRestartEnabled` for an environment, matches the per-environment `scheduledRestartCron` (5-field cron, evaluated via `shared/util/CronSchedule`), and calls `ApplicationRuntimeGateway.rolloutRestart()`. `CronController` exposes `GET /api/cron/next?expression=...&count=N` to preview upcoming fire times for the UI.
 

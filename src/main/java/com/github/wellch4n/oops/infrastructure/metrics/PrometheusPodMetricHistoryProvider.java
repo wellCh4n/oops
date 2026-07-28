@@ -13,27 +13,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
 
 /**
- * Reads the usage curves from an environment's Prometheus-compatible backend.
- *
- * <p>Pods are selected by name rather than by the {@code oops.app.name} label the deploy path stamps on them: kubelet
- * and cAdvisor metrics carry no pod labels, and joining against {@code kube_pod_labels} would force every user to also
- * run kube-state-metrics. Applications deploy as StatefulSets named after the application, so their pods are always
- * {@code {app}-0}, {@code {app}-1}, … — and PromQL matchers are fully anchored, so {@code foo-[0-9]+} cannot
- * accidentally match {@code foo-bar-0}.
+ * Reads the usage curves from an environment's Prometheus-compatible backend. Which series belong to the application
+ * is decided by {@link PrometheusSelectors}, shared with the resource alerts.
  */
 @Component
 public class PrometheusPodMetricHistoryProvider implements PodMetricHistoryProvider {
-
-    /**
-     * Namespaces and application names are interpolated into PromQL label matchers. Anything outside the Kubernetes
-     * name charset is rejected rather than escaped: a name containing a quote could otherwise close the matcher and
-     * read another namespace's series.
-     */
-    private static final Pattern SAFE_NAME = Pattern.compile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$");
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -59,12 +46,9 @@ public class PrometheusPodMetricHistoryProvider implements PodMetricHistoryProvi
             // which is a different thing to show than a backend that is present but answering badly.
             throw new BizException(MonitoringErrors.NOT_AVAILABLE);
         }
-        requireSafeName(namespace, "namespace");
-        requireSafeName(applicationName, "application name");
-
         long startSeconds = startMillis / 1000L;
         long endSeconds = endMillis / 1000L;
-        String selector = selector(namespace, applicationName);
+        String selector = PrometheusSelectors.podSelector(namespace, applicationName);
 
         Map<String, List<double[]>> cpu = fetch(environment, backend,
                 cpuQuery(selector, stepSeconds, aggregation), startSeconds, endSeconds, stepSeconds);
@@ -72,14 +56,6 @@ public class PrometheusPodMetricHistoryProvider implements PodMetricHistoryProvi
                 memoryQuery(selector, stepSeconds, aggregation), startSeconds, endSeconds, stepSeconds);
 
         return merge(cpu, memory);
-    }
-
-    private String selector(String namespace, String applicationName) {
-        // container!="" drops the pod-level rollup series, container!="POD" drops the pause container; without both
-        // a pod's usage would be counted two or three times over.
-        return "namespace=\"" + namespace + "\","
-                + "pod=~\"" + applicationName + "-[0-9]+\","
-                + "container!=\"\",container!=\"POD\"";
     }
 
     /**
@@ -194,11 +170,5 @@ public class PrometheusPodMetricHistoryProvider implements PodMetricHistoryProvi
             }
         }
         return series;
-    }
-
-    private void requireSafeName(String value, String what) {
-        if (value == null || !SAFE_NAME.matcher(value).matches()) {
-            throw new BizException("Invalid " + what + ": " + value);
-        }
     }
 }

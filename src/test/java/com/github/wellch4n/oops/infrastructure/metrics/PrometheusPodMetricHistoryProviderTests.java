@@ -30,6 +30,11 @@ class PrometheusPodMetricHistoryProviderTests {
             queries.add(query);
             return responses.get(queries.size() - 1);
         }
+
+        @Override
+        public String query(Environment environment, MetricsHistoryProperties.Backend backend, String query) {
+            throw new UnsupportedOperationException("the charts only use range queries");
+        }
     }
 
     private static final String CPU_BODY = """
