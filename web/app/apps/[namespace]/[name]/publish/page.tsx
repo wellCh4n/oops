@@ -87,6 +87,7 @@ export default function PublishPage({ params }: PageProps) {
             name: appRes.data.name,
             description: appRes.data.description,
             ownerName: appRes.data.ownerName,
+            icon: appRes.data.icon,
           })
         }
         if (envRes.data) {

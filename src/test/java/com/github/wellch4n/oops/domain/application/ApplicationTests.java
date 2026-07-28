@@ -1,9 +1,12 @@
 package com.github.wellch4n.oops.domain.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -14,7 +17,7 @@ class ApplicationTests {
         Application application = new Application();
         application.setName("demo");
         application.placeInNamespace("default");
-        application.changeProfile("desc", owner);
+        application.changeProfile("desc", owner, null);
         return application;
     }
 
@@ -60,6 +63,55 @@ class ApplicationTests {
     void collaboratorUserIdsEmptyWhenUnset() {
         Application application = application("owner-1");
         assertTrue(application.collaboratorUserIds().isEmpty());
+    }
+
+    @Test
+    void changeIconKeepsPickedEmoji() {
+        Application application = application("owner-1");
+        application.changeIcon("🚀");
+        assertEquals("🚀", application.getIcon());
+    }
+
+    @Test
+    void changeIconTrimsSurroundingWhitespace() {
+        Application application = application("owner-1");
+        application.changeIcon("  🐳  ");
+        assertEquals("🐳", application.getIcon());
+    }
+
+    @Test
+    void changeIconClearsOnBlank() {
+        Application application = application("owner-1");
+        application.changeIcon("🚀");
+        application.changeIcon("   ");
+        assertNull(application.getIcon());
+    }
+
+    @Test
+    void changeIconClearsOnNull() {
+        Application application = application("owner-1");
+        application.changeIcon("🚀");
+        application.changeIcon(null);
+        assertNull(application.getIcon());
+    }
+
+    @Test
+    void changeIconRejectsPlainText() {
+        Application application = application("owner-1");
+        assertThrows(BizException.class, () -> application.changeIcon("rocket"));
+    }
+
+    @Test
+    void changeIconRejectsSequenceTooLongToBeOneMark() {
+        Application application = application("owner-1");
+        assertThrows(BizException.class, () -> application.changeIcon("🚀🚀🚀🚀🚀🚀🚀🚀🚀"));
+    }
+
+    @Test
+    void changeProfileAppliesIcon() {
+        Application application = new Application();
+        application.changeProfile("desc", "owner-1", "🐳");
+        assertEquals("🐳", application.getIcon());
     }
 
     @Test

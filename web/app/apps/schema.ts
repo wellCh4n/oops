@@ -9,6 +9,7 @@ export const getApplicationBasicSchema = (t?: (key: string) => string) => z.obje
     .regex(NAME_REGEX, t?.("validation.nameInvalid") || "Name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number"),
   namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
+  icon: z.string().optional(),
   owner: z.string().optional(),
   collaborators: z.array(z.string()).optional(),
 })
@@ -20,6 +21,7 @@ export const getCreateApplicationSchema = (t?: (key: string) => string) => z.obj
     .regex(NAME_REGEX, t?.("validation.nameInvalid") || "Name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number"),
   namespace: z.string().min(1, t?.("validation.required") || "Namespace is required"),
   description: z.string().optional(),
+  icon: z.string().optional(),
 })
 
 export const applicationBuildSchema = z.object({

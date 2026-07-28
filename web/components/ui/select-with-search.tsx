@@ -23,6 +23,8 @@ interface Option {
   label: string
   namespace?: string
   name?: string
+  // An emoji mark, shown instead of any color background when present.
+  icon?: string
   colorBackground?: string
   color?: string
   accentColor?: string
@@ -171,7 +173,22 @@ export function SelectWithSearch({
   )
 }
 
+// Kept in step with AppIdentityMark: same footprint and border for both variants,
+// so marks look identical whether they come from a list row or a dropdown option.
+const OPTION_MARK_BASE = "size-5 shrink-0 rounded-[4px] border border-black/10 dark:border-white/15"
+
 function OptionColorMark({ option }: { option?: Option }) {
+  if (option?.icon) {
+    return (
+      <span
+        aria-hidden
+        className={cn(OPTION_MARK_BASE, "inline-flex select-none items-center justify-center overflow-hidden bg-muted/40 text-[16px] leading-none")}
+      >
+        {option.icon}
+      </span>
+    )
+  }
+
   const background = getOptionColorBackground(option)
 
   if (!background) {
@@ -181,7 +198,7 @@ function OptionColorMark({ option }: { option?: Option }) {
   return (
     <span
       aria-hidden
-      className="inline-block size-4 shrink-0 rounded-[4px] border border-black/10 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.28)] dark:border-white/15"
+      className={cn(OPTION_MARK_BASE, "inline-block shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.28)]")}
       style={{ background }}
     />
   )

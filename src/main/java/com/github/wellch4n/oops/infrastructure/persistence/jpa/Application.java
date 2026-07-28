@@ -15,6 +15,9 @@ public class Application extends BaseDataObject {
 
     private String description;
 
+    @Column(length = 32)
+    private String icon;
+
     private String namespace;
 
     private String owner;

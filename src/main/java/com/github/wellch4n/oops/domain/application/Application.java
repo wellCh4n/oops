@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.domain.application;
 
 import com.github.wellch4n.oops.domain.shared.BaseAggregateRoot;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.Collections;
 import java.util.List;
 import lombok.Data;
@@ -10,8 +11,17 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class Application extends BaseAggregateRoot {
+    private static final int ICON_MAX_CODE_POINTS = 8;
+
     private String name;
     private String description;
+
+    /**
+     * An emoji standing in as the application's visual mark. When blank the UI falls back to the
+     * color block it derives from the application identity.
+     */
+    private String icon;
+
     private String namespace;
     private String owner;
     private ApplicationBuildConfig buildConfig;
@@ -25,9 +35,30 @@ public class Application extends BaseAggregateRoot {
         this.namespace = namespace;
     }
 
-    public void changeProfile(String description, String owner) {
+    public void changeProfile(String description, String owner, String icon) {
         this.description = description;
         this.owner = owner;
+        changeIcon(icon);
+    }
+
+    /**
+     * Accepts the picked emoji, or clears the icon when blank. The UI only offers a curated set,
+     * but the OpenAPI surface takes whatever a caller sends, so keep out anything that is plainly
+     * not an emoji: ASCII text and sequences long enough to be a label rather than a mark.
+     */
+    public void changeIcon(String icon) {
+        if (icon == null || icon.isBlank()) {
+            this.icon = null;
+            return;
+        }
+        String trimmed = icon.trim();
+        if (trimmed.codePointCount(0, trimmed.length()) > ICON_MAX_CODE_POINTS) {
+            throw new BizException("Application icon must be a single emoji");
+        }
+        if (trimmed.codePoints().anyMatch(codePoint -> codePoint < 0x80)) {
+            throw new BizException("Application icon must be a single emoji");
+        }
+        this.icon = trimmed;
     }
 
     public ApplicationSourceType sourceType() {

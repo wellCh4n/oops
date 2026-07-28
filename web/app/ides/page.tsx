@@ -117,6 +117,7 @@ function IDEPageContent() {
             name: contextApp.name,
             description: contextApp.description,
             ownerName: contextApp.ownerName,
+            icon: contextApp.icon,
           })
         }
       } catch {
@@ -277,7 +278,7 @@ function IDEPageContent() {
                   if (!option.namespace || !option.name) return
                   const app = applications.find(a => a.id === option.value)
                   selectApp(app
-                    ? { namespace: app.namespace, name: app.name, description: app.description, ownerName: app.ownerName }
+                    ? { namespace: app.namespace, name: app.name, description: app.description, ownerName: app.ownerName, icon: app.icon }
                     : { namespace: option.namespace, name: option.name })
                 }}
                 options={applications.map((app) => ({
@@ -285,6 +286,7 @@ function IDEPageContent() {
                   label: selectedNamespace === ALL_NAMESPACES ? `${app.name} (${app.namespace})` : app.name,
                   namespace: app.namespace,
                   name: app.name,
+                  icon: app.icon,
                   colorBackground: appIdentityBackground(app),
                 }))}
                 onSearch={selectedNamespace ? async (query) => {
@@ -294,6 +296,7 @@ function IDEPageContent() {
                     label: selectedNamespace === ALL_NAMESPACES ? `${app.name} (${app.namespace})` : app.name,
                     namespace: app.namespace,
                     name: app.name,
+                    icon: app.icon,
                     colorBackground: appIdentityBackground(app),
                   }))
                 } : undefined}
