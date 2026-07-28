@@ -17,6 +17,10 @@ import org.springframework.stereotype.Component;
  * <p>Prometheus and VictoriaMetrics are normally ClusterIP Services, unreachable from outside the cluster. Proxying
  * through the API server means OOPS needs no extra network path and no second credential — the environment's existing
  * token is what authorises the call. The cost is a {@code services/proxy} permission on that token.
+ *
+ * <p>It also fixes the direction of travel: OOPS pulls out through a path that already works for every environment it
+ * manages. A push-based design (Alertmanager or vmalert calling back) would need an inbound route from each cluster
+ * into OOPS, which for an out-of-cluster deployment generally does not exist.
  */
 @Slf4j
 @Component
@@ -35,16 +39,28 @@ class ApiServerProxyPrometheusTransport implements PrometheusQueryTransport {
                              long startSeconds,
                              long endSeconds,
                              int stepSeconds) {
+        String path = "query_range"
+                + "?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
+                + "&start=" + startSeconds
+                + "&end=" + endSeconds
+                + "&step=" + stepSeconds;
+        return get(environment, backend, path);
+    }
+
+    @Override
+    public String query(Environment environment,
+                        MetricsHistoryProperties.Backend backend,
+                        String query) {
+        return get(environment, backend, "query?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
+    }
+
+    private String get(Environment environment, MetricsHistoryProperties.Backend backend, String apiPath) {
         KubernetesClient client = clientPool.get(environment.getKubernetesApiServer());
 
         String url = client.getMasterUrl().toString().replaceAll("/+$", "")
                 + "/api/v1/namespaces/" + backend.getNamespace()
                 + "/services/" + backend.getServiceName() + ":" + backend.getPort()
-                + "/proxy/api/v1/query_range"
-                + "?query=" + URLEncoder.encode(query, StandardCharsets.UTF_8)
-                + "&start=" + startSeconds
-                + "&end=" + endSeconds
-                + "&step=" + stepSeconds;
+                + "/proxy/api/v1/" + apiPath;
 
         try {
             String body = client.raw(url);

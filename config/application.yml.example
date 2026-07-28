@@ -58,6 +58,26 @@ oops:
         namespace: monitoring
         service-name: prometheus-operated
         port: 9090
+    # Resource alerts. Off unless enabled is set to true here: alerting messages real people and queries a monitoring
+    # backend that not every cluster runs, so it waits to be asked for.
+    # One set of thresholds for the whole installation — there is nothing to configure per application. Once on, an
+    # application is covered by having CPU/memory limits set for an environment; without a limit there is no
+    # denominator for the percentage, so it is skipped.
+    # Notifications go to the application's owner over the configured external channel (e.g. Feishu).
+    alert:
+      enabled: false
+      # CPU and memory are not given the same threshold on purpose. Exceeding a memory limit is an OOMKill —
+      # discrete and fatal — so it warns earlier. Exceeding a CPU limit is throttling: latency degrades but nothing
+      # dies, so the bar is higher and the window longer.
+      cpu:
+        threshold-percent: 95
+        sustained-minutes: 10
+      memory:
+        threshold-percent: 90
+        sustained-minutes: 5
+      # How long a still-firing alert stays quiet before it is repeated. The scan runs every minute, so without this
+      # one sustained problem would send one message a minute.
+      repeat-interval-minutes: 30
   pod-filesystem:
     max-download-size-bytes: 52428800
     max-upload-size-bytes: 52428800

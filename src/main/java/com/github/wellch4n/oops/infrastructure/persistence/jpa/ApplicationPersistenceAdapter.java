@@ -18,6 +18,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     private final ApplicationServiceConfigRepository serviceConfigRepository;
     private final ApplicationCollaboratorRepository collaboratorRepository;
     private final ApplicationExpertConfigRepository expertConfigRepository;
+    private final ApplicationAlertStateRepository alertStateRepository;
 
     public ApplicationPersistenceAdapter(
             ApplicationRepository applicationRepository,
@@ -26,7 +27,8 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
             ApplicationEnvironmentRepository environmentRepository,
             ApplicationServiceConfigRepository serviceConfigRepository,
             ApplicationCollaboratorRepository collaboratorRepository,
-            ApplicationExpertConfigRepository expertConfigRepository
+            ApplicationExpertConfigRepository expertConfigRepository,
+            ApplicationAlertStateRepository alertStateRepository
     ) {
         this.applicationRepository = applicationRepository;
         this.buildConfigRepository = buildConfigRepository;
@@ -35,6 +37,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         this.serviceConfigRepository = serviceConfigRepository;
         this.collaboratorRepository = collaboratorRepository;
         this.expertConfigRepository = expertConfigRepository;
+        this.alertStateRepository = alertStateRepository;
     }
 
     @Override
@@ -108,6 +111,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         serviceConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         expertConfigRepository.deleteByNamespaceAndApplicationName(namespace, name);
         collaboratorRepository.deleteByNamespaceAndApplicationName(namespace, name);
+        alertStateRepository.deleteByNamespaceAndApplicationName(namespace, name);
         applicationRepository.deleteByNamespaceAndName(namespace, name);
     }
 
@@ -120,6 +124,9 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
         expertConfigRepository.updateNamespace(fromNamespace, toNamespace, name);
         environmentRepository.updateNamespace(fromNamespace, toNamespace, name);
         collaboratorRepository.updateNamespace(fromNamespace, toNamespace, name);
+        // Carried over so a migration does not strand the row and re-announce an already-firing alert under the new
+        // namespace key.
+        alertStateRepository.updateNamespace(fromNamespace, toNamespace, name);
         applicationRepository.updateNamespace(fromNamespace, toNamespace, name);
     }
 
