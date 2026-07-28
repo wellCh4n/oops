@@ -190,6 +190,25 @@ export interface PodMetric {
   memoryBytes: number
 }
 
+export interface PodMetricPoint {
+  timestamp: number
+  cpuMillis: number
+  memoryBytes: number
+}
+
+export interface PodMetricSeries {
+  podName: string
+  points: PodMetricPoint[]
+}
+
+export interface PodMetricHistory {
+  /** Spacing of the returned points in seconds, after server-side downsampling. */
+  intervalSeconds: number
+  /** How samples were combined into each returned point. */
+  aggregation: "avg" | "max"
+  series: PodMetricSeries[]
+}
+
 interface ApplicationRuntimeSpecHealthCheck {
   liveness?: ApplicationRuntimeSpecProbe
   readiness?: ApplicationRuntimeSpecProbe
