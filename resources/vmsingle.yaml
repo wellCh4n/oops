@@ -1,0 +1,107 @@
+# VictoriaMetrics single-node, scraping the two container metrics the OOPS usage charts read.
+#
+#   kubectl apply -f resources/vmsingle.yaml
+#
+# Then set oops.metrics.history.backend to namespace: oops, service-name: vmsingle, port: 8428.
+# The environment's Kubernetes token also needs `services/proxy`, which is how OOPS reaches the Service.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vmsingle
+  namespace: oops
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vmsingle
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes/metrics"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vmsingle
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vmsingle
+subjects:
+  - kind: ServiceAccount
+    name: vmsingle
+    namespace: oops
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vmsingle-scrape
+  namespace: oops
+data:
+  scrape.yml: |
+    global:
+      scrape_interval: 30s
+    scrape_configs:
+      # /metrics/resource carries only CPU and memory per container — the series the charts need, and far smaller
+      # than /metrics/cadvisor. It is the same endpoint metrics-server consumes.
+      - job_name: kubelet-resource
+        scheme: https
+        metrics_path: /metrics/resource
+        kubernetes_sd_configs:
+          - role: node
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config:
+          insecure_skip_verify: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vmsingle
+  namespace: oops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vmsingle
+  template:
+    metadata:
+      labels:
+        app: vmsingle
+    spec:
+      serviceAccountName: vmsingle
+      containers:
+        - name: vmsingle
+          image: victoriametrics/victoria-metrics:latest
+          args:
+            - -storageDataPath=/victoria-metrics-data
+            - -promscrape.config=/config/scrape.yml
+          ports:
+            - containerPort: 8428
+          volumeMounts:
+            - name: data
+              mountPath: /victoria-metrics-data
+            - name: config
+              mountPath: /config
+      volumes:
+        # History restarts from empty whenever the pod is recreated; the charts only look back 24 hours.
+        - name: data
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: vmsingle-scrape
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmsingle
+  namespace: oops
+spec:
+  selector:
+    app: vmsingle
+  ports:
+    - port: 8428
+      targetPort: 8428
