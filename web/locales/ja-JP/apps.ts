@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 時間",
   "apps.metrics.agg.avg": "平均値",
   "apps.metrics.agg.max": "最大値",
+  "apps.metrics.request": "リクエスト",
+  "apps.metrics.limit": "リミット",
   "apps.status.title": "稼働状況",
   "apps.status.resources": "リソース",
   "apps.status.resourcesRefresh": "更新",

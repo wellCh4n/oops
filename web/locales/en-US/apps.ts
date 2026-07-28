@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 hours",
   "apps.metrics.agg.avg": "Average",
   "apps.metrics.agg.max": "Maximum",
+  "apps.metrics.request": "Request",
+  "apps.metrics.limit": "Limit",
   "apps.status.title": "Runtime Status",
   "apps.status.resources": "Resources",
   "apps.status.resourcesRefresh": "Refresh",
