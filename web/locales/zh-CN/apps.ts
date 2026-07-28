@@ -263,6 +263,8 @@ const apps = {
   "apps.metrics.range.24h": "24 小时",
   "apps.metrics.agg.avg": "平均值",
   "apps.metrics.agg.max": "最大值",
+  "apps.metrics.request": "请求",
+  "apps.metrics.limit": "限制",
   "apps.status.title": "运行状态",
   "apps.status.resources": "资源",
   "apps.status.resourcesRefresh": "刷新",

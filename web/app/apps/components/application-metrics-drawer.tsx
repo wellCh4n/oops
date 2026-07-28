@@ -1,15 +1,16 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Loader2, RefreshCw } from "lucide-react"
 
 import {
   getApplicationMetricsHistory,
+  getApplicationRuntimeSpec,
   type MetricAggregation,
   type MetricHistoryRange,
 } from "@/lib/api/applications"
-import type { PodMetricHistory } from "@/lib/api/types"
+import type { ApplicationRuntimeSpecEnvironmentConfig, PodMetricHistory } from "@/lib/api/types"
 import {
   Drawer,
   DrawerContent,
@@ -42,6 +43,9 @@ const CHART_COLORS = [
   "var(--chart-5)",
 ]
 
+const REQUEST_LINE_COLOR = "var(--muted-foreground)"
+const LIMIT_LINE_COLOR = "var(--destructive)"
+
 interface ApplicationMetricsDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -72,6 +76,34 @@ function buildRows(history: PodMetricHistory, metric: "cpuMillis" | "memoryBytes
   return Array.from(rowsByTimestamp.values()).sort((a, b) => a.timestamp - b.timestamp)
 }
 
+/**
+ * Request/limit levels for one metric, already in the unit the chart plots (millicores, bytes). Undefined means the
+ * runtime spec leaves that side unset, so no line is drawn.
+ */
+interface ResourceGuides {
+  request?: number
+  limit?: number
+}
+
+/**
+ * The runtime spec stores whatever the user typed into a "core"-suffixed input, which K8s accepts either as a bare
+ * core count ("0.5") or a millicore quantity ("500m").
+ */
+function parseCpuMillis(value: string | undefined): number | undefined {
+  const text = value?.trim()
+  if (!text) return undefined
+  const millis = text.endsWith("m") ? Number(text.slice(0, -1)) : Number(text) * 1000
+  return Number.isFinite(millis) && millis > 0 ? millis : undefined
+}
+
+/** Memory is stored as a bare MiB count — StatefulSetProcessor appends the "Mi" unit when building the container. */
+function parseMemoryBytes(value: string | undefined): number | undefined {
+  const text = value?.trim().replace(/Mi$/i, "")
+  if (!text) return undefined
+  const bytes = Number(text) * 1024 * 1024
+  return Number.isFinite(bytes) && bytes > 0 ? bytes : undefined
+}
+
 function formatCores(cpuMillis: number): string {
   return (cpuMillis / 1000).toFixed(cpuMillis < 100 ? 3 : 2)
 }
@@ -97,6 +129,9 @@ export function ApplicationMetricsDrawer({
   const [history, setHistory] = useState<PodMetricHistory | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [environmentSpec, setEnvironmentSpec] = useState<
+    ApplicationRuntimeSpecEnvironmentConfig | null
+  >(null)
 
   // Only the first load of a given range should blank the charts; the periodic refresh swaps the data in place so
   // the drawer does not flash a spinner every 30 seconds.
@@ -145,6 +180,44 @@ export function ApplicationMetricsDrawer({
     hasLoadedRef.current = false
   }, [range, aggregation, environmentName])
 
+  // Configured request/limit levels, drawn as guide lines. They only change when someone edits the runtime spec, so
+  // this is fetched once per open rather than on the refresh tick.
+  useEffect(() => {
+    if (!open || !environmentName) return
+    let cancelled = false
+    getApplicationRuntimeSpec(namespace, applicationName)
+      .then((response) => {
+        if (cancelled) return
+        const config = response.data?.environmentConfigs?.find(
+          (candidate) => candidate.environmentName === environmentName
+        )
+        setEnvironmentSpec(config ?? null)
+      })
+      .catch(() => {
+        // Guide lines are supplementary; a missing runtime spec must not blank the charts.
+        if (!cancelled) setEnvironmentSpec(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, namespace, applicationName, environmentName])
+
+  const cpuGuides = useMemo<ResourceGuides>(
+    () => ({
+      request: parseCpuMillis(environmentSpec?.cpuRequest),
+      limit: parseCpuMillis(environmentSpec?.cpuLimit),
+    }),
+    [environmentSpec]
+  )
+
+  const memoryGuides = useMemo<ResourceGuides>(
+    () => ({
+      request: parseMemoryBytes(environmentSpec?.memoryRequest),
+      limit: parseMemoryBytes(environmentSpec?.memoryLimit),
+    }),
+    [environmentSpec]
+  )
+
   const podNames = useMemo(() => history?.series.map((series) => series.podName) ?? [], [history])
 
   const chartConfig = useMemo<ChartConfig>(() => {
@@ -159,10 +232,41 @@ export function ApplicationMetricsDrawer({
   const cpuRows = useMemo(() => (history ? buildRows(history, "cpuMillis") : []), [history])
   const memoryRows = useMemo(() => (history ? buildRows(history, "memoryBytes") : []), [history])
 
+  const renderGuideLegend = (guides: ResourceGuides, formatValue: (value: number) => string) => {
+    const entries: { color: string; label: string; value: number }[] = []
+    if (guides.request !== undefined) {
+      entries.push({
+        color: REQUEST_LINE_COLOR,
+        label: t("apps.metrics.request"),
+        value: guides.request,
+      })
+    }
+    if (guides.limit !== undefined) {
+      entries.push({ color: LIMIT_LINE_COLOR, label: t("apps.metrics.limit"), value: guides.limit })
+    }
+    if (entries.length === 0) return null
+    return (
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        {entries.map((entry) => (
+          <span key={entry.label} className="flex items-center gap-1.5">
+            <span
+              className="h-0 w-4 border-t border-dashed"
+              style={{ borderColor: entry.color }}
+              aria-hidden
+            />
+            {entry.label}
+            <span className="font-mono tabular-nums">{formatValue(entry.value)}</span>
+          </span>
+        ))}
+      </div>
+    )
+  }
+
   const renderChart = (
     rows: ChartRow[],
     formatValue: (value: number) => string,
-    axisWidth: number
+    axisWidth: number,
+    guides: ResourceGuides
   ) => {
     if (loading && rows.length === 0) {
       return (
@@ -239,6 +343,24 @@ export function ApplicationMetricsDrawer({
               connectNulls
             />
           ))}
+          {/* Drawn after the areas so the guides stay on top; extendDomain grows the Y axis to keep them visible, which
+              is the point of the lines — the headroom between usage and limit should be readable at a glance. */}
+          {guides.request !== undefined && (
+            <ReferenceLine
+              y={guides.request}
+              ifOverflow="extendDomain"
+              stroke={REQUEST_LINE_COLOR}
+              strokeDasharray="4 4"
+            />
+          )}
+          {guides.limit !== undefined && (
+            <ReferenceLine
+              y={guides.limit}
+              ifOverflow="extendDomain"
+              stroke={LIMIT_LINE_COLOR}
+              strokeDasharray="4 4"
+            />
+          )}
         </AreaChart>
       </ChartContainer>
     )
@@ -296,12 +418,18 @@ export function ApplicationMetricsDrawer({
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="flex flex-col gap-6">
             <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("apps.metrics.cpuTitle")}</h3>
-              {renderChart(cpuRows, formatCores, 48)}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">{t("apps.metrics.cpuTitle")}</h3>
+                {renderGuideLegend(cpuGuides, formatCores)}
+              </div>
+              {renderChart(cpuRows, formatCores, 48, cpuGuides)}
             </section>
             <section className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("apps.metrics.memoryTitle")}</h3>
-              {renderChart(memoryRows, formatMebibytes, 44)}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">{t("apps.metrics.memoryTitle")}</h3>
+                {renderGuideLegend(memoryGuides, formatMebibytes)}
+              </div>
+              {renderChart(memoryRows, formatMebibytes, 44, memoryGuides)}
             </section>
           </div>
         </div>
