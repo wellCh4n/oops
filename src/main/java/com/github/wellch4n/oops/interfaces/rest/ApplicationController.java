@@ -16,6 +16,7 @@ import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
+import com.github.wellch4n.oops.application.service.GitBranchService;
 import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.application.service.PodMetricHistoryService;
@@ -44,15 +45,18 @@ public class ApplicationController {
     private final PipelineService pipelineService;
     private final NamespaceMigrationService namespaceMigrationService;
     private final PodMetricHistoryService podMetricHistoryService;
+    private final GitBranchService gitBranchService;
 
     public ApplicationController(ApplicationService applicationService,
                                  PipelineService pipelineService,
                                  NamespaceMigrationService namespaceMigrationService,
-                                 PodMetricHistoryService podMetricHistoryService) {
+                                 PodMetricHistoryService podMetricHistoryService,
+                                 GitBranchService gitBranchService) {
         this.applicationService = applicationService;
         this.pipelineService = pipelineService;
         this.namespaceMigrationService = namespaceMigrationService;
         this.podMetricHistoryService = podMetricHistoryService;
+        this.gitBranchService = gitBranchService;
     }
 
     @GetMapping("/{name}")
@@ -114,6 +118,13 @@ public class ApplicationController {
     public Result<ApplicationConfigDto.BuildConfig> getApplicationBuildConfig(@PathVariable String namespace,
                                                                               @PathVariable String name) {
         return Result.success(applicationService.getApplicationBuildConfig(namespace, name));
+    }
+
+    @GetMapping("/{name}/branches")
+    public Result<List<String>> getApplicationBranches(@PathVariable String namespace,
+                                                       @PathVariable String name,
+                                                       @RequestParam String env) {
+        return Result.success(gitBranchService.listBranches(namespace, name, env));
     }
 
     @PutMapping("/{name}/build/config")

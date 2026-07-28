@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# --- 阶段 1: 前端构建 ---
+# --- Stage 1: frontend build ---
 FROM node:22-slim AS web-deps
 WORKDIR /build/web
 RUN corepack enable && corepack prepare pnpm@11.8.0 --activate
@@ -12,11 +12,12 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 COPY web/ ./
 RUN pnpm build
 
-# --- 阶段 2: 后端构建 (修正 Maven 镜像源) ---
+# --- Stage 2: backend build ---
 FROM maven:3.9-eclipse-temurin-25 AS backend-builder
 WORKDIR /build/backend
 
-# 强力手段：直接覆盖 Maven 默认的 settings.xml 为阿里云源
+# Build through the Aliyun mirror for speed, but keep central as a fallback: the mirror
+# syncs from central on demand, so a newly published artifact can still 404 there.
 RUN echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"> \
@@ -28,19 +29,32 @@ RUN echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
       <url>https://maven.aliyun.com/repository/public</url> \
     </mirror> \
   </mirrors> \
+  <profiles> \
+    <profile> \
+      <id>fallback-central</id> \
+      <repositories> \
+        <repository> \
+          <id>maven-central-fallback</id> \
+          <url>https://repo1.maven.org/maven2</url> \
+        </repository> \
+      </repositories> \
+    </profile> \
+  </profiles> \
+  <activeProfiles><activeProfile>fallback-central</activeProfile></activeProfiles> \
 </settings>' > /usr/share/maven/conf/settings.xml
 
 COPY pom.xml ./
 
-# 预下载依赖
+# Prefetch dependencies. -U re-checks cached resolution failures: /root/.m2 is a persistent
+# buildkit cache, so one 404 from the mirror sticks as "artifact absent" for every later build.
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline -B
+    mvn dependency:go-offline -B -U
 
 COPY src ./src
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -DskipTests package
 
-# --- 阶段 3: 最终运行镜像 ---
+# --- Stage 3: runtime ---
 FROM node:20-slim AS runtime
 ENV NODE_ENV=production \
     NEXT_PUBLIC_API_URL=/api \

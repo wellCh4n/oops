@@ -132,6 +132,14 @@ export const getApplicationBuildConfig = async (namespace: string, name: string)
   return response.json() as Promise<ApiResponse<ApplicationBuildConfig>>
 }
 
+export const getApplicationBranches = async (namespace: string, name: string, env: string): Promise<ApiResponse<string[]>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/branches?env=${encodeURIComponent(env)}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch application branches")
+  }
+  return response.json() as Promise<ApiResponse<string[]>>
+}
+
 export const updateApplicationBuildConfig = async (namespace: string, name: string, config: ApplicationBuildConfig): Promise<ApiResponse<boolean>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/build/config`, {
     method: "PUT",
