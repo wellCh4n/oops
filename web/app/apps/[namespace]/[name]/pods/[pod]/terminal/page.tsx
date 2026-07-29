@@ -43,6 +43,14 @@ function TerminalPageContent() {
   const [fileTreeWidth, setFileTreeWidth] = useState<number>(FILE_TREE_DEFAULT_WIDTH)
   const draggingRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Held in a ref rather than state: the terminal hands this over during an effect.
+  const retryRef = useRef<(() => void) | null>(null)
+  const registerRetry = useCallback((retry: () => void) => {
+    retryRef.current = retry
+  }, [])
+  const handleRetry = useCallback(() => {
+    retryRef.current?.()
+  }, [])
   const { t } = useLanguage()
 
   const listDirectory = useCallback(
@@ -148,8 +156,9 @@ function TerminalPageContent() {
       <div className="flex h-full min-h-0 flex-col">
         {connectionStatus === "disconnected" && (
           <ConnectionLostBanner
-            message={t("common.disconnected")}
-            retryLabel={t("common.refresh")}
+            message={t("terminal.connectionLost")}
+            retryLabel={t("common.reconnect")}
+            onRetry={handleRetry}
           />
         )}
         <div
@@ -187,6 +196,7 @@ function TerminalPageContent() {
               pod={pod}
               env={env}
               onConnectionStatusChange={setConnectionStatus}
+              registerRetry={registerRetry}
             />
           </div>
         </div>

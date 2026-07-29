@@ -315,10 +315,10 @@ Four handlers registered in `WebSocketConfiguration` (all allow `setAllowedOrigi
 
 | Path | Purpose |
 |---|---|
-| `.../pods/{pod}/terminal` | Binary+text stdin, Fabric8 `exec` with TTY (`xterm-256color`) |
+| `.../pods/{pod}/terminal` | Binary+text stdin, Fabric8 `exec` with TTY (`xterm-256color`); `?terminal={id}` resumes a dropped session |
 | `.../pods/{pod}/log` | Text lines, tail last 2000 lines |
 | `.../pipelines/{pipelineId}/log` | JSON messages (see below) |
-| `/api/sandbox/instances/{sandboxId}/terminal` | Binary+text stdin for a long-lived sandbox instance terminal |
+| `/api/sandbox/instances/{sandboxId}/terminal` | Binary+text stdin for a long-lived sandbox instance terminal; same `?terminal={id}` |
 
 **Pipeline log message format:**
 ```json
@@ -327,7 +327,21 @@ Four handlers registered in `WebSocketConfiguration` (all allow `setAllowedOrigi
 { "type": "error", "data": "..." }
 ```
 
-Log handlers respond to text `"ping"` with `"pong"` and also start a native WebSocket ping-control-frame heartbeat. Terminal handlers write text/binary payloads to the remote TTY, so do not use text `"ping"` as a terminal heartbeat. JWT is accepted as `?token=` query param for WebSocket connections (browsers cannot set custom headers on upgrade).
+All four handlers start a native WebSocket ping-control-frame heartbeat (`WebSocketSessionSupport.startHeartbeat`, 10s) — without it idle terminals get dropped by proxies and NATs. Log handlers *additionally* answer text `"ping"` with `"pong"`; terminal handlers must not, because their text payloads are stdin and would type the word into the user's shell. JWT is accepted as `?token=` query param for WebSocket connections (browsers cannot set custom headers on upgrade).
+
+### Resumable Terminals
+
+A terminal is an `exec` stream, so its shell dies with the stream — a flaky network used to cost the user their working directory and any running command, and the page had to be reloaded, wiping the scrollback. Both terminal handlers now take a `?terminal={id}` param and keep the shell alive across reconnects.
+
+**Where the shell lives.** `DtachInstaller` copies a static [dtach](https://github.com/crigler/dtach) into `/tmp/.oops/dtach` (plus a `shell.sh` launcher) and `KubernetesTerminalSessionGateway` runs `dtach -A <socket> -E -r winch` instead of the shell directly. The shell becomes dtach's child rather than the exec stream's, so dropping the stream only detaches a client. `-A` creates-or-attaches, which makes the first connect and every reconnect the same command; `-r winch` makes full-screen programs redraw on reattach. **OOPS itself stores nothing** — no session table, no replay buffer, no reaper. The trade-off is that output produced while disconnected is lost (dtach does not buffer); the shell and its running command survive, which is the point.
+
+**Session identity** is `{userId}-{browser terminal id}`, and the browser id lives only in the component's memory (`TerminalSocketView`, never persisted). That one fact produces all three behaviours without any branching: reconnect reuses the id and gets the same shell; a page reload generates a new id and gets a fresh shell; a second tab likewise gets its own. The user id prefix is what stops one user reattaching to another's shell by guessing an id, and `TerminalSessionSupport` rejects anything outside `[A-Za-z0-9_-]{1,80}` before it reaches a path or a command.
+
+**Cleanup has no TTL by design.** A deliberate close (`1000`/`1001` — unmount, reload, closed tab) triggers `terminate()`, which scans `/proc` for the dtach master holding that socket and kills it; the scan skips its own pid because the socket path appears in the killer's own argv too. An abnormal close (no close frame) leaves the shell running for the reconnect. Since OOPS holds no resource for a detached shell — only the user's own container does — a TTL would mostly serve to kill the long-running command the feature exists to protect. Leftovers are bounded by the deliberate-close path and by container restarts.
+
+**Everything degrades to plain exec.** Read-only filesystem, missing `cat`, unsupported architecture (only amd64/arm64 are bundled), `oops.terminal.resume-enabled: false`, or an unauthenticated socket — all fall back to the shell OOPS always opened, with client-side reconnect still working. A terminal never fails just because it cannot be made resumable.
+
+**The binaries** live in `src/main/resources/bin/dtach-linux-{amd64,arm64}` (~50KB each) with checksums in `dtach.sha256`. Rebuild them only when bumping the pinned upstream tag, with `tools/build-dtach.sh` — it compiles from source in Alpine containers of each platform and downloads nothing prebuilt. Maven does not filter them (spring-boot-starter-parent only filters `application*`), so they reach the JAR byte-identical.
 
 ## Frontend Patterns
 

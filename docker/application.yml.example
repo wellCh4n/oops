@@ -94,6 +94,12 @@ oops:
     max-download-size-bytes: 52428800
     max-upload-size-bytes: 52428800
     max-edit-size-bytes: 1048576
+  terminal:
+    # Lets a pod terminal survive a dropped connection: OOPS copies a small static dtach into the
+    # container's /tmp/.oops and runs the shell under it, so the shell keeps its working directory and
+    # any running command until the browser reconnects. Set to false to stop OOPS writing an
+    # executable into application containers; terminals then reconnect into a fresh shell instead.
+    resume-enabled: true
   feishu:
     enabled: false
     app-id: cli_xxx
