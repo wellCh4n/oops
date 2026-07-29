@@ -19,6 +19,8 @@ const apps = {
   "apps.col.status": "ステータス",
   "apps.col.pipelines": "パイプライン",
   "apps.col.ide": "開発環境",
+  "apps.deploying.mark": "デプロイ中",
+  "apps.deploying.title": "デプロイ中の環境",
   "apps.tab.appInfo": "基本情報",
   "apps.tab.buildConfig": "ビルドフロー",
   "apps.tab.runtimeSpec": "ランタイム仕様",

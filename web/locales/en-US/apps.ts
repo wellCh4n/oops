@@ -19,6 +19,8 @@ const apps = {
   "apps.col.status": "Status",
   "apps.col.pipelines": "Pipelines",
   "apps.col.ide": "IDE",
+  "apps.deploying.mark": "Deploying",
+  "apps.deploying.title": "Environments being deployed",
   "apps.tab.appInfo": "Info",
   "apps.tab.buildConfig": "Build",
   "apps.tab.runtimeSpec": "Runtime",

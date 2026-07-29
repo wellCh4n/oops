@@ -83,6 +83,24 @@ public class PipelinePersistenceAdapter implements com.github.wellch4n.oops.appl
     }
 
     @Override
+    public List<com.github.wellch4n.oops.domain.delivery.Pipeline> findByStatusIn(List<PipelineStatus> statuses) {
+        if (statuses.isEmpty()) {
+            return List.of();
+        }
+        return PersistenceMapper.convertList(pipelineRepository.findByStatusIn(statuses), PersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<com.github.wellch4n.oops.domain.delivery.Pipeline> findByNamespaceAndStatusIn(String namespace, List<PipelineStatus> statuses) {
+        if (statuses.isEmpty()) {
+            return List.of();
+        }
+        return PersistenceMapper.convertList(
+                pipelineRepository.findByNamespaceAndStatusIn(namespace, statuses),
+                PersistenceMapper::toDomain);
+    }
+
+    @Override
     public com.github.wellch4n.oops.domain.delivery.Pipeline save(com.github.wellch4n.oops.domain.delivery.Pipeline pipeline) {
         return PersistenceMapper.toDomain(pipelineRepository.save(PersistenceMapper.toEntity(pipeline)));
     }

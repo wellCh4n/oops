@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.interfaces.rest;
 
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
+import com.github.wellch4n.oops.application.dto.ActiveDeploymentDto;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
 import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
@@ -62,6 +63,16 @@ public class ApplicationController {
     @GetMapping("/{name}")
     public Result<ApplicationDto> getApplication(@PathVariable String namespace, @PathVariable String name) {
         return Result.success(applicationService.getApplicationResponse(namespace, name));
+    }
+
+    /**
+     * The "deploying" marks on the application list. Kept apart from the list endpoint because the
+     * list polls this alone — a poll must not re-run the paging, owner-name and build-config
+     * lookups that building a page of applications costs.
+     */
+    @GetMapping("/active-deployments")
+    public Result<List<ActiveDeploymentDto>> getActiveDeployments(@PathVariable String namespace) {
+        return Result.success(pipelineService.getActiveDeployments(namespace));
     }
 
     @GetMapping

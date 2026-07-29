@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, SseWatchOptions } from "./sse"
-import { Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { ActiveDeployment, Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -34,6 +34,16 @@ export const getApplications = async (
     throw new Error("Failed to fetch applications")
   }
   return response.json() as Promise<ApiResponse<Page<Application>>>
+}
+
+// Every in-flight pipeline of a namespace scope ("all" spans every namespace). Deliberately
+// light so the application list can poll it without re-fetching the applications themselves.
+export const getActiveDeployments = async (namespace: string): Promise<ApiResponse<ActiveDeployment[]>> => {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/active-deployments`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch active deployments")
+  }
+  return response.json() as Promise<ApiResponse<ActiveDeployment[]>>
 }
 
 export const getApplicationService = async (namespace: string, name: string): Promise<ApiResponse<ApplicationServiceConfig>> => {

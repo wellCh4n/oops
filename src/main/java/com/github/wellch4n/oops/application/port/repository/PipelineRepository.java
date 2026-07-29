@@ -27,6 +27,10 @@ public interface PipelineRepository {
             String applicationName,
             List<PipelineStatus> statuses);
 
+    List<Pipeline> findByStatusIn(List<PipelineStatus> statuses);
+
+    List<Pipeline> findByNamespaceAndStatusIn(String namespace, List<PipelineStatus> statuses);
+
     Pipeline save(Pipeline pipeline);
 
     int updateStatusIfMatch(String id, PipelineStatus expected, PipelineStatus target);

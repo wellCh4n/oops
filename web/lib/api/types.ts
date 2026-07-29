@@ -81,6 +81,17 @@ export interface Application {
   createdTime?: string
 }
 
+// An in-flight pipeline, fetched for a whole namespace scope at once so the application
+// list can mark the applications that are currently deploying.
+export interface ActiveDeployment {
+  namespace: string
+  applicationName: string
+  pipelineId: string
+  environment: string
+  status: PipelineStatus
+  createdTime?: string
+}
+
 type DockerFileType = 'BUILTIN' | 'USER'
 
 interface DockerFileConfig {
