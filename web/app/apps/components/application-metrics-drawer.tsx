@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
-import { Loader2, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw, X } from "lucide-react"
 
 import {
   getApplicationMetricsHistory,
@@ -13,6 +13,7 @@ import {
 import type { ApplicationRuntimeSpecEnvironmentConfig, PodMetricHistory } from "@/lib/api/types"
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
@@ -389,15 +390,25 @@ export function ApplicationMetricsDrawer({
                 {applicationName} · {environmentName}
               </DrawerDescription>
             </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => load(true)}
-              disabled={loading}
-              aria-label={t("apps.metrics.refresh")}
-            >
-              <RefreshCw className={loading ? "animate-spin" : undefined} />
-            </Button>
+            {/* Clicking the scrim closes the drawer too, but nothing on screen
+                says so — Dialog puts an explicit X in the same corner, so this
+                one does as well. */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => load(true)}
+                disabled={loading}
+                aria-label={t("apps.metrics.refresh")}
+              >
+                <RefreshCw className={loading ? "animate-spin" : undefined} />
+              </Button>
+              <DrawerClose
+                render={<Button variant="ghost" size="icon-sm" aria-label={t("common.close")} />}
+              >
+                <X />
+              </DrawerClose>
+            </div>
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">

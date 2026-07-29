@@ -130,7 +130,7 @@ function AppsContent() {
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="size-4" />{t("common.owner")}:</span>
+                <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="size-4" />{t("apps.ownerFilter")}</span>
                 <div className="inline-flex rounded-lg border bg-muted p-0.5 h-9">
                   <button
                     type="button"

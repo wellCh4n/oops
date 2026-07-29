@@ -5,6 +5,7 @@ const domains = {
   "domains.createDesc": "新增一個受管網域。",
   "domains.editTitle": "編輯網域",
   "domains.editDesc": "更新網域設定與憑證。",
+  "domains.searchLabel": "網域或描述:",
   "domains.searchPlaceholder": "依網域搜尋",
   "domains.col.host": "網域",
   "domains.col.certMode": "憑證模式",

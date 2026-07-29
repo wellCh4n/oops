@@ -2,6 +2,7 @@ const assets = {
   "assets.title": "静的リソース",
   "assets.uploadBtn": "アップロード",
   "assets.refresh": "更新",
+  "assets.searchLabel": "名前:",
   "assets.searchPlaceholder": "名前のプレフィックスで検索（現在のフォルダ）",
   "assets.folder": "フォルダ",
   "assets.col.fileName": "名前",

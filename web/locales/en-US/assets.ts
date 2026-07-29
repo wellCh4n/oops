@@ -2,6 +2,7 @@ const assets = {
   "assets.title": "Static Assets",
   "assets.uploadBtn": "Upload",
   "assets.refresh": "Refresh",
+  "assets.searchLabel": "Name:",
   "assets.searchPlaceholder": "Search by name prefix, current folder",
   "assets.folder": "Folder",
   "assets.col.fileName": "Name",

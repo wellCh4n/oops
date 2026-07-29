@@ -5,6 +5,7 @@ const domains = {
   "domains.createDesc": "Add a new domain to manage.",
   "domains.editTitle": "Edit Domain",
   "domains.editDesc": "Update domain settings and certificates.",
+  "domains.searchLabel": "Host or description:",
   "domains.searchPlaceholder": "Search host",
   "domains.col.host": "Host",
   "domains.col.certMode": "Cert Mode",
