@@ -47,7 +47,7 @@ function AppsContent() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [activeDeployments, setActiveDeployments] = useState<Record<string, ActiveDeployment[]>>({})
   const { t } = useLanguage()
-  const columns = useMemo(() => getColumns(t, activeDeployments), [t, activeDeployments])
+  const columns = useMemo(() => getColumns(t), [t])
 
   const page = Number(searchParams.get("page") ?? "1")
   const { size, rememberSize } = usePageSize(searchParams.get("size"))
@@ -232,6 +232,7 @@ function AppsContent() {
               columns={columns}
               data={applications}
               loading={loading}
+              meta={{ activeDeployments }}
             />
             <Pagination
               page={page}

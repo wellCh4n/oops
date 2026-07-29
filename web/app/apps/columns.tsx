@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { ColumnDef } from "@tanstack/react-table"
-import { Pencil, Rocket, Activity, GitBranch, ArrowRight } from "lucide-react"
+import { Pencil, Rocket, Activity, GitBranch, ArrowRight, Loader2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
@@ -15,6 +15,13 @@ import { ActiveDeployment, Application } from "@/lib/api/types"
 // Keys the active-deployment lookup the list polls; an application is identified by
 // namespace and name, since the "all" scope mixes namespaces on one page.
 export const applicationKey = (namespace: string, name: string) => `${namespace}/${name}`
+
+// The polled lookup arrives through the table meta rather than through getColumns: a column
+// rebuilt on every poll would hand the table a new cell function, and React remounts a cell
+// whose function identity changed — closing an open hover card under the pointer.
+interface TableMeta {
+  activeDeployments: Record<string, ActiveDeployment[]>
+}
 
 // Marks an application whose pipeline is still in flight, and lists the deploying
 // environments — each linking to its pipeline detail — when hovered.
@@ -37,10 +44,8 @@ function DeployingMark({
       <HoverCardTrigger
         render={
           <Badge variant="info" className="cursor-pointer gap-1.5">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-            </span>
+            {/* Slower than the default 1s so the mark reads as steady progress rather than a hurry. */}
+            <Loader2 className="animate-spin [animation-duration:1.4s]" />
             {t("apps.deploying.mark")}
           </Badge>
         }
@@ -70,24 +75,25 @@ function DeployingMark({
   )
 }
 
-export const getColumns = (
-  t: (key: string) => string,
-  activeDeployments: Record<string, ActiveDeployment[]> = {}
-): ColumnDef<Application>[] => [
+export const getColumns = (t: (key: string) => string): ColumnDef<Application>[] => [
   {
     accessorKey: "name",
     header: t("apps.col.name"),
-    cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <AppIdentityMark seed={row.original} />
-        <Copyable value={row.original.name} maxLength={Infinity} className="font-sans" />
-        <DeployingMark
-          application={row.original}
-          deployments={activeDeployments[applicationKey(row.original.namespace, row.original.name)] ?? []}
-          t={t}
-        />
-      </div>
-    ),
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as TableMeta | undefined
+      const application = row.original
+      return (
+        <div className="flex items-center gap-2">
+          <AppIdentityMark seed={application} />
+          <Copyable value={application.name} maxLength={Infinity} className="font-sans" />
+          <DeployingMark
+            application={application}
+            deployments={meta?.activeDeployments[applicationKey(application.namespace, application.name)] ?? []}
+            t={t}
+          />
+        </div>
+      )
+    },
   },
   {
     accessorKey: "description",
