@@ -9,6 +9,7 @@ const common = {
   "common.save": "保存",
   "common.saving": "保存中...",
   "common.cancel": "取消",
+  "common.close": "关闭",
   "common.create": "创建",
   "common.confirm": "确认",
   "common.namespace": "命名空间",

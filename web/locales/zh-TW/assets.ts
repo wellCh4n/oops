@@ -2,6 +2,7 @@ const assets = {
   "assets.title": "靜態資源",
   "assets.uploadBtn": "上傳檔案",
   "assets.refresh": "重新整理",
+  "assets.searchLabel": "檔名:",
   "assets.searchPlaceholder": "依檔名前綴搜尋，僅目前目錄",
   "assets.folder": "目錄",
   "assets.col.fileName": "檔名",

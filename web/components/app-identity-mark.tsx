@@ -25,9 +25,12 @@ export function AppIdentityMark({ seed, className }: AppIdentityMarkProps) {
         aria-hidden
         className={cn(
           MARK_BASE,
-          // 16px fills the 18px inner box, so the glyph carries the same visual
-          // weight as the gradient block, which covers its square edge to edge.
-          "inline-flex items-center justify-center overflow-hidden bg-muted/40 text-[16px] leading-none",
+          // The gradient block paints all 20px edge to edge, so the emoji has to
+          // match the inner box exactly — 18px, the 20px square minus its border —
+          // to carry the same weight. Anything smaller reads as a little glyph on
+          // a plate, since colour-emoji fonts already inset their own ink and the
+          // faint plate contributes nothing the eye measures the mark by.
+          "inline-flex items-center justify-center overflow-hidden bg-muted/40 text-[18px] leading-none",
           // The emoji stands in for an image, so it must not behave like text:
           // no caret, no drag-select, and nothing picked up by a copied selection.
           "select-none",

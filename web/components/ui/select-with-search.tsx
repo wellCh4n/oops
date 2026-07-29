@@ -182,7 +182,7 @@ function OptionColorMark({ option }: { option?: Option }) {
     return (
       <span
         aria-hidden
-        className={cn(OPTION_MARK_BASE, "inline-flex select-none items-center justify-center overflow-hidden bg-muted/40 text-[16px] leading-none")}
+        className={cn(OPTION_MARK_BASE, "inline-flex select-none items-center justify-center overflow-hidden bg-muted/40 text-[18px] leading-none")}
       >
         {option.icon}
       </span>

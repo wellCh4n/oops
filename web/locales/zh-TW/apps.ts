@@ -4,6 +4,7 @@ const apps = {
   "apps.fetchError": "取得應用程式清單失敗",
   "apps.namespaceFilter": "命名空間:",
   "apps.appNameFilter": "應用程式:",
+  "apps.ownerFilter": "負責人:",
   "apps.searchPlaceholder": "搜尋應用名稱或描述...",
   "apps.searchBtn": "搜尋",
   "apps.ownerAll": "所有人",

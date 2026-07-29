@@ -2,6 +2,7 @@ const assets = {
   "assets.title": "静态资源",
   "assets.uploadBtn": "上传文件",
   "assets.refresh": "刷新",
+  "assets.searchLabel": "文件名:",
   "assets.searchPlaceholder": "按文件名前缀搜索，仅当前目录",
   "assets.folder": "目录",
   "assets.col.fileName": "文件名",

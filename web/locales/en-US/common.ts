@@ -9,6 +9,7 @@ const common = {
   "common.save": "Save",
   "common.saving": "Saving...",
   "common.cancel": "Cancel",
+  "common.close": "Close",
   "common.create": "Create",
   "common.confirm": "Confirm",
   "common.namespace": "Namespace",

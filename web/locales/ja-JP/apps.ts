@@ -4,6 +4,7 @@ const apps = {
   "apps.fetchError": "アプリ一覧の取得に失敗しました",
   "apps.namespaceFilter": "名前空間:",
   "apps.appNameFilter": "アプリ:",
+  "apps.ownerFilter": "担当者:",
   "apps.searchPlaceholder": "名前または説明で検索...",
   "apps.searchBtn": "検索",
   "apps.ownerAll": "全員",

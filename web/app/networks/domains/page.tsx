@@ -60,7 +60,7 @@ export default function DomainsPage() {
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5">
                 <Search className="size-4" />
-                {t("domains.title")}
+                {t("domains.searchLabel")}
               </span>
               <div className="flex items-center gap-2">
                 <Input

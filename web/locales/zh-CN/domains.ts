@@ -5,6 +5,7 @@ const domains = {
   "domains.createDesc": "添加一个新的托管域名。",
   "domains.editTitle": "编辑域名",
   "domains.editDesc": "更新域名设置和证书。",
+  "domains.searchLabel": "域名或描述:",
   "domains.searchPlaceholder": "按域名搜索",
   "domains.col.host": "域名",
   "domains.col.certMode": "证书模式",
