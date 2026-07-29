@@ -19,6 +19,7 @@ import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.application.dto.ActiveDeploymentDto;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.PipelineDto;
@@ -82,6 +83,22 @@ public class PipelineService {
                 pipelinePage.size(),
                 pipelinePage.totalPages()
         );
+    }
+
+    /**
+     * Lists every in-flight pipeline of a namespace scope — {@code all} spans every namespace —
+     * so the application list can mark the applications that are currently deploying. The set is
+     * bounded by how many deployments can run at once, so it is returned whole rather than paged.
+     */
+    public List<ActiveDeploymentDto> getActiveDeployments(String namespace) {
+        List<PipelineStatus> activeStatuses = deploymentConcurrencyPolicy.activePipelineStatuses();
+        List<Pipeline> pipelines = "all".equalsIgnoreCase(namespace)
+                ? pipelineRepository.findByStatusIn(activeStatuses)
+                : pipelineRepository.findByNamespaceAndStatusIn(namespace, activeStatuses);
+        return pipelines.stream()
+                .sorted(Comparator.comparing(Pipeline::getCreatedTime, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(ActiveDeploymentDto::from)
+                .toList();
     }
 
     public Pipeline getPipeline(String namespace, String applicationName, String id) {

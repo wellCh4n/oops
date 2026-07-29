@@ -5,9 +5,9 @@ import { Plus, Search, Layers, LayoutGrid, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { DataTable } from "@/components/ui/data-table"
-import { getColumns } from "./columns"
-import { Application } from "@/lib/api/types"
-import { getApplications } from "@/lib/api/applications"
+import { applicationKey, getColumns } from "./columns"
+import { ActiveDeployment, Application } from "@/lib/api/types"
+import { getActiveDeployments, getApplications } from "@/lib/api/applications"
 import { useRouter, useSearchParams } from "next/navigation"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { Pagination } from "@/components/ui/pagination"
@@ -20,6 +20,10 @@ import { useWorkContext } from "@/contexts/work-context"
 import { ALL_NAMESPACES } from "@/store/work-context"
 import { useOwnerFilterStore } from "@/store/owner-filter"
 import { usePageSize } from "@/store/page-size"
+
+// How often the "deploying" marks refresh. Only the deployment lookup is re-fetched — the
+// applications themselves do not change on this cadence.
+const DEPLOYING_POLL_INTERVAL_MS = 5000
 
 export default function AppsPage() {
   return (
@@ -41,6 +45,7 @@ function AppsContent() {
   const [totalPages, setTotalPages] = useState(0)
   const [total, setTotal] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [activeDeployments, setActiveDeployments] = useState<Record<string, ActiveDeployment[]>>({})
   const { t } = useLanguage()
   const columns = useMemo(() => getColumns(t), [t])
 
@@ -82,6 +87,37 @@ function AppsContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace, page, size, ownerOnly])
+
+  // The deploying marks refresh on their own, independently of the application list: a poll
+  // that fails is simply skipped, leaving the marks that are already on screen in place.
+  const fetchActiveDeployments = useCallback(async () => {
+    if (!selectedNamespace) {
+      setActiveDeployments({})
+      return
+    }
+    try {
+      const res = await getActiveDeployments(selectedNamespace)
+      const grouped: Record<string, ActiveDeployment[]> = {}
+      for (const deployment of res.data ?? []) {
+        const key = applicationKey(deployment.namespace, deployment.applicationName)
+        ;(grouped[key] ??= []).push(deployment)
+      }
+      setActiveDeployments(grouped)
+    } catch (error) {
+      console.error("Failed to fetch active deployments:", error)
+    }
+  }, [selectedNamespace])
+
+  useEffect(() => {
+    if (!selectedNamespace) return
+    fetchActiveDeployments()
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchActiveDeployments()
+      }
+    }, DEPLOYING_POLL_INTERVAL_MS)
+    return () => clearInterval(intervalId)
+  }, [selectedNamespace, fetchActiveDeployments])
 
   const handleSearch = () => {
     updateParams({ page: "1" })
@@ -196,6 +232,7 @@ function AppsContent() {
               columns={columns}
               data={applications}
               loading={loading}
+              meta={{ activeDeployments }}
             />
             <Pagination
               page={page}

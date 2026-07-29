@@ -44,6 +44,10 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
 
     boolean existsByNamespaceAndApplicationNameAndStatusIn(String namespace, String applicationName, List<PipelineStatus> statuses);
 
+    List<Pipeline> findByStatusIn(List<PipelineStatus> statuses);
+
+    List<Pipeline> findByNamespaceAndStatusIn(String namespace, List<PipelineStatus> statuses);
+
     @Modifying
     @Transactional
     @Query("update Pipeline p set p.status = :target where p.id = :id and p.status = :expected")

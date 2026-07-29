@@ -19,6 +19,8 @@ const apps = {
   "apps.col.status": "状态",
   "apps.col.pipelines": "流水线",
   "apps.col.ide": "开发环境",
+  "apps.deploying.mark": "发布中",
+  "apps.deploying.title": "正在发布的环境",
   "apps.tab.appInfo": "基本信息",
   "apps.tab.buildConfig": "构建流程",
   "apps.tab.runtimeSpec": "运行规格",
