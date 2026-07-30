@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.wellch4n.oops.infrastructure.kubernetes.stream.TerminalSessionSupport.ContainerProbe;
+import com.github.wellch4n.oops.infrastructure.kubernetes.stream.TerminalSessionSupport.DtachState;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -78,7 +79,21 @@ class TerminalSessionSupportTest {
 
         assertTrue(probe.launcherReady());
         assertEquals("x86_64", probe.machine());
-        assertFalse(probe.dtachInstalled());
+        assertEquals(DtachState.MISSING, probe.dtachState());
+    }
+
+    /**
+     * The verdict that matters most: a dtach that is present but will not run has to be distinct from
+     * one that is absent, or the installer would upload it again on every connect — and terminals
+     * reconnect on their own, so nothing would bound how often.
+     */
+    @Test
+    @DisplayName("Present-but-unrunnable dtach is its own verdict, not the same as absent")
+    void distinguishesUnusableDtachFromMissing() {
+        assertEquals(DtachState.UNUSABLE,
+                TerminalSessionSupport.parseProbe("launcher=yes\narch=x86_64\ndtach=unusable\n").dtachState());
+        assertEquals(DtachState.USABLE,
+                TerminalSessionSupport.parseProbe("launcher=yes\narch=x86_64\ndtach=yes\n").dtachState());
     }
 
     @Test
@@ -87,11 +102,23 @@ class TerminalSessionSupportTest {
         ContainerProbe probe = TerminalSessionSupport.parseProbe("sh: uname: not found\n");
 
         assertFalse(probe.launcherReady());
-        assertFalse(probe.dtachInstalled());
+        assertEquals(DtachState.MISSING, probe.dtachState());
         assertNull(probe.machine());
 
         ContainerProbe empty = TerminalSessionSupport.parseProbe(null);
         assertFalse(empty.launcherReady());
         assertNull(empty.machine());
+        assertEquals(DtachState.MISSING, empty.dtachState());
+    }
+
+    /**
+     * The one thing the runtime guard cannot get wrong: it must run the binary rather than test its
+     * permission bit, because {@code -x} is true on a noexec mount and on a truncated ELF alike, and
+     * the script {@code exec}s straight after the guard passes.
+     */
+    @Test
+    @DisplayName("The dtach guard runs the binary and silences it, since it also runs on the user's TTY")
+    void guardExecutesTheBinaryQuietly() {
+        assertEquals("/tmp/.oops/dtach --version >/dev/null 2>&1", TerminalSessionSupport.DTACH_RUNS_CHECK);
     }
 }

@@ -32,16 +32,21 @@ public class KubernetesTerminalSessionGateway implements TerminalSessionGateway 
      *
      * <p>The trailing lines are the fallback OOPS has always used, reached whenever dtach is absent
      * or refuses to start, so a terminal never fails just because it cannot be made resumable.
+     * Reaching them depends on the guard actually running the binary rather than testing {@code -x}:
+     * once this script reaches {@code exec}, a binary that will not load takes the shell down with it
+     * — the exec replaces the shell, so there is nothing left to fall back to, and the browser
+     * reconnects into the same failure indefinitely. The check is cheap and re-run per connect so a
+     * verdict that went stale since the install cannot strand the terminal either.
      */
     private static final String TERMINAL_SCRIPT = """
             socket=$1
-            if [ -n "$socket" ] && [ -x /tmp/.oops/dtach ] && [ -x /tmp/.oops/shell.sh ]; then
+            if [ -n "$socket" ] && [ -x /tmp/.oops/shell.sh ] && %s; then
               exec /tmp/.oops/dtach -A "$socket" -E -r winch /tmp/.oops/shell.sh
             fi
             export TERM=xterm-256color
             if command -v bash >/dev/null 2>&1; then exec bash; fi
             exec /bin/sh
-            """;
+            """.formatted(TerminalSessionSupport.DTACH_RUNS_CHECK);
 
     /**
      * Kills the dtach master holding a session. The socket path is unique per session and appears in

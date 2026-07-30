@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.stream;
 
 import com.github.wellch4n.oops.infrastructure.kubernetes.stream.TerminalSessionSupport.ContainerProbe;
+import com.github.wellch4n.oops.infrastructure.kubernetes.stream.TerminalSessionSupport.DtachState;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
@@ -25,8 +26,11 @@ import org.springframework.stereotype.Component;
  * runs the same command again to reattach to the shell that stayed behind.
  *
  * <p>Every failure mode here is non-fatal by design. Read-only filesystems, exotic architectures,
- * missing {@code cat} — all of them just leave the container without resume support, and the caller
- * opens the plain shell that OOPS has always opened.
+ * missing {@code cat}, a {@code /tmp} the container may not execute from — all of them just leave the
+ * container without resume support, and the caller opens the plain shell that OOPS has always opened.
+ * That promise rests on the binary being run once before it is reported as installed: a file that
+ * landed is not the same as a file that works, and treating the two as one would hand the terminal a
+ * command it cannot exec, which kills the shell instead of falling back to it.
  */
 @Slf4j
 @Component
@@ -34,6 +38,20 @@ public class DtachInstaller {
 
     private static final long PROBE_TIMEOUT_SECONDS = 15;
     private static final long UPLOAD_TIMEOUT_SECONDS = 60;
+
+    /**
+     * Reports which of the three {@link TerminalSessionSupport.DtachState}s the container is in.
+     * Declared ahead of the probe script because that script ends with it.
+     */
+    private static final String DTACH_VERDICT_SCRIPT = """
+            if %s; then
+              printf 'dtach=yes\\n'
+            elif [ -f %s ]; then
+              printf 'dtach=unusable\\n'
+            else
+              printf 'dtach=no\\n'
+            fi
+            """.formatted(TerminalSessionSupport.DTACH_RUNS_CHECK, TerminalSessionSupport.UNUSABLE_MARKER_PATH);
 
     /**
      * Prepares the scratch directory and reports what the container already has. The launcher is
@@ -55,22 +73,35 @@ public class DtachInstaller {
               printf 'launcher=no\\n'
             fi
             printf 'arch=%s\\n' "$(uname -m 2>/dev/null)"
-            if [ -x /tmp/.oops/dtach ]; then printf 'dtach=yes\\n'; else printf 'dtach=no\\n'; fi
-            """;
+            """ + DTACH_VERDICT_SCRIPT;
 
     /**
      * Receives the binary on stdin. Staged under a pid-suffixed name and moved into place so a
      * terminal opening concurrently can never exec a half-written file.
+     *
+     * <p>Landing the file is not the same as installing it, so the binary is run once before this
+     * reports success. {@code cat} cannot tell a complete upload from a stream that ended early — it
+     * sees EOF either way and exits 0 — so without that run a truncated ELF would be reported as
+     * installed, and every terminal after it would exec a binary that segfaults.
      */
     private static final String INSTALL_SCRIPT = """
             staging=/tmp/.oops/dtach.$$
             if cat > "$staging" && chmod +x "$staging" && mv "$staging" /tmp/.oops/dtach; then
-              printf 'installed=yes\\n'
+              if %s; then
+                printf 'installed=yes\\n'
+              else
+                # It landed but will not run. Drop it and leave a marker, so the next terminal skips
+                # straight to a plain shell instead of uploading 50KB again — and again on every
+                # reconnect, since the browser retries on its own.
+                rm -f /tmp/.oops/dtach 2>/dev/null
+                : > %s 2>/dev/null
+                printf 'installed=no\\n'
+              fi
             else
               rm -f "$staging" 2>/dev/null
               printf 'installed=no\\n'
             fi
-            """;
+            """.formatted(TerminalSessionSupport.DTACH_RUNS_CHECK, TerminalSessionSupport.UNUSABLE_MARKER_PATH);
 
     /** Binaries are read from the JAR once and shared; they are ~50KB each and never change at runtime. */
     private final ConcurrentHashMap<String, byte[]> binaryCache = new ConcurrentHashMap<>();
@@ -85,8 +116,13 @@ public class DtachInstaller {
                 log.debug("Terminal resume unavailable for {}/{}: launcher could not be written", namespace, podName);
                 return false;
             }
-            if (probe.dtachInstalled()) {
+            if (probe.dtachState() == DtachState.USABLE) {
                 return true;
+            }
+            if (probe.dtachState() == DtachState.UNUSABLE) {
+                log.debug("Terminal resume unavailable for {}/{}: dtach is installed but will not run there",
+                        namespace, podName);
+                return false;
             }
             String resource = TerminalSessionSupport.dtachResource(probe.machine());
             if (resource == null) {
@@ -117,11 +153,11 @@ public class DtachInstaller {
                 .exec("sh", "-c", PROBE_SCRIPT + "\n")) {
 
             if (!finished.await(PROBE_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                return new ContainerProbe(false, null, false);
+                return new ContainerProbe(false, null, DtachState.MISSING);
             }
         } catch (InterruptedException interruptedException) {
             Thread.currentThread().interrupt();
-            return new ContainerProbe(false, null, false);
+            return new ContainerProbe(false, null, DtachState.MISSING);
         }
         return TerminalSessionSupport.parseProbe(stdout.toString(StandardCharsets.UTF_8));
     }
