@@ -13,4 +13,11 @@ public class FeishuProperties {
     private String appSecret;
     private String redirectUri;
     private String callbackFrontUrl;
+    /**
+     * Whether a resignation in Feishu should disable the matching OOPS account.
+     *
+     * <p>Off by default: it takes people's access away on a signal from outside OOPS, so like resource alerts it
+     * waits to be asked for rather than starting on its own after an upgrade.
+     */
+    private boolean syncUserDeactivation = false;
 }

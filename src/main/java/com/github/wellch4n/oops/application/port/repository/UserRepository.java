@@ -28,4 +28,6 @@ public interface UserRepository {
     void deleteById(String id);
 
     boolean existsByRole(UserRole role);
+
+    long countEnabledByRole(UserRole role);
 }

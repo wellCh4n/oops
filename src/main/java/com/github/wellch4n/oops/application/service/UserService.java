@@ -13,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 public class UserService {
 
@@ -126,6 +128,28 @@ public class UserService {
 
     public boolean hasAdmin() {
         return userRepository.existsByRole(UserRole.ADMIN);
+    }
+
+    /**
+     * Disables an account without deleting it, for callers acting on an external signal such as a resignation.
+     *
+     * <p>Refuses to disable the last enabled admin: an external directory has no idea it is holding the only key to
+     * this installation, and locking every admin out is far worse than leaving one account to be turned off by hand.
+     *
+     * @return whether this call is what changed the account, so the caller can stay quiet about repeat deliveries
+     */
+    public boolean deactivateUser(String id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
+            return false;
+        }
+        if (user.getRole() == UserRole.ADMIN && userRepository.countEnabledByRole(UserRole.ADMIN) <= 1) {
+            log.warn("Refusing to disable user {} — it is the last enabled admin", id);
+            return false;
+        }
+        user.setEnabled(false);
+        userRepository.save(user);
+        return true;
     }
 
     public String resetMyAccessToken(String userId) {
