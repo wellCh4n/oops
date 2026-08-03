@@ -94,6 +94,11 @@ oops:
     app-id: cli_xxx
     app-secret: xxx
     redirect-uri: http://localhost:3000/auth/feishu/callback
+    # Disable an OOPS account when Feishu reports the person as having left the organisation.
+    # Off by default — it takes access away on a signal from outside OOPS, so it waits to be asked for.
+    # Requires the Feishu console's subscription method to be 长连接 (not 开发者服务器), the
+    # contact.user.deleted_v3 event subscribed, and one of the contact:contact*readonly permissions.
+    sync-user-deactivation: false
   ide:
     enabled: false
     https: false

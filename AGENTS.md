@@ -140,7 +140,7 @@ Key properties to configure:
 - `oops.pipeline.image.*`: Clone, Buildah, and ZIP (curl) images for builds, registry mirrors, and ZIP unzip excludes
 - `oops.ingress.cert-resolver`: Traefik certificate resolver name
 - `oops.object-storage.*`: S3-compatible object storage for ZIP source uploads and asset hosting (`enabled`, `endpoint`, `region`, `bucket`, `access-key`, `secret-key`, `path-style-access`, `key-prefix`, `asset-key-prefix`, `asset-base-url`, URL expiration, max file size)
-- `oops.feishu.*`: Feishu (Lark) OAuth configuration (optional)
+- `oops.feishu.*`: Feishu (Lark) OAuth configuration (optional); the same credentials also drive the inbound event long connection, which additionally needs `sync-user-deactivation`
 - `oops.ide.*`: code-server IDE configuration (optional)
 - `oops.sandbox.*`: Sandbox runtime image allowlist and execution defaults
 - `oops.pod-filesystem.*`: Pod file browser limits, especially max download size
@@ -238,6 +238,21 @@ Owners can grant other users access to their applications via collaborators (`Ap
 
 ### External Accounts
 `ExternalAccount` entity stores linked OAuth accounts (`email`, `provider`, `providerUserId`). Used by the notification system to route pipeline status messages to the user's linked provider (e.g., Feishu).
+
+### External Event Subscriptions (inbound)
+
+Providers can also push events *into* OOPS. The path is split so a provider knows nothing about OOPS's domain and a business handler knows nothing about the provider:
+
+`FeishuEventClient` (infrastructure adapter, receives and translates) → publishes a **provider-neutral Spring event** → a listener in `application/event/` acts on it.
+
+**Transport is a long connection, not a webhook.** `FeishuEventClient` dials out with the SDK's `com.lark.oapi.ws.Client`, feeding an `EventDispatcher` that routes by event type. OOPS is self-hosted and frequently has no address Feishu's servers can reach, so having the backend dial out is the mode that works everywhere; it also removes the webhook attack surface entirely — no public endpoint, no verification token, no encrypt key, because the connection authenticates with the app credentials themselves. **Nothing beyond `oops.feishu.enabled` / `app-id` / `app-secret` needs configuring**, and in the Feishu console the subscription method must be 长连接, not 开发者服务器. The trade-off is that events only arrive while the process is up; acceptable because the only subscription is idempotent and nothing else depends on it.
+
+- **Off unless both `oops.feishu.enabled` and `oops.feishu.sync-user-deactivation` are true** — `@ConditionalOnProperty` with two names requires both. Opt-in for the same reason resource alerts are: it takes people's access away on a signal from outside OOPS, so it must not switch itself on at upgrade. The gate sits on the bean rather than inside the handler because resignations are the only subscription — with the switch off there is nothing to listen for and no socket worth opening. (`ExternalUserDeactivatedListener` still exists either way; with no client it simply never hears anything.)
+- It connects on `ApplicationReadyEvent` from a virtual thread, so an unreachable Feishu cannot hold up startup. **Reconnection is left entirely to the SDK**: `autoReconnect` already defaults to true and `Client.start()` routes ordinary failures into it, so the only thing it hands back is the kind of error (bad credentials) no retry fixes. There is no de-duplication either — delivery is at least once, but disabling an already-disabled account is a no-op.
+- **Subscribed events.** `contact.user.deleted_v3` (resignation) → `ExternalUserDeactivatedEvent` → `ExternalUserDeactivatedListener` disables the OOPS account (`enabled=false`), which login, `JwtAuthFilter` and `OpenApiAuthFilter` all already enforce, so an issued JWT and an OpenAPI access token both stop working on the next request. It resolves the person by `ExternalAccount.providerUserId` first and falls back to email; someone with no OOPS account is an info log, not an error. Disabling rather than deleting keeps owned applications with a resolvable owner and lets an admin reverse a mistake. `UserService.deactivateUser()` refuses to disable the **last enabled admin** (`UserRepository.countEnabledByRole`) — an external directory has no idea it is holding the only key to the installation.
+- The listener is **synchronous**, unlike the notification listeners: it is a single-row update running on the SDK's own connection thread, so an `@Async` hop would buy nothing. Nothing in this path touches an OOPS request, scheduler or pipeline thread. Note that `Client.handleDataFrame` catches whatever the handler throws **and acknowledges the event anyway**, so a failure is lost rather than redelivered — hence the listener logs the account it could not disable. Every event is logged twice at INFO, once on receipt and once for the outcome (disabled / no linked account / left as is): resignations are rare enough for the volume not to matter, and the SDK logs nothing at INFO, so without those lines an event that matched no account would leave no trace of having arrived.
+
+Adding a provider means one new client adapter; adding a business reaction means one new listener. Neither touches the other. `FeishuEventClientTests` drives payloads straight through `EventDispatcher.doWithoutValidation()`, so the event handling is covered without a socket.
 
 ### Domain Management
 `Domain` entities store managed domains with `host`, `https`, `certMode` (`AUTO` or `UPLOADED`), and optional PEM cert/key. Domains are admin-managed at `/api/domains` (ADMIN-only writes) and listed at `/networks/domains`. Domain lookup uses longest-suffix matching (supports wildcard by stripping `*.`).

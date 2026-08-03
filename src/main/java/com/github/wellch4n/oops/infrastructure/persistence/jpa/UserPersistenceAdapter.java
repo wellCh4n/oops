@@ -82,4 +82,9 @@ public class UserPersistenceAdapter implements com.github.wellch4n.oops.applicat
     public boolean existsByRole(UserRole role) {
         return userRepository.existsByRole(role);
     }
+
+    @Override
+    public long countEnabledByRole(UserRole role) {
+        return userRepository.countEnabledByRole(role);
+    }
 }

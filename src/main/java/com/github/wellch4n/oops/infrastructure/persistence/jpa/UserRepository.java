@@ -14,6 +14,10 @@ public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByAccessToken(String accessToken);
     boolean existsByRole(UserRole role);
 
+    /** Rows predating the {@code enabled} column carry NULL, which everywhere else reads as enabled. */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.role = :role AND (u.enabled IS NULL OR u.enabled = TRUE)")
+    long countEnabledByRole(@Param("role") UserRole role);
+
     @Query("SELECT u FROM User u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(COALESCE(u.email, '')) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "ORDER BY u.createdTime DESC")
