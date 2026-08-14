@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.domain.application.SourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
@@ -66,7 +67,10 @@ public class ApplicationBuildConfig extends BaseDataObject {
     @Converter
     public static class DockerFileConfigConverter implements AttributeConverter<DockerFileConfig, String> {
 
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         @Override
         public String convertToDatabaseColumn(DockerFileConfig attribute) {
@@ -96,7 +100,10 @@ public class ApplicationBuildConfig extends BaseDataObject {
     @Converter
     public static class EnvironmentConfigsConverter implements AttributeConverter<List<EnvironmentConfig>, String> {
 
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         private static final TypeReference<List<EnvironmentConfig>> TYPE = new TypeReference<>() {};
 
         @Override

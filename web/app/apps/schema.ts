@@ -131,6 +131,10 @@ export const applicationServiceSchema = z.object({
       editing: z.boolean(),
       prefix: z.string(),
       suffix: z.string(),
+      basicAuthEnabled: z.boolean(),
+      basicAuthUsername: z.string(),
+      basicAuthPassword: z.string(),
+      basicAuthPasswordSet: z.boolean(),
     })),
   })),
 })

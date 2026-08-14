@@ -15,7 +15,7 @@ import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Check, ExternalLink, Pencil, Plug, Globe, Info, Plus, Trash2, X, Network } from "lucide-react"
+import { Check, ExternalLink, Pencil, Plug, Globe, Info, KeyRound, Plus, Trash2, X, Network } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
@@ -27,6 +27,7 @@ import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationServiceFormValues, applicationServiceSchema } from "../schema"
 import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
+import { HostBasicAuth, HostBasicAuthDialog } from "./host-basic-auth-dialog"
 
 interface Props {
   initialServiceConfig?: ApplicationServiceConfig
@@ -72,10 +73,20 @@ function createEmptyHost() {
     editing: true,
     prefix: "",
     suffix: "",
+    basicAuthEnabled: false,
+    basicAuthUsername: "",
+    basicAuthPassword: "",
+    basicAuthPasswordSet: false,
   }
 }
 
 function normalizeHostForSnapshot(host: ApplicationServiceFormValues["environmentConfigs"][number]["hosts"][number]) {
+  const basicAuth = {
+    basicAuthEnabled: host.basicAuthEnabled,
+    basicAuthUsername: host.basicAuthUsername,
+    basicAuthPassword: host.basicAuthPassword,
+  }
+
   if (host.editing) {
     return {
       host: host.host,
@@ -83,6 +94,7 @@ function normalizeHostForSnapshot(host: ApplicationServiceFormValues["environmen
       editing: true,
       prefix: host.prefix,
       suffix: host.suffix,
+      ...basicAuth,
     }
   }
 
@@ -92,6 +104,7 @@ function normalizeHostForSnapshot(host: ApplicationServiceFormValues["environmen
     editing: false,
     prefix: "",
     suffix: "",
+    ...basicAuth,
   }
 }
 
@@ -106,6 +119,10 @@ function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig)
       editing: false,
       prefix: "",
       suffix: "",
+      basicAuthEnabled: config.basicAuthEnabled ?? false,
+      basicAuthUsername: config.basicAuthUsername ?? "",
+      basicAuthPassword: "",
+      basicAuthPasswordSet: config.basicAuthPasswordSet ?? false,
     })
     grouped.set(config.environmentName, hosts)
   })
@@ -132,6 +149,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const [domains, setDomains] = useState<Domain[]>([])
   const [pendingApexConfirm, setPendingApexConfirm] = useState<HostErrorContext | null>(null)
+  const [basicAuthTarget, setBasicAuthTarget] = useState<HostErrorContext | null>(null)
   const { t } = useLanguage()
 
   const form = useForm<ApplicationServiceFormValues>({
@@ -174,6 +192,19 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${pendingApexConfirm.hostIndex}.suffix`) || ""
   }, [environmentIndexByName, form, pendingApexConfirm])
+
+  const basicAuthHost = useMemo(() => {
+    if (!basicAuthTarget) {
+      return null
+    }
+
+    const environmentIndex = environmentIndexByName.get(basicAuthTarget.environmentName)
+    if (environmentIndex == null) {
+      return null
+    }
+
+    return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${basicAuthTarget.hostIndex}`) ?? null
+  }, [basicAuthTarget, environmentIndexByName, form])
 
   const buildSnapshot = useCallback((values: ApplicationServiceFormValues = form.getValues()) => JSON.stringify({
     port: values.port?.trim() ?? "",
@@ -340,6 +371,14 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     })
     void validateHost(environmentName, hostIndex, combinedHost)
   }, [environmentIndexByName, form, pendingApexConfirm, updateHost, validateHost])
+
+  const confirmBasicAuth = useCallback((value: HostBasicAuth) => {
+    if (!basicAuthTarget) {
+      return
+    }
+
+    updateHost(basicAuthTarget.environmentName, basicAuthTarget.hostIndex, value)
+  }, [basicAuthTarget, updateHost])
 
   const removeHost = useCallback((environmentName: string, hostIndex: number) => {
     const environmentIndex = environmentIndexByName.get(environmentName)
@@ -514,17 +553,34 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     }
 
     const environmentConfigsPayload: ApplicationServiceEnvironmentConfig[] = []
-    values.environmentConfigs.forEach((group) => {
-      group.hosts.forEach((host) => {
-        if (host.host.trim()) {
-          environmentConfigsPayload.push({
-            environmentName: group.environmentName,
-            host: host.host.trim(),
-            https: host.https,
-          })
+    for (const group of values.environmentConfigs) {
+      for (const host of group.hosts) {
+        if (!host.host.trim()) {
+          continue
         }
-      })
-    })
+
+        if (host.basicAuthEnabled) {
+          if (!host.basicAuthUsername.trim()) {
+            toast.error(t("apps.service.basicAuth.usernameRequired"))
+            return false
+          }
+          if (!host.basicAuthPassword && !host.basicAuthPasswordSet) {
+            toast.error(t("apps.service.basicAuth.passwordRequired"))
+            return false
+          }
+        }
+
+        environmentConfigsPayload.push({
+          environmentName: group.environmentName,
+          host: host.host.trim(),
+          https: host.https,
+          basicAuthEnabled: host.basicAuthEnabled,
+          basicAuthUsername: host.basicAuthEnabled ? host.basicAuthUsername.trim() : undefined,
+          // Blank means "keep the stored password" — the backend never hands the hash back.
+          basicAuthPassword: host.basicAuthEnabled ? host.basicAuthPassword || undefined : undefined,
+        })
+      }
+    }
 
     setSaving(true)
     try {
@@ -539,14 +595,31 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
       }
 
       toast.success(t("apps.service.saveSuccess"))
+      // Mirror what the server now returns: the plaintext password is gone, only the "a password
+      // exists" marker survives.
       onSaved?.({
         port: portValue,
         internalPorts: internalPortsPayload,
-        environmentConfigs: environmentConfigsPayload,
+        environmentConfigs: environmentConfigsPayload.map((config) => ({
+          ...config,
+          basicAuthPassword: undefined,
+          basicAuthPasswordSet: config.basicAuthEnabled,
+        })),
       })
       pendingInternalPortRef.current = ""
       setPendingInternalPort("")
-      form.reset({ ...values, internalPorts: internalPortsPayload.map(String) })
+      form.reset({
+        ...values,
+        internalPorts: internalPortsPayload.map(String),
+        environmentConfigs: values.environmentConfigs.map((group) => ({
+          ...group,
+          hosts: group.hosts.map((host) => ({
+            ...host,
+            basicAuthPassword: "",
+            basicAuthPasswordSet: host.basicAuthEnabled,
+          })),
+        })),
+      })
       return true
     } catch {
       toast.error(t("apps.service.saveError"))
@@ -766,6 +839,29 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                   {error && <p className="text-xs text-destructive">{error}</p>}
                                 </div>
 
+                                {!hostConfig.editing && (
+                                  <Tooltip>
+                                    <TooltipTrigger
+                                      render={
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="icon"
+                                          aria-label={t("apps.service.basicAuth.title")}
+                                          onClick={() => setBasicAuthTarget({ environmentName: group.environmentName, hostIndex })}
+                                        />
+                                      }
+                                    >
+                                      <KeyRound className={hostConfig.basicAuthEnabled ? "size-4 text-primary" : "size-4"} />
+                                    </TooltipTrigger>
+                                    <TooltipContent className="text-xs">
+                                      {hostConfig.basicAuthEnabled
+                                        ? t("apps.service.basicAuth.enabledTooltip").replace("{username}", hostConfig.basicAuthUsername)
+                                        : t("apps.service.basicAuth.title")}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
+
                                 {hostConfig.editing ? (
                                   <Button
                                     type="button"
@@ -838,6 +934,21 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
           {saving ? t("common.saving") : t("common.save")}
         </Button>
       </div>
+
+      {basicAuthTarget && basicAuthHost && (
+        <HostBasicAuthDialog
+          key={`${basicAuthTarget.environmentName}-${basicAuthTarget.hostIndex}`}
+          onOpenChange={(open) => { if (!open) setBasicAuthTarget(null) }}
+          host={basicAuthHost.host}
+          value={{
+            basicAuthEnabled: basicAuthHost.basicAuthEnabled,
+            basicAuthUsername: basicAuthHost.basicAuthUsername,
+            basicAuthPassword: basicAuthHost.basicAuthPassword,
+            basicAuthPasswordSet: basicAuthHost.basicAuthPasswordSet,
+          }}
+          onConfirm={confirmBasicAuth}
+        />
+      )}
 
       <AlertDialog open={!!pendingApexConfirm} onOpenChange={(open) => { if (!open) setPendingApexConfirm(null) }}>
         <AlertDialogContent>

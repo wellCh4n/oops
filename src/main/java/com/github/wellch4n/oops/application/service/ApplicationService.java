@@ -33,7 +33,9 @@ import com.github.wellch4n.oops.application.dto.Page;
 import java.time.Instant;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,6 +67,7 @@ public class ApplicationService {
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
     private final DomainPolicy domainPolicy;
+    private final PasswordEncoder passwordEncoder;
 
     public ApplicationService(ApplicationRepository applicationRepository,
                               EnvironmentRepository environmentRepository,
@@ -74,7 +77,8 @@ public class ApplicationService {
                               ApplicationMetricsGateway applicationMetricsGateway,
                               ApplicationBuildConfigPolicy buildConfigPolicy,
                               HealthCheckPolicy healthCheckPolicy,
-                              DomainPolicy domainPolicy) {
+                              DomainPolicy domainPolicy,
+                              PasswordEncoder passwordEncoder) {
         this.applicationRepository = applicationRepository;
         this.environmentRepository = environmentRepository;
         this.userService = userService;
@@ -84,6 +88,7 @@ public class ApplicationService {
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
         this.domainPolicy = domainPolicy;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Application getApplication(String namespace, String name) {
@@ -553,9 +558,65 @@ public class ApplicationService {
         }
 
         Application application = requireAggregate(namespace, name);
-        application.updateServiceConfig(request.toDomain());
+        ApplicationServiceConfig serviceConfig = request.toDomain();
+        serviceConfig.setEnvironmentConfigs(
+                resolveBasicAuth(application.getServiceConfig(), request.environmentConfigs()));
+        application.updateServiceConfig(serviceConfig);
         applicationRepository.saveAggregate(application);
         return true;
+    }
+
+    /**
+     * Turns the submitted basic auth credentials into what gets stored: a BCrypt hash, never the
+     * plaintext. A blank password on a host that already has one means "unchanged" — the UI cannot
+     * echo back a hash, so it sends an empty field and we carry the stored hash forward.
+     */
+    private List<ApplicationServiceConfig.EnvironmentConfig> resolveBasicAuth(
+            ApplicationServiceConfig existingConfig,
+            List<ApplicationConfigDto.ServiceEnvironmentConfig> requestedConfigs) {
+        if (requestedConfigs == null) {
+            return null;
+        }
+
+        Map<String, String> storedHashes = new HashMap<>();
+        if (existingConfig != null && existingConfig.getEnvironmentConfigs() != null) {
+            for (ApplicationServiceConfig.EnvironmentConfig stored : existingConfig.getEnvironmentConfigs()) {
+                if (StringUtils.isNotBlank(stored.getBasicAuthPasswordHash())) {
+                    storedHashes.put(basicAuthKey(stored.getEnvironmentName(), stored.getHost()),
+                            stored.getBasicAuthPasswordHash());
+                }
+            }
+        }
+
+        return requestedConfigs.stream().map(requested -> {
+            ApplicationServiceConfig.EnvironmentConfig config = requested.toDomain();
+            if (!Boolean.TRUE.equals(requested.basicAuthEnabled())) {
+                // Left null rather than false so the host stores nothing at all about basic auth.
+                config.setBasicAuthEnabled(null);
+                config.setBasicAuthUsername(null);
+                config.setBasicAuthPasswordHash(null);
+                return config;
+            }
+
+            if (StringUtils.isBlank(requested.basicAuthUsername())) {
+                throw new BizException("Basic auth username is required for host " + requested.host());
+            }
+            if (StringUtils.isNotBlank(requested.basicAuthPassword())) {
+                config.setBasicAuthPasswordHash(passwordEncoder.encode(requested.basicAuthPassword()));
+                return config;
+            }
+
+            String storedHash = storedHashes.get(basicAuthKey(requested.environmentName(), requested.host()));
+            if (StringUtils.isBlank(storedHash)) {
+                throw new BizException("Basic auth password is required for host " + requested.host());
+            }
+            config.setBasicAuthPasswordHash(storedHash);
+            return config;
+        }).toList();
+    }
+
+    private static String basicAuthKey(String environmentName, String host) {
+        return environmentName + "\n" + host;
     }
 
     public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {

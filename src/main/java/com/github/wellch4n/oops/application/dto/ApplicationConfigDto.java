@@ -13,6 +13,7 @@ import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.function.Function;
+import org.apache.commons.lang3.StringUtils;
 
 public final class ApplicationConfigDto {
     private ApplicationConfigDto() {
@@ -318,16 +319,34 @@ public final class ApplicationConfigDto {
         }
     }
 
+    /**
+     * @param basicAuthPassword    write-only plaintext password; blank on update means "keep the
+     *                             stored one". Always null on the way out.
+     * @param basicAuthPasswordSet read-only marker telling the UI a password is already stored, so
+     *                             it can offer "leave blank to keep" instead of the hash itself.
+     */
     public record ServiceEnvironmentConfig(
             String environmentName,
             String host,
-            Boolean https
+            Boolean https,
+            Boolean basicAuthEnabled,
+            String basicAuthUsername,
+            String basicAuthPassword,
+            Boolean basicAuthPasswordSet
     ) {
         public static ServiceEnvironmentConfig from(ApplicationServiceConfig.EnvironmentConfig config) {
             if (config == null) {
                 return null;
             }
-            return new ServiceEnvironmentConfig(config.getEnvironmentName(), config.getHost(), config.getHttps());
+            return new ServiceEnvironmentConfig(
+                    config.getEnvironmentName(),
+                    config.getHost(),
+                    config.getHttps(),
+                    config.getBasicAuthEnabled(),
+                    config.getBasicAuthUsername(),
+                    null,
+                    StringUtils.isNotBlank(config.getBasicAuthPasswordHash())
+            );
         }
 
         public ApplicationServiceConfig.EnvironmentConfig toDomain() {
@@ -335,6 +354,8 @@ public final class ApplicationConfigDto {
             config.setEnvironmentName(environmentName);
             config.setHost(host);
             config.setHttps(https);
+            config.setBasicAuthEnabled(basicAuthEnabled);
+            config.setBasicAuthUsername(basicAuthUsername);
             return config;
         }
     }

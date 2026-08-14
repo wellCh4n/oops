@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.EncryptedStringConverter;
 import com.github.wellch4n.oops.shared.util.EncryptionUtils;
@@ -108,7 +109,10 @@ public class Environment {
 
     @Converter
     public static class GitCredentialConverter implements AttributeConverter<GitCredential, String> {
-        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
         @Override
         public String convertToDatabaseColumn(GitCredential attribute) {
