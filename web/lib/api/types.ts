@@ -320,4 +320,10 @@ export interface ApplicationServiceEnvironmentConfig {
   environmentName: string
   host?: string
   https?: boolean
+  basicAuthEnabled?: boolean
+  basicAuthUsername?: string
+  // Write-only. Sent when the user sets a new password; blank keeps the stored one.
+  basicAuthPassword?: string
+  // Read-only. Tells the UI a password is already stored — the hash itself is never returned.
+  basicAuthPasswordSet?: boolean
 }

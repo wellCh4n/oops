@@ -15,6 +15,7 @@ import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,8 @@ public class IngressRouteProcessor implements DeployProcessor {
 
     private static final String REDIRECT_MIDDLEWARE_NAME = "oops-redirect-https";
     private static final int TLS_SECRET_SYNC_ATTEMPTS = 3;
+    private static final String BASIC_AUTH_LABEL_KEY = "oops.resource";
+    private static final String BASIC_AUTH_LABEL_VALUE = "basic-auth";
 
     @Override
     public void process(DeployContext ctx) {
@@ -57,25 +60,36 @@ public class IngressRouteProcessor implements DeployProcessor {
         List<Domain> allDomains = domainRepository.findAll();
 
         Set<String> appliedNames = new HashSet<>();
+        Set<String> appliedBasicAuthNames = new HashSet<>();
         for (ApplicationServiceConfig.EnvironmentConfig config : envServiceConfigs) {
             String host = config.getHost();
             boolean https = Boolean.TRUE.equals(config.getHttps());
+
+            // The HTTP route of an HTTPS host only redirects, so basic auth belongs on the route
+            // that actually serves the application.
+            List<String> serveMiddlewares = List.of();
+            if (config.basicAuthConfigured()) {
+                String basicAuthName = basicAuthResourceName(applicationName, host);
+                ensureBasicAuthMiddleware(ctx, basicAuthName, config);
+                appliedBasicAuthNames.add(basicAuthName);
+                serveMiddlewares = List.of(basicAuthName);
+            }
 
             if (https) {
                 ensureRedirectMiddleware(ctx);
 
                 String httpName = ingressRouteName(applicationName, host, "http");
                 appliedNames.add(httpName);
-                applyIngressRoute(ctx, httpName, host, List.of("web"), null, true);
+                applyIngressRoute(ctx, httpName, host, List.of("web"), null, List.of(REDIRECT_MIDDLEWARE_NAME));
 
                 String httpsName = ingressRouteName(applicationName, host, "https");
                 appliedNames.add(httpsName);
                 applyIngressRoute(ctx, httpsName, host, List.of("websecure"),
-                        buildTlsForHost(ctx, host, allDomains), false);
+                        buildTlsForHost(ctx, host, allDomains), serveMiddlewares);
             } else {
                 String httpName = ingressRouteName(applicationName, host, "http");
                 appliedNames.add(httpName);
-                applyIngressRoute(ctx, httpName, host, List.of("web"), null, false);
+                applyIngressRoute(ctx, httpName, host, List.of("web"), null, serveMiddlewares);
             }
         }
 
@@ -88,19 +102,23 @@ public class IngressRouteProcessor implements DeployProcessor {
                         .inNamespace(namespace)
                         .withName(r.getMetadata().getName())
                         .delete());
+
+        deleteStaleBasicAuthResources(ctx, appliedBasicAuthNames);
     }
 
     private void applyIngressRoute(DeployContext ctx, String resourceName, String host,
-                                   List<String> entryPoints, IngressRouteSpec.Tls tls, boolean redirect) {
+                                   List<String> entryPoints, IngressRouteSpec.Tls tls,
+                                   List<String> middlewareNames) {
         String applicationName = ctx.getApplication().getName();
 
         var routeBuilder = IngressRouteSpec.Route.builder()
                 .match("Host(`" + host + "`)")
                 .kind("Rule")
                 .services(List.of(IngressRouteSpec.Service.builder().name(applicationName).port(ctx.getServicePort()).build()));
-        if (redirect) {
-            routeBuilder.middlewares(List.of(
-                    IngressRouteSpec.Middleware.builder().name(REDIRECT_MIDDLEWARE_NAME).build()));
+        if (!middlewareNames.isEmpty()) {
+            routeBuilder.middlewares(middlewareNames.stream()
+                    .map(middlewareName -> IngressRouteSpec.Middleware.builder().name(middlewareName).build())
+                    .toList());
         }
 
         IngressRouteSpec spec = IngressRouteSpec.builder()
@@ -165,6 +183,76 @@ public class IngressRouteProcessor implements DeployProcessor {
         }
     }
 
+    /**
+     * Writes the htpasswd Secret and the Traefik BasicAuth Middleware for one host. The stored
+     * BCrypt hash goes straight into the Secret — Traefik reads htpasswd lines, so no plaintext is
+     * needed anywhere in the cluster.
+     */
+    private void ensureBasicAuthMiddleware(DeployContext ctx, String resourceName,
+                                           ApplicationServiceConfig.EnvironmentConfig config) {
+        String namespace = ctx.getApplication().getNamespace();
+        Map<String, String> labels = new HashMap<>(ctx.getLabels());
+        labels.put(BASIC_AUTH_LABEL_KEY, BASIC_AUTH_LABEL_VALUE);
+
+        String htpasswd = config.getBasicAuthUsername() + ":" + config.getBasicAuthPasswordHash();
+        Secret secret = new SecretBuilder()
+                .withNewMetadata()
+                    .withName(resourceName)
+                    .withNamespace(namespace)
+                    .withLabels(labels)
+                    .withOwnerReferences(ctx.getOwnerRef())
+                .endMetadata()
+                .withType("Opaque")
+                .withData(Map.of("users",
+                        Base64.getEncoder().encodeToString(htpasswd.getBytes(StandardCharsets.UTF_8))))
+                .build();
+
+        Middleware middleware = new Middleware();
+        middleware.setMetadata(new ObjectMetaBuilder()
+                .withName(resourceName)
+                .withNamespace(namespace)
+                .withLabels(labels)
+                .withOwnerReferences(ctx.getOwnerRef())
+                .build());
+        middleware.setSpec(MiddlewareSpec.builder()
+                .basicAuth(MiddlewareSpec.BasicAuth.builder().secret(resourceName).build())
+                .build());
+
+        try {
+            ctx.getClient().secrets().inNamespace(namespace).resource(secret).patch(ctx.getPatchContext());
+            ctx.getClient().resources(Middleware.class)
+                    .inNamespace(namespace)
+                    .resource(middleware)
+                    .forceConflicts()
+                    .serverSideApply();
+        } catch (Exception e) {
+            log.error("Error applying basic auth middleware {}/{}: ", namespace, resourceName, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Drops the basic auth Secret and Middleware of hosts that no longer use it. Owner references
+     * only clean up when the whole application goes away, so turning basic auth off for a single
+     * host has to be handled here.
+     */
+    private void deleteStaleBasicAuthResources(DeployContext ctx, Set<String> appliedNames) {
+        String namespace = ctx.getApplication().getNamespace();
+        String applicationName = ctx.getApplication().getName();
+
+        ctx.getClient().resources(Middleware.class)
+                .inNamespace(namespace)
+                .withLabel("oops.app.name", applicationName)
+                .withLabel(BASIC_AUTH_LABEL_KEY, BASIC_AUTH_LABEL_VALUE)
+                .list().getItems().stream()
+                .map(middleware -> middleware.getMetadata().getName())
+                .filter(name -> !appliedNames.contains(name))
+                .forEach(name -> {
+                    ctx.getClient().resources(Middleware.class).inNamespace(namespace).withName(name).delete();
+                    ctx.getClient().secrets().inNamespace(namespace).withName(name).delete();
+                });
+    }
+
     private IngressRouteSpec.Tls buildTlsForHost(DeployContext ctx, String host, List<Domain> allDomains) {
         Domain domain = allDomains.stream()
                 .filter(d -> d.getHost() != null
@@ -211,6 +299,10 @@ public class IngressRouteProcessor implements DeployProcessor {
 
     private static String ingressRouteName(String applicationName, String host, String suffix) {
         return applicationName + "-" + suffix + "-" + host.replace('.', '-');
+    }
+
+    private static String basicAuthResourceName(String applicationName, String host) {
+        return applicationName + "-basic-auth-" + host.replace('.', '-');
     }
 
     private static String tlsSecretName(Domain domain) {

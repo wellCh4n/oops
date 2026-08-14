@@ -43,5 +43,24 @@ public class ApplicationServiceConfig extends BaseDomainObject {
         private String environmentName;
         private String host;
         private Boolean https = true;
+        private Boolean basicAuthEnabled;
+        private String basicAuthUsername;
+
+        /**
+         * BCrypt hash of the basic auth password. The plaintext is never stored — it is hashed on
+         * save and handed to Traefik in htpasswd form, so it is also never returned to the UI.
+         */
+        private String basicAuthPasswordHash;
+
+        /**
+         * Whether this host is fully configured for basic auth. A half-filled config (enabled but
+         * missing a credential) is treated as off so the host stays reachable instead of rejecting
+         * every request with a 401 nobody can satisfy.
+         */
+        public boolean basicAuthConfigured() {
+            return Boolean.TRUE.equals(basicAuthEnabled)
+                    && basicAuthUsername != null && !basicAuthUsername.isBlank()
+                    && basicAuthPasswordHash != null && !basicAuthPasswordHash.isBlank();
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.domain.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig.EnvironmentConfig;
@@ -48,5 +49,38 @@ class ApplicationServiceConfigTests {
     @Test
     void distinctInternalPortsEmptyWhenUnset() {
         assertTrue(new ApplicationServiceConfig().distinctInternalPorts().isEmpty());
+    }
+
+    @Test
+    void basicAuthConfiguredRequiresEnabledFlagAndBothCredentials() {
+        EnvironmentConfig config = environmentConfig("prod");
+        assertFalse(config.basicAuthConfigured());
+
+        config.setBasicAuthEnabled(true);
+        assertFalse(config.basicAuthConfigured());
+
+        config.setBasicAuthUsername("visitor");
+        assertFalse(config.basicAuthConfigured());
+
+        config.setBasicAuthPasswordHash("$2a$10$hash");
+        assertTrue(config.basicAuthConfigured());
+    }
+
+    @Test
+    void basicAuthConfiguredFalseWhenDisabledButCredentialsRemain() {
+        EnvironmentConfig config = environmentConfig("prod");
+        config.setBasicAuthEnabled(false);
+        config.setBasicAuthUsername("visitor");
+        config.setBasicAuthPasswordHash("$2a$10$hash");
+        assertFalse(config.basicAuthConfigured());
+    }
+
+    @Test
+    void basicAuthConfiguredFalseWhenCredentialsAreBlank() {
+        EnvironmentConfig config = environmentConfig("prod");
+        config.setBasicAuthEnabled(true);
+        config.setBasicAuthUsername("  ");
+        config.setBasicAuthPasswordHash("  ");
+        assertFalse(config.basicAuthConfigured());
     }
 }
