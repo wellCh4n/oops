@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { DataTable } from "@/components/ui/data-table"
 import { getPipelines, stopPipeline, deployPipeline, rollbackPipeline, getCurrentImage } from "@/lib/api/pipelines"
-import { getApplications, getApplicationBuildEnvConfigs } from "@/lib/api/applications"
+import { getApplications, getApplicationEnvironments } from "@/lib/api/applications"
 import { Pipeline, Application } from "@/lib/api/types"
 import { getPipelineColumns } from "./columns"
 import { toast } from "sonner"
@@ -142,10 +142,10 @@ function PipelinesContent() {
     }
     const load = async () => {
       try {
-        const res = await getApplicationBuildEnvConfigs(activeNamespace, selectedApp)
+        const res = await getApplicationEnvironments(activeNamespace, selectedApp)
         if (res.data) {
-          setEnvironments(res.data.reduce<string[]>((acc, c) => {
-            if (c.environmentName) acc.push(c.environmentName)
+          setEnvironments(res.data.reduce<string[]>((acc, environment) => {
+            if (environment.environmentName) acc.push(environment.environmentName)
             return acc
           }, []))
         }
