@@ -155,6 +155,11 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
                 PersistenceMapper::toDomain);
     }
 
+    @Override
+    public List<com.github.wellch4n.oops.domain.application.ApplicationServiceConfig> findAllServiceConfigs() {
+        return PersistenceMapper.convertList(serviceConfigRepository.findAll(), PersistenceMapper::toDomain);
+    }
+
     private void hydrateAggregate(com.github.wellch4n.oops.domain.application.Application application) {
         String namespace = application.getNamespace();
         String name = application.getName();

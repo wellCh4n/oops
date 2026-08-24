@@ -41,4 +41,6 @@ public interface ApplicationRepository {
             String hostPattern,
             String namespace,
             String applicationName);
+
+    List<ApplicationServiceConfig> findAllServiceConfigs();
 }

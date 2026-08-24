@@ -11,4 +11,5 @@ public class UpsertDomainCommand {
     private DomainCertMode certMode;
     private String certPem;
     private String keyPem;
+    private String environmentName;
 }

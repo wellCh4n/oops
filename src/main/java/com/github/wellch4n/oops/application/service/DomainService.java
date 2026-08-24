@@ -1,6 +1,9 @@
 package com.github.wellch4n.oops.application.service;
 
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.DomainRepository;
+import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
@@ -15,10 +18,17 @@ import org.springframework.stereotype.Service;
 public class DomainService {
 
     private final DomainRepository domainRepository;
+    private final EnvironmentRepository environmentRepository;
+    private final ApplicationRepository applicationRepository;
     private final DomainPolicy domainPolicy;
 
-    public DomainService(DomainRepository domainRepository, DomainPolicy domainPolicy) {
+    public DomainService(DomainRepository domainRepository,
+                         EnvironmentRepository environmentRepository,
+                         ApplicationRepository applicationRepository,
+                         DomainPolicy domainPolicy) {
         this.domainRepository = domainRepository;
+        this.environmentRepository = environmentRepository;
+        this.applicationRepository = applicationRepository;
         this.domainPolicy = domainPolicy;
     }
 
@@ -42,10 +52,12 @@ public class DomainService {
         if (domainRepository.existsByHost(host)) {
             throw new BizException("Domain already exists: " + host);
         }
+        String environmentName = requireValidEnvironment(request.getEnvironmentName());
 
         Domain domain = new Domain();
         domain.setHost(host);
         domain.setDescription(request.getDescription());
+        domain.setEnvironmentName(environmentName);
         applyCertFields(domain, request);
         return domainRepository.save(domain);
     }
@@ -61,10 +73,61 @@ public class DomainService {
         if (!newHost.equals(domain.getHost()) && domainRepository.existsByHost(newHost)) {
             throw new BizException("Domain already exists: " + newHost);
         }
+        String environmentName = requireValidEnvironment(request.getEnvironmentName());
+        rejectRebindingWhileInUse(domain, newHost, environmentName);
         domain.setHost(newHost);
         domain.setDescription(request.getDescription());
+        domain.setEnvironmentName(environmentName);
         applyCertFields(domain, request);
         return domainRepository.saveAndFlush(domain);
+    }
+
+    private String requireValidEnvironment(String environmentName) {
+        if (environmentName == null || environmentName.isBlank()) {
+            throw new BizException("Domain environment is required");
+        }
+        String trimmed = environmentName.trim();
+        if (environmentRepository.findFirstByName(trimmed) == null) {
+            throw new BizException("Environment not found: " + trimmed);
+        }
+        return trimmed;
+    }
+
+    /**
+     * A domain that already governs saved application hosts cannot be moved to another environment
+     * (or another suffix) out from under them — the conflict must surface on the admin edit that
+     * creates it, not on the application's next innocent deploy.
+     */
+    private void rejectRebindingWhileInUse(Domain domain, String newHost, String newEnvironmentName) {
+        boolean hostUnchanged = newHost.equals(domain.getHost());
+        boolean environmentUnchanged = newEnvironmentName.equals(domain.getEnvironmentName());
+        if (hostUnchanged && environmentUnchanged) {
+            return;
+        }
+
+        List<Domain> candidates = domainRepository.findAll();
+        for (ApplicationServiceConfig serviceConfig : applicationRepository.findAllServiceConfigs()) {
+            if (serviceConfig.getEnvironmentConfigs() == null) {
+                continue;
+            }
+            for (ApplicationServiceConfig.EnvironmentConfig environmentConfig : serviceConfig.getEnvironmentConfigs()) {
+                String host = environmentConfig.getHost();
+                if (host == null || host.isBlank()) {
+                    continue;
+                }
+                Domain governing = domainPolicy.findBestMatch(host, candidates, Domain::getHost).orElse(null);
+                if (governing == null || !domain.getId().equals(governing.getId())) {
+                    continue;
+                }
+                boolean stillCovered = (host.equals(newHost) || host.endsWith("." + newHost))
+                        && newEnvironmentName.equals(environmentConfig.getEnvironmentName());
+                if (!stillCovered) {
+                    throw new BizException("Domain is in use by application " + serviceConfig.getNamespace()
+                            + "/" + serviceConfig.getApplicationName() + " (host " + host + ", environment "
+                            + environmentConfig.getEnvironmentName() + "), remove that host first");
+                }
+            }
+        }
     }
 
     public void delete(String id) {

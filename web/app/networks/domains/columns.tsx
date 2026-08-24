@@ -27,8 +27,17 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
       : <span className="text-muted-foreground">-</span>,
   },
   {
+    accessorKey: "environmentName",
+    header: t("domains.col.environment"),
+    size: 100,
+    cell: ({ row }) => row.original.environmentName
+      ? <span>{row.original.environmentName}</span>
+      : <span className="text-muted-foreground">{t("domains.environment.unbound")}</span>,
+  },
+  {
     accessorKey: "https",
     header: "HTTPS",
+    size: 70,
     cell: ({ row }) => row.original.https
       ? <Badge variant="success">ON</Badge>
       : <Badge variant="secondary">OFF</Badge>,
@@ -36,6 +45,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
   {
     accessorKey: "certMode",
     header: t("domains.col.certMode"),
+    size: 90,
     cell: ({ row }) => {
       const d = row.original
       if (!d.https) return <span className="text-muted-foreground">-</span>
@@ -47,6 +57,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
   {
     accessorKey: "certNotAfter",
     header: t("domains.col.certNotAfter"),
+    size: 150,
     cell: ({ row }) => {
       const d = row.original
       if (d.certMode !== "UPLOADED" || !d.certNotAfter) return <span className="text-muted-foreground">-</span>
@@ -56,6 +67,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
   {
     accessorKey: "createdTime",
     header: t("domains.col.createdTime"),
+    size: 150,
     cell: ({ row }) => <LocalTime value={row.original.createdTime} />,
   },
   {

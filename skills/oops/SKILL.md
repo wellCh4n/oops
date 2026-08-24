@@ -144,6 +144,8 @@ python skills/oops/scripts/oops.py app service set -n <ns> <app> \
 
 The host should be a subdomain under a managed domain from `python skills/oops/scripts/oops.py domain ls`.
 For example if `example.com` is managed, set the host to `hello.example.com`.
+Each managed domain belongs to one environment (the ENVIRONMENT column) — pick a domain whose
+environment matches the `<env>` you are configuring, or the save is rejected.
 
 ### Step 6 — Configure runtime (**easy to forget; replicas default to 0**)
 
