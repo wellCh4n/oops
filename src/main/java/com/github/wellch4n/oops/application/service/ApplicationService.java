@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
 import com.github.wellch4n.oops.application.port.ApplicationMetricsGateway;
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.DomainRepository;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
@@ -16,6 +17,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
 import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.routing.Domain;
 import com.github.wellch4n.oops.domain.routing.DomainPolicy;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.UserRole;
@@ -67,6 +69,7 @@ public class ApplicationService {
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
     private final DomainPolicy domainPolicy;
+    private final DomainRepository domainRepository;
     private final PasswordEncoder passwordEncoder;
 
     public ApplicationService(ApplicationRepository applicationRepository,
@@ -78,6 +81,7 @@ public class ApplicationService {
                               ApplicationBuildConfigPolicy buildConfigPolicy,
                               HealthCheckPolicy healthCheckPolicy,
                               DomainPolicy domainPolicy,
+                              DomainRepository domainRepository,
                               PasswordEncoder passwordEncoder) {
         this.applicationRepository = applicationRepository;
         this.environmentRepository = environmentRepository;
@@ -88,6 +92,7 @@ public class ApplicationService {
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
         this.domainPolicy = domainPolicy;
+        this.domainRepository = domainRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -542,12 +547,14 @@ public class ApplicationService {
     @Transactional
     public Boolean updateApplicationServiceConfig(String namespace, String name, ApplicationConfigDto.ServiceConfig request) {
         if (request.environmentConfigs() != null) {
+            List<Domain> managedDomains = domainRepository.findAll();
             for (ApplicationConfigDto.ServiceEnvironmentConfig envConfig : request.environmentConfigs()) {
                 String host = envConfig.host();
                 if (host == null || host.isBlank()) {
                     continue;
                 }
                 domainPolicy.validateHost(host);
+                requireDomainAllowsEnvironment(host, envConfig.environmentName(), managedDomains);
                 ServiceHostConflictView conflict = findHostConflictApplication(namespace, name, host);
                 if (conflict != null) {
                     throw new BizException("Host " + host + " is already used by environment "
@@ -564,6 +571,23 @@ public class ApplicationService {
         application.updateServiceConfig(serviceConfig);
         applicationRepository.saveAggregate(application);
         return true;
+    }
+
+    /**
+     * A host may only be used in the environment its governing managed domain is bound to. Hosts
+     * under no managed domain stay allowed — they simply get no certificate configuration, which
+     * covers externally-managed or self-signed setups.
+     */
+    private void requireDomainAllowsEnvironment(String host, String environmentName, List<Domain> managedDomains) {
+        Domain governing = domainPolicy.findBestMatch(host, managedDomains, Domain::getHost).orElse(null);
+        if (governing == null) {
+            return;
+        }
+        if (!governing.allowsEnvironment(environmentName)) {
+            throw new BizException("Domain " + governing.getHost() + " is not available in environment "
+                    + environmentName + (governing.getEnvironmentName() != null
+                    ? " (its environment is " + governing.getEnvironmentName() + ")" : ""));
+        }
     }
 
     /**

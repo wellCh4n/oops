@@ -17,4 +17,9 @@ public class Domain extends BaseAggregateRoot {
     private String keyPem;
     private String certSubject;
     private LocalDateTime certNotAfter;
+    private String environmentName;
+
+    public boolean allowsEnvironment(String environment) {
+        return environmentName != null && environmentName.equals(environment);
+    }
 }

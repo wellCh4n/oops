@@ -744,11 +744,14 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                   if (!group) {
                     return null
                   }
+                  const environmentDomains = domains.filter(
+                    (domain) => domain.environmentName === group.environmentName
+                  )
 
                   return (
                     <TabsContent key={field.id} value={group.environmentName}>
                       <div className="grid gap-4">
-                        {domains.length === 0 ? (
+                        {environmentDomains.length === 0 ? (
                           <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed">
                             {t("apps.service.noDomainPrefix")}
                             <Link href="/networks/domains" className="inline-flex items-center gap-0.5 text-primary mx-1">
@@ -803,7 +806,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                           </SelectValue>
                                         </SelectTrigger>
                                         <SelectContent>
-                                          {domains.map((domain) => (
+                                          {environmentDomains.map((domain) => (
                                             <SelectItem key={domain.id} value={domain.host}>
                                               <div className="flex flex-col items-start">
                                                 <span>{domain.host}</span>
@@ -909,7 +912,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                           })
                         )}
 
-                        {domains.length > 0 && (
+                        {environmentDomains.length > 0 && (
                           <Button
                             type="button"
                             variant="outline"

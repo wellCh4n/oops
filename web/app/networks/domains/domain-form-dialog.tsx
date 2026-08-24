@@ -29,6 +29,15 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Domain, DomainCertMode, DomainRequest, createDomain, deleteDomain, updateDomain } from "@/lib/api/domains"
+import { fetchEnvironments } from "@/lib/api/environments"
+import { Environment } from "@/lib/api/types"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { isValidHost } from "@/lib/host-validation"
 import { useLanguage } from "@/contexts/language-context"
 
@@ -51,8 +60,17 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
   const [certPem, setCertPem] = useState("")
   const [keyPem, setKeyPem] = useState("")
   const [replaceCert, setReplaceCert] = useState(false)
+  const [environmentName, setEnvironmentName] = useState("")
+  const [environments, setEnvironments] = useState<Environment[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    fetchEnvironments()
+      .then((res) => setEnvironments(res.data ?? []))
+      .catch(() => setEnvironments([]))
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -64,6 +82,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       setCertPem("")
       setKeyPem("")
       setReplaceCert(false)
+      setEnvironmentName(target.environmentName ?? "")
     } else {
       setHost("")
       setDescription("")
@@ -72,6 +91,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       setCertPem("")
       setKeyPem("")
       setReplaceCert(false)
+      setEnvironmentName("")
     }
   }, [open, target])
 
@@ -86,12 +106,17 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       toast.error(t("domains.field.hostInvalid"))
       return
     }
+    if (!environmentName) {
+      toast.error(t("domains.field.environmentRequired"))
+      return
+    }
     setSubmitting(true)
     try {
       const request: DomainRequest = {
         host: trimmedHost,
         description: description.trim() || undefined,
         https,
+        environmentName,
       }
       if (https) {
         request.certMode = certMode
@@ -163,6 +188,23 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
               placeholder={t("domains.field.descriptionPlaceholder")}
               autoComplete="off"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("domains.field.environment")}</Label>
+            <Select value={environmentName} onValueChange={(value) => setEnvironmentName(value ?? "")}>
+              <SelectTrigger className="w-full cursor-pointer">
+                <SelectValue placeholder={t("domains.field.environmentPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                {environments.map((environment) => (
+                  <SelectItem key={environment.id} value={environment.name} className="cursor-pointer">
+                    {environment.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{t("domains.field.environmentHint")}</p>
           </div>
 
           <div className="flex items-center justify-between rounded-md border p-3">

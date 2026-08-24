@@ -105,6 +105,7 @@ final class PersistenceMapper {
         domain.setKeyPem(entity.getKeyPem());
         domain.setCertSubject(entity.getCertSubject());
         domain.setCertNotAfter(entity.getCertNotAfter());
+        domain.setEnvironmentName(entity.getEnvironmentName());
         return domain;
     }
 
@@ -123,6 +124,7 @@ final class PersistenceMapper {
         entity.setKeyPem(domain.getKeyPem());
         entity.setCertSubject(domain.getCertSubject());
         entity.setCertNotAfter(domain.getCertNotAfter());
+        entity.setEnvironmentName(domain.getEnvironmentName());
         return entity;
     }
 

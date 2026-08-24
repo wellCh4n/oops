@@ -196,9 +196,10 @@ def cmd_env_ls(client: Client, args: argparse.Namespace) -> None:
 def cmd_domain_ls(client: Client, args: argparse.Namespace) -> None:
     items = client.get("/openapi/domains")
     render(args.json, items, lambda lst: print_table(
-        ["HOST", "HTTPS", "CERT MODE", "UPLOADED", "DESCRIPTION"],
+        ["HOST", "ENVIRONMENT", "HTTPS", "CERT MODE", "UPLOADED", "DESCRIPTION"],
         [[
             dash(d.get("host")),
+            dash(d.get("environmentName")),
             str(bool(d.get("https"))),
             dash(d.get("certMode")),
             str(bool(d.get("hasUploadedCert"))),

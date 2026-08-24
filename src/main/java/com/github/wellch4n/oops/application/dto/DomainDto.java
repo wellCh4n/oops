@@ -22,6 +22,7 @@ public class DomainDto {
     private String certSubject;
     private LocalDateTime certNotAfter;
     private LocalDateTime createdTime;
+    private String environmentName;
 
     public static DomainDto from(Domain domain) {
         return DomainDto.builder()
@@ -34,6 +35,7 @@ public class DomainDto {
                 .certSubject(domain.getCertSubject())
                 .certNotAfter(domain.getCertNotAfter())
                 .createdTime(domain.getCreatedTime())
+                .environmentName(domain.getEnvironmentName())
                 .build();
     }
 }

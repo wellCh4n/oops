@@ -42,4 +42,6 @@ public class Domain extends BaseDataObject {
     private String certSubject;
 
     private LocalDateTime certNotAfter;
+
+    private String environmentName;
 }
