@@ -579,6 +579,9 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
       if (!namespace || !applicationName || !activeTab) return
 
       setIsLoadingConfig(true)
+      // Clear the previous environment's rows right away so the tab switch is
+      // visible immediately instead of appearing to wait for the fetch.
+      form.reset({ configMaps: [] })
       try {
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
         if (res.data) {

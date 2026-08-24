@@ -2,9 +2,8 @@
 
 import { Suspense, useState, useEffect, useCallback, Fragment } from "react"
 import { useParams, useRouter, useSearchParams, usePathname } from "next/navigation"
-import { restartApplicationPod, getClusterDomain, watchApplicationStatus, getApplicationMetrics } from "@/lib/api/applications"
-import { fetchEnvironments } from "@/lib/api/environments"
-import { ApplicationPodStatus, Environment, ClusterDomainInfo, PodMetric } from "@/lib/api/types"
+import { restartApplicationPod, getClusterDomain, watchApplicationStatus, getApplicationMetrics, getApplicationEnvironments } from "@/lib/api/applications"
+import { ApplicationPodStatus, ApplicationEnvironment, ClusterDomainInfo, PodMetric } from "@/lib/api/types"
 import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
@@ -78,7 +77,7 @@ function ApplicationStatusContent() {
 
   const [loading, setLoading] = useState(true)
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
-  const [environments, setEnvironments] = useState<Environment[]>([])
+  const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnv] = useState<string>("")
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
@@ -100,16 +99,16 @@ function ApplicationStatusContent() {
   useEffect(() => {
     const loadEnvironments = async () => {
       try {
-        const res = await fetchEnvironments()
+        const res = await getApplicationEnvironments(namespace, name)
         if (res.data && Array.isArray(res.data) && res.data.length > 0) {
           setEnvironments(res.data)
 
           // Determine initial environment: the URL first, then the environment
           // carried in the work context, and only then the first one.
-          let initialEnv = res.data[0].name
-          if (envParam && res.data.some(e => e.name === envParam)) {
+          let initialEnv = res.data[0].environmentName
+          if (envParam && res.data.some(environment => environment.environmentName === envParam)) {
             initialEnv = envParam
-          } else if (!envParam && contextEnv && res.data.some(e => e.name === contextEnv)) {
+          } else if (!envParam && contextEnv && res.data.some(environment => environment.environmentName === contextEnv)) {
             initialEnv = contextEnv
           }
 
@@ -132,7 +131,7 @@ function ApplicationStatusContent() {
   // `contextEnv` is only a seed for the first render — reacting to it would
   // fight the user's own tab switches.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [envParam, pathname, router, searchParams, t])
+  }, [namespace, name, envParam, pathname, router, searchParams, t])
 
   // Subscribe to pod status via SSE when environment changes
   useEffect(() => {
@@ -300,8 +299,8 @@ function ApplicationStatusContent() {
                 <Tabs value={selectedEnv} onValueChange={handleTabChange}>
                   <TabsList>
                     {environments.map((env) => (
-                      <TabsTrigger key={env.id} value={env.name} className="px-8">
-                        {env.name}
+                      <TabsTrigger key={env.environmentName} value={env.environmentName} className="px-8">
+                        {env.environmentName}
                       </TabsTrigger>
                     ))}
                   </TabsList>
