@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
-import { BranchPicker } from "@/components/branch-picker"
+import { BranchPicker, BranchCommitLine } from "@/components/branch-picker"
+import type { GitBranch } from "@/lib/api/applications"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import Link from "next/link"
 import { useWorkContextStore } from "@/store/work-context"
@@ -50,6 +51,8 @@ export default function PublishPage({ params }: PageProps) {
   }
   const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
   const [branch, setBranch] = useState<string>("main")
+  const [resolvedBranch, setResolvedBranch] = useState<GitBranch | null>(null)
+  const [branchesLoading, setBranchesLoading] = useState(false)
   const [publishRepository, setPublishRepository] = useState<string>("")
   const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
@@ -387,11 +390,23 @@ export default function PublishPage({ params }: PageProps) {
               id="branch"
               value={branch}
               onValueChange={setBranch}
+              onBranchResolved={setResolvedBranch}
+              onLoadingChange={setBranchesLoading}
               namespace={namespace}
               applicationName={name}
               env={selectedEnv}
               placeholder="main"
             />
+            <p className="flex h-4 min-w-0 items-center gap-1 text-xs text-muted-foreground">
+              <span className="shrink-0">{t("apps.publish.branchLatestCommit")}</span>
+              {branchesLoading ? (
+                <Skeleton className="h-3 w-64 max-w-full" />
+              ) : resolvedBranch ? (
+                <BranchCommitLine branch={resolvedBranch} className="truncate" />
+              ) : (
+                <span>—</span>
+              )}
+            </p>
           </div>
         )}
 

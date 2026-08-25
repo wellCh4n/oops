@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.application.service;
 
+import com.github.wellch4n.oops.application.dto.GitBranchView;
 import com.github.wellch4n.oops.application.port.GitRepositoryGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.domain.application.Application;
@@ -27,11 +28,11 @@ public class GitBranchService {
     }
 
     /**
-     * Remote branches of the application repository, read with the git credentials of the given
+     * Remote branches of the application repository with their tip commits, read with the git credentials of the given
      * environment. Returns an empty list when the application does not build from git, so the UI can
      * fall back to a plain text input.
      */
-    public List<String> listBranches(String namespace, String applicationName, String environmentName) {
+    public List<GitBranchView> listBranches(String namespace, String applicationName, String environmentName) {
         Application application = applicationRepository.findAggregate(namespace, applicationName);
         if (application == null) {
             throw new BizException("Application not found");

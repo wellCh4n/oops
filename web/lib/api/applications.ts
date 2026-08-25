@@ -142,12 +142,20 @@ export const getApplicationBuildConfig = async (namespace: string, name: string)
   return response.json() as Promise<ApiResponse<ApplicationBuildConfig>>
 }
 
-export const getApplicationBranches = async (namespace: string, name: string, env: string): Promise<ApiResponse<string[]>> => {
+export interface GitBranch {
+  name: string
+  commitId: string
+  commitMessage?: string | null
+  commitAuthor?: string | null
+  committedAt?: string | null
+}
+
+export const getApplicationBranches = async (namespace: string, name: string, env: string): Promise<ApiResponse<GitBranch[]>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/branches?env=${encodeURIComponent(env)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application branches")
   }
-  return response.json() as Promise<ApiResponse<string[]>>
+  return response.json() as Promise<ApiResponse<GitBranch[]>>
 }
 
 export const updateApplicationBuildConfig = async (namespace: string, name: string, config: ApplicationBuildConfig): Promise<ApiResponse<boolean>> => {

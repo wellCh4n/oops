@@ -4,13 +4,17 @@ import * as React from "react"
 import { Check, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { getApplicationBranches } from "@/lib/api/applications"
+import { getApplicationBranches, type GitBranch } from "@/lib/api/applications"
 import { useLanguage } from "@/contexts/language-context"
 
 interface BranchPickerProps {
   id?: string
   value: string
   onValueChange: (value: string) => void
+  /** Called with the branch that was picked, or with the matching one once the list is loaded. */
+  onBranchResolved?: (branch: GitBranch | null) => void
+  /** Reports whether the branch list is currently being fetched. */
+  onLoadingChange?: (loading: boolean) => void
   namespace: string
   applicationName: string
   env?: string
@@ -28,6 +32,8 @@ export function BranchPicker({
   id,
   value,
   onValueChange,
+  onBranchResolved,
+  onLoadingChange,
   namespace,
   applicationName,
   env,
@@ -37,7 +43,7 @@ export function BranchPicker({
 }: BranchPickerProps) {
   const { t } = useLanguage()
   const [open, setOpen] = React.useState(false)
-  const [branches, setBranches] = React.useState<string[]>([])
+  const [branches, setBranches] = React.useState<GitBranch[]>([])
   const [loading, setLoading] = React.useState(false)
   const [failed, setFailed] = React.useState(false)
   const [highlight, setHighlight] = React.useState(-1)
@@ -84,6 +90,16 @@ export function BranchPicker({
     }
   }, [namespace, applicationName, env])
 
+  // Load once per environment so the commit next to the input shows without opening the list.
+  React.useEffect(() => {
+    if (!env || disabled) return
+    loadBranches()
+  }, [env, disabled, loadBranches])
+
+  React.useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
+
   const openList = () => {
     if (disabled) return
     setOpen(true)
@@ -93,12 +109,23 @@ export function BranchPicker({
   }
 
   const query = value.trim().toLowerCase()
-  const matches = branches.some((branch) => branch.toLowerCase() === query)
+  const exact = branches.find((branch) => branch.name.toLowerCase() === query) ?? null
+  const matches = exact
     ? branches
-    : branches.filter((branch) => branch.toLowerCase().includes(query))
+    : branches.filter((branch) => branch.name.toLowerCase().includes(query))
 
-  const commit = (branch: string) => {
-    onValueChange(branch)
+  // Whatever is typed, tell the parent which known branch it currently names so it can show
+  // that branch's tip commit next to the input.
+  const resolvedRef = React.useRef<GitBranch | null | undefined>(undefined)
+  React.useEffect(() => {
+    if (!onBranchResolved) return
+    if (resolvedRef.current === exact) return
+    resolvedRef.current = exact
+    onBranchResolved(exact)
+  }, [exact, onBranchResolved])
+
+  const commit = (branch: GitBranch) => {
+    onValueChange(branch.name)
     setOpen(false)
     setHighlight(-1)
   }
@@ -163,18 +190,21 @@ export function BranchPicker({
             <div className="max-h-60 overflow-y-auto py-1">
               {matches.map((branch, index) => (
                 <button
-                  key={branch}
+                  key={branch.name}
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setHighlight(index)}
                   onClick={() => commit(branch)}
                   className={cn(
-                    "flex w-full cursor-pointer items-center gap-2 px-3 py-1.5 text-left text-sm",
+                    "flex w-full cursor-pointer items-start gap-2 px-3 py-1.5 text-left text-sm",
                     index === highlight && "bg-accent text-accent-foreground"
                   )}
                 >
-                  <Check className={cn("size-4 shrink-0", branch === value ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">{branch}</span>
+                  <Check className={cn("mt-0.5 size-4 shrink-0", branch.name === value ? "opacity-100" : "opacity-0")} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate">{branch.name}</span>
+                    <BranchCommitLine branch={branch} className="block truncate text-xs text-muted-foreground" />
+                  </span>
                 </button>
               ))}
             </div>
@@ -183,4 +213,35 @@ export function BranchPicker({
       )}
     </div>
   )
+}
+
+/**
+ * One-line summary of a branch tip: short SHA, then the subject, author and relative age when the
+ * backend managed to read the commit itself.
+ */
+export function BranchCommitLine({ branch, className }: { branch: GitBranch; className?: string }) {
+  const { t } = useLanguage()
+  const parts: string[] = [branch.commitId.slice(0, 7)]
+  if (branch.commitMessage) parts.push(branch.commitMessage)
+  const meta: string[] = []
+  if (branch.commitAuthor) meta.push(branch.commitAuthor)
+  if (branch.committedAt) meta.push(formatRelativeTime(branch.committedAt, t))
+  return (
+    <span className={className} title={[...parts, ...meta].join(" · ")}>
+      {parts.join(" ")}
+      {meta.length > 0 && <span className="opacity-70"> · {meta.join(" · ")}</span>}
+    </span>
+  )
+}
+
+function formatRelativeTime(iso: string, t: (key: string) => string): string {
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const minutes = Math.max(0, Math.floor(diffMs / 60000))
+  const ago = (key: string, count: number) => t(key).replace("{count}", String(count))
+  if (minutes < 60) return ago("apps.publish.commitMinutesAgo", minutes)
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return ago("apps.publish.commitHoursAgo", hours)
+  const days = Math.floor(hours / 24)
+  if (days < 30) return ago("apps.publish.commitDaysAgo", days)
+  return new Date(iso).toLocaleDateString()
 }

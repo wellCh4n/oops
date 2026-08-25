@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.infrastructure.git;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.wellch4n.oops.application.dto.GitBranchView;
 import com.github.wellch4n.oops.application.port.GitRepositoryGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.shared.exception.BizException;
@@ -18,9 +19,12 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -31,8 +35,21 @@ import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.InvalidRemoteException;
+import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.internal.storage.dfs.DfsRepositoryDescription;
+import org.eclipse.jgit.internal.storage.dfs.InMemoryRepository;
+import org.eclipse.jgit.lib.NullProgressMonitor;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.transport.FilterSpec;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.Transport;
+import org.eclipse.jgit.transport.URIish;
 import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.transport.sshd.JGitKeyCache;
@@ -56,48 +73,54 @@ public class JGitRepositoryGateway implements GitRepositoryGateway {
     private static final int TIMEOUT_SECONDS = 15;
     private static final long CACHE_SECONDS = 60L;
 
-    private final Cache<String, List<String>> branchCache = Caffeine.newBuilder()
+    private static final String COMMIT_FILTER_LINE = "blob:none";
+    private static final int MAX_MESSAGE_LENGTH = 200;
+
+    private final Cache<String, List<GitBranchView>> branchCache = Caffeine.newBuilder()
             .expireAfterWrite(CACHE_SECONDS, TimeUnit.SECONDS)
             .maximumSize(500)
             .build();
 
     @Override
-    public List<String> listRemoteBranches(Environment environment, String repositoryUrl) {
+    public List<GitBranchView> listRemoteBranches(Environment environment, String repositoryUrl) {
         String key = environment.getName() + "|" + repositoryUrl;
         return branchCache.get(key, ignored -> fetchRemoteBranches(environment, repositoryUrl));
     }
 
-    private List<String> fetchRemoteBranches(Environment environment, String repositoryUrl) {
+    private List<GitBranchView> fetchRemoteBranches(Environment environment, String repositoryUrl) {
         Environment.GitCredential gitCredential = environment.getGitCredential();
         boolean overSsh = isSshUrl(repositoryUrl);
         SshdSessionFactory sshSessionFactory = overSsh ? createSshSessionFactory(gitCredential) : null;
+        TransportConfigCallback transportConfig = transport -> {
+            if (transport instanceof SshTransport sshTransport && sshSessionFactory != null) {
+                sshTransport.setSshSessionFactory(sshSessionFactory);
+            }
+        };
+        CredentialsProvider credentialsProvider = overSsh ? null : createCredentialsProvider(gitCredential);
 
         try {
             LsRemoteCommand command = Git.lsRemoteRepository()
                     .setRemote(repositoryUrl)
                     .setHeads(true)
-                    .setTimeout(TIMEOUT_SECONDS);
-
-            if (overSsh) {
-                command.setTransportConfigCallback(transport -> {
-                    if (transport instanceof SshTransport sshTransport) {
-                        sshTransport.setSshSessionFactory(sshSessionFactory);
-                    }
-                });
-            } else {
-                CredentialsProvider credentialsProvider = createCredentialsProvider(gitCredential);
-                if (credentialsProvider != null) {
-                    command.setCredentialsProvider(credentialsProvider);
-                }
+                    .setTimeout(TIMEOUT_SECONDS)
+                    .setTransportConfigCallback(transportConfig);
+            if (credentialsProvider != null) {
+                command.setCredentialsProvider(credentialsProvider);
             }
 
             Collection<Ref> refs = command.call();
-            return refs.stream()
-                    .map(Ref::getName)
-                    .filter(refName -> refName.startsWith(BRANCH_REF_PREFIX))
-                    .map(refName -> refName.substring(BRANCH_REF_PREFIX.length()))
-                    .distinct()
-                    .sorted()
+            Map<String, ObjectId> tips = new HashMap<>();
+            for (Ref ref : refs) {
+                if (ref.getName().startsWith(BRANCH_REF_PREFIX) && ref.getObjectId() != null) {
+                    tips.putIfAbsent(ref.getName().substring(BRANCH_REF_PREFIX.length()), ref.getObjectId());
+                }
+            }
+
+            Map<ObjectId, RevCommit> commits = fetchTipCommits(
+                    repositoryUrl, tips.values(), transportConfig, credentialsProvider);
+            return tips.entrySet().stream()
+                    .map(entry -> toView(entry.getKey(), entry.getValue(), commits.get(entry.getValue())))
+                    .sorted((left, right) -> left.name().compareTo(right.name()))
                     .toList();
         } catch (GitAPIException exception) {
             log.warn("Failed to list remote branches of {} in environment {}",
@@ -108,6 +131,68 @@ public class JGitRepositoryGateway implements GitRepositoryGateway {
                 sshSessionFactory.close();
             }
         }
+    }
+
+    /**
+     * Pulls only the tip commit of every branch into a throwaway in-memory repository: depth 1 so
+     * no history comes along, and a {@code blob:none} filter so no file contents do either. This
+     * is best effort — a remote that rejects shallow or partial fetches just leaves the commit
+     * details empty, the branch list itself is already in hand.
+     */
+    private Map<ObjectId, RevCommit> fetchTipCommits(String repositoryUrl,
+                                                     Collection<ObjectId> tips,
+                                                     TransportConfigCallback transportConfig,
+                                                     CredentialsProvider credentialsProvider) {
+        Map<ObjectId, RevCommit> commits = new HashMap<>();
+        if (tips.isEmpty()) {
+            return commits;
+        }
+        List<RefSpec> refSpecs = tips.stream()
+                .distinct()
+                .map(tip -> new RefSpec(tip.name() + ":refs/tips/" + tip.name()))
+                .toList();
+
+        try (InMemoryRepository repository = new InMemoryRepository(new DfsRepositoryDescription("oops-branch-tips"));
+             Transport transport = Transport.open(repository, new URIish(repositoryUrl))) {
+            transportConfig.configure(transport);
+            if (credentialsProvider != null) {
+                transport.setCredentialsProvider(credentialsProvider);
+            }
+            transport.setTimeout(TIMEOUT_SECONDS);
+            transport.setDepth(1);
+            transport.setFilterSpec(FilterSpec.fromFilterLine(COMMIT_FILTER_LINE));
+            transport.fetch(NullProgressMonitor.INSTANCE, refSpecs);
+
+            try (RevWalk revWalk = new RevWalk(repository)) {
+                for (ObjectId tip : tips) {
+                    try {
+                        commits.put(tip, revWalk.parseCommit(tip));
+                    } catch (MissingObjectException exception) {
+                        log.debug("Tip {} of {} was not delivered by the remote", tip.name(), repositoryUrl);
+                    }
+                }
+            }
+        } catch (Exception exception) {
+            log.info("Could not read tip commits of {}, branches will carry the SHA only: {}",
+                    repositoryUrl, exception.getMessage());
+        }
+        return commits;
+    }
+
+    private static GitBranchView toView(String name, ObjectId tip, RevCommit commit) {
+        if (commit == null) {
+            return GitBranchView.of(name, tip.name());
+        }
+        PersonIdent author = commit.getAuthorIdent();
+        Instant committedAt = commit.getCommitterIdent() != null
+                ? commit.getCommitterIdent().getWhenAsInstant()
+                : null;
+        return new GitBranchView(
+                name,
+                tip.name(),
+                StringUtils.abbreviate(commit.getShortMessage(), MAX_MESSAGE_LENGTH),
+                author != null ? author.getName() : null,
+                committedAt);
     }
 
     private static boolean isSshUrl(String repositoryUrl) {

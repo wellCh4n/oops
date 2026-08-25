@@ -16,6 +16,7 @@ import com.github.wellch4n.oops.application.dto.NamespaceMigrationResult;
 import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
+import com.github.wellch4n.oops.application.dto.GitBranchView;
 import com.github.wellch4n.oops.application.service.ApplicationService;
 import com.github.wellch4n.oops.application.service.GitBranchService;
 import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
@@ -132,7 +133,7 @@ public class ApplicationController {
     }
 
     @GetMapping("/{name}/branches")
-    public Result<List<String>> getApplicationBranches(@PathVariable String namespace,
+    public Result<List<GitBranchView>> getApplicationBranches(@PathVariable String namespace,
                                                        @PathVariable String name,
                                                        @RequestParam String env) {
         return Result.success(gitBranchService.listBranches(namespace, name, env));
