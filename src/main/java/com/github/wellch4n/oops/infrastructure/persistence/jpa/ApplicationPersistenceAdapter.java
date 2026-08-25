@@ -59,7 +59,7 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
             int page,
             int size
     ) {
-        var result = applicationRepository.findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
+        var result = applicationRepository.findByNamespaceAndNameContainingIgnoreCaseOrderByPublishAndOwnerAndCreatedTime(
                 namespace, keyword, currentUserId, ownerId, PageRequest.of(Math.max(page - 1, 0), size));
         return new PageResult<>(
                 result.getTotalElements(),

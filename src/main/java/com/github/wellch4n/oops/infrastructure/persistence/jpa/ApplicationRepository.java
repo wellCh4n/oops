@@ -24,8 +24,24 @@ public interface ApplicationRepository extends JpaRepository<Application, String
 
     Page<Application> findByNamespaceAndNameContainingIgnoreCase(String namespace, String keyword, Pageable pageable);
 
-    @Query("SELECT a FROM Application a WHERE (:namespace = 'all' OR a.namespace = :namespace) AND (LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(a.description, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:ownerId IS NULL OR a.owner = :ownerId) ORDER BY CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC")
-    Page<Application> findByNamespaceAndNameContainingIgnoreCaseOrderByOwnerAndCreatedTime(
+    /**
+     * Ordered so the applications a user actually works on surface first: the ones they published most recently
+     * (any pipeline they triggered, newest publish first), then the ones they own, then everything else, each group
+     * newest-created first.
+     * <p>
+     * The last-publish subquery appears once and only in ORDER BY: it is a sort key, not data the caller needs, and
+     * MySQL may re-evaluate every copy of a correlated subquery per row. Applications the user never published sort
+     * last without an explicit null guard because MySQL orders NULL last on DESC.
+     * <p>
+     * There is deliberately no index covering operator_id: the subquery falls back to idx_pipeline_app_created and
+     * filters operator_id row by row. Adding (namespace, application_name, operator_id, created_time) would make it a
+     * single index dive, but that DDL was left out so upgrades never touch a live pipeline table.
+     */
+    @Query(value = "SELECT a "
+            + "FROM Application a WHERE (:namespace = 'all' OR a.namespace = :namespace) AND (LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(a.description, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:ownerId IS NULL OR a.owner = :ownerId) "
+            + "ORDER BY (SELECT MAX(p.createdTime) FROM Pipeline p WHERE p.namespace = a.namespace AND p.applicationName = a.name AND p.operatorId = :currentUserId) DESC, CASE WHEN a.owner = :currentUserId THEN 0 ELSE 1 END, a.createdTime DESC",
+            countQuery = "SELECT COUNT(a) FROM Application a WHERE (:namespace = 'all' OR a.namespace = :namespace) AND (LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(a.description, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND (:ownerId IS NULL OR a.owner = :ownerId)")
+    Page<Application> findByNamespaceAndNameContainingIgnoreCaseOrderByPublishAndOwnerAndCreatedTime(
             @Param("namespace") String namespace,
             @Param("keyword") String keyword,
             @Param("currentUserId") String currentUserId,
