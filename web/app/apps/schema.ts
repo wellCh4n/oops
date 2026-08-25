@@ -128,9 +128,6 @@ export const applicationServiceSchema = z.object({
     hosts: z.array(z.object({
       host: z.string(),
       https: z.boolean(),
-      editing: z.boolean(),
-      prefix: z.string(),
-      suffix: z.string(),
       basicAuthEnabled: z.boolean(),
       basicAuthUsername: z.string(),
       basicAuthPassword: z.string(),

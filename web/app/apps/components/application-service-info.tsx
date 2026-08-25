@@ -7,19 +7,16 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { TagsInput } from "@/components/ui/tags-input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
 import { TabsContent } from "@/components/ui/tabs"
 import { Copyable } from "@/components/ui/copyable"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { Check, ExternalLink, Pencil, Plug, Globe, Info, KeyRound, Plus, Trash2, X, Network } from "lucide-react"
+import { ExternalLink, Lock, LockOpen, Pencil, Plug, Globe, Info, KeyRound, Plus, Trash2, Network } from "lucide-react"
 import { ApplicationEnvironment, ApplicationServiceConfig, ApplicationServiceEnvironmentConfig } from "@/lib/api/types"
 import { updateApplicationService, checkApplicationServiceHost } from "@/lib/api/applications"
 import { Domain, fetchDomains } from "@/lib/api/domains"
-import { isValidHost } from "@/lib/host-validation"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -27,7 +24,7 @@ import { ApplicationTabHandle } from "./application-tab-handle"
 import { useApplicationEditorTab } from "./use-application-editor-tab"
 import { ApplicationServiceFormValues, applicationServiceSchema } from "../schema"
 import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
-import { HostBasicAuth, HostBasicAuthDialog } from "./host-basic-auth-dialog"
+import { HostEditorDialog, HostEditorValue } from "./host-editor-dialog"
 
 interface Props {
   initialServiceConfig?: ApplicationServiceConfig
@@ -36,76 +33,12 @@ interface Props {
   onSaved?: (serviceConfig: ApplicationServiceConfig) => void
 }
 
-interface HostErrorContext {
+type HostFormValue = ApplicationServiceFormValues["environmentConfigs"][number]["hosts"][number]
+
+interface HostEditorTarget {
   environmentName: string
-  hostIndex: number
-}
-
-function splitHost(fullHost: string, domains: Domain[]): { prefix: string; suffix: string } {
-  const lower = fullHost.trim().toLowerCase()
-  if (!lower) return { prefix: "", suffix: "" }
-
-  const hosts = domains.map((domain) => domain.host).sort((a, b) => b.length - a.length)
-  const matchHost = hosts.find((host) => lower === host || lower.endsWith("." + host))
-  if (!matchHost) {
-    return { prefix: lower, suffix: "" }
-  }
-  if (lower === matchHost) {
-    return { prefix: "", suffix: matchHost }
-  }
-
-  return { prefix: lower.slice(0, -(matchHost.length + 1)), suffix: matchHost }
-}
-
-function combineHost(prefix: string, suffix: string) {
-  const normalizedPrefix = prefix.trim().toLowerCase()
-  if (!suffix) {
-    return normalizedPrefix
-  }
-
-  return normalizedPrefix ? `${normalizedPrefix}.${suffix}` : suffix
-}
-
-function createEmptyHost() {
-  return {
-    host: "",
-    https: true,
-    editing: true,
-    prefix: "",
-    suffix: "",
-    basicAuthEnabled: false,
-    basicAuthUsername: "",
-    basicAuthPassword: "",
-    basicAuthPasswordSet: false,
-  }
-}
-
-function normalizeHostForSnapshot(host: ApplicationServiceFormValues["environmentConfigs"][number]["hosts"][number]) {
-  const basicAuth = {
-    basicAuthEnabled: host.basicAuthEnabled,
-    basicAuthUsername: host.basicAuthUsername,
-    basicAuthPassword: host.basicAuthPassword,
-  }
-
-  if (host.editing) {
-    return {
-      host: host.host,
-      https: host.https,
-      editing: true,
-      prefix: host.prefix,
-      suffix: host.suffix,
-      ...basicAuth,
-    }
-  }
-
-  return {
-    host: host.host,
-    https: host.https,
-    editing: false,
-    prefix: "",
-    suffix: "",
-    ...basicAuth,
-  }
+  /** Undefined while adding a new host. */
+  hostIndex?: number
 }
 
 function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig): ApplicationServiceFormValues {
@@ -116,9 +49,6 @@ function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig)
     hosts.push({
       host: config.host?.replace(/^https?:\/\//i, "") ?? "",
       https: config.https ?? true,
-      editing: false,
-      prefix: "",
-      suffix: "",
       basicAuthEnabled: config.basicAuthEnabled ?? false,
       basicAuthUsername: config.basicAuthUsername ?? "",
       basicAuthPassword: "",
@@ -144,12 +74,10 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   onSaved,
 }: Props, ref) {
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
-  const [hostErrors, setHostErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [envsLoading, setEnvsLoading] = useState(!!(namespace && applicationName))
   const [domains, setDomains] = useState<Domain[]>([])
-  const [pendingApexConfirm, setPendingApexConfirm] = useState<HostErrorContext | null>(null)
-  const [basicAuthTarget, setBasicAuthTarget] = useState<HostErrorContext | null>(null)
+  const [hostEditorTarget, setHostEditorTarget] = useState<HostEditorTarget | null>(null)
   const { t } = useLanguage()
 
   const form = useForm<ApplicationServiceFormValues>({
@@ -180,31 +108,16 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     return new Map(environmentConfigs.map((group, index) => [group.environmentName, index]))
   }, [environmentConfigs])
 
-  const pendingApexSuffix = useMemo(() => {
-    if (!pendingApexConfirm) {
-      return ""
+  const editingHost = useMemo<HostFormValue | undefined>(() => {
+    if (!hostEditorTarget || hostEditorTarget.hostIndex == null) {
+      return undefined
     }
-
-    const environmentIndex = environmentIndexByName.get(pendingApexConfirm.environmentName)
+    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environmentName)
     if (environmentIndex == null) {
-      return ""
+      return undefined
     }
-
-    return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${pendingApexConfirm.hostIndex}.suffix`) || ""
-  }, [environmentIndexByName, form, pendingApexConfirm])
-
-  const basicAuthHost = useMemo(() => {
-    if (!basicAuthTarget) {
-      return null
-    }
-
-    const environmentIndex = environmentIndexByName.get(basicAuthTarget.environmentName)
-    if (environmentIndex == null) {
-      return null
-    }
-
-    return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${basicAuthTarget.hostIndex}`) ?? null
-  }, [basicAuthTarget, environmentIndexByName, form])
+    return form.getValues(`environmentConfigs.${environmentIndex}.hosts.${hostEditorTarget.hostIndex}`)
+  }, [environmentIndexByName, form, hostEditorTarget])
 
   const buildSnapshot = useCallback((values: ApplicationServiceFormValues = form.getValues()) => JSON.stringify({
     port: values.port?.trim() ?? "",
@@ -212,7 +125,13 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     pendingInternalPort: pendingInternalPortRef.current.trim(),
     environmentConfigs: (values.environmentConfigs ?? []).map((group) => ({
       environmentName: group.environmentName,
-      hosts: group.hosts.map(normalizeHostForSnapshot),
+      hosts: group.hosts.map((host) => ({
+        host: host.host,
+        https: host.https,
+        basicAuthEnabled: host.basicAuthEnabled,
+        basicAuthUsername: host.basicAuthUsername,
+        basicAuthPassword: host.basicAuthPassword,
+      })),
     })),
   }), [form])
 
@@ -228,51 +147,9 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     })
   }, [environmentIndexByName, form])
 
-  const updateHost = useCallback((environmentName: string, hostIndex: number, patch: Partial<ApplicationServiceFormValues["environmentConfigs"][number]["hosts"][number]>) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      return
-    }
-
-    const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
-    const nextHosts = hosts.map((host, index) => (
-      index === hostIndex ? { ...host, ...patch } : host
-    ))
-    setHosts(environmentName, nextHosts)
-  }, [environmentIndexByName, form, setHosts])
-
-  const hostErrorKey = useCallback((environmentName: string, hostIndex: number) => `${environmentName}::${hostIndex}`, [])
-
-  const clearHostError = useCallback((environmentName: string, hostIndex: number) => {
-    const key = hostErrorKey(environmentName, hostIndex)
-    setHostErrors((current) => {
-      if (!(key in current)) {
-        return current
-      }
-
-      const next = { ...current }
-      delete next[key]
-      return next
-    })
-  }, [hostErrorKey])
-
-  const validateHost = useCallback(async (environmentName: string, hostIndex: number, host: string) => {
-    if (!namespace || !applicationName) return
-
-    const trimmedHost = host.trim()
-    const key = hostErrorKey(environmentName, hostIndex)
-    if (!trimmedHost) {
-      clearHostError(environmentName, hostIndex)
-      return
-    }
-
-    if (!isValidHost(trimmedHost)) {
-      setHostErrors((current) => ({
-        ...current,
-        [key]: t("apps.service.hostInvalid"),
-      }))
-      return
-    }
+  /** Resolves to an error message when the host is already taken, in this form or by another application. */
+  const checkHost = useCallback(async (host: string): Promise<string | null> => {
+    if (!namespace || !applicationName || !hostEditorTarget) return null
 
     const formatMessage = (name: string, ns: string, env: string) =>
       t("apps.service.hostDuplicated")
@@ -282,103 +159,36 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     for (const group of environmentConfigs) {
       for (let index = 0; index < group.hosts.length; index += 1) {
-        if (group.environmentName === environmentName && index === hostIndex) {
-          continue
-        }
-        if (group.hosts[index].host.trim() === trimmedHost) {
-          setHostErrors((current) => ({
-            ...current,
-            [key]: formatMessage(applicationName, namespace, group.environmentName),
-          }))
-          return
+        const isSelf = group.environmentName === hostEditorTarget.environmentName && index === hostEditorTarget.hostIndex
+        if (!isSelf && group.hosts[index].host.trim() === host) {
+          return formatMessage(applicationName, namespace, group.environmentName)
         }
       }
     }
 
     try {
-      const result = await checkApplicationServiceHost(namespace, applicationName, trimmedHost)
+      const result = await checkApplicationServiceHost(namespace, applicationName, host)
       const duplicatedHost = result.data
       if (result.success && duplicatedHost) {
-        setHostErrors((current) => ({
-          ...current,
-          [key]: formatMessage(duplicatedHost.applicationName, duplicatedHost.namespace, duplicatedHost.environmentName),
-        }))
-      } else {
-        clearHostError(environmentName, hostIndex)
+        return formatMessage(duplicatedHost.applicationName, duplicatedHost.namespace, duplicatedHost.environmentName)
       }
     } catch {
-      // ignore transient errors
+      // transient errors are re-checked server-side on save
     }
-  }, [applicationName, clearHostError, environmentConfigs, hostErrorKey, namespace, t])
+    return null
+  }, [applicationName, environmentConfigs, hostEditorTarget, namespace, t])
 
-  const beginEdit = useCallback((environmentName: string, hostIndex: number) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      return
-    }
+  const confirmHostEditor = useCallback((value: HostEditorValue) => {
+    if (!hostEditorTarget) return
+    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environmentName)
+    if (environmentIndex == null) return
 
-    const host = form.getValues(`environmentConfigs.${environmentIndex}.hosts.${hostIndex}`)
-    const { prefix, suffix } = splitHost(host.host, domains)
-    updateHost(environmentName, hostIndex, { editing: true, prefix, suffix })
-  }, [domains, environmentIndexByName, form, updateHost])
-
-  const confirmEdit = useCallback((environmentName: string, hostIndex: number) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      return
-    }
-
-    const host = form.getValues(`environmentConfigs.${environmentIndex}.hosts.${hostIndex}`)
-    if (!host.suffix) {
-      toast.error(t("apps.service.suffixRequired"))
-      return
-    }
-    if (!host.prefix.trim()) {
-      setPendingApexConfirm({ environmentName, hostIndex })
-      return
-    }
-
-    const combinedHost = combineHost(host.prefix, host.suffix)
-    updateHost(environmentName, hostIndex, {
-      host: combinedHost,
-      editing: false,
-      prefix: "",
-      suffix: "",
-    })
-    void validateHost(environmentName, hostIndex, combinedHost)
-  }, [environmentIndexByName, form, t, updateHost, validateHost])
-
-  const confirmApexEdit = useCallback(() => {
-    if (!pendingApexConfirm) {
-      return
-    }
-
-    const { environmentName, hostIndex } = pendingApexConfirm
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      setPendingApexConfirm(null)
-      return
-    }
-
-    const host = form.getValues(`environmentConfigs.${environmentIndex}.hosts.${hostIndex}`)
-    const combinedHost = combineHost(host.prefix, host.suffix)
-    setPendingApexConfirm(null)
-    updateHost(environmentName, hostIndex, {
-      host: combinedHost,
-      editing: false,
-      prefix: "",
-      suffix: "",
-    })
-    void validateHost(environmentName, hostIndex, combinedHost)
-  }, [environmentIndexByName, form, pendingApexConfirm, updateHost, validateHost])
-
-  const confirmBasicAuth = useCallback((value: HostBasicAuth) => {
-    if (!basicAuthTarget) {
-      return
-    }
-
-    updateHost(basicAuthTarget.environmentName, basicAuthTarget.hostIndex, value)
-  }, [basicAuthTarget, updateHost])
+    const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
+    const nextHosts = hostEditorTarget.hostIndex == null
+      ? [...hosts, value]
+      : hosts.map((host, index) => (index === hostEditorTarget.hostIndex ? value : host))
+    setHosts(hostEditorTarget.environmentName, nextHosts)
+  }, [environmentIndexByName, form, hostEditorTarget, setHosts])
 
   const removeHost = useCallback((environmentName: string, hostIndex: number) => {
     const environmentIndex = environmentIndexByName.get(environmentName)
@@ -388,47 +198,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
     setHosts(environmentName, hosts.filter((_, index) => index !== hostIndex))
-    setHostErrors((current) => {
-      const next: Record<string, string> = {}
-      Object.entries(current).forEach(([key, message]) => {
-        const [envName, indexText] = key.split("::")
-        const index = Number(indexText)
-        if (envName !== environmentName) {
-          next[key] = message
-        } else if (index < hostIndex) {
-          next[key] = message
-        } else if (index > hostIndex) {
-          next[`${envName}::${index - 1}`] = message
-        }
-      })
-      return next
-    })
   }, [environmentIndexByName, form, setHosts])
 
-  const cancelEdit = useCallback((environmentName: string, hostIndex: number) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      return
-    }
-
-    const host = form.getValues(`environmentConfigs.${environmentIndex}.hosts.${hostIndex}`)
-    if (!host.host) {
-      removeHost(environmentName, hostIndex)
-      return
-    }
-
-    updateHost(environmentName, hostIndex, { editing: false, prefix: "", suffix: "" })
-  }, [environmentIndexByName, form, removeHost, updateHost])
-
-  const addHost = useCallback((environmentName: string) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
-    if (environmentIndex == null) {
-      return
-    }
-
-    const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
-    setHosts(environmentName, [...hosts, createEmptyHost()])
-  }, [environmentIndexByName, form, setHosts])
 
   const validateInternalPort = useCallback((value: string) => {
     // Require a plain decimal integer in range — reject "1e4", "9090.0", "+80", etc.
@@ -532,25 +303,6 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
       }
     }
 
-    const hasPending = values.environmentConfigs.some((group) => group.hosts.some((host) => host.editing))
-    if (hasPending) {
-      toast.error(t("apps.service.confirmPending"))
-      return false
-    }
-
-    if (Object.keys(hostErrors).length > 0) {
-      toast.error(Object.values(hostErrors)[0])
-      return false
-    }
-
-    const invalidHost = values.environmentConfigs
-      .flatMap((group) => group.hosts)
-      .map((host) => host.host.trim())
-      .find((host) => host && !isValidHost(host))
-    if (invalidHost) {
-      toast.error(t("apps.service.hostInvalid"))
-      return false
-    }
 
     const environmentConfigsPayload: ApplicationServiceEnvironmentConfig[] = []
     for (const group of values.environmentConfigs) {
@@ -627,7 +379,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     } finally {
       setSaving(false)
     }
-  }, [applicationName, form, hostErrors, namespace, onSaved, t])
+  }, [applicationName, form, namespace, onSaved, t])
 
   const saveCurrentTab = useCallback(async () => {
     let success = false
@@ -761,72 +513,23 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                             {t("apps.service.noDomainSuffix")}
                           </div>
                         ) : (
-                          group.hosts.map((hostConfig, hostIndex) => {
-                            const error = hostErrors[hostErrorKey(group.environmentName, hostIndex)]
-
-                            return (
-                              <div key={`${group.environmentName}-${hostIndex}`} className="flex w-full items-start gap-2">
-                                {hostConfig.editing && (
-                                  <div className="flex h-9 items-center gap-2">
-                                    <Checkbox
-                                      id={`service-https-${group.environmentName}-${hostIndex}`}
-                                      checked={hostConfig.https}
-                                      onCheckedChange={(checked) => {
-                                        updateHost(group.environmentName, hostIndex, { https: checked === true })
-                                      }}
-                                    />
-                                    <Label htmlFor={`service-https-${group.environmentName}-${hostIndex}`}>HTTPS</Label>
-                                  </div>
-                                )}
-
-                                <div className="flex flex-1 flex-col gap-1">
-                                  {hostConfig.editing ? (
-                                    <div className="flex items-center gap-1">
-                                      <Input
-                                        className="flex-1"
-                                        autoComplete="off"
-                                        value={hostConfig.prefix}
-                                        onChange={(event) => {
-                                          updateHost(group.environmentName, hostIndex, {
-                                            prefix: event.target.value.trim().toLowerCase(),
-                                          })
-                                        }}
-                                        placeholder={t("apps.service.prefixPlaceholder")}
-                                      />
-                                      <span className="text-muted-foreground">.</span>
-                                      <Select
-                                        value={hostConfig.suffix}
-                                        onValueChange={(value) => {
-                                          updateHost(group.environmentName, hostIndex, { suffix: value ?? undefined })
-                                        }}
-                                      >
-                                        <SelectTrigger className="flex-1">
-                                          <SelectValue placeholder={t("apps.service.suffixPlaceholder")}>
-                                            {hostConfig.suffix}
-                                          </SelectValue>
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {environmentDomains.map((domain) => (
-                                            <SelectItem key={domain.id} value={domain.host}>
-                                              <div className="flex flex-col items-start">
-                                                <span>{domain.host}</span>
-                                                {domain.description && (
-                                                  <span className="text-xs text-muted-foreground">{domain.description}</span>
-                                                )}
-                                              </div>
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  ) : hostConfig.host ? (
-                                    <div className="flex h-9 items-center gap-2">
-                                      <Copyable
-                                        value={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
-                                        maxLength={Infinity}
-                                      />
+                          group.hosts.length === 0 ? (
+                            <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed text-center">
+                              {t("apps.service.noHosts")}
+                            </div>
+                          ) : (
+                            <div className="divide-y rounded-md border">
+                              {group.hosts.map((hostConfig, hostIndex) => {
+                                const url = `${hostConfig.https ? "https" : "http"}://${hostConfig.host}`
+                                return (
+                                  <div key={`${group.environmentName}-${hostIndex}`} className="flex items-center gap-2 px-3 py-2">
+                                    {hostConfig.https
+                                      ? <Lock className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
+                                      : <LockOpen className="size-4 shrink-0 text-muted-foreground" />}
+                                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                                      <Copyable value={url} maxLength={Infinity} />
                                       <a
-                                        href={`${hostConfig.https ? "https" : "http"}://${hostConfig.host}`}
+                                        href={url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-muted-foreground hover:text-foreground transition-colors"
@@ -834,82 +537,40 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                         <ExternalLink className="size-4" />
                                       </a>
                                     </div>
-                                  ) : (
-                                    <span className="h-9 inline-flex items-center text-sm text-muted-foreground">
-                                      {t("apps.service.domainPlaceholder")}
-                                    </span>
-                                  )}
-                                  {error && <p className="text-xs text-destructive">{error}</p>}
-                                </div>
-
-                                {!hostConfig.editing && (
-                                  <Tooltip>
-                                    <TooltipTrigger
-                                      render={
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="icon"
-                                          aria-label={t("apps.service.basicAuth.title")}
-                                          onClick={() => setBasicAuthTarget({ environmentName: group.environmentName, hostIndex })}
-                                        />
-                                      }
+                                    {hostConfig.basicAuthEnabled && (
+                                      <Tooltip>
+                                        <TooltipTrigger render={<Badge variant="secondary" className="gap-1 cursor-default" />}>
+                                          <KeyRound className="size-3" />
+                                          {t("apps.service.basicAuth.title")}
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-xs">
+                                          {t("apps.service.basicAuth.enabledTooltip").replace("{username}", hostConfig.basicAuthUsername)}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      aria-label={t("apps.service.editHost")}
+                                      onClick={() => setHostEditorTarget({ environmentName: group.environmentName, hostIndex })}
                                     >
-                                      <KeyRound className={hostConfig.basicAuthEnabled ? "size-4 text-primary" : "size-4"} />
-                                    </TooltipTrigger>
-                                    <TooltipContent className="text-xs">
-                                      {hostConfig.basicAuthEnabled
-                                        ? t("apps.service.basicAuth.enabledTooltip").replace("{username}", hostConfig.basicAuthUsername)
-                                        : t("apps.service.basicAuth.title")}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-
-                                {hostConfig.editing ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label={t("apps.service.confirmHost")}
-                                    onClick={() => confirmEdit(group.environmentName, hostIndex)}
-                                  >
-                                    <Check className="size-4" />
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label={t("apps.service.editHost")}
-                                    onClick={() => beginEdit(group.environmentName, hostIndex)}
-                                  >
-                                    <Pencil className="size-4" />
-                                  </Button>
-                                )}
-
-                                {hostConfig.editing ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    aria-label={t("apps.service.cancelHost")}
-                                    onClick={() => cancelEdit(group.environmentName, hostIndex)}
-                                  >
-                                    <X className="size-4" />
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => removeHost(group.environmentName, hostIndex)}
-                                  >
-                                    <Trash2 className="size-4 text-destructive" />
-                                  </Button>
-                                )}
-                              </div>
-                            )
-                          })
+                                      <Pencil className="size-4" />
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      aria-label={t("common.delete")}
+                                      onClick={() => removeHost(group.environmentName, hostIndex)}
+                                    >
+                                      <Trash2 className="size-4 text-destructive" />
+                                    </Button>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
                         )}
 
                         {environmentDomains.length > 0 && (
@@ -917,7 +578,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                             type="button"
                             variant="outline"
                             className="w-full"
-                            onClick={() => addHost(group.environmentName)}
+                            onClick={() => setHostEditorTarget({ environmentName: group.environmentName })}
                           >
                             <Plus className="size-4 mr-1" />
                             {t("apps.service.addHost")}
@@ -938,35 +599,16 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
         </Button>
       </div>
 
-      {basicAuthTarget && basicAuthHost && (
-        <HostBasicAuthDialog
-          key={`${basicAuthTarget.environmentName}-${basicAuthTarget.hostIndex}`}
-          onOpenChange={(open) => { if (!open) setBasicAuthTarget(null) }}
-          host={basicAuthHost.host}
-          value={{
-            basicAuthEnabled: basicAuthHost.basicAuthEnabled,
-            basicAuthUsername: basicAuthHost.basicAuthUsername,
-            basicAuthPassword: basicAuthHost.basicAuthPassword,
-            basicAuthPasswordSet: basicAuthHost.basicAuthPasswordSet,
-          }}
-          onConfirm={confirmBasicAuth}
+      {hostEditorTarget && (
+        <HostEditorDialog
+          key={`${hostEditorTarget.environmentName}-${hostEditorTarget.hostIndex ?? "new"}`}
+          value={editingHost}
+          domains={domains.filter((domain) => domain.environmentName === hostEditorTarget.environmentName)}
+          onOpenChange={(open) => { if (!open) setHostEditorTarget(null) }}
+          checkHost={checkHost}
+          onConfirm={confirmHostEditor}
         />
       )}
-
-      <AlertDialog open={!!pendingApexConfirm} onOpenChange={(open) => { if (!open) setPendingApexConfirm(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("apps.service.apexConfirmTitle")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("apps.service.apexConfirmDesc").replace("{host}", pendingApexSuffix)}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingApexConfirm(null)}>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmApexEdit}>{t("common.confirm")}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
           </form>
         </Form>
       </div>
