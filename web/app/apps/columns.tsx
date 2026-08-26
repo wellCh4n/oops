@@ -103,7 +103,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Application>[]
       if (!desc) return null
       return (
         <Tooltip>
-          <TooltipTrigger render={<span className="block max-w-48 truncate cursor-default" />}>
+          <TooltipTrigger render={<span className="inline-block max-w-48 truncate align-middle cursor-default" />}>
             {desc}
           </TooltipTrigger>
           <TooltipContent>
