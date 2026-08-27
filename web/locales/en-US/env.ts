@@ -16,6 +16,8 @@ const env = {
   "env.col.name": "Name",
   "env.col.workNamespace": "Work Namespace",
   "env.col.imageRepo": "Image Repository",
+  "env.tab.basic": "Cluster",
+  "env.tab.credentials": "Registry",
   "env.basicInfo": "Basic Info",
   "env.k8sConfig": "Kubernetes Config",
   "env.validated": "Validated",

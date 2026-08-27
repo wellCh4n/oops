@@ -70,19 +70,33 @@ export async function validateImageRepository(data: { url?: string; username?: s
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
-export async function updateEnvironment(id: string, data: EnvironmentFormValues): Promise<ApiResponse<boolean>> {
-  const response = await apiFetch(`/api/environments/${id}`, {
+export async function updateEnvironmentCluster(
+  id: string,
+  data: Pick<EnvironmentFormValues, "kubernetesApiServer" | "workNamespace" | "buildStorageClass">
+): Promise<ApiResponse<boolean>> {
+  const response = await apiFetch(`/api/environments/${id}/cluster`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-
   if (!response.ok) {
-    throw new Error("Failed to update environment")
+    throw new Error("Failed to update environment cluster config")
   }
+  return response.json() as Promise<ApiResponse<boolean>>
+}
 
+export async function updateEnvironmentCredentials(
+  id: string,
+  data: Pick<EnvironmentFormValues, "imageRepository" | "gitCredential">
+): Promise<ApiResponse<boolean>> {
+  const response = await apiFetch(`/api/environments/${id}/credentials`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+  if (!response.ok) {
+    throw new Error("Failed to update environment credentials")
+  }
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
