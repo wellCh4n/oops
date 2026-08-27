@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
@@ -25,19 +26,10 @@ type DeployRequest struct {
 	} `json:"strategy"`
 }
 
-type bizError struct{ message string }
-
-func (e *bizError) Error() string { return e.message }
-
 // IsBizError reports whether the failure carries a user-facing message.
-func IsBizError(err error) bool {
-	_, matches := err.(*bizError)
-	return matches
-}
+func IsBizError(err error) bool { return domain.IsBizError(err) }
 
-func bizf(format string, args ...any) error {
-	return &bizError{message: fmt.Sprintf(format, args...)}
-}
+func bizf(format string, args ...any) error { return domain.Bizf(format, args...) }
 
 // DeployApplication mirrors DeploymentService.deployApplication.
 func (engine *Engine) DeployApplication(ctx context.Context, namespace, applicationName string, request *DeployRequest, operatorID string) (string, error) {
@@ -309,7 +301,7 @@ func (engine *Engine) Stop(ctx context.Context, namespace, applicationName, id s
 	if pipeline.Status != nil {
 		current = *pipeline.Status
 	}
-	if err := ensureCanTransition(current, store.StatusStopped); err != nil {
+	if err := domain.EnsurePipelineTransition(current, store.StatusStopped); err != nil {
 		return bizf("%s", err.Error())
 	}
 	if current != store.StatusBuildSucceeded {

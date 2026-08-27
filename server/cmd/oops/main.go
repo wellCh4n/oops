@@ -8,6 +8,7 @@ import (
 
 	"github.com/wellch4n/oops/server/internal/config"
 	"github.com/wellch4n/oops/server/internal/crypto"
+	"github.com/wellch4n/oops/server/internal/feishu"
 	"github.com/wellch4n/oops/server/internal/httpapi"
 	"github.com/wellch4n/oops/server/internal/store"
 )
@@ -35,6 +36,12 @@ func main() {
 	server := httpapi.NewServer(cfg, st)
 	server.Engine().Run(context.Background())
 	server.Engine().RunResourceAlerts(context.Background(), server.AlertConfig())
+	// Inbound Feishu events are double-gated, like the Java bean's
+	// @ConditionalOnProperty on both names: resignations are the only
+	// subscription, so with the switch off there is no socket worth opening.
+	if cfg.Oops.Feishu.Enabled && cfg.Oops.Feishu.SyncUserDeactivation {
+		feishu.RunEventClient(context.Background(), cfg.Oops.Feishu.AppID, cfg.Oops.Feishu.AppSecret, st)
+	}
 	log.Printf("oops server listening on %s", *listen)
 	if err := http.ListenAndServe(*listen, server.Handler()); err != nil {
 		log.Fatal(err)

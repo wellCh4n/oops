@@ -3,18 +3,20 @@ package store
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
-// Pipeline statuses, mirroring PipelineStatus.
+// Pipeline statuses re-exported from domain for existing call sites.
 const (
-	StatusInitialized    = "INITIALIZED"
-	StatusRunning        = "RUNNING"
-	StatusBuildSucceeded = "BUILD_SUCCEEDED"
-	StatusDeploying      = "DEPLOYING"
-	StatusRollingOut     = "ROLLING_OUT"
-	StatusSucceeded      = "SUCCEEDED"
-	StatusError          = "ERROR"
-	StatusStopped        = "STOPPED"
+	StatusInitialized    = domain.PipelineInitialized
+	StatusRunning        = domain.PipelineRunning
+	StatusBuildSucceeded = domain.PipelineBuildSucceeded
+	StatusDeploying      = domain.PipelineDeploying
+	StatusRollingOut     = domain.PipelineRollingOut
+	StatusSucceeded      = domain.PipelineSucceeded
+	StatusError          = domain.PipelineError
+	StatusStopped        = domain.PipelineStopped
 )
 
 // CreatePipeline inserts an INITIALIZED pipeline and returns its id.

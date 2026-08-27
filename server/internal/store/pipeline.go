@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+
 	"errors"
 	"fmt"
+	"github.com/wellch4n/oops/server/internal/domain"
 	"strings"
 )
 
@@ -191,7 +193,7 @@ func (s *Store) FindHostConflict(ctx context.Context, namespace, applicationName
 }
 
 // ActivePipelineStatuses mirrors DeploymentConcurrencyPolicy.
-var ActivePipelineStatuses = []string{"RUNNING", "DEPLOYING", "ROLLING_OUT"}
+var ActivePipelineStatuses = domain.ActivePipelineStatuses
 
 // FindActiveDeployments returns in-flight pipelines, newest first. Namespace
 // "all" spans every namespace, matching PipelineService.getActiveDeployments.

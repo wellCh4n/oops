@@ -6,41 +6,18 @@ import (
 	"database/sql"
 	"encoding/pem"
 	"errors"
-	"fmt"
-	"regexp"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 	"strings"
 	"time"
 )
 
-var hostPattern = regexp.MustCompile(`^([a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)(\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)+$`)
+// The host policy and BizError live in domain; thin aliases keep call sites terse.
+func bizErrorf(format string, args ...any) error { return domain.Bizf(format, args...) }
 
-// BizError carries a user-facing failure message, the Go form of BizException.
-type BizError struct{ Message string }
+func NormalizeHost(host string) string { return domain.NormalizeHost(host) }
 
-func (e *BizError) Error() string { return e.Message }
-
-func bizErrorf(format string, args ...any) error {
-	return &BizError{Message: fmt.Sprintf(format, args...)}
-}
-
-// NormalizeHost mirrors DomainPolicy.normalizeHost: trim and strip "*.".
-func NormalizeHost(host string) string {
-	trimmed := strings.TrimSpace(host)
-	return strings.TrimPrefix(trimmed, "*.")
-}
-
-func ValidateHost(host string) error {
-	if host == "" {
-		return bizErrorf("Domain host is required")
-	}
-	if host != strings.ToLower(host) {
-		return bizErrorf("Domain must be lowercase: %s", host)
-	}
-	if !hostPattern.MatchString(host) {
-		return bizErrorf("Invalid domain format: %s", host)
-	}
-	return nil
-}
+func ValidateHost(host string) error { return domain.ValidateHost(host) }
 
 // UpsertDomainCommand mirrors the Java command object.
 type UpsertDomainCommand struct {

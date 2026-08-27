@@ -94,3 +94,26 @@ func (s *Store) FindUserByAccessToken(ctx context.Context, accessToken string) (
 		"SELECT "+userColumns+" FROM user WHERE access_token = ? LIMIT 1", accessToken)
 	return scanUser(row)
 }
+
+// DeactivateUser mirrors UserService.deactivateUser: disable rather than
+// delete, refusing to disable the last enabled admin (an external directory
+// has no idea it is holding the only key to the installation). Returns whether
+// anything changed.
+func (s *Store) DeactivateUser(ctx context.Context, id string) (bool, error) {
+	user, err := s.FindUserByID(ctx, id)
+	if err != nil || !user.Enabled {
+		return false, nil
+	}
+	if user.Role == "ADMIN" {
+		var enabledAdmins int
+		if err := s.db.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM user WHERE role = 'ADMIN' AND enabled = 1").Scan(&enabledAdmins); err != nil {
+			return false, err
+		}
+		if enabledAdmins <= 1 {
+			return false, nil // last-admin guard; the caller logs
+		}
+	}
+	_, err = s.db.ExecContext(ctx, "UPDATE user SET enabled = 0 WHERE id = ?", id)
+	return err == nil, err
+}

@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+
 	"errors"
-	"regexp"
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
 // Codec is the crypto dependency: environment secrets are encrypted at rest.
@@ -16,11 +17,7 @@ type Codec interface {
 
 func (s *Store) SetCodec(codec Codec) { s.codec = codec }
 
-var environmentNamePattern = regexp.MustCompile(`^[A-Za-z]([-A-Za-z0-9]*[A-Za-z0-9])?$`)
-
-func IsValidEnvironmentName(name string) bool {
-	return name != "" && len(name) <= 24 && environmentNamePattern.MatchString(name)
-}
+func IsValidEnvironmentName(name string) bool { return domain.IsValidEnvironmentName(name) }
 
 // GitCredential mirrors Environment.GitCredential; the whole JSON blob is
 // encrypted at rest by GitCredentialConverter.

@@ -1,19 +1,18 @@
 package httpapi
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
-// respondBiz maps store.BizError to Result.failure like GlobalExceptionHandler.
+// respondBiz maps domain.BizError to Result.failure like GlobalExceptionHandler.
 func respondBiz(c *gin.Context, err error) {
-	var bizError *store.BizError
-	if errors.As(err, &bizError) {
-		c.JSON(http.StatusOK, fail(bizError.Message))
+	if domain.IsBizError(err) {
+		c.JSON(http.StatusOK, fail(err.Error()))
 		return
 	}
 	c.JSON(http.StatusInternalServerError, fail(err.Error()))

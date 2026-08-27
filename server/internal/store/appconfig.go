@@ -174,7 +174,49 @@ func (s *Store) FindRuntimeSpec(ctx context.Context, namespace, applicationName 
 	if err := decodeJSONColumn(healthCheck, &view.HealthCheck); err != nil {
 		return nil, err
 	}
+	normalizeHealthCheck(view.HealthCheck)
 	return &view, nil
+}
+
+// normalizeHealthCheck fills the Java entity's field defaults for keys absent
+// from the stored JSON (Jackson keeps the initializers: enabled=false, path
+// "/", 30/10/3/3), so both backends render the same probe.
+func normalizeHealthCheck(healthCheck *HealthCheck) {
+	if healthCheck == nil {
+		return
+	}
+	normalizeProbe(healthCheck.Liveness)
+	normalizeProbe(healthCheck.Readiness)
+}
+
+func normalizeProbe(probe *Probe) {
+	if probe == nil {
+		return
+	}
+	setBool := func(target **bool, fallback bool) {
+		if *target == nil {
+			value := fallback
+			*target = &value
+		}
+	}
+	setString := func(target **string, fallback string) {
+		if *target == nil {
+			value := fallback
+			*target = &value
+		}
+	}
+	setInt := func(target **int, fallback int) {
+		if *target == nil {
+			value := fallback
+			*target = &value
+		}
+	}
+	setBool(&probe.Enabled, false)
+	setString(&probe.Path, "/")
+	setInt(&probe.InitialDelaySeconds, 30)
+	setInt(&probe.PeriodSeconds, 10)
+	setInt(&probe.TimeoutSeconds, 3)
+	setInt(&probe.FailureThreshold, 3)
 }
 
 type serviceEnvironmentConfigRow struct {
@@ -238,6 +280,11 @@ func (s *Store) FindServiceConfig(ctx context.Context, namespace, applicationNam
 		return nil, err
 	}
 	view.StoredEnvironmentConfigs = rows
+	if rows != nil {
+		// A stored "[]" renders as [] like the Java converter; only a NULL
+		// column stays null.
+		view.EnvironmentConfigs = []ServiceEnvironmentConfig{}
+	}
 	for _, row := range rows {
 		view.EnvironmentConfigs = append(view.EnvironmentConfigs, ServiceEnvironmentConfig{
 			EnvironmentName:      row.EnvironmentName,
