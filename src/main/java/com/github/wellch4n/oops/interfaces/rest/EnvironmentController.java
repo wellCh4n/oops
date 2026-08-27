@@ -37,11 +37,18 @@ public class EnvironmentController {
         return Result.success(environment == null ? null : EnvironmentDto.from(environment));
     }
 
-    @PutMapping("{id}")
+    @PutMapping("{id}/cluster")
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<Boolean> updateEnvironment(@PathVariable String id,
-                                             @RequestBody Environment environment) {
-        return Result.success(environmentService.updateEnvironment(id, environment));
+    public Result<Boolean> updateClusterConfig(@PathVariable String id,
+                                               @RequestBody Environment environment) {
+        return Result.success(environmentService.updateClusterConfig(id, environment));
+    }
+
+    @PutMapping("{id}/credentials")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Boolean> updateCredentialConfig(@PathVariable String id,
+                                                  @RequestBody Environment environment) {
+        return Result.success(environmentService.updateCredentialConfig(id, environment));
     }
 
     @PostMapping

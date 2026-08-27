@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, type CSSProperties } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { Suspense, useState, useEffect, type CSSProperties } from "react"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Check, Loader2, Info, Server, Package, AlertTriangle, KeyRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { EnvironmentFormValues, getEnvironmentSchema } from "../columns"
-import { fetchEnvironment, updateEnvironment, validateKubernetes, validateImageRepository, createNamespace, deleteEnvironment } from "@/lib/api/environments"
+import { fetchEnvironment, updateEnvironmentCluster, updateEnvironmentCredentials, validateKubernetes, validateImageRepository, createNamespace, deleteEnvironment } from "@/lib/api/environments"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import {
   AlertDialog,
@@ -34,9 +35,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+type EnvironmentTab = "basic" | "credentials" | "danger-zone"
+const VALID_TABS = new Set<EnvironmentTab>(["basic", "credentials", "danger-zone"])
+const DEFAULT_TAB: EnvironmentTab = "basic"
+
 export default function EnvironmentEditPage() {
+  return (
+    <Suspense fallback={null}>
+      <EnvironmentEditPageContent />
+    </Suspense>
+  )
+}
+
+function EnvironmentEditPageContent() {
   const params = useParams()
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const rawTab = searchParams.get("tab")
+  const currentTab = rawTab && VALID_TABS.has(rawTab as EnvironmentTab)
+    ? rawTab as EnvironmentTab
+    : DEFAULT_TAB
   const id = params.id as string
   const { t } = useLanguage()
   const [isLoading, setIsLoading] = useState(true)
@@ -57,6 +76,8 @@ export default function EnvironmentEditPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSavingCluster, setIsSavingCluster] = useState(false)
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false)
 
   const form = useForm<EnvironmentFormValues>({
     resolver: zodResolver(getEnvironmentSchema(t)),
@@ -219,18 +240,50 @@ export default function EnvironmentEditPage() {
     }
   }
 
-  const onSubmit = async (data: EnvironmentFormValues) => {
+  const handleTabChange = (value: string | number | null) => {
+    if (!value || !VALID_TABS.has(value as EnvironmentTab)) return
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.set("tab", value as string)
+    router.push(`${pathname}?${nextParams.toString()}`)
+  }
+
+  const handleSaveCluster = async () => {
+    const valid = await form.trigger(["kubernetesApiServer", "workNamespace", "buildStorageClass"])
+    if (!valid) return
+    setIsSavingCluster(true)
     try {
-      const res = await updateEnvironment(id, data)
+      const { kubernetesApiServer, workNamespace, buildStorageClass } = form.getValues()
+      const res = await updateEnvironmentCluster(id, { kubernetesApiServer, workNamespace, buildStorageClass })
       if (res.success) {
         toast.success(t("env.updateSuccess"))
-        router.push("/settings/environments")
       } else {
-        toast.error(t("env.updateError"))
+        toast.error(res.message || t("env.updateError"))
       }
     } catch (e) {
       console.error(e)
       toast.error(t("env.updateError"))
+    } finally {
+      setIsSavingCluster(false)
+    }
+  }
+
+  const handleSaveCredentials = async () => {
+    const valid = await form.trigger(["imageRepository", "gitCredential"])
+    if (!valid) return
+    setIsSavingCredentials(true)
+    try {
+      const { imageRepository, gitCredential } = form.getValues()
+      const res = await updateEnvironmentCredentials(id, { imageRepository, gitCredential })
+      if (res.success) {
+        toast.success(t("env.updateSuccess"))
+      } else {
+        toast.error(res.message || t("env.updateError"))
+      }
+    } catch (e) {
+      console.error(e)
+      toast.error(t("env.updateError"))
+    } finally {
+      setIsSavingCredentials(false)
     }
   }
 
@@ -269,7 +322,15 @@ export default function EnvironmentEditPage() {
       <div className="flex gap-6">
         <div className="flex-1 min-w-0">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="flex w-full flex-col gap-4">
+                <form onSubmit={(event) => event.preventDefault()} className="w-full">
+                <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="basic" className="px-6 cursor-pointer">{t("env.tab.basic")}</TabsTrigger>
+                    <TabsTrigger value="credentials" className="px-6 cursor-pointer">{t("env.tab.credentials")}</TabsTrigger>
+                    <TabsTrigger value="danger-zone" className="px-6 cursor-pointer data-active:bg-destructive data-active:text-white dark:data-active:border-destructive">{t("env.dangerZone")}</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="basic" keepMounted className="flex flex-col gap-4">
                   {/* Basic Info Block */}
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
@@ -399,6 +460,15 @@ export default function EnvironmentEditPage() {
                     </div>
                   </div>
 
+                  <div className="flex">
+                    <Button type="button" onClick={handleSaveCluster} disabled={!isK8sValidated || isSavingCluster}>
+                      {isSavingCluster && <Loader2 className="size-4 animate-spin" />}
+                      {t("env.save")}
+                    </Button>
+                  </div>
+                  </TabsContent>
+
+                  <TabsContent value="credentials" keepMounted className="flex flex-col gap-4">
                   {/* Image Repo Config Block */}
                   <div className="border rounded-lg overflow-hidden">
                     <div className="flex items-center justify-between px-4 py-3 bg-muted/50 border-b">
@@ -584,9 +654,14 @@ export default function EnvironmentEditPage() {
                   </div>
 
                   <div className="flex">
-                    <Button type="submit" disabled={!isK8sValidated || !isRepoValidated}>{t("env.save")}</Button>
+                    <Button type="button" onClick={handleSaveCredentials} disabled={!isRepoValidated || isSavingCredentials}>
+                      {isSavingCredentials && <Loader2 className="size-4 animate-spin" />}
+                      {t("env.save")}
+                    </Button>
                   </div>
+                  </TabsContent>
 
+                  <TabsContent value="danger-zone">
                   {/* Danger Zone Block */}
                   <div className="border border-destructive/30 rounded-lg overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-destructive/10 border-b border-destructive/30">
@@ -615,6 +690,8 @@ export default function EnvironmentEditPage() {
                       </Button>
                     </div>
                   </div>
+                  </TabsContent>
+                </Tabs>
                 </form>
               </Form>
         </div>

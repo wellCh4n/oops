@@ -16,6 +16,8 @@ const env = {
   "env.col.name": "名前",
   "env.col.workNamespace": "作業用名前空間",
   "env.col.imageRepo": "イメージリポジトリ",
+  "env.tab.basic": "クラスター情報",
+  "env.tab.credentials": "リポジトリ情報",
   "env.basicInfo": "基本情報",
   "env.k8sConfig": "Kubernetes 設定",
   "env.validated": "検証済み",

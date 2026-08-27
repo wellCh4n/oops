@@ -16,6 +16,8 @@ const env = {
   "env.col.name": "名称",
   "env.col.workNamespace": "工作命名空间",
   "env.col.imageRepo": "镜像仓库",
+  "env.tab.basic": "集群信息",
+  "env.tab.credentials": "仓库信息",
   "env.basicInfo": "基本信息",
   "env.k8sConfig": "Kubernetes 配置",
   "env.validated": "验证通过",

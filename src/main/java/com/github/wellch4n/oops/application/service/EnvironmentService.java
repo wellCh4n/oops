@@ -6,7 +6,6 @@ import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.util.List;
-import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -43,16 +42,25 @@ public class EnvironmentService {
         return environmentRepository.findById(id).orElse(null);
     }
 
-    public Boolean updateEnvironment(String id, Environment environment) {
-        Optional<Environment> environmentOptional = environmentRepository.findById(id);
-        if (environmentOptional.isEmpty()) {
-            throw new BizException("Environment with id " + id + " does not exist.");
-        }
+    public Boolean updateClusterConfig(String id, Environment environment) {
+        Environment existingEnvironment = environmentRepository.findById(id)
+                .orElseThrow(() -> new BizException("Environment with id " + id + " does not exist."));
 
-        Environment existingEnvironment = environmentOptional.get();
         existingEnvironment.setKubernetesApiServer(environment.getKubernetesApiServer());
-        existingEnvironment.setBuildStorageClass(environment.getBuildStorageClass());
         existingEnvironment.setWorkNamespace(environment.getWorkNamespace());
+        existingEnvironment.setBuildStorageClass(environment.getBuildStorageClass());
+
+        // The work namespace or cluster may have changed — re-sync stored credentials into it.
+        syncDockerHubSecret(existingEnvironment);
+        syncGitCredentialSecret(existingEnvironment);
+        environmentRepository.saveAndFlush(existingEnvironment);
+        return true;
+    }
+
+    public Boolean updateCredentialConfig(String id, Environment environment) {
+        Environment existingEnvironment = environmentRepository.findById(id)
+                .orElseThrow(() -> new BizException("Environment with id " + id + " does not exist."));
+
         existingEnvironment.setImageRepository(environment.getImageRepository());
         existingEnvironment.setGitCredential(environment.getGitCredential());
 
