@@ -53,7 +53,9 @@ public class WebSocketConfiguration implements WebSocketConfigurer {
                 .addHandler(new TerminalWebSocketHandler(environmentService, terminalSessionGateway), "/api/namespaces/{namespace}/applications/{app}/pods/{pod}/terminal")
                 .addHandler(new PodLogWebSocketHandler(environmentService, podLogStreamGateway), "/api/namespaces/{namespace}/applications/{app}/pods/{pod}/log")
                 .addHandler(new PipelineLogWebSocketHandler(environmentService, pipelineService, pipelineLogStreamGateway), "/api/namespaces/{namespace}/applications/{app}/pipelines/{pipelineId}/log")
-                .addHandler(new SandboxTerminalWebSocketHandler(sandboxInstanceService, terminalSessionGateway), "/api/sandbox/instances/{sandboxId}/terminal")
+                .addHandler(new SandboxTerminalWebSocketHandler(sandboxInstanceService, terminalSessionGateway),
+                        "/api/sandbox/instances/{sandboxId}/terminal",
+                        "/openapi/sandbox/instances/{sandboxId}/terminal")
                 .setAllowedOrigins("*");
     }
 }

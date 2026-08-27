@@ -144,6 +144,30 @@ export default function SandboxDocPage() {
         </DocSubSection>
       </DocSection>
 
+      <DocSection title="实例终端（WebSocket）">
+        <Endpoint
+          method="WS"
+          path={`${PATH_PREFIX}/instances/{id}/terminal`}
+          summary="连接到沙箱实例的交互式 TTY 终端（xterm-256color）。"
+        />
+        <DocParagraph>
+          这是一个 WebSocket 端点：握手请求与其他 OpenAPI 接口一样，携带{" "}
+          <InlineCode>Authorization: Bearer &lt;access token&gt;</InlineCode> 请求头（浏览器无法在 WebSocket
+          握手上设置请求头，此端点面向 CLI / 机器客户端）。连接建立后，发送的文本或二进制帧会直接写入远端
+          TTY 的 stdin，终端输出以帧的形式返回。
+        </DocParagraph>
+        <CodeBlock language="python">{`import asyncio, websockets
+
+async def main():
+    url = "ws://oops.example.com/openapi/sandbox/instances/{id}/terminal"
+    headers = {"Authorization": "Bearer <access token>"}
+    async with websockets.connect(url, additional_headers=headers) as ws:
+        await ws.send("ls -la\\n")
+        print(await ws.recv())
+
+asyncio.run(main())`}</CodeBlock>
+      </DocSection>
+
       <DocSection title="文件浏览与下载">
         <Endpoint
           method="GET"

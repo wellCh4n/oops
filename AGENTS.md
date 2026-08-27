@@ -335,7 +335,7 @@ Four handlers registered in `WebSocketConfiguration` (all allow `setAllowedOrigi
 | `.../pods/{pod}/terminal` | Binary+text stdin, Fabric8 `exec` with TTY (`xterm-256color`) |
 | `.../pods/{pod}/log` | Text lines, tail last 2000 lines |
 | `.../pipelines/{pipelineId}/log` | JSON messages (see below) |
-| `/api/sandbox/instances/{sandboxId}/terminal` | Binary+text stdin for a long-lived sandbox instance terminal |
+| `/api/sandbox/instances/{sandboxId}/terminal` | Binary+text stdin for a long-lived sandbox instance terminal (also mapped at `/openapi/sandbox/instances/{sandboxId}/terminal`, authenticated by `OpenApiAuthFilter` via `Authorization` header on the upgrade request — CLI/machine clients only, no `?token=` fallback) |
 
 **Pipeline log message format:**
 ```json

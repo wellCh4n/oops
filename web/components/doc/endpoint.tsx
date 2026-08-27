@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 import { useDocContext } from "./doc-context"
 import { useLanguage } from "@/contexts/language-context"
 
-type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH"
+type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "WS"
 
 const methodStyles: Record<Method, string> = {
   GET: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
@@ -15,6 +15,7 @@ const methodStyles: Record<Method, string> = {
   PUT: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
   DELETE: "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300",
   PATCH: "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300",
+  WS: "bg-indigo-100 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300",
 }
 
 interface EndpointProps {
@@ -69,6 +70,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
         <code className="font-mono text-sm break-all">{path}</code>
       </div>
       {summary && <div className="text-sm text-muted-foreground">{summary}</div>}
+      {method !== "WS" && (
       <div className="relative">
         <pre className="overflow-x-auto rounded-md border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono [font-variant-ligatures:none] [font-feature-settings:'liga'_0,'clig'_0,'calt'_0]">
           <code>{curl}</code>
@@ -84,6 +86,7 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
           {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
         </Button>
       </div>
+      )}
     </div>
   )
 }
