@@ -1,12 +1,82 @@
+// User accounts: queries, paging, and admin/self-service writes.
 package store
 
 import (
 	"context"
 	"errors"
-
 	"github.com/wellch4n/oops/server/internal/domain"
 	"golang.org/x/crypto/bcrypt"
+	"strings"
 )
+
+type User struct {
+	ID          string         `json:"id"`
+	CreatedTime *LocalDateTime `json:"createdTime"`
+	Username    string         `json:"username"`
+	Email       string         `json:"email"`
+	Password    string         `json:"-"`
+	Role        string         `json:"role"`
+	Enabled     bool           `json:"enabled"`
+	AccessToken *string        `json:"accessToken"`
+}
+
+func (User) TableName() string { return "user" }
+
+func (s *Store) FindUserByUsernameOrEmail(ctx context.Context, login string) (*User, error) {
+	var user User
+	err := s.orm.WithContext(ctx).
+		Where("username = ? OR email = ?", login, login).
+		First(&user).Error
+	return &user, notFound(err)
+}
+
+func (s *Store) FindUserByID(ctx context.Context, id string) (*User, error) {
+	var user User
+	err := s.orm.WithContext(ctx).Where("id = ?", id).First(&user).Error
+	return &user, notFound(err)
+}
+
+func (s *Store) UsernamesByIDs(ctx context.Context, ids []string) (map[string]string, error) {
+	names := map[string]string{}
+	if len(ids) == 0 {
+		return names, nil
+	}
+	var users []User
+	if err := s.orm.WithContext(ctx).
+		Select("id", "username").
+		Where("id IN ?", ids).
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	for _, user := range users {
+		names[user.ID] = user.Username
+	}
+	return names, nil
+}
+
+// ListUsers backs GET /api/users: the whole roster, for owner/collaborator pickers.
+func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
+	users := []User{}
+	err := s.orm.WithContext(ctx).Order("created_time").Find(&users).Error
+	return users, err
+}
+
+// PageUsers backs GET /api/users/page: keyword filter over username/email.
+func (s *Store) PageUsers(ctx context.Context, keyword string, page, size int) (int64, []User, error) {
+	pattern := "%" + strings.ToLower(keyword) + "%"
+	query := s.orm.WithContext(ctx).Model(&User{}).
+		Where("LOWER(username) LIKE ? OR LOWER(email) LIKE ?", pattern, pattern)
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return 0, nil, err
+	}
+	users := []User{}
+	err := query.Order("created_time DESC").
+		Limit(size).Offset((max(page, 1) - 1) * size).
+		Find(&users).Error
+	return total, users, err
+}
 
 var (
 	ErrWrongPassword = errors.New("old password is incorrect")

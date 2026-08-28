@@ -39,3 +39,8 @@ func (t LocalDateTime) Value() (driver.Value, error) {
 	}
 	return t.Time, nil
 }
+
+// Now returns the creation timestamp the way BaseDataObject.prePersist does.
+func Now() *LocalDateTime {
+	return &LocalDateTime{Time: time.Now().UTC()}
+}
