@@ -136,21 +136,45 @@ func (client *Client) Authenticate(ctx context.Context, code string) (*UserInfo,
 	}, nil
 }
 
-// SendCardToUser mirrors FeishuMessageStrategy: an interactive card addressed
-// by the receiver's Feishu user id.
-func (client *Client) SendCardToUser(ctx context.Context, providerUserID, title, text string) error {
+// CardFact is one short field on the card's fact grid.
+type CardFact struct{ Label, Value string }
+
+// SendCardToUser mirrors FeishuMessageStrategy.buildCard: a colored header
+// (template by message level), a two-column fact grid, and optional artifact
+// and detail sections.
+func (client *Client) SendCardToUser(ctx context.Context, providerUserID, title, template string, facts []CardFact, artifact, detail string) error {
 	appToken, err := client.appAccessToken(ctx)
 	if err != nil {
 		return err
 	}
+	markdown := func(content string) map[string]any {
+		return map[string]any{"tag": "lark_md", "content": content}
+	}
+	fields := make([]any, 0, len(facts))
+	for _, fact := range facts {
+		value := fact.Value
+		if value == "" {
+			value = "-"
+		}
+		fields = append(fields, map[string]any{
+			"is_short": true,
+			"text":     markdown("**" + fact.Label + "**\n" + value),
+		})
+	}
+	elements := []any{map[string]any{"tag": "div", "fields": fields}}
+	if artifact != "" {
+		elements = append(elements, map[string]any{"tag": "div", "text": markdown("**制品**\n" + artifact)})
+	}
+	if detail != "" {
+		elements = append(elements, map[string]any{"tag": "div", "text": markdown("**说明**\n" + detail)})
+	}
 	card := map[string]any{
 		"config": map[string]any{"wide_screen_mode": true},
 		"header": map[string]any{
-			"title": map[string]any{"tag": "plain_text", "content": title},
+			"template": template,
+			"title":    map[string]any{"tag": "plain_text", "content": title},
 		},
-		"elements": []any{
-			map[string]any{"tag": "div", "text": map[string]any{"tag": "lark_md", "content": text}},
-		},
+		"elements": elements,
 	}
 	content, err := json.Marshal(card)
 	if err != nil {

@@ -214,14 +214,23 @@ func (engine *Engine) notifyAlert(target alertTarget, pods []string, alertType s
 		if target.Metric == "CPU" {
 			metricLabel = "CPU"
 		}
-		title := "Oops 资源告警｜" + metricLabel + "持续超限"
-		text := fmt.Sprintf("**应用**：%s/%s\n**环境**：%s\n**Pod**：%s",
-			target.Namespace, target.ApplicationName, target.Environment, strings.Join(pods, ", "))
-		if alertType == "RESOLVED" {
-			title = "Oops 资源告警｜" + metricLabel + "已恢复"
-			text = fmt.Sprintf("**应用**：%s/%s\n**环境**：%s", target.Namespace, target.ApplicationName, target.Environment)
+		message := Notification{
+			Title: "Oops 资源告警｜" + metricLabel + "持续超限",
+			Level: "WARNING",
+			Facts: []Fact{
+				{"应用", target.Namespace + "/" + target.ApplicationName},
+				{"环境", target.Environment},
+				{"指标", metricLabel},
+				{"触发 Pod", strings.Join(pods, ", ")},
+				{"时间", time.Now().Format("2006-01-02 15:04:05")},
+			},
 		}
-		if err := engine.Notifier.SendToUser(ctx, *application.Owner, title, text); err != nil {
+		if alertType == "RESOLVED" {
+			message.Title = "Oops 资源告警｜" + metricLabel + "已恢复"
+			message.Level = "SUCCESS"
+			message.Facts = message.Facts[:2]
+		}
+		if err := engine.Notifier.SendToUser(ctx, *application.Owner, message); err != nil {
 			slog.Error("failed to send alert notification", "namespace", target.Namespace, "application", target.ApplicationName, "error", err)
 		}
 	}()

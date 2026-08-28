@@ -4,19 +4,28 @@ import (
 	"context"
 	"errors"
 
+	"github.com/wellch4n/oops/server/internal/engine"
 	"github.com/wellch4n/oops/server/internal/feishu"
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
 // feishuNotifier mirrors ExternalMessageService + FeishuMessageStrategy:
-// resolve the operator's linked Feishu account, then send the card.
+// resolve the user's linked Feishu account, then send the interactive card.
 type feishuNotifier struct {
 	store  *store.Store
 	client *feishu.Client
 }
 
-func (notifier *feishuNotifier) SendToUser(ctx context.Context, operatorUserID, title, markdown string) error {
-	account, err := notifier.store.FindExternalAccountByUser(ctx, "FEISHU", operatorUserID)
+// cardTemplates mirrors FeishuMessageStrategy.resolveTemplate.
+var cardTemplates = map[string]string{
+	"SUCCESS": "green",
+	"ERROR":   "red",
+	"WARNING": "orange",
+	"NEUTRAL": "grey",
+}
+
+func (notifier *feishuNotifier) SendToUser(ctx context.Context, userID string, message engine.Notification) error {
+	account, err := notifier.store.FindExternalAccountByUser(ctx, "FEISHU", userID)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil // no linked account — nothing to deliver, like the Java strategy
 	}
@@ -26,5 +35,13 @@ func (notifier *feishuNotifier) SendToUser(ctx context.Context, operatorUserID, 
 	if account.ProviderUserID == "" {
 		return nil
 	}
-	return notifier.client.SendCardToUser(ctx, account.ProviderUserID, title, markdown)
+	template := cardTemplates[message.Level]
+	if template == "" {
+		template = "blue"
+	}
+	facts := make([]feishu.CardFact, 0, len(message.Facts))
+	for _, fact := range message.Facts {
+		facts = append(facts, feishu.CardFact{Label: fact.Label, Value: fact.Value})
+	}
+	return notifier.client.SendCardToUser(ctx, account.ProviderUserID, message.Title, template, facts, message.Artifact, message.Detail)
 }
