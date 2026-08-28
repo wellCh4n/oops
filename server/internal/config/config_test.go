@@ -17,8 +17,8 @@ func TestMySQLDSNFromJDBCURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// loc is omitted: the driver's default location is already UTC.
-	for _, fragment := range []string{"oops:secret@tcp(localhost:3306)/oops", "parseTime=true", "charset=utf8mb4"} {
+	// loc=Local: the datetime columns hold a naive wall clock in the process zone.
+	for _, fragment := range []string{"oops:secret@tcp(localhost:3306)/oops", "parseTime=true", "charset=utf8mb4", "loc=Local"} {
 		if !strings.Contains(dsn, fragment) {
 			t.Fatalf("dsn missing %q: %s", fragment, dsn)
 		}
@@ -45,20 +45,27 @@ func TestMySQLDSNFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, fragment := range []string{"tcp(db.example.com:3306)", "/oops", "parseTime=true", "charset=utf8mb4"} {
+	for _, fragment := range []string{"tcp(db.example.com:3306)", "/oops", "parseTime=true", "charset=utf8mb4", "loc=Local"} {
 		if !strings.Contains(dsn, fragment) {
 			t.Errorf("jdbc-converted DSN missing %q: %s", fragment, dsn)
 		}
 	}
 
+	// A native DSN keeps its own credentials and address, but the timestamp
+	// zone is not the operator's to get wrong: loc=Local is forced on.
 	native := &Config{}
-	native.Spring.Datasource.URL = "oops:secret@tcp(localhost:3306)/oops?parseTime=true"
+	native.Spring.Datasource.URL = "oops:secret@tcp(localhost:3306)/oops?loc=UTC"
 	dsn, err = native.MySQLDSN()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dsn != native.Spring.Datasource.URL {
-		t.Errorf("native DSN must pass through unchanged, got %s", dsn)
+	for _, fragment := range []string{"oops:secret@tcp(localhost:3306)/oops", "parseTime=true", "loc=Local"} {
+		if !strings.Contains(dsn, fragment) {
+			t.Errorf("native DSN missing %q: %s", fragment, dsn)
+		}
+	}
+	if strings.Contains(dsn, "loc=UTC") {
+		t.Errorf("native DSN must not stay pinned to UTC: %s", dsn)
 	}
 
 	broken := &Config{}
@@ -76,7 +83,7 @@ func TestDatasourceTopLevelWinsOverSpring(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if dsn != cfg.Datasource.URL {
+	if !strings.Contains(dsn, "native:pw@tcp(db:3306)/oops") {
 		t.Errorf("top-level datasource must win, got %s", dsn)
 	}
 }

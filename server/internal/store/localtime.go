@@ -7,9 +7,14 @@ import (
 )
 
 // LocalDateTime serializes like Jackson renders a Java LocalDateTime:
-// "2026-06-24T17:44:28.724532" — local wall-clock time, no zone suffix.
-// Values are stored in MySQL as UTC (the JDBC side connects with
-// serverTimezone=UTC), so we convert to the process-local zone on output.
+// "2026-06-24T17:44:28.724532" — a naive wall clock with no zone suffix.
+//
+// The datetime(6) columns hold exactly that: the wall clock of the process
+// that wrote the row, which on the JVM side was LocalDateTime.now() in the
+// container zone. So the value is read, written and rendered verbatim — the
+// connection is pinned to loc=Local (see config.MySQLDSN) so the driver never
+// shifts it either. Converting on output would push every Java-era row
+// forward by the local offset.
 type LocalDateTime struct {
 	time.Time
 }
@@ -18,7 +23,7 @@ func (t LocalDateTime) MarshalJSON() ([]byte, error) {
 	if t.IsZero() {
 		return []byte("null"), nil
 	}
-	return []byte(`"` + t.In(time.Local).Format("2006-01-02T15:04:05.999999") + `"`), nil
+	return []byte(`"` + t.Format("2006-01-02T15:04:05.999999") + `"`), nil
 }
 
 func (t *LocalDateTime) Scan(value any) error {
@@ -40,7 +45,8 @@ func (t LocalDateTime) Value() (driver.Value, error) {
 	return t.Time, nil
 }
 
-// Now returns the creation timestamp the way BaseDataObject.prePersist does.
+// Now returns the creation timestamp the way BaseDataObject.prePersist does:
+// LocalDateTime.now(), the local wall clock.
 func Now() *LocalDateTime {
-	return &LocalDateTime{Time: time.Now().UTC()}
+	return &LocalDateTime{Time: time.Now()}
 }

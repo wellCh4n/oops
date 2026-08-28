@@ -76,7 +76,7 @@ func (engine *Engine) notifyPipeline(pipeline *store.PipelineView, notificationT
 		}
 		createdTime := "-"
 		if pipeline.CreatedTime != nil {
-			createdTime = pipeline.CreatedTime.In(time.Local).Format("2006-01-02 15:04:05")
+			createdTime = pipeline.CreatedTime.Format("2006-01-02 15:04:05")
 		}
 		message := Notification{
 			Title: "Oops 发布通知｜" + notificationTitles[notificationType],

@@ -173,8 +173,16 @@ var jdbcPattern = regexp.MustCompile(`^jdbc:mysql://([^/]+)/([^?]+)(?:\?(.*))?$`
 
 // MySQLDSN accepts the datasource URL in either format: a Spring JDBC URL
 // (jdbc:mysql://host:port/db?...) is converted to a go-sql-driver DSN, and a
-// native DSN (user:pass@tcp(host:port)/db?...) is validated and passed
+// native DSN (user:pass@tcp(host:port)/db?...) is normalized and passed
 // through — username/password from the DSN itself win in that case.
+//
+// Either way the connection is pinned to parseTime with loc=Local, and the
+// JDBC URL's serverTimezone is deliberately ignored: Connector/J applies it
+// only to instant types, never to a LocalDateTime, which it binds as a bare
+// wall-clock literal. So the datetime(6) columns hold a naive wall clock in
+// the process zone whatever serverTimezone said, and the driver has to read
+// and write them in that same zone. A UTC connection shifts every timestamp
+// by the local offset — old rows read too late, new rows written too early.
 func (c *Config) MySQLDSN() (string, error) {
 	datasource := c.Datasource
 	if strings.TrimSpace(datasource.URL) == "" {
@@ -182,10 +190,13 @@ func (c *Config) MySQLDSN() (string, error) {
 	}
 	datasourceURL := strings.TrimSpace(datasource.URL)
 	if !strings.HasPrefix(datasourceURL, "jdbc:") {
-		if _, err := mysql.ParseDSN(datasourceURL); err != nil {
+		settings, err := mysql.ParseDSN(datasourceURL)
+		if err != nil {
 			return "", fmt.Errorf("datasource url is neither a jdbc:mysql:// URL nor a valid DSN: %w", err)
 		}
-		return datasourceURL, nil
+		settings.ParseTime = true
+		settings.Loc = time.Local
+		return settings.FormatDSN(), nil
 	}
 
 	matches := jdbcPattern.FindStringSubmatch(datasourceURL)
@@ -199,11 +210,8 @@ func (c *Config) MySQLDSN() (string, error) {
 	settings.Addr = matches[1]
 	settings.DBName = matches[2]
 	settings.ParseTime = true
+	settings.Loc = time.Local
 	settings.Params = map[string]string{"charset": "utf8mb4"}
-	// Keep timestamps interpreted the same way as the JVM side (serverTimezone=UTC).
-	if strings.Contains(matches[3], "serverTimezone=UTC") {
-		settings.Loc = time.UTC
-	}
 	return settings.FormatDSN(), nil
 }
 

@@ -146,7 +146,7 @@ Applications deploy as **StatefulSets** (`enableServiceLinks: false`) with Traef
 - **Identity**: 24-char NanoId strings (`domain.NewID`).
 - **Pagination**: `Page{total, data, size, totalPages}`, `page` is 1-based.
 - **JWT claims**: `sub` = username, `userId`, `role` (`ADMIN`/`USER`); HS256 with `oops.jwt.secret`.
-- **Timestamps**: `LocalDateTime` — local time, microseconds, no zone suffix.
+- **Timestamps**: `LocalDateTime` — local time, microseconds, no zone suffix. The `datetime(6)` columns hold a naive wall clock in the process zone (what `LocalDateTime.now()` wrote on the JVM side), so the MySQL connection is pinned to `parseTime=true&loc=Local` and values are read, written and rendered verbatim — never converted.
 
 ## WebSocket Protocols
 

@@ -49,7 +49,7 @@ func (s *Store) FindAlertState(ctx context.Context, namespace, applicationName, 
 // SaveAlertState upserts the target's state, stamping firing_since on a fresh
 // edge and last_notified_time on every save (a save only happens on notify).
 func (s *Store) SaveAlertState(ctx context.Context, namespace, applicationName, environmentName, metric string, firing bool) error {
-	now := time.Now().UTC()
+	now := time.Now()
 	_, err := s.FindAlertState(ctx, namespace, applicationName, environmentName, metric)
 	if errors.Is(err, ErrNotFound) {
 		record := alertStateRecord{

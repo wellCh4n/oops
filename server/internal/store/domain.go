@@ -132,7 +132,7 @@ func parseCertificate(certPem string) (*certMeta, error) {
 	}
 	return &certMeta{
 		subject:  certificate.Subject.String(),
-		notAfter: certificate.NotAfter.UTC(),
+		notAfter: certificate.NotAfter.Local(),
 		dnsNames: dnsNames,
 	}, nil
 }

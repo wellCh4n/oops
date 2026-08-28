@@ -101,6 +101,20 @@ func TestLocalDateTimeMarshal(t *testing.T) {
 	}
 }
 
+// The wall clock in the column is rendered verbatim, never re-zoned: the
+// datetime(6) columns already hold local time, so converting on output would
+// push every Java-era row forward by the local offset.
+func TestLocalDateTimeMarshalDoesNotConvert(t *testing.T) {
+	instant := time.Date(2026, 8, 28, 9, 30, 15, 123456000, time.UTC)
+	encoded, err := json.Marshal(LocalDateTime{Time: instant})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(encoded) != `"2026-08-28T09:30:15.123456"` {
+		t.Errorf("marshal must render the value's own wall clock, got %s", encoded)
+	}
+}
+
 // Mirrors PemCertificateParserTests, with a certificate minted on the fly.
 func testCertificate(t *testing.T, commonName string, dnsNames []string) string {
 	t.Helper()
