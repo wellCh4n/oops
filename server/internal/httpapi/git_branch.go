@@ -10,16 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 	gogit "github.com/go-git/go-git/v5"
 	gitconfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
-// gitBranchView mirrors GitBranchView. Commit details beyond the id are best
-// effort on the Java side too; here the branch list carries name + commitId.
+// gitBranchView mirrors GitBranchView. Everything but name and commitId is
+// best effort: when the remote refuses a shallow fetch of the tips, the
+// commit details stay null and the UI shows the short SHA only.
 type gitBranchView struct {
 	Name          string  `json:"name"`
 	CommitID      string  `json:"commitId"`
@@ -80,7 +84,49 @@ func listRemoteBranches(repository string, credential *store.GitCredential) ([]g
 		}
 	}
 	sort.Slice(branches, func(i, j int) bool { return branches[i].Name < branches[j].Name })
+	enrichBranchCommits(repository, auth, branches)
 	return branches, nil
+}
+
+const maxCommitMessageLength = 200
+
+// enrichBranchCommits mirrors JGitRepositoryGateway: after ls-remote, fetch
+// only the tip commits (depth 1) into an in-memory repository and read each
+// branch head's subject, author and time. Best effort — a remote that rejects
+// the shallow fetch leaves the branch list SHA-only.
+func enrichBranchCommits(repository string, auth transport.AuthMethod, branches []gitBranchView) {
+	if len(branches) == 0 {
+		return
+	}
+	storer := memory.NewStorage()
+	remote := gogit.NewRemote(storer, &gitconfig.RemoteConfig{
+		Name: "origin", URLs: []string{repository},
+	})
+	err := remote.Fetch(&gogit.FetchOptions{
+		Auth:     auth,
+		Depth:    1,
+		RefSpecs: []gitconfig.RefSpec{"+refs/heads/*:refs/heads/*"},
+		Tags:     gogit.NoTags,
+	})
+	if err != nil && err != gogit.NoErrAlreadyUpToDate {
+		return
+	}
+	for i := range branches {
+		commit, err := object.GetCommit(storer, plumbing.NewHash(branches[i].CommitID))
+		if err != nil {
+			continue
+		}
+		subject, _, _ := strings.Cut(commit.Message, "\n")
+		subject = strings.TrimSpace(subject)
+		if len(subject) > maxCommitMessageLength {
+			subject = subject[:maxCommitMessageLength]
+		}
+		author := strings.TrimSpace(commit.Author.Name)
+		committedAt := commit.Author.When.UTC().Format(time.RFC3339)
+		branches[i].CommitMessage = &subject
+		branches[i].CommitAuthor = &author
+		branches[i].CommittedAt = &committedAt
+	}
 }
 
 func (s *Server) getApplicationBranches(c *gin.Context) {
