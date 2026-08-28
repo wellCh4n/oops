@@ -117,7 +117,7 @@ func (s *Server) listApplications(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	total, applications, err := s.store.PageApplications(ctx, namespace, keyword, ownerID, page, size)
+	total, applications, err := s.store.PageApplications(ctx, namespace, keyword, ownerID, principalFrom(c).UserID, page, size)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return

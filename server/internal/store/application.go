@@ -24,13 +24,17 @@ type Application struct {
 
 func (Application) TableName() string { return "application" }
 
-// PageApplications mirrors ApplicationPersistenceAdapter: filter by namespace +
-// keyword (and optionally owner), newest first. The Java side additionally
-// orders by the viewer's latest publish; that refinement lands with the
-// pipeline tables in a later migration step.
-func (s *Store) PageApplications(ctx context.Context, namespace, keyword, ownerID string, page, size int) (int64, []Application, error) {
+// PageApplications mirrors the Java repository query: namespace "all" spans
+// every namespace, the keyword matches name or description, and rows order by
+// the viewer's latest publish, then the viewer's own applications, then
+// creation time.
+func (s *Store) PageApplications(ctx context.Context, namespace, keyword, ownerID, viewerID string, page, size int) (int64, []Application, error) {
+	pattern := "%" + strings.ToLower(keyword) + "%"
 	query := s.orm.WithContext(ctx).Model(&Application{}).
-		Where("namespace = ? AND LOWER(name) LIKE ?", namespace, "%"+strings.ToLower(keyword)+"%")
+		Where("(LOWER(name) LIKE ? OR LOWER(COALESCE(description, '')) LIKE ?)", pattern, pattern)
+	if !strings.EqualFold(namespace, "all") {
+		query = query.Where("namespace = ?", namespace)
+	}
 	if ownerID != "" {
 		query = query.Where("owner = ?", ownerID)
 	}
@@ -39,7 +43,12 @@ func (s *Store) PageApplications(ctx context.Context, namespace, keyword, ownerI
 		return 0, nil, err
 	}
 	applications := []Application{}
-	err := query.Order("created_time DESC").
+	err := query.
+		Order(gorm.Expr(`(SELECT MAX(p.created_time) FROM pipeline p
+			WHERE p.namespace = application.namespace AND p.application_name = application.name
+			AND p.operator_id = ?) DESC`, viewerID)).
+		Order(gorm.Expr("CASE WHEN owner = ? THEN 0 ELSE 1 END", viewerID)).
+		Order("created_time DESC").
 		Limit(size).Offset((max(page, 1) - 1) * size).
 		Find(&applications).Error
 	return total, applications, err
