@@ -8,19 +8,10 @@ import { toast } from "sonner"
 import { ContentPage } from "@/components/content-page"
 import { DOC_TOPICS } from "@/components/doc/doc-topics"
 import { DocProvider } from "@/components/doc/doc-context"
+import { DocMarkup } from "@/components/doc/doc-markup"
+import { anchorFromKey } from "@/components/doc/doc-anchor"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/language-context"
-
-function slugify(title: string): string {
-  return title
-    .normalize("NFKC")
-    .toLowerCase()
-    .trim()
-    .replace(/[()[\]{}<>"'`,.;:!?@#$%^&*=+|\\/]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
 
 const SectionSlugContext = createContext<string>("")
 
@@ -64,13 +55,14 @@ function AnchorHeading({
 }
 
 interface DocLayoutProps {
-  title: string
+  titleKey: string
   children: ReactNode
 }
 
-export function DocLayout({ title, children }: DocLayoutProps) {
+export function DocLayout({ titleKey, children }: DocLayoutProps) {
   const pathname = usePathname()
   const { t } = useLanguage()
+  const title = t(titleKey)
 
   return (
     <ContentPage title={t("doc.title")} documentTitle={title}>
@@ -91,7 +83,7 @@ export function DocLayout({ title, children }: DocLayoutProps) {
                         : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
                     )}
                   >
-                    {topic.title}
+                    {t(topic.titleKey)}
                   </Link>
                 )
               })}
@@ -108,20 +100,21 @@ export function DocLayout({ title, children }: DocLayoutProps) {
 }
 
 export function DocSection({
-  title,
+  titleKey,
   id,
   children,
 }: {
-  title: string
+  titleKey: string
   id?: string
   children: ReactNode
 }) {
-  const sectionId = id ?? slugify(title)
+  const { t } = useLanguage()
+  const sectionId = id ?? anchorFromKey(titleKey)
   return (
     <SectionSlugContext.Provider value={sectionId}>
       <section className="space-y-3">
         <AnchorHeading id={sectionId} as="h2" className="border-b pb-1 text-lg font-semibold">
-          {title}
+          {t(titleKey)}
         </AnchorHeading>
         {children}
       </section>
@@ -130,27 +123,49 @@ export function DocSection({
 }
 
 export function DocSubSection({
-  title,
+  titleKey,
   id,
   children,
 }: {
-  title: string
+  titleKey: string
   id?: string
   children: ReactNode
 }) {
+  const { t } = useLanguage()
   const parentSlug = useContext(SectionSlugContext)
-  const selfSlug = id ?? slugify(title)
-  const sectionId = parentSlug ? `${parentSlug}-${selfSlug}` : selfSlug
+  const selfSlug = id ?? anchorFromKey(titleKey)
+  // Key-derived slugs already carry the section path, so only prefix an
+  // explicitly-passed `id` that doesn't sit under the parent already.
+  const sectionId =
+    !parentSlug || selfSlug.startsWith(`${parentSlug}-`) ? selfSlug : `${parentSlug}-${selfSlug}`
   return (
     <div className="space-y-2">
       <AnchorHeading id={sectionId} as="h3" className="text-sm font-semibold text-foreground/90">
-        {title}
+        {t(titleKey)}
       </AnchorHeading>
       {children}
     </div>
   )
 }
 
-export function DocParagraph({ children }: { children: ReactNode }) {
-  return <p className="text-sm leading-relaxed text-muted-foreground">{children}</p>
+export function DocParagraph({ textKey }: { textKey: string }) {
+  const { t } = useLanguage()
+  return (
+    <p className="text-sm leading-relaxed text-muted-foreground">
+      <DocMarkup text={t(textKey)} />
+    </p>
+  )
+}
+
+export function DocList({ itemKeys }: { itemKeys: string[] }) {
+  const { t } = useLanguage()
+  return (
+    <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+      {itemKeys.map((key) => (
+        <li key={key}>
+          <DocMarkup text={t(key)} />
+        </li>
+      ))}
+    </ul>
+  )
 }

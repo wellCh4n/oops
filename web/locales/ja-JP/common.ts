@@ -72,14 +72,6 @@ const common = {
   "terminal.files.deleteFailed": "削除に失敗しました",
   "pods.missingEnv": "env パラメータがありません",
   "common.error": "エラーが発生しました",
-  "doc.field": "フィールド",
-  "doc.type": "型",
-  "doc.description": "説明",
-  "doc.anchorCopied": "アンカーリンクをコピーしました",
-  "doc.anchorNavigated": "セクションに移動しました",
-  "doc.copyAnchor": "アンカーリンクをコピー",
-  "doc.copyCurl": "curl をコピー",
-  "doc.title": "OpenAPI ドキュメント",
 }
 
 export default common

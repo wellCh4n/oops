@@ -166,6 +166,7 @@ Log streams split lines like `BufferedReader.readLine` (`\n`, `\r\n`, or bare `\
 - **Work context**: namespace/app/environment selection lives in the Zustand work-context store; `lib/work-context-url.ts` stamps it onto links — the internal param is `env` but it always travels in URLs as `environment` (`urlKeyFor`). URL wins over the store.
 - **Feature flags**: `useFeaturesStore` (`feishu`, `ide`, `objectStorage`, ...) gates optional UI.
 - **i18n**: four locales under `web/locales/`; `t()` falls back to the key.
+- **OpenAPI docs copy**: the `/help/docs` pages hold no prose — every title, endpoint summary, field description and paragraph is a key in `locales/*/doc.ts` (`doc.<topic>.<section>.<slot>`), passed down as `titleKey` / `summaryKey` / `descriptionKey` / `textKey` so the pages stay server components. Paragraph strings carry an inline markup dialect rendered by `components/doc/doc-markup.tsx`: `` `text` `` → `InlineCode`, `**text**` → bold, and bold may wrap code. Code spans are opaque, so a glob like `` `/openapi/**` `` is never read as a bold marker. Section anchors are derived from the key by `doc-anchor.ts`, never from the rendered title, which keeps `#configmaps-write` pointing at the same heading in every locale — pass an explicit `id` only to keep an existing anchor alive.
 - **Command palette**: `/` opens it (outside inputs); two-stage command → app search.
 
 ## Testing

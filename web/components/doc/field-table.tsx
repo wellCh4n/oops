@@ -1,13 +1,14 @@
 "use client"
 
-import { ReactNode } from "react"
 import { useLanguage } from "@/contexts/language-context"
+import { DocMarkup } from "./doc-markup"
 
 export interface FieldRow {
   name: string
   type: string
   required?: boolean
-  description?: ReactNode
+  /** Translation key for the description cell; omit for self-evident fields. */
+  descriptionKey?: string
 }
 
 export function FieldTable({ rows }: { rows: FieldRow[] }) {
@@ -30,7 +31,9 @@ export function FieldTable({ rows }: { rows: FieldRow[] }) {
                 {row.required && <span className="ml-1 text-rose-500">*</span>}
               </td>
               <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{row.type}</td>
-              <td className="px-3 py-2 text-muted-foreground">{row.description}</td>
+              <td className="px-3 py-2 text-muted-foreground">
+                {row.descriptionKey && <DocMarkup text={t(row.descriptionKey)} />}
+              </td>
             </tr>
           ))}
         </tbody>
