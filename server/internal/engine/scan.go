@@ -1,3 +1,6 @@
+// Package engine runs the pipeline lifecycle: build jobs, the deploy
+// processor chain, scan loops that converge pipeline status, scheduled
+// restarts, resource alert scans, and namespace migration.
 package engine
 
 import (
@@ -35,12 +38,12 @@ func (engine *Engine) cluster(ctx context.Context, environmentName string) (*k8s
 		return nil, nil, err
 	}
 	url, token := "", ""
-	if environment.KubernetesApiServer != nil {
-		if environment.KubernetesApiServer.URL != nil {
-			url = *environment.KubernetesApiServer.URL
+	if environment.KubernetesAPIServer != nil {
+		if environment.KubernetesAPIServer.URL != nil {
+			url = *environment.KubernetesAPIServer.URL
 		}
-		if environment.KubernetesApiServer.Token != nil {
-			token = *environment.KubernetesApiServer.Token
+		if environment.KubernetesAPIServer.Token != nil {
+			token = *environment.KubernetesAPIServer.Token
 		}
 	}
 	cluster, err := k8s.NewCluster(url, token)

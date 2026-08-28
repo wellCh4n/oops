@@ -9,8 +9,8 @@ import (
 	"github.com/wellch4n/oops/server/internal/k8s"
 )
 
-func (s *Server) ideSettings() k8s.IdeSettings {
-	return k8s.IdeSettings{
+func (s *Server) ideSettings() k8s.IDESettings {
+	return k8s.IDESettings{
 		Domain:       s.cfg.Oops.IDE.Domain,
 		HTTPS:        s.cfg.Oops.IDE.HTTPS,
 		Image:        s.cfg.Oops.IDE.Image,
@@ -34,7 +34,7 @@ func (s *Server) listIdes(c *gin.Context) {
 	if !resolved {
 		return
 	}
-	views, err := k8s.ListIdes(c.Request.Context(), cluster, workNamespace, c.Param("name"), s.ideSettings())
+	views, err := k8s.ListIDEs(c.Request.Context(), cluster, workNamespace, c.Param("name"), s.ideSettings())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
@@ -42,12 +42,12 @@ func (s *Server) listIdes(c *gin.Context) {
 	c.JSON(http.StatusOK, ok(views))
 }
 
-func (s *Server) getDefaultIdeConfig(c *gin.Context) {
+func (s *Server) getDefaultIDEConfig(c *gin.Context) {
 	cluster, workNamespace, resolved := s.ideWorkTarget(c)
 	if !resolved {
 		return
 	}
-	config, err := k8s.GetDefaultIdeConfig(c.Request.Context(), cluster, workNamespace)
+	config, err := k8s.GetDefaultIDEConfig(c.Request.Context(), cluster, workNamespace)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
@@ -55,8 +55,8 @@ func (s *Server) getDefaultIdeConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, ok(config))
 }
 
-func (s *Server) createIde(c *gin.Context) {
-	var request k8s.CreateIdeRequest
+func (s *Server) createIDE(c *gin.Context) {
+	var request k8s.CreateIDERequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
@@ -75,7 +75,7 @@ func (s *Server) createIde(c *gin.Context) {
 	if !resolved {
 		return
 	}
-	ideID, err := k8s.CreateIde(c.Request.Context(), cluster, workNamespace, namespace, applicationName,
+	ideID, err := k8s.CreateIDE(c.Request.Context(), cluster, workNamespace, namespace, applicationName,
 		repository, s.ideSettings(), &request)
 	if err != nil {
 		c.JSON(http.StatusOK, fail(err.Error()))
@@ -84,13 +84,13 @@ func (s *Server) createIde(c *gin.Context) {
 	c.JSON(http.StatusOK, ok(ideID))
 }
 
-func (s *Server) deleteIde(c *gin.Context) {
+func (s *Server) deleteIDE(c *gin.Context) {
 	cluster, workNamespace, resolved := s.ideWorkTarget(c)
 	if !resolved {
 		return
 	}
 	name := strings.TrimSpace(c.Param("ide"))
-	if err := k8s.DeleteIde(c.Request.Context(), cluster, workNamespace, name); err != nil {
+	if err := k8s.DeleteIDE(c.Request.Context(), cluster, workNamespace, name); err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}

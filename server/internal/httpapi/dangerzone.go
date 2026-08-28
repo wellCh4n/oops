@@ -22,12 +22,12 @@ func (s *Server) ensureOwnerOrAdmin(ctx context.Context, application *store.Appl
 
 func (s *Server) clusterForEnvironment(environment *store.EnvironmentFull) (*k8s.Cluster, error) {
 	url, token := "", ""
-	if environment.KubernetesApiServer != nil {
-		if environment.KubernetesApiServer.URL != nil {
-			url = *environment.KubernetesApiServer.URL
+	if environment.KubernetesAPIServer != nil {
+		if environment.KubernetesAPIServer.URL != nil {
+			url = *environment.KubernetesAPIServer.URL
 		}
-		if environment.KubernetesApiServer.Token != nil {
-			token = *environment.KubernetesApiServer.Token
+		if environment.KubernetesAPIServer.Token != nil {
+			token = *environment.KubernetesAPIServer.Token
 		}
 	}
 	return k8s.NewCluster(url, token)

@@ -24,7 +24,7 @@ type environmentRecord struct {
 
 func (environmentRecord) TableName() string { return "environment" }
 
-type KubernetesApiServer struct {
+type KubernetesAPIServer struct {
 	URL   *string `json:"url"`
 	Token *string `json:"token"`
 }
@@ -87,7 +87,7 @@ func (credential *GitCredential) isEmpty() bool {
 type EnvironmentFull struct {
 	ID                  string               `json:"id"`
 	Name                string               `json:"name"`
-	KubernetesApiServer *KubernetesApiServer `json:"kubernetesApiServer"`
+	KubernetesAPIServer *KubernetesAPIServer `json:"kubernetesApiServer"`
 	WorkNamespace       *string              `json:"workNamespace"`
 	BuildStorageClass   *string              `json:"buildStorageClass"`
 	ImageRepository     *ImageRepository     `json:"imageRepository"`
@@ -102,7 +102,7 @@ func (s *Store) environmentRecordToFull(record *environmentRecord) (*Environment
 		BuildStorageClass: record.BuildStorageClass,
 	}
 	if record.APIServerURL != nil || record.APIServerToken != nil {
-		server := &KubernetesApiServer{URL: record.APIServerURL}
+		server := &KubernetesAPIServer{URL: record.APIServerURL}
 		if record.APIServerToken != nil {
 			// An empty stored token decrypts to "" (converter passthrough),
 			// which Jackson renders as "" rather than null.
@@ -112,7 +112,7 @@ func (s *Store) environmentRecordToFull(record *environmentRecord) (*Environment
 			}
 			server.Token = &token
 		}
-		environment.KubernetesApiServer = server
+		environment.KubernetesAPIServer = server
 	}
 	if record.ImageRepositoryURL != nil || record.ImageRepositoryUsername != nil || record.ImageRepositoryPassword != nil {
 		repository := &ImageRepository{
@@ -216,9 +216,9 @@ func (s *Store) CreateEnvironment(ctx context.Context, environment *EnvironmentF
 	record := environmentRecord{ID: domain.NewID(), Name: environment.Name,
 		WorkNamespace: environment.WorkNamespace, BuildStorageClass: environment.BuildStorageClass}
 	var err error
-	if environment.KubernetesApiServer != nil {
-		record.APIServerURL = environment.KubernetesApiServer.URL
-		if record.APIServerToken, err = s.encryptOptional(environment.KubernetesApiServer.Token); err != nil {
+	if environment.KubernetesAPIServer != nil {
+		record.APIServerURL = environment.KubernetesAPIServer.URL
+		if record.APIServerToken, err = s.encryptOptional(environment.KubernetesAPIServer.Token); err != nil {
 			return "", err
 		}
 	}
@@ -247,7 +247,7 @@ func (s *Store) requireEnvironmentRow(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *Store) UpdateEnvironmentClusterConfig(ctx context.Context, id string, server *KubernetesApiServer, workNamespace, buildStorageClass *string) error {
+func (s *Store) UpdateEnvironmentClusterConfig(ctx context.Context, id string, server *KubernetesAPIServer, workNamespace, buildStorageClass *string) error {
 	if err := s.requireEnvironmentRow(ctx, id); err != nil {
 		return err
 	}

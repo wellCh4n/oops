@@ -70,9 +70,9 @@ func RunEventClient(ctx context.Context, appID, appSecret string, st *store.Stor
 	client := larkws.NewClient(appID, appSecret, larkws.WithEventHandler(eventDispatcher), larkws.WithAutoReconnect(true))
 	// Started from a goroutine so an unreachable Feishu cannot hold up startup.
 	go func() {
-		if err := client.Start(ctx); err != nil {
-			// Start only returns errors no retry fixes (bad credentials).
-			log.Printf("feishu event long connection failed to start: %v", err)
-		}
+		// Start only returns errors no retry fixes (bad credentials);
+		// ordinary drops are retried internally via autoReconnect.
+		err := client.Start(ctx)
+		log.Printf("feishu event long connection stopped: %v", err)
 	}()
 }

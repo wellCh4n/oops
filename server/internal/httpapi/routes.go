@@ -18,7 +18,7 @@ func (s *Server) Routes() *gin.Engine {
 	s.registerApplicationRoutes(authed)
 	s.registerSandbox(authed)
 	if s.cfg.Oops.IDE.Enabled {
-		s.registerIdeRoutes(authed)
+		s.registerIDERoutes(authed)
 	}
 
 	s.registerOpenAPI(engine)
@@ -161,10 +161,10 @@ func (s *Server) registerApplicationRoutes(authed *gin.RouterGroup) {
 }
 
 // IDE instances, present only when oops.ide.enabled (like the conditional beans).
-func (s *Server) registerIdeRoutes(authed *gin.RouterGroup) {
+func (s *Server) registerIDERoutes(authed *gin.RouterGroup) {
 	ides := authed.Group("/namespaces/:namespace/applications/:name/ides")
 	ides.GET("", s.listIdes)
-	ides.POST("", s.createIde)
-	ides.DELETE("/:ide", s.deleteIde)
-	ides.GET("/config/default", s.getDefaultIdeConfig)
+	ides.POST("", s.createIDE)
+	ides.DELETE("/:ide", s.deleteIDE)
+	ides.GET("/config/default", s.getDefaultIDEConfig)
 }

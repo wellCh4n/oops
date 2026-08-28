@@ -47,7 +47,7 @@ func (client *Client) postJSON(ctx context.Context, endpoint, bearer string, bod
 	}
 	response, err := client.http.Do(request)
 	if err != nil {
-		return fmt.Errorf("Feishu API error: %w", err)
+		return fmt.Errorf("calling Feishu API: %w", err)
 	}
 	defer response.Body.Close()
 	return json.NewDecoder(response.Body).Decode(out)
@@ -109,7 +109,7 @@ func (client *Client) Authenticate(ctx context.Context, code string) (*UserInfo,
 	request.Header.Set("Authorization", "Bearer "+tokenResponse.Data.AccessToken)
 	response, err := client.http.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("Feishu API error: %w", err)
+		return nil, fmt.Errorf("calling Feishu API: %w", err)
 	}
 	defer response.Body.Close()
 	var infoResponse struct {

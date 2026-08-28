@@ -28,7 +28,7 @@ func (s *Server) getDomain(c *gin.Context) {
 }
 
 func (s *Server) createDomain(c *gin.Context) {
-	var request store.UpsertDomainCommand
+	var request store.UpsertDomainRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
@@ -42,7 +42,7 @@ func (s *Server) createDomain(c *gin.Context) {
 }
 
 func (s *Server) updateDomain(c *gin.Context) {
-	var request store.UpsertDomainCommand
+	var request store.UpsertDomainRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return

@@ -59,14 +59,14 @@ func firstNonBlank(requested, fallback string) string {
 func (s *Server) sandboxEnvironment(ctx context.Context, environmentName string) (*k8s.Cluster, *store.EnvironmentFull, string, error) {
 	environment, err := s.store.FindEnvironmentFullByName(ctx, environmentName)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("Environment not found: %s", environmentName)
+		return nil, nil, "", fmt.Errorf("environment not found: %s", environmentName)
 	}
 	workNamespace := ""
 	if environment.WorkNamespace != nil {
 		workNamespace = strings.TrimSpace(*environment.WorkNamespace)
 	}
 	if workNamespace == "" {
-		return nil, nil, "", fmt.Errorf("Environment has no work namespace configured: %s", environmentName)
+		return nil, nil, "", fmt.Errorf("environment has no work namespace configured: %s", environmentName)
 	}
 	cluster, err := s.clusterForEnvironment(environment)
 	return cluster, environment, workNamespace, err

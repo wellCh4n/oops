@@ -300,7 +300,7 @@ func ExecSandboxInstance(ctx context.Context, cluster *Cluster, workNamespace, s
 	_ = stdout
 	_ = stderr
 	if execContext.Err() == context.DeadlineExceeded {
-		return -1, fmt.Errorf("Sandbox exec timed out")
+		return -1, fmt.Errorf("sandbox exec timed out")
 	}
 	if err != nil {
 		// A non-zero exit surfaces as an exec error carrying the code.

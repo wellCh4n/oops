@@ -2,13 +2,13 @@ package k8s
 
 import (
 	"context"
-	"crypto/rand"
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -34,8 +34,8 @@ func secretMounts() []corev1.VolumeMount {
 	}
 }
 
-// IdeSettings mirrors IdeProperties.
-type IdeSettings struct {
+// IDESettings mirrors IDEProperties.
+type IDESettings struct {
 	Domain       string
 	HTTPS        bool
 	Image        string
@@ -44,28 +44,28 @@ type IdeSettings struct {
 	CertResolver string
 }
 
-// IdeConfig mirrors IdeConfigDto: {settings, env, extensions}.
-type IdeConfig struct {
+// IDEConfig mirrors IDEConfigDto: {settings, env, extensions}.
+type IDEConfig struct {
 	Settings   string `json:"settings"`
 	Env        string `json:"env"`
 	Extensions string `json:"extensions"`
 }
 
-func ideFileDefaults() IdeConfig {
+func ideFileDefaults() IDEConfig {
 	var root struct {
 		Settings   json.RawMessage `json:"settings"`
 		Env        string          `json:"env"`
 		Extensions string          `json:"extensions"`
 	}
 	if err := json.Unmarshal(ideDefaultConfigRaw, &root); err != nil {
-		return IdeConfig{Settings: "{}"}
+		return IDEConfig{Settings: "{}"}
 	}
-	return IdeConfig{Settings: string(root.Settings), Env: root.Env, Extensions: root.Extensions}
+	return IDEConfig{Settings: string(root.Settings), Env: root.Env, Extensions: root.Extensions}
 }
 
-// GetDefaultIdeConfig mirrors the gateway: the work namespace's ide-config
+// GetDefaultIDEConfig mirrors the gateway: the work namespace's ide-config
 // ConfigMap overrides the file defaults and is auto-created on first read.
-func GetDefaultIdeConfig(ctx context.Context, cluster *Cluster, workNamespace string) (IdeConfig, error) {
+func GetDefaultIDEConfig(ctx context.Context, cluster *Cluster, workNamespace string) (IDEConfig, error) {
 	fileDefaults := ideFileDefaults()
 	if cluster == nil || workNamespace == "" {
 		return fileDefaults, nil
@@ -77,7 +77,7 @@ func GetDefaultIdeConfig(ctx context.Context, cluster *Cluster, workNamespace st
 		env, hasEnv := configMap.Data[".env"]
 		extensions, hasExtensions := configMap.Data["extensions"]
 		if hasSettings && hasEnv && hasExtensions {
-			return IdeConfig{Settings: settings, Env: env, Extensions: extensions}, nil
+			return IDEConfig{Settings: settings, Env: env, Extensions: extensions}, nil
 		}
 	}
 	data := map[string]string{}
@@ -106,8 +106,8 @@ func boolTrue() *bool {
 	return &value
 }
 
-// IdeView mirrors IdeDto.
-type IdeView struct {
+// IDEView mirrors IdeDto.
+type IDEView struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Host      string `json:"host"`
@@ -116,8 +116,8 @@ type IdeView struct {
 	Ready     bool   `json:"ready"`
 }
 
-// CreateIdeRequest mirrors CreateIdeCommand.
-type CreateIdeRequest struct {
+// CreateIDERequest mirrors CreateIDECommand.
+type CreateIDERequest struct {
 	Name       string `json:"name"`
 	Branch     string `json:"branch"`
 	Settings   string `json:"settings"`
@@ -125,12 +125,12 @@ type CreateIdeRequest struct {
 	Extensions string `json:"extensions"`
 }
 
-// CreateIde builds the code-server StatefulSet, Service and IngressRoute
+// CreateIDE builds the code-server StatefulSet, Service and IngressRoute
 // (IngressRoutes cascade via ownerReference on delete).
-func CreateIde(ctx context.Context, cluster *Cluster, workNamespace, namespace, applicationName, repository string,
-	settings IdeSettings, request *CreateIdeRequest) (string, error) {
+func CreateIDE(ctx context.Context, cluster *Cluster, workNamespace, namespace, applicationName, repository string,
+	settings IDESettings, request *CreateIDERequest) (string, error) {
 
-	ideID := newIdeID()
+	ideID := domain.NewID()
 	name := applicationName + "-ide-" + ideID
 	labels := map[string]string{
 		"oops.type":   "IDE",
@@ -164,7 +164,7 @@ func CreateIde(ctx context.Context, cluster *Cluster, workNamespace, namespace, 
 
 	ideSettings := strings.TrimSpace(request.Settings)
 	if ideSettings == "" {
-		defaults, _ := GetDefaultIdeConfig(ctx, cluster, workNamespace)
+		defaults, _ := GetDefaultIDEConfig(ctx, cluster, workNamespace)
 		ideSettings = defaults.Settings
 	} else {
 		ideSettings = strings.Join(strings.Fields(ideSettings), " ")
@@ -279,7 +279,7 @@ func CreateIde(ctx context.Context, cluster *Cluster, workNamespace, namespace, 
 		return "", fmt.Errorf("IDE creation failed at Service, rolled back: %w", err)
 	}
 
-	if err := createIdeIngressRoute(ctx, cluster, workNamespace, name, settings, owner); err != nil {
+	if err := createIDEIngressRoute(ctx, cluster, workNamespace, name, settings, owner); err != nil {
 		_ = cluster.Clientset.AppsV1().StatefulSets(workNamespace).Delete(ctx, name, metav1.DeleteOptions{})
 		return "", fmt.Errorf("IDE creation failed at IngressRoute, rolled back: %w", err)
 	}
@@ -288,23 +288,7 @@ func CreateIde(ctx context.Context, cluster *Cluster, workNamespace, namespace, 
 
 func int32Pointer(value int32) *int32 { return &value }
 
-// newIdeID generates a 24-char lowercase-alphanumeric NanoId from a CSPRNG,
-// the same identity scheme the store uses.
-func newIdeID() string {
-	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
-	id := make([]byte, 24)
-	alphabetSize := big.NewInt(int64(len(alphabet)))
-	for i := range id {
-		index, err := rand.Int(rand.Reader, alphabetSize)
-		if err != nil {
-			panic(err)
-		}
-		id[i] = alphabet[index.Int64()]
-	}
-	return string(id)
-}
-
-func createIdeIngressRoute(ctx context.Context, cluster *Cluster, workNamespace, name string, settings IdeSettings, owner metav1.OwnerReference) error {
+func createIDEIngressRoute(ctx context.Context, cluster *Cluster, workNamespace, name string, settings IDESettings, owner metav1.OwnerReference) error {
 	// Skip gracefully when the Traefik CRD is absent, like the Java gateway.
 	if _, err := cluster.Clientset.Discovery().ServerResourcesForGroupVersion("traefik.io/v1alpha1"); err != nil {
 		return nil
@@ -363,7 +347,7 @@ func createIdeIngressRoute(ctx context.Context, cluster *Cluster, workNamespace,
 	return err
 }
 
-func DeleteIde(ctx context.Context, cluster *Cluster, workNamespace, name string) error {
+func DeleteIDE(ctx context.Context, cluster *Cluster, workNamespace, name string) error {
 	err := cluster.Clientset.AppsV1().StatefulSets(workNamespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -371,14 +355,14 @@ func DeleteIde(ctx context.Context, cluster *Cluster, workNamespace, name string
 	return err
 }
 
-func ListIdes(ctx context.Context, cluster *Cluster, workNamespace, applicationName string, settings IdeSettings) ([]IdeView, error) {
+func ListIDEs(ctx context.Context, cluster *Cluster, workNamespace, applicationName string, settings IDESettings) ([]IDEView, error) {
 	statefulSets, err := cluster.Clientset.AppsV1().StatefulSets(workNamespace).List(ctx, metav1.ListOptions{
 		LabelSelector: "oops.type=IDE,oops.app=" + applicationName,
 	})
 	if err != nil {
 		return nil, err
 	}
-	views := []IdeView{}
+	views := []IDEView{}
 	for i := range statefulSets.Items {
 		statefulSet := &statefulSets.Items[i]
 		id := statefulSet.Name
@@ -386,7 +370,7 @@ func ListIdes(ctx context.Context, cluster *Cluster, workNamespace, applicationN
 		if name == "" {
 			name = id
 		}
-		views = append(views, IdeView{
+		views = append(views, IDEView{
 			ID:        id,
 			Name:      name,
 			Host:      id + "." + settings.Domain,

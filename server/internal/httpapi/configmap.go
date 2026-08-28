@@ -22,7 +22,7 @@ func (s *Server) getConfigMaps(c *gin.Context) {
 }
 
 func (s *Server) updateConfigMaps(c *gin.Context) {
-	var commands []k8s.UpdateConfigMapCommand
+	var commands []k8s.UpdateConfigMapRequest
 	if err := c.ShouldBindJSON(&commands); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return

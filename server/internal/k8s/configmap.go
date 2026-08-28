@@ -54,8 +54,8 @@ func ResourceNameOf(key string) string {
 	return sanitized
 }
 
-// UpdateConfigMapCommand mirrors the Java command.
-type UpdateConfigMapCommand struct {
+// UpdateConfigMapRequest mirrors the Java command.
+type UpdateConfigMapRequest struct {
 	Key       string  `json:"key"`
 	Value     string  `json:"value"`
 	Secret    bool    `json:"secret"`
@@ -163,7 +163,7 @@ func annotationValues(mounts map[string]string, metas map[string]configMeta) map
 	return annotations
 }
 
-func UpdateConfigMaps(ctx context.Context, cluster *Cluster, namespace, applicationName string, commands []UpdateConfigMapCommand) error {
+func UpdateConfigMaps(ctx context.Context, cluster *Cluster, namespace, applicationName string, commands []UpdateConfigMapRequest) error {
 	client := cluster.Clientset.CoreV1()
 
 	// Ensure the namespace exists (server-side apply like the Java gateway).

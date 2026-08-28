@@ -100,9 +100,9 @@ func (engine *Engine) MigrateNamespace(ctx context.Context, namespace, name, tar
 func (engine *Engine) redeployToTarget(ctx context.Context, cluster *k8s.Cluster, configMaps []k8s.ConfigMapItem,
 	environmentName, target, name, currentImage string) error {
 
-	commands := make([]k8s.UpdateConfigMapCommand, 0, len(configMaps))
+	commands := make([]k8s.UpdateConfigMapRequest, 0, len(configMaps))
 	for _, item := range configMaps {
-		commands = append(commands, k8s.UpdateConfigMapCommand{
+		commands = append(commands, k8s.UpdateConfigMapRequest{
 			Key: item.Key, Value: item.Value, Secret: item.Secret,
 			MountPath: item.MountPath, Group: item.Group, Comment: item.Comment,
 		})

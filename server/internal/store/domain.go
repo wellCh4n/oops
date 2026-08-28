@@ -100,8 +100,8 @@ func (s *Store) ListDomainsFull(ctx context.Context) ([]DomainFull, error) {
 	return domains, nil
 }
 
-// UpsertDomainCommand mirrors the Java command object.
-type UpsertDomainCommand struct {
+// UpsertDomainRequest mirrors the Java command object.
+type UpsertDomainRequest struct {
 	Host            string  `json:"host"`
 	Description     *string `json:"description"`
 	HTTPS           *bool   `json:"https"`
@@ -173,7 +173,7 @@ func (s *Store) requireDomainEnvironment(ctx context.Context, environmentName *s
 }
 
 // applyCertFields mirrors DomainService.applyCertFields.
-func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainCommand) error {
+func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainRequest) error {
 	https := request.HTTPS != nil && *request.HTTPS
 	record.HTTPS = &https
 	if !https {
@@ -232,7 +232,7 @@ func (s *Store) domainHostExists(ctx context.Context, host string) (bool, error)
 	return count > 0, err
 }
 
-func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainCommand) (*DomainView, error) {
+func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainRequest) (*DomainView, error) {
 	host := domain.NormalizeHost(request.Host)
 	if err := domain.ValidateHost(host); err != nil {
 		return nil, err
@@ -269,7 +269,7 @@ func (s *Store) FindDomain(ctx context.Context, id string) (*DomainView, error) 
 	return &view, nil
 }
 
-func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomainCommand) (*DomainView, error) {
+func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomainRequest) (*DomainView, error) {
 	var record domainRecord
 	if err := s.orm.WithContext(ctx).Where("id = ?", id).First(&record).Error; err != nil {
 		return nil, domain.Bizf("Domain not found: %s", id)

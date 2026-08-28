@@ -9,9 +9,9 @@ import (
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
-// requireOpenApiAuth mirrors OpenApiAuthFilter: Bearer user access token
+// requireOpenAPIAuth mirrors OpenApiAuthFilter: Bearer user access token
 // (sk-oops-...), enabled accounts only. No JWT, no cookies, no query param.
-func (s *Server) requireOpenApiAuth() gin.HandlerFunc {
+func (s *Server) requireOpenAPIAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		header := c.GetHeader("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
@@ -38,8 +38,8 @@ func hiddenFromOpenAPI(c *gin.Context) {
 }
 
 func redactEnvironment(environment store.EnvironmentFull) store.EnvironmentFull {
-	if environment.KubernetesApiServer != nil {
-		environment.KubernetesApiServer = &store.KubernetesApiServer{URL: environment.KubernetesApiServer.URL}
+	if environment.KubernetesAPIServer != nil {
+		environment.KubernetesAPIServer = &store.KubernetesAPIServer{URL: environment.KubernetesAPIServer.URL}
 	}
 	if environment.ImageRepository != nil {
 		environment.ImageRepository = &store.ImageRepository{
@@ -67,7 +67,7 @@ func (s *Server) openapiListEnvironments(c *gin.Context) {
 // registerOpenAPI wires the /openapi surface: the dual-mapped application,
 // deployment, pipeline, and configmap endpoints plus the discovery listing.
 func (s *Server) registerOpenAPI(engine *gin.Engine) {
-	openapi := engine.Group("/openapi", s.requireOpenApiAuth())
+	openapi := engine.Group("/openapi", s.requireOpenAPIAuth())
 
 	s.registerSandbox(openapi)
 	openapi.GET("/namespaces", s.listNamespaces)
