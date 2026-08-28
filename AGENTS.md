@@ -33,7 +33,7 @@ Only two interfaces exist, both consumer-defined and small: `engine.Notifier` an
 
 ### Frontend (Next.js)
 
-**Next.js:** 16.2.9 · **React:** 19.2.3 · **Package manager:** pnpm
+**Next.js:** 16.2.12 · **React:** 19.2.3 · **Package manager:** pnpm
 
 - `web/app/`: App Router pages · `web/components/` (+ `components/ui/` shadcn-style Radix components)
 - `web/lib/`: utilities, i18n, API clients · `web/store/`: Zustand stores · `web/contexts/`: work-context provider · `web/locales/`: `zh-CN`, `en-US`, `zh-TW`, `ja-JP`
