@@ -83,9 +83,14 @@ func pipelineRecordsToViews(records []pipelineRecord) []PipelineView {
 }
 
 func (s *Store) PagePipelines(ctx context.Context, namespace, applicationName, environment string, page, size int) (int64, []PipelineView, error) {
+	// "all" spans every namespace and an empty/"all" environment means no
+	// filter, mirroring PipelinePersistenceAdapter.findPage.
 	query := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
-		Where("namespace = ? AND application_name = ?", namespace, applicationName)
-	if environment != "" {
+		Where("application_name = ?", applicationName)
+	if !strings.EqualFold(namespace, "all") {
+		query = query.Where("namespace = ?", namespace)
+	}
+	if environment != "" && !strings.EqualFold(environment, "all") {
 		query = query.Where("environment = ?", environment)
 	}
 	var total int64
