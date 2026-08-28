@@ -100,7 +100,7 @@ function SandboxesContent() {
         const envs = res.data ?? []
         setEnvironments(envs)
         if (envs.length > 0 && !searchParams.get("environment")) {
-          updateParams({ env: envs[0].name })
+          updateParams({ environment: envs[0].name })
         }
       })
       .catch(() => setEnvironments([]))
@@ -335,7 +335,7 @@ function SandboxesContent() {
                 </span>
                 <SelectWithSearch
                   value={envFilter}
-                  onValueChange={(value) => updateParams({ env: value })}
+                  onValueChange={(value) => updateParams({ environment: value })}
                   options={environments.map((env) => ({ value: env.name, label: env.name }))}
                   placeholder={t("sandbox.envPlaceholder")}
                   className="w-[200px]"
