@@ -18,9 +18,9 @@ Mainstream Go layout — one noun per topic, reads and writes together, no repos
 - **`cmd/devtool/`** — local verification scratch tool (not shipped).
 - **`internal/domain/`** — rules shared by several packages, nothing else: pipeline status state machine (`EnsurePipelineTransition`, `ActivePipelineStatuses`), `BizError`/`Bizf`, resource/environment/host name validation, `NewID` (24-char NanoId).
 - **`internal/httpapi/`** — Gin handlers, one file per resource (`user.go`, `application.go`, `environment.go`, ...), `routes.go` is the single grouped route table, `server.go` wires dependencies. WebSocket handlers in `websocket.go`/`pipeline_log.go` (gorilla/websocket).
-- **`internal/store/`** — GORM persistence, one file per topic (`user.go`, `application.go`, `appconfig.go`, `pipeline.go`, `environment.go`, `domain.go`, ...). `orm.go` has the generic `JSONField[T]` valuer/scanner for JSON-blob columns (preserves null-vs-`[]`). `migrate.go` + `migrations/` run goose migrations at startup. `localtime.go`'s `LocalDateTime` renders Java-compatible timestamps (local time, no zone).
-- **`internal/engine/`** — pipeline lifecycle: `buildjob.go` (build Job assembly), `scan.go` (5s scan loops, optimistic-lock state transitions, `evaluateRollout` health verdict), `deploy*.go` (processor chain: namespace → pull secret → StatefulSet → Service → IngressRoute), `restartjob.go`, `alerts.go`, `migration.go`, `notify.go`.
-- **`internal/k8s/`** — client-go glue: `client.go` (`NewCluster`, kubeconfig fallback when the environment URL is empty), `appruntime.go`, `configmap.go`, `podfs.go`, `sandbox*.go`, `ide.go` (embeds `ide-default-config.json`), `metricshistory.go` (Prometheus via API-server service proxy), Traefik CRDs via the dynamic client (`traefik.io/v1alpha1`, server-side apply, FieldManager "oops").
+- **`internal/store/`** — GORM persistence, one file per topic (`user.go`, `application.go`, `application_config.go`, `pipeline.go`, `environment.go`, `domain.go`, ...). `orm.go` has the generic `JSONField[T]` valuer/scanner for JSON-blob columns (preserves null-vs-`[]`). `migrate.go` + `migrations/` run goose migrations at startup. `localtime.go`'s `LocalDateTime` renders Java-compatible timestamps (local time, no zone).
+- **`internal/engine/`** — pipeline lifecycle: `build_job.go` (build Job assembly), `scan.go` (5s scan loops, optimistic-lock state transitions, `evaluateRollout` health verdict), `deploy*.go` (processor chain: namespace → pull secret → StatefulSet → Service → IngressRoute), `restart_job.go`, `alerts.go`, `migration.go`, `notify.go`.
+- **`internal/k8s/`** — client-go glue: `client.go` (`NewCluster`, kubeconfig fallback when the environment URL is empty), `application_runtime.go`, `configmap.go`, `podfs.go`, `sandbox*.go`, `ide.go` (embeds `ide-default-config.json`), `metrics_history.go` (Prometheus via API-server service proxy), Traefik CRDs via the dynamic client (`traefik.io/v1alpha1`, server-side apply, FieldManager "oops").
 - **`internal/config/`** — the full `oops.*`/`spring.datasource` config tree from `application.yml`.
 - **`internal/crypto/`** — AES-256-GCM codec for environment secrets (key = SHA-256 of `oops.crypto.secret-key`).
 - **`internal/feishu/`** — Feishu OAuth + interactive-card messages, and the larkws long-connection event client (user-deactivation sync).
@@ -122,7 +122,7 @@ Applications deploy as **StatefulSets** (`enableServiceLinks: false`) with Traef
 
 **Resource alerts** (`engine/alerts.go`, opt-in via `oops.metrics.alert.enabled`, global config only): the sustained-for-N-minutes condition is one PromQL `min_over_time` instant query per target; `application_alert_state` makes it edge-triggered (notify on OK→FIRING, repeat interval, once on recovery). Memory 90%/5min, CPU 95%/10min by design.
 
-**Scheduled restarts** (`engine/restartjob.go`): per-environment cron in expert config, scanned every minute, `GET /api/cron/next` previews fire times.
+**Scheduled restarts** (`engine/restart_job.go`): per-environment cron in expert config, scanned every minute, `GET /api/cron/next` previews fire times.
 
 **Deletion & migration**: Danger Zone cascade-deletes K8s resources + DB rows (owner/admin only); namespace migration moves DB rows and live workloads per environment with per-environment results.
 
@@ -177,6 +177,8 @@ Backend tests live beside the code (`*_test.go`, 8 packages): domain state machi
 ### Backend
 - Mainstream Go: initialisms upper-case (`IDE`, `API`, `JWT`), error strings lower-case, `*Request` for request DTOs, interfaces defined by consumers, `log/slog` for logging.
 - **Full descriptive variable names** — `environment`, `statefulSet`, `containerStatus`; never `e`, `ss`, `cs`.
+- **File names**: lower-case, underscore between words (`metrics_history.go`, `build_job.go`, `application_runtime.go`); run words together only when they are a single term of art (`configmap.go`, `podfs.go`, `scanlines.go`, `localtime.go`). Don't abbreviate in a file name what you wouldn't abbreviate in an identifier — `application_`, not `app_`.
+- **File-name footgun**: a trailing `_<GOOS>` / `_<GOARCH>` / `_test` segment is a build constraint, not a word separator — `client_js.go`, `store_plan9.go`, `parse_arm.go` silently drop out of the build. This is why `cmd/devtool/wstest.go` stays jammed. Check with `go list -f '{{len .IgnoredGoFiles}}' ./...` after renaming.
 - Verify with `go build ./... && go vet ./... && go test ./...`; staticcheck should stay clean.
 
 ### Frontend
