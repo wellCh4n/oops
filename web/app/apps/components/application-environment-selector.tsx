@@ -81,11 +81,11 @@ export function ApplicationEnvironmentSelector({
           <TabsList className="justify-start h-auto flex-wrap">
             {environments.map((env) => (
               <TabsTrigger
-                key={env.environmentName}
-                value={env.environmentName}
+                key={env.environment}
+                value={env.environment}
                 className="px-6 cursor-pointer"
               >
-                {env.environmentName}
+                {env.environment}
               </TabsTrigger>
             ))}
           </TabsList>

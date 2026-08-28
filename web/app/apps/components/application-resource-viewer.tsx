@@ -14,10 +14,10 @@ import { useLanguage } from "@/contexts/language-context"
 interface ApplicationResourceViewerProps {
   namespace?: string
   applicationName?: string
-  environmentName?: string
+  environment?: string
 }
 
-export function ApplicationResourceViewer({ namespace, applicationName, environmentName }: ApplicationResourceViewerProps) {
+export function ApplicationResourceViewer({ namespace, applicationName, environment }: ApplicationResourceViewerProps) {
   const { t } = useLanguage()
   const { resolvedTheme } = useTheme()
   const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
@@ -27,11 +27,11 @@ export function ApplicationResourceViewer({ namespace, applicationName, environm
   const [activeKind, setActiveKind] = useState<string>("")
 
   const loadResources = useCallback(async () => {
-    if (!namespace || !applicationName || !environmentName) return
+    if (!namespace || !applicationName || !environment) return
     setLoading(true)
     setError(false)
     try {
-      const res = await getApplicationResources(namespace, applicationName, environmentName)
+      const res = await getApplicationResources(namespace, applicationName, environment)
       setResources(res.data ?? [])
     } catch {
       setError(true)
@@ -39,7 +39,7 @@ export function ApplicationResourceViewer({ namespace, applicationName, environm
     } finally {
       setLoading(false)
     }
-  }, [namespace, applicationName, environmentName])
+  }, [namespace, applicationName, environment])
 
   useEffect(() => {
     loadResources()
@@ -93,7 +93,7 @@ export function ApplicationResourceViewer({ namespace, applicationName, environm
               height="100%"
               defaultLanguage="yaml"
               theme={editorTheme}
-              path={`${environmentName}/${activeKind}`}
+              path={`${environment}/${activeKind}`}
               value={activeContent}
               options={{
                 readOnly: true,

@@ -101,7 +101,7 @@ export const getStatusColumns = (
     cell: ({ row }) => {
       const podName = row.original.name
       const podPath = `/apps/${linkContext.namespace}/${linkContext.applicationName}/pods/${podName}`
-      const query = `?env=${encodeURIComponent(linkContext.env)}`
+      const query = `?environment=${encodeURIComponent(linkContext.env)}`
       return (
         <div className="flex items-center justify-end gap-2">
           <Button

@@ -72,7 +72,7 @@ function EnvironmentEditPageContent() {
   const [showCreateNamespaceDialog, setShowCreateNamespaceDialog] = useState(false)
   const [missingNamespace, setMissingNamespace] = useState("")
 
-  const [environmentName, setEnvironmentName] = useState("")
+  const [environment, setEnvironmentName] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
@@ -288,7 +288,7 @@ function EnvironmentEditPageContent() {
   }
 
   const handleDelete = async () => {
-    if (!environmentName || deleteConfirmInput !== environmentName) return
+    if (!environment || deleteConfirmInput !== environment) return
     setIsDeleting(true)
     let ok = false
     try {
@@ -317,7 +317,7 @@ function EnvironmentEditPageContent() {
   }
 
   return (
-    <ContentPage title={environmentName}>
+    <ContentPage title={environment}>
       <div className="space-y-6">
       <div className="flex gap-6">
         <div className="flex-1 min-w-0">
@@ -673,7 +673,7 @@ function EnvironmentEditPageContent() {
                         <p className="text-sm font-medium">{t("env.delete")}</p>
                         <p className="text-xs text-muted-foreground">
                           {t("env.deleteDescPrefix")}
-                          <strong>{environmentName}</strong>
+                          <strong>{environment}</strong>
                           {t("env.deleteDescSuffix")}
                         </p>
                       </div>
@@ -717,14 +717,14 @@ function EnvironmentEditPageContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t("env.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("env.deleteDescPrefix")}<strong>{environmentName}</strong>{t("env.deleteDescSuffix")}
+              {t("env.deleteDescPrefix")}<strong>{environment}</strong>{t("env.deleteDescSuffix")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="space-y-2">
             <Input
               value={deleteConfirmInput}
               onChange={(e) => setDeleteConfirmInput(e.target.value)}
-              placeholder={environmentName || t("env.namePlaceholder")}
+              placeholder={environment || t("env.namePlaceholder")}
             />
           </div>
           <AlertDialogFooter>
@@ -736,7 +736,7 @@ function EnvironmentEditPageContent() {
             </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={isDeleting || !environmentName || deleteConfirmInput !== environmentName}
+              disabled={isDeleting || !environment || deleteConfirmInput !== environment}
               onClick={(e) => {
                 e.preventDefault()
                 handleDelete()

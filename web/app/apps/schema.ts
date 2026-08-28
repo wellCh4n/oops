@@ -34,7 +34,7 @@ export const applicationBuildSchema = z.object({
   }).nullish(),
   buildImage: z.string().nullish(),
   environmentConfigs: z.array(z.object({
-    environmentName: z.string(),
+    environment: z.string(),
     buildCommand: z.string().nullish(),
   })),
 }).superRefine((value, ctx) => {
@@ -48,7 +48,7 @@ export const applicationBuildSchema = z.object({
 
 export const applicationRuntimeSpecSchema = z.object({
   environmentConfigs: z.array(z.object({
-    environmentName: z.string(),
+    environment: z.string(),
     replicas: z.number().int().min(0).optional(),
     cpuRequest: z.string().optional(),
     cpuLimit: z.string().optional(),
@@ -111,7 +111,7 @@ export const applicationConfigSchema = z.object({
 
 export const applicationExpertConfigSchema = z.object({
   environmentConfigs: z.array(z.object({
-    environmentName: z.string(),
+    environment: z.string(),
     serviceAccountName: z.string().optional(),
     priority: z.string().optional(),
     scheduledRestartEnabled: z.boolean().optional(),
@@ -124,7 +124,7 @@ export const applicationServiceSchema = z.object({
   port: z.string(),
   internalPorts: z.array(z.string()),
   environmentConfigs: z.array(z.object({
-    environmentName: z.string(),
+    environment: z.string(),
     hosts: z.array(z.object({
       host: z.string(),
       https: z.boolean(),

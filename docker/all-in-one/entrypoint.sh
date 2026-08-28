@@ -1,17 +1,8 @@
 #!/bin/sh
 set -e
 
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -XX:+ExitOnOutOfMemoryError -XX:+UseCompactObjectHeaders -XX:+UseShenandoahGC"
-
-
-CONFIG_ARGS=""
-if [ -n "${SPRING_CONFIG_LOCATION:-}" ]; then
-  CONFIG_ARGS="--spring.config.location=${SPRING_CONFIG_LOCATION}"
-elif [ -f "/app/config/application.properties" ] || [ -f "/app/application.properties" ]; then
-  CONFIG_ARGS="--spring.config.additional-location=file:/app/config/,file:/app/"
-fi
-
-java -jar /app/oops.jar ${CONFIG_ARGS} --server.port=${BACKEND_PORT:-8080} &
+# OOPS_CONFIG overrides the default mount point of the shared application.yml.
+/app/oops -config "${OOPS_CONFIG:-/app/config/application.yml}" -listen ":${BACKEND_PORT:-8080}" &
 BACK_PID=$!
 
 cd /app/web

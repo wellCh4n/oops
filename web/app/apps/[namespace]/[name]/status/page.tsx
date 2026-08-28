@@ -73,7 +73,7 @@ function ApplicationStatusContent() {
 
   const namespace = params.namespace as string
   const name = params.name as string
-  const envParam = searchParams.get("env")
+  const envParam = searchParams.get("environment")
 
   const [loading, setLoading] = useState(true)
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
@@ -105,10 +105,10 @@ function ApplicationStatusContent() {
 
           // Determine initial environment: the URL first, then the environment
           // carried in the work context, and only then the first one.
-          let initialEnv = res.data[0].environmentName
-          if (envParam && res.data.some(environment => environment.environmentName === envParam)) {
+          let initialEnv = res.data[0].environment
+          if (envParam && res.data.some(environment => environment.environment === envParam)) {
             initialEnv = envParam
-          } else if (!envParam && contextEnv && res.data.some(environment => environment.environmentName === contextEnv)) {
+          } else if (!envParam && contextEnv && res.data.some(environment => environment.environment === contextEnv)) {
             initialEnv = contextEnv
           }
 
@@ -118,7 +118,7 @@ function ApplicationStatusContent() {
           // Sync URL if needed
           if (initialEnv !== envParam) {
             const newParams = new URLSearchParams(searchParams.toString())
-            newParams.set("env", initialEnv)
+            newParams.set("environment", initialEnv)
             router.replace(`${pathname}?${newParams.toString()}`)
           }
         }
@@ -196,7 +196,7 @@ function ApplicationStatusContent() {
     setSelectedEnv(value)
     setWorkContext({ env: value })
     const newParams = new URLSearchParams(searchParams.toString())
-    newParams.set("env", value)
+    newParams.set("environment", value)
     router.push(`${pathname}?${newParams.toString()}`)
   }
 
@@ -299,8 +299,8 @@ function ApplicationStatusContent() {
                 <Tabs value={selectedEnv} onValueChange={handleTabChange}>
                   <TabsList>
                     {environments.map((env) => (
-                      <TabsTrigger key={env.environmentName} value={env.environmentName} className="px-8">
-                        {env.environmentName}
+                      <TabsTrigger key={env.environment} value={env.environment} className="px-8">
+                        {env.environment}
                       </TabsTrigger>
                     ))}
                   </TabsList>
@@ -356,14 +356,14 @@ function ApplicationStatusContent() {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="border-t p-3">
-            <ApplicationResourceViewer namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+            <ApplicationResourceViewer namespace={namespace} applicationName={name} environment={selectedEnv} />
           </div>
         </CollapsibleContent>
       </Collapsible>
 
       {selectedEnv && (
         <div className="mt-4">
-          <ApplicationEventsPanel namespace={namespace} applicationName={name} environmentName={selectedEnv} />
+          <ApplicationEventsPanel namespace={namespace} applicationName={name} environment={selectedEnv} />
         </div>
       )}
 
@@ -373,7 +373,7 @@ function ApplicationStatusContent() {
           onOpenChange={setMetricsDrawerOpen}
           namespace={namespace}
           applicationName={name}
-          environmentName={selectedEnv}
+          environment={selectedEnv}
         />
       )}
 

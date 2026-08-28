@@ -65,7 +65,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
         if (initialData) {
           requests.push(
             getApplicationEnvironments(initialData.namespace, initialData.name)
-              .then(res => setSelectedEnvNames(res.data.map(e => e.environmentName)))
+              .then(res => setSelectedEnvNames(res.data.map(e => e.environment)))
           )
         }
         await Promise.all(requests)
@@ -137,7 +137,7 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
         const envPayload: ApplicationEnvironment[] = selectedEnvNames.map(envName => ({
             namespace: data.namespace,
             applicationName: data.name,
-            environmentName: envName
+            environment: envName
         }))
         await updateApplicationEnvironments(data.namespace, data.name, envPayload)
       }

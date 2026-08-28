@@ -57,8 +57,8 @@ export default function DomainsPage() {
     const names = new Set<string>()
     let hasUnset = false
     for (const domain of domains) {
-      if (domain.environmentName) {
-        names.add(domain.environmentName)
+      if (domain.environment) {
+        names.add(domain.environment)
       } else {
         hasUnset = true
       }
@@ -76,8 +76,8 @@ export default function DomainsPage() {
   const filtered = environmentFilter === "all"
     ? searched
     : environmentFilter === "__unset__"
-      ? searched.filter((d) => !d.environmentName)
-      : searched.filter((d) => d.environmentName === environmentFilter)
+      ? searched.filter((d) => !d.environment)
+      : searched.filter((d) => d.environment === environmentFilter)
 
   return (
     <ContentPage title={t("domains.title")}>

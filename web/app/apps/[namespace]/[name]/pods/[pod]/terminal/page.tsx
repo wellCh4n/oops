@@ -36,7 +36,7 @@ function TerminalPageContent() {
   const namespace = params.namespace as string
   const name = params.name as string
   const pod = params.pod as string
-  const env = searchParams.get("env") ?? ""
+  const env = searchParams.get("environment") ?? ""
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "disconnected"
   >("connecting")

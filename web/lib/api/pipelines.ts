@@ -64,7 +64,7 @@ export const rollbackPipeline = async (namespace: string, name: string, id: stri
 
 // Returns the container image currently running on the application's StatefulSet for the given environment.
 export const getCurrentImage = async (namespace: string, name: string, environment: string): Promise<ApiResponse<string>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/current-image?env=${encodeURIComponent(environment)}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/current-image?environment=${encodeURIComponent(environment)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch current image")
   }

@@ -151,7 +151,7 @@ export interface GitBranch {
 }
 
 export const getApplicationBranches = async (namespace: string, name: string, env: string): Promise<ApiResponse<GitBranch[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/branches?env=${encodeURIComponent(env)}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/branches?environment=${encodeURIComponent(env)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application branches")
   }
@@ -227,7 +227,7 @@ export const updateApplicationExpertConfig = async (
 }
 
 export const getApplicationResources = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationResource[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/resources?env=${encodeURIComponent(env)}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/resources?environment=${encodeURIComponent(env)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application resources")
   }
@@ -235,7 +235,7 @@ export const getApplicationResources = async (namespace: string, name: string, e
 }
 
 export const getApplicationMetrics = async (namespace: string, name: string, env: string): Promise<ApiResponse<PodMetric[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/metrics?env=${encodeURIComponent(env)}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/metrics?environment=${encodeURIComponent(env)}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application metrics")
   }
@@ -252,7 +252,7 @@ export const getApplicationMetricsHistory = async (
   range: MetricHistoryRange,
   agg: MetricAggregation
 ): Promise<ApiResponse<PodMetricHistory>> => {
-  const query = new URLSearchParams({ env, range, agg })
+  const query = new URLSearchParams({ environment: env, range, agg })
   const response = await apiFetch(
     `/api/namespaces/${namespace}/applications/${name}/metrics/history?${query.toString()}`
   )
@@ -355,7 +355,7 @@ export const deployApplication = async (
 }
 
 export const getApplicationStatus = async (namespace: string, name: string, env: string): Promise<ApiResponse<ApplicationPodStatus[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/status?env=${env}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/status?environment=${env}`)
   if (!response.ok) {
     throw new Error("Failed to fetch application status")
   }
@@ -368,7 +368,7 @@ export const getApplicationEvents = async (
   env: string,
   options?: { since?: string; limit?: number }
 ): Promise<ApiResponse<ApplicationEvent[]>> => {
-  const params = new URLSearchParams({ env })
+  const params = new URLSearchParams({ environment: env })
   if (options?.since) params.set("since", options.since)
   if (options?.limit !== undefined) params.set("limit", String(options.limit))
 
@@ -393,13 +393,13 @@ export const watchApplicationStatus = (
   options: Omit<SseWatchOptions<ApplicationStatusEvents>, "url">
 ): (() => void) => {
   return watchSse<ApplicationStatusEvents>({
-    url: `/api/namespaces/${namespace}/applications/${name}/status/watch?env=${encodeURIComponent(env)}`,
+    url: `/api/namespaces/${namespace}/applications/${name}/status/watch?environment=${encodeURIComponent(env)}`,
     ...options,
   })
 }
 
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?env=${env}`, {
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?environment=${env}`, {
     method: "PUT",
   })
   if (!response.ok) {
@@ -411,7 +411,7 @@ export const restartApplicationPod = async (namespace: string, name: string, pod
 export interface ServiceHostConflict {
   namespace: string
   applicationName: string
-  environmentName: string
+  environment: string
 }
 
 export const checkApplicationServiceHost = async (
@@ -429,7 +429,7 @@ export const checkApplicationServiceHost = async (
 }
 
 export const getClusterDomain = async (namespace: string, name: string, env: string): Promise<ApiResponse<ClusterDomainInfo>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?env=${env}`)
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/service/cluster-domain?environment=${env}`)
   if (!response.ok) {
     throw new Error("Failed to fetch cluster domain")
   }

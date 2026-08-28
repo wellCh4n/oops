@@ -56,7 +56,7 @@ interface ApplicationMetricsDrawerProps {
   onOpenChange: (open: boolean) => void
   namespace: string
   applicationName: string
-  environmentName: string
+  environment: string
 }
 
 /**
@@ -126,7 +126,7 @@ export function ApplicationMetricsDrawer({
   onOpenChange,
   namespace,
   applicationName,
-  environmentName,
+  environment,
 }: ApplicationMetricsDrawerProps) {
   const { t } = useLanguage()
   const [range, setRange] = useState<MetricHistoryRange>("1h")
@@ -144,13 +144,13 @@ export function ApplicationMetricsDrawer({
 
   const load = useCallback(
     async (showSpinner: boolean) => {
-      if (!environmentName) return
+      if (!environment) return
       if (showSpinner) setLoading(true)
       try {
         const response = await getApplicationMetricsHistory(
           namespace,
           applicationName,
-          environmentName,
+          environment,
           range,
           aggregation
         )
@@ -167,7 +167,7 @@ export function ApplicationMetricsDrawer({
         hasLoadedRef.current = true
       }
     },
-    [namespace, applicationName, environmentName, range, aggregation, t]
+    [namespace, applicationName, environment, range, aggregation, t]
   )
 
   useEffect(() => {
@@ -183,18 +183,18 @@ export function ApplicationMetricsDrawer({
   // Reset to a first-load spinner whenever the query changes, since the previous range's data is not comparable.
   useEffect(() => {
     hasLoadedRef.current = false
-  }, [range, aggregation, environmentName])
+  }, [range, aggregation, environment])
 
   // Configured request/limit levels, drawn as guide lines. They only change when someone edits the runtime spec, so
   // this is fetched once per open rather than on the refresh tick.
   useEffect(() => {
-    if (!open || !environmentName) return
+    if (!open || !environment) return
     let cancelled = false
     getApplicationRuntimeSpec(namespace, applicationName)
       .then((response) => {
         if (cancelled) return
         const config = response.data?.environmentConfigs?.find(
-          (candidate) => candidate.environmentName === environmentName
+          (candidate) => candidate.environment === environment
         )
         setEnvironmentSpec(config ?? null)
       })
@@ -205,7 +205,7 @@ export function ApplicationMetricsDrawer({
     return () => {
       cancelled = true
     }
-  }, [open, namespace, applicationName, environmentName])
+  }, [open, namespace, applicationName, environment])
 
   const cpuGuides = useMemo<ResourceGuides>(
     () => ({
@@ -387,7 +387,7 @@ export function ApplicationMetricsDrawer({
             <div className="min-w-0">
               <DrawerTitle>{t("apps.metrics.title")}</DrawerTitle>
               <DrawerDescription className="truncate">
-                {applicationName} · {environmentName}
+                {applicationName} · {environment}
               </DrawerDescription>
             </div>
             {/* Clicking the scrim closes the drawer too, but nothing on screen
