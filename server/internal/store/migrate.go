@@ -5,12 +5,26 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/pressly/goose/v3"
 )
 
 //go:embed migrations/*.sql
 var migrations embed.FS
+
+// slogGooseLogger routes goose's progress lines ("OK 00002_... (12ms)",
+// "goose: no migrations to run") into the application log.
+type slogGooseLogger struct{}
+
+func (slogGooseLogger) Fatalf(format string, v ...any) {
+	slog.Error("migration", "message", strings.TrimSpace(fmt.Sprintf(format, v...)))
+}
+
+func (slogGooseLogger) Printf(format string, v ...any) {
+	slog.Info("migration", "message", strings.TrimSpace(fmt.Sprintf(format, v...)))
+}
 
 // baselineFlywayVersion is the Java-side Flyway version the goose baseline
 // (00001) was dumped from. A database migrated by an older Java release is
@@ -30,7 +44,7 @@ func (s *Store) Migrate() error {
 		return err
 	}
 	goose.SetBaseFS(migrations)
-	goose.SetLogger(goose.NopLogger())
+	goose.SetLogger(slogGooseLogger{})
 	if err := goose.SetDialect("mysql"); err != nil {
 		return err
 	}
@@ -76,7 +90,7 @@ func (s *Store) MigrateDown() error {
 		return err
 	}
 	goose.SetBaseFS(migrations)
-	goose.SetLogger(goose.NopLogger())
+	goose.SetLogger(slogGooseLogger{})
 	if err := goose.SetDialect("mysql"); err != nil {
 		return err
 	}

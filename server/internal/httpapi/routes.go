@@ -6,6 +6,7 @@ import "github.com/gin-gonic/gin"
 // way the Java controllers were: one block per resource, public → authed →
 // admin, with the application aggregate's sub-resources kept together.
 func (s *Server) Routes() *gin.Engine {
+	gin.SetMode(gin.ReleaseMode) // silence the per-handler registration debug prints
 	engine := gin.New()
 	engine.Use(gin.Recovery(), s.cors())
 
