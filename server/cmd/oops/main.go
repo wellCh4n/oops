@@ -35,6 +35,10 @@ func main() {
 		os.Exit(1)
 	}
 	defer st.Close()
+	if err := st.Migrate(); err != nil {
+		slog.Error("run database migrations", "error", err)
+		os.Exit(1)
+	}
 	st.SetCodec(crypto.NewCodec(cfg.Oops.Crypto.SecretKey))
 
 	server := httpapi.NewServer(cfg, st)

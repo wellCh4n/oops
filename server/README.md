@@ -1,8 +1,10 @@
 # OOPS Go Server
 
 The Go rewrite of the OOPS backend. It serves the same `/api` and `/openapi`
-surfaces with wire-compatible responses, shares the MySQL schema (Flyway
-migrations stay owned by the Java side until final cut-over), reads the same
+surfaces with wire-compatible responses, owns the MySQL schema (goose
+migrations under `internal/store/migrations/` run at startup — the baseline
+creates the full schema on a fresh database and no-ops via IF NOT EXISTS on
+one that Flyway already built), reads the same
 `config/application.yml`, and signs/verifies the same HS256 JWTs — so the
 Next.js frontend and the repo-vendored CLI work unchanged, and nginx can run
 both backends side by side during migration.
