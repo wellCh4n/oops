@@ -4,21 +4,30 @@ package config
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"gopkg.in/yaml.v3"
 )
 
+// DatasourceConfig holds the database connection settings. URL accepts either
+// a Spring JDBC URL or a native go-sql-driver DSN (see MySQLDSN).
+type DatasourceConfig struct {
+	URL      string `yaml:"url"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
 type Config struct {
-	Spring struct {
-		Datasource struct {
-			URL      string `yaml:"url"`
-			Username string `yaml:"username"`
-			Password string `yaml:"password"`
-		} `yaml:"datasource"`
+	// Datasource is the Go-native home for the database settings; the
+	// spring.datasource block below is the Java-era spelling and is used
+	// as a fallback when this one is absent.
+	Datasource DatasourceConfig `yaml:"datasource"`
+	Spring     struct {
+		Datasource DatasourceConfig `yaml:"datasource"`
 	} `yaml:"spring"`
 	Oops struct {
 		JWT struct {
@@ -162,22 +171,40 @@ func Load(path string) (*Config, error) {
 
 var jdbcPattern = regexp.MustCompile(`^jdbc:mysql://([^/]+)/([^?]+)(?:\?(.*))?$`)
 
-// MySQLDSN converts the Spring JDBC URL into a go-sql-driver DSN.
+// MySQLDSN accepts the datasource URL in either format: a Spring JDBC URL
+// (jdbc:mysql://host:port/db?...) is converted to a go-sql-driver DSN, and a
+// native DSN (user:pass@tcp(host:port)/db?...) is validated and passed
+// through — username/password from the DSN itself win in that case.
 func (c *Config) MySQLDSN() (string, error) {
-	matches := jdbcPattern.FindStringSubmatch(c.Spring.Datasource.URL)
-	if matches == nil {
-		return "", fmt.Errorf("unsupported datasource url: %s", c.Spring.Datasource.URL)
+	datasource := c.Datasource
+	if strings.TrimSpace(datasource.URL) == "" {
+		datasource = c.Spring.Datasource
 	}
-	hostPort, database := matches[1], matches[2]
-	params := url.Values{}
-	params.Set("parseTime", "true")
-	params.Set("charset", "utf8mb4")
+	datasourceURL := strings.TrimSpace(datasource.URL)
+	if !strings.HasPrefix(datasourceURL, "jdbc:") {
+		if _, err := mysql.ParseDSN(datasourceURL); err != nil {
+			return "", fmt.Errorf("datasource url is neither a jdbc:mysql:// URL nor a valid DSN: %w", err)
+		}
+		return datasourceURL, nil
+	}
+
+	matches := jdbcPattern.FindStringSubmatch(datasourceURL)
+	if matches == nil {
+		return "", fmt.Errorf("unsupported datasource url: %s", datasourceURL)
+	}
+	settings := mysql.NewConfig() // handles credential escaping, unlike string concatenation
+	settings.User = datasource.Username
+	settings.Passwd = datasource.Password
+	settings.Net = "tcp"
+	settings.Addr = matches[1]
+	settings.DBName = matches[2]
+	settings.ParseTime = true
+	settings.Params = map[string]string{"charset": "utf8mb4"}
 	// Keep timestamps interpreted the same way as the JVM side (serverTimezone=UTC).
 	if strings.Contains(matches[3], "serverTimezone=UTC") {
-		params.Set("loc", "UTC")
+		settings.Loc = time.UTC
 	}
-	return fmt.Sprintf("%s:%s@tcp(%s)/%s?%s",
-		c.Spring.Datasource.Username, c.Spring.Datasource.Password, hostPort, database, params.Encode()), nil
+	return settings.FormatDSN(), nil
 }
 
 // IDEMiddlewares returns the configured Traefik middleware names.

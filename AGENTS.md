@@ -82,7 +82,7 @@ Compose/runtime layouts under `docker/` (backend image builds the Go binary in `
 
 Single `application.yml` for everything. Templates: `config/application.yml.example` (local dev, cp to `config/application.yml`) and `docker/application.yml.example` (compose stacks, cp to `docker/application.yml`, bind-mounted to `/app/config/application.yml`).
 
-Key properties: `spring.datasource.*` (MySQL), `oops.admin.password`, `oops.jwt.secret` (min 32 chars), `oops.crypto.secret-key`, `oops.pipeline.image.*` (clone/buildah/zip images, registry mirrors, unzip excludes), `oops.ingress.cert-resolver`, `oops.object-storage.*`, `oops.feishu.*` (+ `sync-user-deactivation` for the inbound long connection), `oops.ide.*`, `oops.sandbox.*`, `oops.pod-filesystem.*`, `oops.metrics.history.*` (Prometheus-compatible backend location; blank namespace hides charts), `oops.metrics.alert.*` (global opt-in resource alerts).
+Key properties: `datasource.*` (MySQL — `url` accepts a native Go DSN or a Spring JDBC URL; the Java-era `spring.datasource.*` block still works as a fallback), `oops.admin.password`, `oops.jwt.secret` (min 32 chars), `oops.crypto.secret-key`, `oops.pipeline.image.*` (clone/buildah/zip images, registry mirrors, unzip excludes), `oops.ingress.cert-resolver`, `oops.object-storage.*`, `oops.feishu.*` (+ `sync-user-deactivation` for the inbound long connection), `oops.ide.*`, `oops.sandbox.*`, `oops.pod-filesystem.*`, `oops.metrics.history.*` (Prometheus-compatible backend location; blank namespace hides charts), `oops.metrics.alert.*` (global opt-in resource alerts).
 
 Default admin: `admin` / `oops.admin.password` (default `admin123`), seeded on first startup.
 
