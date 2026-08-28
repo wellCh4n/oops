@@ -128,7 +128,9 @@ jobs:
           images: ghcr.io/${{ steps.owner.outputs.owner }}/oops-${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
-            type=raw,value=latest
+            # Pre-release tags (v3.0.0-alpha.1, ...) must not move latest;
+            # only final releases do.
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
