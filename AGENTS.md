@@ -38,7 +38,7 @@ Key technologies:
 
 ### Frontend (Next.js)
 
-**Next.js:** 16.2.9  
+**Next.js:** 16.2.12  
 **React:** 19.2.3  
 **Package manager:** pnpm
 

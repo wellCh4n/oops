@@ -1,3 +1,20 @@
 allowBuilds:
   sharp: true
   unrs-resolver: true
+
+# Security overrides: patched versions of transitive dependencies whose parents
+# still pin a vulnerable release. Each entry stays inside the current major, so
+# the parent's API expectations hold. Drop an entry once its parent ships a fix.
+overrides:
+  '@babel/core@<7.29.6': ^7.29.6            # CVE-2026-49356
+  ajv@<6.14.0: ^6.14.0                      # CVE-2025-69873
+  brace-expansion@1: ^1.1.18                # CVE-2026-33750, -13149, -14257, -69152
+  brace-expansion@5: ^5.0.9                 # CVE-2026-13149, -14257, -69152
+  dompurify@<3.4.13: ^3.4.13                # CVE-2026-0540, -41238..40, -49458/9, -49978, -65898..914
+  flatted@<3.4.2: ^3.4.2                    # CVE-2026-32141, -33228
+  minimatch@3: ^3.1.4                       # CVE-2026-26996, -27903, -27904
+  nanoid@3: ^3.3.18                         # CVE-2026-67213, -67214
+  picomatch@2: ^2.3.2                       # CVE-2026-33671, -33672
+  picomatch@4: ^4.0.4                       # CVE-2026-33671, -33672
+  postcss@<8.5.23: ^8.5.23                  # CVE-2026-41305, -45623, -69153, -73646
+  sharp@<0.35.0: ^0.35.0                    # libvips CVE-2026-33327/-33328/-35590/-35591
