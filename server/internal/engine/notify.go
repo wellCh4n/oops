@@ -3,7 +3,7 @@ package engine
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -72,7 +72,7 @@ func (engine *Engine) notifyPipeline(pipeline *store.PipelineView, notificationT
 			lines = append(lines, "", fmt.Sprintf("镜像：%s", *pipeline.Artifact))
 		}
 		if err := engine.Notifier.SendToUser(ctx, operatorID, title, strings.Join(lines, "\n")); err != nil {
-			log.Printf("failed to send pipeline notification for %s: %v", pipeline.ID, err)
+			slog.Error("failed to send pipeline notification", "pipeline", pipeline.ID, "error", err)
 		}
 	}()
 }

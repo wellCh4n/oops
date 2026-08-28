@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -163,7 +163,7 @@ func (engine *Engine) probeAlert(ctx context.Context, config AlertConfig, target
 func (engine *Engine) scanResourceAlerts(ctx context.Context, config AlertConfig) {
 	targets, err := engine.collectAlertTargets(ctx, config)
 	if err != nil {
-		log.Printf("alert scan: %v", err)
+		slog.Error("alert scan failed", "error", err)
 		return
 	}
 	repeatInterval := time.Duration(config.RepeatIntervalMinutes) * time.Minute
@@ -222,7 +222,7 @@ func (engine *Engine) notifyAlert(target alertTarget, pods []string, alertType s
 			text = fmt.Sprintf("**应用**：%s/%s\n**环境**：%s", target.Namespace, target.ApplicationName, target.Environment)
 		}
 		if err := engine.Notifier.SendToUser(ctx, *application.Owner, title, text); err != nil {
-			log.Printf("failed to send alert notification for %s/%s: %v", target.Namespace, target.ApplicationName, err)
+			slog.Error("failed to send alert notification", "namespace", target.Namespace, "application", target.ApplicationName, "error", err)
 		}
 	}()
 }

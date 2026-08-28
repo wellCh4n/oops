@@ -2,7 +2,7 @@ package engine
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -85,12 +85,12 @@ func (engine *Engine) MigrateNamespace(ctx context.Context, namespace, name, tar
 	for _, plan := range plans {
 		err := engine.redeployToTarget(ctx, plan.Cluster, plan.ConfigMaps, plan.EnvironmentName, target, name, plan.CurrentImage)
 		if err != nil {
-			log.Printf("failed to migrate workload %s/%s env %s: %v", namespace, name, plan.EnvironmentName, err)
+			slog.Error("failed to migrate workload", "namespace", namespace, "application", name, "environment", plan.EnvironmentName, "error", err)
 			result.FailedEnvironments = append(result.FailedEnvironments, plan.EnvironmentName)
 			continue
 		}
 		if err := DeleteWorkload(ctx, plan.Cluster, namespace, name); err != nil {
-			log.Printf("failed to delete old workload %s/%s env %s: %v", namespace, name, plan.EnvironmentName, err)
+			slog.Error("failed to delete old workload", "namespace", namespace, "application", name, "environment", plan.EnvironmentName, "error", err)
 		}
 		result.MigratedEnvironments = append(result.MigratedEnvironments, plan.EnvironmentName)
 	}

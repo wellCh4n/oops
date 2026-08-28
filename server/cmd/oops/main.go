@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/wellch4n/oops/server/internal/config"
 	"github.com/wellch4n/oops/server/internal/crypto"
@@ -20,15 +21,18 @@ func main() {
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		slog.Error("load config", "error", err)
+		os.Exit(1)
 	}
 	dsn, err := cfg.MySQLDSN()
 	if err != nil {
-		log.Fatalf("datasource: %v", err)
+		slog.Error("datasource", "error", err)
+		os.Exit(1)
 	}
 	st, err := store.Open(dsn)
 	if err != nil {
-		log.Fatalf("open mysql: %v", err)
+		slog.Error("open mysql", "error", err)
+		os.Exit(1)
 	}
 	defer st.Close()
 	st.SetCodec(crypto.NewCodec(cfg.Oops.Crypto.SecretKey))
@@ -42,8 +46,9 @@ func main() {
 	if cfg.Oops.Feishu.Enabled && cfg.Oops.Feishu.SyncUserDeactivation {
 		feishu.RunEventClient(context.Background(), cfg.Oops.Feishu.AppID, cfg.Oops.Feishu.AppSecret, st)
 	}
-	log.Printf("oops server listening on %s", *listen)
+	slog.Info("oops server listening", "address", *listen)
 	if err := http.ListenAndServe(*listen, server.Handler()); err != nil {
-		log.Fatal(err)
+		slog.Error("http server stopped", "error", err)
+		os.Exit(1)
 	}
 }

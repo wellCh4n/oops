@@ -3,7 +3,7 @@ package feishu
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 
 	"github.com/larksuite/oapi-sdk-go/v3/event/dispatcher"
 	larkcontact "github.com/larksuite/oapi-sdk-go/v3/service/contact/v3"
@@ -39,7 +39,7 @@ func RunEventClient(ctx context.Context, appID, appSecret string, st *store.Stor
 			// Every event is logged on receipt and outcome: resignations are
 			// rare, and without these lines an event matching no account would
 			// leave no trace of having arrived.
-			log.Printf("feishu reported user %s as removed from the organisation", providerUserID)
+			slog.Info("feishu reported user as removed from the organisation", "providerUserId", providerUserID)
 
 			userID := ""
 			if account, err := st.FindExternalAccountByProviderUser(ctx, "FEISHU", providerUserID); err == nil {
@@ -51,18 +51,18 @@ func RunEventClient(ctx context.Context, appID, appSecret string, st *store.Stor
 			}
 			if userID == "" {
 				// Not an error: plenty of people in the directory never signed in to OOPS.
-				log.Printf("feishu user %s left the organisation but has no linked OOPS account", providerUserID)
+				slog.Info("feishu user left the organisation but has no linked OOPS account", "providerUserId", providerUserID)
 				return nil
 			}
 			disabled, err := st.DeactivateUser(ctx, userID)
 			switch {
 			case err != nil:
 				// Nothing will retry this: name the account an admin has to disable by hand.
-				log.Printf("failed to disable OOPS user %s after feishu reported %s as removed: %v", userID, providerUserID, err)
+				slog.Error("failed to disable OOPS user after feishu reported the account as removed", "userId", userID, "providerUserId", providerUserID, "error", err)
 			case disabled:
-				log.Printf("disabled OOPS user %s after feishu reported the account as removed", userID)
+				slog.Info("disabled OOPS user after feishu reported the account as removed", "userId", userID)
 			default:
-				log.Printf("OOPS user %s was left as is after feishu reported the account as removed", userID)
+				slog.Info("OOPS user left as is after feishu reported the account as removed", "userId", userID)
 			}
 			return nil
 		})
@@ -73,6 +73,6 @@ func RunEventClient(ctx context.Context, appID, appSecret string, st *store.Stor
 		// Start only returns errors no retry fixes (bad credentials);
 		// ordinary drops are retried internally via autoReconnect.
 		err := client.Start(ctx)
-		log.Printf("feishu event long connection stopped: %v", err)
+		slog.Error("feishu event long connection stopped", "error", err)
 	}()
 }

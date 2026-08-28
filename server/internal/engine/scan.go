@@ -5,10 +5,12 @@ package engine
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -73,13 +75,13 @@ func (engine *Engine) loop(ctx context.Context, scan func(context.Context)) {
 func (engine *Engine) scanPipelineJobs(ctx context.Context) {
 	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, domain.PipelineRunning)
 	if err != nil {
-		log.Printf("pipeline scan: %v", err)
+		slog.Error("pipeline scan failed", "error", err)
 		return
 	}
 	for i := range pipelines {
 		pipeline := &pipelines[i]
 		if err := engine.scanOneRunning(ctx, pipeline); err != nil {
-			log.Printf("pipeline %s scan error: %v", pipeline.ID, err)
+			slog.Error("pipeline scan error", "pipeline", pipeline.ID, "error", err)
 			message := err.Error()
 			if message == "" {
 				message = "发布任务执行失败，请查看日志。"
@@ -87,7 +89,7 @@ func (engine *Engine) scanPipelineJobs(ctx context.Context) {
 			deployingUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineError, message)
 			runningUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineError, message)
 			if deployingUpdated > 0 || runningUpdated > 0 {
-				log.Printf("pipeline %s marked ERROR: %s", pipeline.ID, message)
+				slog.Info("pipeline marked ERROR", "pipeline", pipeline.ID, "message", message)
 			}
 		}
 	}
@@ -118,7 +120,7 @@ func (engine *Engine) scanOneRunning(ctx context.Context, pipeline *store.Pipeli
 		if pipeline.DeployMode != nil && *pipeline.DeployMode == "MANUAL" {
 			updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineBuildSucceeded)
 			if err == nil && updated > 0 {
-				log.Printf("pipeline %s build succeeded, awaiting manual deploy", pipeline.ID)
+				slog.Info("pipeline build succeeded, awaiting manual deploy", "pipeline", pipeline.ID)
 				engine.notifyPipeline(pipeline, "BUILD_SUCCEEDED", "镜像构建完成，等待手动发布。")
 			}
 			return err
@@ -127,7 +129,7 @@ func (engine *Engine) scanOneRunning(ctx context.Context, pipeline *store.Pipeli
 		if err != nil || claimed == 0 {
 			return err
 		}
-		log.Printf("pipeline %s deploying", pipeline.ID)
+		slog.Info("pipeline deploying", "pipeline", pipeline.ID)
 		engine.notifyPipeline(pipeline, "DEPLOYING", "发布任务已进入部署阶段。")
 		if err := engine.deployArtifact(ctx, cluster, environment, pipeline); err != nil {
 			return err
@@ -135,13 +137,13 @@ func (engine *Engine) scanOneRunning(ctx context.Context, pipeline *store.Pipeli
 		if _, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineRollingOut); err != nil {
 			return err
 		}
-		log.Printf("pipeline %s rolling out", pipeline.ID)
+		slog.Info("pipeline rolling out", "pipeline", pipeline.ID)
 		engine.notifyPipeline(pipeline, "ROLLING_OUT", "正在等待新版本发布生效…")
 	case job.Status.Failed > 0:
 		message := "镜像构建失败，请查看流水线日志。"
 		updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineError, message)
 		if err == nil && updated > 0 {
-			log.Printf("pipeline %s build failed", pipeline.ID)
+			slog.Info("pipeline build failed", "pipeline", pipeline.ID)
 			engine.notifyPipeline(pipeline, "FAILED", message)
 		}
 		return err
@@ -200,13 +202,13 @@ func (engine *Engine) deployArtifact(ctx context.Context, cluster *k8s.Cluster, 
 func (engine *Engine) scanRollingOutPipelines(ctx context.Context) {
 	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, domain.PipelineRollingOut)
 	if err != nil {
-		log.Printf("rollout scan: %v", err)
+		slog.Error("rollout scan failed", "error", err)
 		return
 	}
 	for i := range pipelines {
 		pipeline := &pipelines[i]
 		if err := engine.scanOneRollingOut(ctx, pipeline); err != nil {
-			log.Printf("pipeline %s rollout scan error: %v", pipeline.ID, err)
+			slog.Error("pipeline rollout scan error", "pipeline", pipeline.ID, "error", err)
 		}
 	}
 }
@@ -234,56 +236,73 @@ func (engine *Engine) scanOneRollingOut(ctx context.Context, pipeline *store.Pip
 		return err
 	}
 
-	desired := int32(0)
-	if statefulSet.Spec.Replicas != nil {
-		desired = *statefulSet.Spec.Replicas
-	}
-	status := statefulSet.Status
-	generationObserved := status.ObservedGeneration >= statefulSet.Generation
-	rolloutComplete := generationObserved && status.UpdatedReplicas == desired && status.ReadyReplicas == desired
-
 	pods, err := cluster.Clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 		LabelSelector: applicationTypeLabel + "=" + applicationTypeLabelValue + "," + applicationNameLabel + "=" + applicationName,
 	})
 	if err != nil {
 		return err
 	}
-	failureReason := ""
-	for _, pod := range pods.Items {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if waiting := containerStatus.State.Waiting; waiting != nil && fatalWaitingReasons[waiting.Reason] {
-				failureReason = waiting.Reason + " (" + pod.Name + ")"
-			}
-		}
-	}
+	verdict := evaluateRollout(statefulSet, pods.Items, time.Now())
 
 	switch {
-	case failureReason != "":
-		return engine.failRollout(ctx, pipeline, "新版本部署失败："+failureReason)
-	case rolloutComplete:
+	case verdict.failureMessage != "":
+		return engine.failRollout(ctx, pipeline, verdict.failureMessage)
+	case verdict.complete:
 		updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineRollingOut, domain.PipelineSucceeded)
 		if err == nil && updated > 0 {
-			log.Printf("pipeline %s succeeded", pipeline.ID)
+			slog.Info("pipeline succeeded", "pipeline", pipeline.ID)
 			engine.notifyPipeline(pipeline, "SUCCEEDED", "应用已经成功发布。")
 		}
 		return err
 	default:
-		startedAt := statefulSet.Annotations[rolloutStartedAtAnnotation]
-		if startedAt != "" {
-			if parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(startedAt)); err == nil {
-				if time.Since(parsed) > rolloutTimeout {
-					return engine.failRollout(ctx, pipeline, "发布生效超时，新版本未在规定时间内就绪。")
-				}
-			}
-		}
 		return nil // still rolling out
 	}
+}
+
+// rolloutVerdict is the outcome of one health inspection of a rolling-out
+// StatefulSet: complete, failed (failureMessage set), or still in progress.
+type rolloutVerdict struct {
+	complete       bool
+	failureMessage string
+}
+
+// evaluateRollout mirrors PipelineInstanceScanJob's rollout health check: a
+// fatal container waiting reason fails the rollout immediately, an up-to-date
+// fully-ready StatefulSet completes it, and anything else keeps waiting until
+// the oops.rollout.started-at annotation is older than the timeout.
+func evaluateRollout(statefulSet *appsv1.StatefulSet, pods []corev1.Pod, now time.Time) rolloutVerdict {
+	for _, pod := range pods {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if waiting := containerStatus.State.Waiting; waiting != nil && fatalWaitingReasons[waiting.Reason] {
+				return rolloutVerdict{failureMessage: "新版本部署失败：" + waiting.Reason + " (" + pod.Name + ")"}
+			}
+		}
+	}
+
+	desired := int32(0)
+	if statefulSet.Spec.Replicas != nil {
+		desired = *statefulSet.Spec.Replicas
+	}
+	status := statefulSet.Status
+	generationObserved := status.ObservedGeneration >= statefulSet.Generation
+	if generationObserved && status.UpdatedReplicas == desired && status.ReadyReplicas == desired {
+		return rolloutVerdict{complete: true}
+	}
+
+	if startedAt := statefulSet.Annotations[rolloutStartedAtAnnotation]; startedAt != "" {
+		if parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(startedAt)); err == nil {
+			if now.Sub(parsed) > rolloutTimeout {
+				return rolloutVerdict{failureMessage: "发布生效超时，新版本未在规定时间内就绪。"}
+			}
+		}
+	}
+	return rolloutVerdict{}
 }
 
 func (engine *Engine) failRollout(ctx context.Context, pipeline *store.PipelineView, message string) error {
 	updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRollingOut, domain.PipelineError, message)
 	if err == nil && updated > 0 {
-		log.Printf("pipeline %s failed rollout: %s", pipeline.ID, message)
+		slog.Info("pipeline failed rollout", "pipeline", pipeline.ID, "message", message)
 		engine.notifyPipeline(pipeline, "FAILED", message)
 	}
 	return err

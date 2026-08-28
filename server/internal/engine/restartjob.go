@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +34,7 @@ func (engine *Engine) RunScheduledRestarts(ctx context.Context) {
 func (engine *Engine) scanScheduledRestarts(ctx context.Context, minute time.Time) {
 	configs, err := engine.Store.ListAllExpertConfigs(ctx)
 	if err != nil {
-		log.Printf("scheduled restart scan: %v", err)
+		slog.Error("scheduled restart scan failed", "error", err)
 		return
 	}
 	for _, config := range configs {
@@ -55,9 +55,9 @@ func (engine *Engine) scanScheduledRestarts(ctx context.Context, minute time.Tim
 			environmentName := *environmentConfig.EnvironmentName
 			go func() {
 				if err := engine.rolloutRestart(ctx, environmentName, namespace, application); err != nil {
-					log.Printf("scheduled restart failed for %s/%s in %s: %v", namespace, application, environmentName, err)
+					slog.Error("scheduled restart failed", "namespace", namespace, "application", application, "environment", environmentName, "error", err)
 				} else {
-					log.Printf("triggered scheduled rolling restart for %s/%s in %s", namespace, application, environmentName)
+					slog.Info("triggered scheduled rolling restart", "namespace", namespace, "application", application, "environment", environmentName)
 				}
 			}()
 		}

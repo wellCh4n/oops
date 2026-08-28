@@ -2,7 +2,7 @@ package httpapi
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -60,7 +60,7 @@ func (s *Server) deleteApplication(c *gin.Context) {
 			err = engine.DeleteWorkload(ctx, cluster, namespace, name)
 		}
 		if err != nil {
-			log.Printf("failed to delete K8s resources for %s/%s in env %s: %v", namespace, name, binding.EnvironmentName, err)
+			slog.Error("failed to delete K8s resources", "namespace", namespace, "application", name, "environment", binding.EnvironmentName, "error", err)
 			c.JSON(http.StatusOK, fail("Application deletion failed"))
 			return
 		}
