@@ -13,46 +13,21 @@ COPY web/ ./
 RUN pnpm build
 
 # --- Stage 2: backend build ---
-FROM maven:3.9-eclipse-temurin-25 AS backend-builder
+FROM golang:1.27-alpine AS backend-builder
 WORKDIR /build/backend
 
-# Build through the Aliyun mirror for speed, but keep central as a fallback: the mirror
-# syncs from central on demand, so a newly published artifact can still 404 there.
-RUN echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" \
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" \
-  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd"> \
-  <mirrors> \
-    <mirror> \
-      <id>aliyunmaven</id> \
-      <mirrorOf>central</mirrorOf> \
-      <name>Aliyun Maven</name> \
-      <url>https://maven.aliyun.com/repository/public</url> \
-    </mirror> \
-  </mirrors> \
-  <profiles> \
-    <profile> \
-      <id>fallback-central</id> \
-      <repositories> \
-        <repository> \
-          <id>maven-central-fallback</id> \
-          <url>https://repo1.maven.org/maven2</url> \
-        </repository> \
-      </repositories> \
-    </profile> \
-  </profiles> \
-  <activeProfiles><activeProfile>fallback-central</activeProfile></activeProfiles> \
-</settings>' > /usr/share/maven/conf/settings.xml
+# Pull modules through the goproxy.cn mirror for speed; "direct" keeps a
+# fallback for anything the mirror cannot serve.
+ENV GOPROXY=https://goproxy.cn,direct
 
-COPY pom.xml ./
+COPY server/go.mod server/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go mod download
 
-# Prefetch dependencies. -U re-checks cached resolution failures: /root/.m2 is a persistent
-# buildkit cache, so one 404 from the mirror sticks as "artifact absent" for every later build.
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline -B -U
-
-COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -DskipTests package
+COPY server/ ./
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /oops ./cmd/oops
 
 # --- Stage 3: runtime ---
 FROM node:20-slim AS runtime
@@ -70,10 +45,7 @@ RUN apt-get update \
 WORKDIR /app
 RUN mkdir -p /app/config /app/web
 
-ENV JAVA_HOME=/opt/java/openjdk
-ENV PATH="${JAVA_HOME}/bin:${PATH}"
-COPY --from=backend-builder /opt/java/openjdk /opt/java/openjdk
-COPY --from=backend-builder /build/backend/target/oops-0.0.1-SNAPSHOT.jar /app/oops.jar
+COPY --from=backend-builder /oops /app/oops
 
 COPY --from=web-deps /build/web/.next/standalone /app/web
 COPY --from=web-deps /build/web/.next/static /app/web/.next/static
