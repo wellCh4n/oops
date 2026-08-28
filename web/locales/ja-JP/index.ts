@@ -2,6 +2,7 @@ import apps from "./apps"
 import assets from "./assets"
 import cmd from "./cmd"
 import common from "./common"
+import doc from "./doc"
 import domains from "./domains"
 import env from "./env"
 import ide from "./ide"
@@ -22,6 +23,7 @@ const translations: Record<string, string> = {
   ...assets,
   ...cmd,
   ...common,
+  ...doc,
   ...domains,
   ...env,
   ...ide,

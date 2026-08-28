@@ -1,4 +1,3 @@
-import { InlineCode } from "@/components/doc/code-block"
 import { DocLayout, DocParagraph, DocSection, DocSubSection } from "@/components/doc/doc-layout"
 import { Endpoint } from "@/components/doc/endpoint"
 import { FieldTable } from "@/components/doc/field-table"
@@ -7,81 +6,67 @@ const PATH_PREFIX = "/openapi/namespaces/{namespace}/applications/{name}/pipelin
 
 export default function PipelinesDocPage() {
   return (
-    <DocLayout title="流水线">
-      <DocSection title="说明">
-        <DocParagraph>
-          每次触发部署都会在数据库中创建一条 Pipeline 记录，对应 Kubernetes 上的一个 Job：
-          先克隆源码，可选执行构建命令，再用 Buildah 打包镜像并推送。
-          构建完成后根据 <InlineCode>deployMode</InlineCode> 决定是否立即部署。流水线日志通过 <InlineCode>WebSocket</InlineCode> 推送，OpenAPI 不开放日志接口。
-        </DocParagraph>
-        <DocParagraph>
-          以下接口都在路径前缀 <InlineCode>{PATH_PREFIX}</InlineCode> 下，每条流水线通过 NanoId 形式的 <InlineCode>id</InlineCode> 寻址。
-        </DocParagraph>
+    <DocLayout titleKey="doc.pipelines.title">
+      <DocSection titleKey="doc.pipelines.overview.title">
+        <DocParagraph textKey="doc.pipelines.overview.p1" />
+        <DocParagraph textKey="doc.pipelines.overview.p2" />
       </DocSection>
 
-      <DocSection title="列出流水线">
+      <DocSection titleKey="doc.pipelines.list.title">
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}?environment=&page=1&size=10`}
-          summary="分页查询应用的流水线，可按环境过滤。"
+          summaryKey="doc.pipelines.list.summary"
         />
-        <DocSubSection title="查询参数">
+        <DocSubSection titleKey="doc.pipelines.list.params.title">
           <FieldTable
             rows={[
-              { name: "environment", type: "string", description: "可选，按环境名过滤。" },
-              { name: "page", type: "int", description: "1 起，默认 1。" },
-              { name: "size", type: "int", description: "默认 10。" },
+              { name: "environment", type: "string", descriptionKey: "doc.pipelines.list.params.environment" },
+              { name: "page", type: "int", descriptionKey: "doc.pipelines.list.params.page" },
+              { name: "size", type: "int", descriptionKey: "doc.pipelines.list.params.size" },
             ]}
           />
         </DocSubSection>
-        <DocSubSection title="响应分页元素 (PipelineDto)">
+        <DocSubSection titleKey="doc.pipelines.list.item.title">
           <FieldTable
             rows={[
-              { name: "id", type: "string", description: "流水线 ID。" },
-              { name: "name", type: "string", description: "流水线名称（K8s Job 名）。" },
-              { name: "status", type: "string", description: "流水线状态枚举，见下方说明。" },
-              { name: "artifact", type: "string", description: "构建产出物（镜像 tag 等）。" },
+              { name: "id", type: "string", descriptionKey: "doc.pipelines.list.item.id" },
+              { name: "name", type: "string", descriptionKey: "doc.pipelines.list.item.name" },
+              { name: "status", type: "string", descriptionKey: "doc.pipelines.list.item.status" },
+              { name: "artifact", type: "string", descriptionKey: "doc.pipelines.list.item.artifact" },
               { name: "environment", type: "string" },
-              { name: "publishType", type: "string", description: "源类型，GIT 或 ZIP。" },
-              { name: "publishConfig", type: "object", description: "源信息，带 type 鉴别字段。GIT：repository、branch；ZIP：objectKey 或 url。" },
-              { name: "deployMode", type: "string", description: "取值 IMMEDIATE 或 MANUAL。" },
-              { name: "operatorId", type: "string", description: "触发者 userId。" },
+              { name: "publishType", type: "string", descriptionKey: "doc.pipelines.list.item.publishType" },
+              { name: "publishConfig", type: "object", descriptionKey: "doc.pipelines.list.item.publishConfig" },
+              { name: "deployMode", type: "string", descriptionKey: "doc.pipelines.list.item.deployMode" },
+              { name: "operatorId", type: "string", descriptionKey: "doc.pipelines.list.item.operatorId" },
               { name: "operatorName", type: "string" },
-              { name: "message", type: "string", description: "失败原因或状态备注。" },
-              { name: "triggerType", type: "string", description: "取值 RELEASE 或 ROLLBACK。" },
-              { name: "rollbackFromPipelineId", type: "string", description: "回滚来源流水线 ID，仅回滚流水线有值。" },
+              { name: "message", type: "string", descriptionKey: "doc.pipelines.list.item.message" },
+              { name: "triggerType", type: "string", descriptionKey: "doc.pipelines.list.item.triggerType" },
+              { name: "rollbackFromPipelineId", type: "string", descriptionKey: "doc.pipelines.list.item.rollbackFrom" },
               { name: "createdTime", type: "string" },
             ]}
           />
-          <DocParagraph>
-            <InlineCode>status</InlineCode> 取值：<InlineCode>INITIALIZED</InlineCode>、<InlineCode>RUNNING</InlineCode>、<InlineCode>BUILD_SUCCEEDED</InlineCode>、<InlineCode>DEPLOYING</InlineCode>、<InlineCode>ROLLING_OUT</InlineCode>、<InlineCode>SUCCEEDED</InlineCode>、<InlineCode>ERROR</InlineCode>、<InlineCode>STOPPED</InlineCode>。
-          </DocParagraph>
+          <DocParagraph textKey="doc.pipelines.list.item.statuses" />
         </DocSubSection>
       </DocSection>
 
-      <DocSection title="获取单条流水线">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{id}`} summary="按 id 获取流水线详情。" />
+      <DocSection titleKey="doc.pipelines.get.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{id}`} summaryKey="doc.pipelines.get.summary" />
       </DocSection>
 
-      <DocSection title="停止流水线">
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/stop`} summary="停止运行中的流水线。请求体为空。" />
-        <DocParagraph>
-          只对处于 <InlineCode>RUNNING</InlineCode> / <InlineCode>BUILD_SUCCEEDED</InlineCode> / <InlineCode>DEPLOYING</InlineCode> 状态的流水线有效。已完成或正在发布生效的流水线调用会得到业务错误响应。
-        </DocParagraph>
+      <DocSection titleKey="doc.pipelines.stop.title">
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/stop`} summaryKey="doc.pipelines.stop.summary" />
+        <DocParagraph textKey="doc.pipelines.stop.p1" />
       </DocSection>
 
-      <DocSection title="手动部署已构建的流水线">
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/deploy`} summary="对 deployMode=MANUAL 且已构建成功的流水线触发部署。请求体为空。" />
-        <DocParagraph>
-          仅对 <InlineCode>status=BUILD_SUCCEEDED</InlineCode> 的流水线生效。<InlineCode>IMMEDIATE</InlineCode> 模式的流水线会在构建结束后自动进入部署阶段，无需调用此接口。
-        </DocParagraph>
+      <DocSection titleKey="doc.pipelines.deploy.title">
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{id}/deploy`} summaryKey="doc.pipelines.deploy.summary" />
+        <DocParagraph textKey="doc.pipelines.deploy.p1" />
       </DocSection>
 
-      <DocSection title="回滚到历史版本">
-        <Endpoint method="POST" path={`${PATH_PREFIX}/{id}/rollback`} summary="基于一条成功流水线创建回滚流水线并重新发布其 artifact。" />
-        <DocParagraph>
-          回滚流水线的 <InlineCode>triggerType</InlineCode> 为 <InlineCode>ROLLBACK</InlineCode>，会复用历史 artifact 并跳过构建阶段，直接进入部署流程。
-        </DocParagraph>
+      <DocSection titleKey="doc.pipelines.rollback.title">
+        <Endpoint method="POST" path={`${PATH_PREFIX}/{id}/rollback`} summaryKey="doc.pipelines.rollback.summary" />
+        <DocParagraph textKey="doc.pipelines.rollback.p1" />
       </DocSection>
     </DocLayout>
   )

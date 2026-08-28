@@ -1,4 +1,4 @@
-import { CodeBlock, InlineCode } from "@/components/doc/code-block"
+import { CodeBlock } from "@/components/doc/code-block"
 import { DocLayout, DocParagraph, DocSection, DocSubSection } from "@/components/doc/doc-layout"
 import { Endpoint } from "@/components/doc/endpoint"
 import { FieldTable } from "@/components/doc/field-table"
@@ -7,65 +7,60 @@ const PATH_PREFIX = "/openapi/namespaces/{namespace}/applications/{name}/deploym
 
 export default function DeploymentsDocPage() {
   return (
-    <DocLayout title="部署">
-      <DocSection title="说明">
-        <DocParagraph>
-          部署是触发流水线的入口。请求体中的 <InlineCode>strategy</InlineCode> 字段决定本次构建从何处取得源码：Git 仓库或 ZIP 包。
-          使用 ZIP 源时需要先调用上传接口拿到对象存储的预签名 URL，将文件上传后再发起部署。
-        </DocParagraph>
-        <DocParagraph>
-          OOPS 不允许同一个应用并发部署，若该应用已有处于 <InlineCode>RUNNING</InlineCode> 或 <InlineCode>DEPLOYING</InlineCode> 的流水线，调用会被拒绝。
-        </DocParagraph>
+    <DocLayout titleKey="doc.deployments.title">
+      <DocSection titleKey="doc.deployments.overview.title">
+        <DocParagraph textKey="doc.deployments.overview.p1" />
+        <DocParagraph textKey="doc.deployments.overview.p2" />
       </DocSection>
 
-      <DocSection title="申请源码上传地址（仅 ZIP）">
+      <DocSection titleKey="doc.deployments.upload.title">
         <Endpoint
           method="POST"
           path={`${PATH_PREFIX}/source-upload`}
-          summary="返回一个用于上传 ZIP 源码包的预签名 URL，仅在对象存储已配置时可用。"
+          summaryKey="doc.deployments.upload.summary"
         />
-        <DocSubSection title="请求体 (ObjectStorageUploadCommand)">
+        <DocSubSection titleKey="doc.deployments.upload.body.title">
           <FieldTable
             rows={[
-              { name: "fileName", type: "string", required: true, description: "原始文件名，用于在对象存储中拼接 key。" },
-              { name: "fileSize", type: "long", required: true, description: "文件字节数。超过 oops.object-storage.max-file-size 会被拒绝。" },
-              { name: "contentType", type: "string", description: "上传时使用的 Content-Type，例如 application/zip。" },
+              { name: "fileName", type: "string", required: true, descriptionKey: "doc.deployments.upload.body.fileName" },
+              { name: "fileSize", type: "long", required: true, descriptionKey: "doc.deployments.upload.body.fileSize" },
+              { name: "contentType", type: "string", descriptionKey: "doc.deployments.upload.body.contentType" },
             ]}
           />
         </DocSubSection>
-        <DocSubSection title="响应 (ObjectStorageUploadResult)">
+        <DocSubSection titleKey="doc.deployments.upload.response.title">
           <FieldTable
             rows={[
-              { name: "objectKey", type: "string", description: "对象存储中的 key，部署时填入 strategy.objectKey。" },
-              { name: "objectUrl", type: "string", description: "对象的最终下载地址（仅展示用途）。" },
-              { name: "uploadUrl", type: "string", description: "预签名 PUT URL，客户端用其上传文件。" },
-              { name: "headers", type: "object", description: "上传时需要附带的请求头，键值均为字符串。" },
+              { name: "objectKey", type: "string", descriptionKey: "doc.deployments.upload.response.objectKey" },
+              { name: "objectUrl", type: "string", descriptionKey: "doc.deployments.upload.response.objectUrl" },
+              { name: "uploadUrl", type: "string", descriptionKey: "doc.deployments.upload.response.uploadUrl" },
+              { name: "headers", type: "object", descriptionKey: "doc.deployments.upload.response.headers" },
             ]}
           />
         </DocSubSection>
-        <DocSubSection title="上传示例">
+        <DocSubSection titleKey="doc.deployments.upload.example.title">
           <CodeBlock language="bash">{`curl -X PUT "$UPLOAD_URL" \\
   -H "Content-Type: application/zip" \\
   --data-binary @./build.zip`}</CodeBlock>
         </DocSubSection>
       </DocSection>
 
-      <DocSection title="触发部署">
-        <Endpoint method="POST" path={PATH_PREFIX} summary="创建一条流水线并立即开始构建。响应 data 为新流水线的 id。" />
-        <DocSubSection title="请求体 (DeployCommand)">
+      <DocSection titleKey="doc.deployments.trigger.title">
+        <Endpoint method="POST" path={PATH_PREFIX} summaryKey="doc.deployments.trigger.summary" />
+        <DocSubSection titleKey="doc.deployments.trigger.body.title">
           <FieldTable
             rows={[
-              { name: "environment", type: "string", required: true, description: "目标环境名，需在应用绑定的环境中。" },
-              { name: "deployMode", type: "string", required: true, description: "取值 IMMEDIATE 或 MANUAL。MANUAL 模式下构建结束后需手动调用 deploy 接口。" },
-              { name: "strategy", type: "object", required: true, description: "源码来源。带类型字段 type，见下方两种形态。" },
+              { name: "environment", type: "string", required: true, descriptionKey: "doc.deployments.trigger.body.environment" },
+              { name: "deployMode", type: "string", required: true, descriptionKey: "doc.deployments.trigger.body.deployMode" },
+              { name: "strategy", type: "object", required: true, descriptionKey: "doc.deployments.trigger.body.strategy" },
             ]}
           />
         </DocSubSection>
-        <DocSubSection title="Git 源">
+        <DocSubSection titleKey="doc.deployments.trigger.git.title">
           <FieldTable
             rows={[
-              { name: "strategy.type", type: "string", required: true, description: "固定为 GIT。" },
-              { name: "strategy.branch", type: "string", required: true, description: "分支名或 commit。" },
+              { name: "strategy.type", type: "string", required: true, descriptionKey: "doc.deployments.trigger.git.type" },
+              { name: "strategy.branch", type: "string", required: true, descriptionKey: "doc.deployments.trigger.git.branch" },
             ]}
           />
           <CodeBlock language="json">{`{
@@ -74,13 +69,13 @@ export default function DeploymentsDocPage() {
   "strategy": { "type": "GIT", "branch": "main" }
 }`}</CodeBlock>
         </DocSubSection>
-        <DocSubSection title="ZIP 源">
+        <DocSubSection titleKey="doc.deployments.trigger.zip.title">
           <FieldTable
             rows={[
-              { name: "strategy.type", type: "string", required: true, description: "固定为 ZIP。" },
-              { name: "strategy.objectKey", type: "string", description: "对象存储上传场景：上一步返回的 objectKey。与 url 二选一。" },
-              { name: "strategy.url", type: "string", description: "公共地址场景：可直接下载的 ZIP URL。与 objectKey 二选一。" },
-              { name: "strategy.repository", type: "string", description: "已废弃的旧字段。仍然兼容：http(s) 开头按 url 处理，否则按 objectKey 处理。" },
+              { name: "strategy.type", type: "string", required: true, descriptionKey: "doc.deployments.trigger.zip.type" },
+              { name: "strategy.objectKey", type: "string", descriptionKey: "doc.deployments.trigger.zip.objectKey" },
+              { name: "strategy.url", type: "string", descriptionKey: "doc.deployments.trigger.zip.url" },
+              { name: "strategy.repository", type: "string", descriptionKey: "doc.deployments.trigger.zip.repository" },
             ]}
           />
           <CodeBlock language="json">{`{

@@ -72,14 +72,6 @@ const common = {
   "terminal.files.deleteFailed": "删除失败",
   "pods.missingEnv": "缺少 env 参数",
   "common.error": "操作失败",
-  "doc.field": "字段",
-  "doc.type": "类型",
-  "doc.description": "说明",
-  "doc.anchorCopied": "锚点链接已复制",
-  "doc.anchorNavigated": "已定位到该章节",
-  "doc.copyAnchor": "复制锚点链接",
-  "doc.copyCurl": "复制 curl",
-  "doc.title": "OpenAPI 文档",
 }
 
 export default common

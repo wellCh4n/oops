@@ -1,4 +1,4 @@
-import { CodeBlock, InlineCode } from "@/components/doc/code-block"
+import { CodeBlock } from "@/components/doc/code-block"
 import { DocLayout, DocParagraph, DocSection, DocSubSection } from "@/components/doc/doc-layout"
 import { Endpoint } from "@/components/doc/endpoint"
 import { FieldTable } from "@/components/doc/field-table"
@@ -7,42 +7,39 @@ const PATH_PREFIX = "/openapi/namespaces/{namespace}/applications"
 
 export default function ApplicationsDocPage() {
   return (
-    <DocLayout title="应用">
-      <DocSection title="说明">
-        <DocParagraph>
-          应用是 OOPS 中的核心资源。每个应用属于一个命名空间，可绑定多个环境，并在每个环境下拥有独立的构建配置、运行时配置与 Service/Ingress 配置。
-          以下接口都在路径前缀 <InlineCode>{PATH_PREFIX}</InlineCode> 下，且应用通过 <InlineCode>name</InlineCode>（而非数字 id）寻址。
-        </DocParagraph>
+    <DocLayout titleKey="doc.applications.title">
+      <DocSection titleKey="doc.applications.overview.title">
+        <DocParagraph textKey="doc.applications.overview.p1" />
       </DocSection>
 
-      <DocSection title="基础 CRUD">
+      <DocSection titleKey="doc.applications.crud.title">
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}?keyword=&page=1&size=10&ownerOnly=false`}
-          summary="按关键字分页查询命名空间下的应用。"
+          summaryKey="doc.applications.crud.list.summary"
         />
-        <DocSubSection title="查询参数">
+        <DocSubSection titleKey="doc.applications.crud.list.params.title">
           <FieldTable
             rows={[
-              { name: "keyword", type: "string", description: "应用名模糊匹配，可选。" },
-              { name: "page", type: "int", description: "页码，1 起，默认 1。" },
-              { name: "size", type: "int", description: "页大小，默认 10。" },
-              { name: "ownerOnly", type: "boolean", description: "只返回当前调用者作为 owner 的应用，默认 false。" },
+              { name: "keyword", type: "string", descriptionKey: "doc.applications.crud.list.params.keyword" },
+              { name: "page", type: "int", descriptionKey: "doc.applications.crud.list.params.page" },
+              { name: "size", type: "int", descriptionKey: "doc.applications.crud.list.params.size" },
+              { name: "ownerOnly", type: "boolean", descriptionKey: "doc.applications.crud.list.params.ownerOnly" },
             ]}
           />
         </DocSubSection>
 
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}`} summary="按名称获取单个应用详情。" />
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}`} summaryKey="doc.applications.crud.get.summary" />
 
-        <Endpoint method="POST" path={PATH_PREFIX} summary="创建应用。响应 data 为新应用的 id。" />
-        <DocSubSection title="请求体 (ApplicationConfigDto.Profile)">
+        <Endpoint method="POST" path={PATH_PREFIX} summaryKey="doc.applications.crud.create.summary" />
+        <DocSubSection titleKey="doc.applications.crud.create.body.title">
           <FieldTable
             rows={[
-              { name: "name", type: "string", required: true, description: "应用名，命名空间内唯一，必须符合 K8s 资源名规则。" },
+              { name: "name", type: "string", required: true, descriptionKey: "doc.applications.crud.create.body.name" },
               { name: "description", type: "string" },
-              { name: "namespace", type: "string", description: "通常与 URL 中的 namespace 一致；后端以 URL 为准。" },
-              { name: "owner", type: "string", description: "创建时会自动覆盖为调用者 userId，可省略。" },
-              { name: "collaborators", type: "array", description: "协作者 userId 字符串列表，会去重并排除 owner。" },
+              { name: "namespace", type: "string", descriptionKey: "doc.applications.crud.create.body.namespace" },
+              { name: "owner", type: "string", descriptionKey: "doc.applications.crud.create.body.owner" },
+              { name: "collaborators", type: "array", descriptionKey: "doc.applications.crud.create.body.collaborators" },
             ]}
           />
           <CodeBlock language="json">{`{
@@ -52,24 +49,22 @@ export default function ApplicationsDocPage() {
 }`}</CodeBlock>
         </DocSubSection>
 
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}`} summary="更新应用 Profile（描述、协作者等）。" />
-        <DocParagraph>
-          请求体结构与创建相同。删除应用接口存在但 OpenAPI 不开放，需要在 UI 中通过 Danger Zone 执行。
-        </DocParagraph>
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}`} summaryKey="doc.applications.crud.update.summary" />
+        <DocParagraph textKey="doc.applications.crud.update.p1" />
       </DocSection>
 
-      <DocSection title="构建配置">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/build/config`} summary="获取应用的全局构建配置。" />
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/build/config`} summary="更新构建配置。" />
-        <DocSubSection title="请求体 (ApplicationConfigDto.BuildConfig)">
+      <DocSection titleKey="doc.applications.build.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/build/config`} summaryKey="doc.applications.build.get.summary" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/build/config`} summaryKey="doc.applications.build.put.summary" />
+        <DocSubSection titleKey="doc.applications.build.body.title">
           <FieldTable
             rows={[
-              { name: "sourceType", type: "string", required: true, description: "源码类型，取值 GIT 或 ZIP。" },
-              { name: "repository", type: "string", description: "Git 仓库地址；ZIP 时为对象存储 key 模板。" },
-              { name: "dockerFileConfig.type", type: "string", description: "Dockerfile 类型（内置类型枚举）。" },
-              { name: "dockerFileConfig.path", type: "string", description: "Dockerfile 在仓库中的相对路径。" },
-              { name: "dockerFileConfig.content", type: "string", description: "内联 Dockerfile 内容（与 path 二选一）。" },
-              { name: "buildImage", type: "string", description: "用于构建步骤的镜像。" },
+              { name: "sourceType", type: "string", required: true, descriptionKey: "doc.applications.build.body.sourceType" },
+              { name: "repository", type: "string", descriptionKey: "doc.applications.build.body.repository" },
+              { name: "dockerFileConfig.type", type: "string", descriptionKey: "doc.applications.build.body.dockerfileType" },
+              { name: "dockerFileConfig.path", type: "string", descriptionKey: "doc.applications.build.body.dockerfilePath" },
+              { name: "dockerFileConfig.content", type: "string", descriptionKey: "doc.applications.build.body.dockerfileContent" },
+              { name: "buildImage", type: "string", descriptionKey: "doc.applications.build.body.buildImage" },
             ]}
           />
         </DocSubSection>
@@ -77,38 +72,38 @@ export default function ApplicationsDocPage() {
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/environments/build/configs`}
-          summary="获取应用在每个环境下的差异化构建配置。"
+          summaryKey="doc.applications.build.envGet.summary"
         />
         <Endpoint
           method="PUT"
           path={`${PATH_PREFIX}/{name}/environments/build/configs`}
-          summary="覆盖式更新每环境构建配置（请求体为数组）。"
+          summaryKey="doc.applications.build.envPut.summary"
         />
-        <DocSubSection title="请求体元素 (BuildEnvironmentConfig)">
+        <DocSubSection titleKey="doc.applications.build.envBody.title">
           <FieldTable
             rows={[
               { name: "environment", type: "string", required: true },
-              { name: "buildCommand", type: "string", description: "该环境下的自定义构建命令。" },
+              { name: "buildCommand", type: "string", descriptionKey: "doc.applications.build.envBody.buildCommand" },
             ]}
           />
         </DocSubSection>
       </DocSection>
 
-      <DocSection title="运行时配置">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/runtime-spec`} summary="获取运行时配置（含健康检查）。" />
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/runtime-spec`} summary="更新运行时配置。" />
-        <DocSubSection title="请求体 (ApplicationConfigDto.RuntimeSpec)">
+      <DocSection titleKey="doc.applications.runtime.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/runtime-spec`} summaryKey="doc.applications.runtime.get.summary" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/runtime-spec`} summaryKey="doc.applications.runtime.put.summary" />
+        <DocSubSection titleKey="doc.applications.runtime.body.title">
           <FieldTable
             rows={[
-              { name: "environmentConfigs", type: "array", description: "每个环境的资源配置数组，元素结构见下方 RuntimeEnvironmentConfig。" },
+              { name: "environmentConfigs", type: "array", descriptionKey: "doc.applications.runtime.body.environmentConfigs" },
               { name: "healthCheck.liveness.enabled", type: "boolean" },
-              { name: "healthCheck.liveness.path", type: "string", description: "HTTP 存活检查路径，例如 /healthz。" },
+              { name: "healthCheck.liveness.path", type: "string", descriptionKey: "doc.applications.runtime.body.livenessPath" },
               { name: "healthCheck.liveness.initialDelaySeconds", type: "int" },
               { name: "healthCheck.liveness.periodSeconds", type: "int" },
               { name: "healthCheck.liveness.timeoutSeconds", type: "int" },
               { name: "healthCheck.liveness.failureThreshold", type: "int" },
               { name: "healthCheck.readiness.enabled", type: "boolean" },
-              { name: "healthCheck.readiness.path", type: "string", description: "HTTP 就绪检查路径，影响 Service 流量和 rollout 完成判定。" },
+              { name: "healthCheck.readiness.path", type: "string", descriptionKey: "doc.applications.runtime.body.readinessPath" },
               { name: "healthCheck.readiness.initialDelaySeconds", type: "int" },
               { name: "healthCheck.readiness.periodSeconds", type: "int" },
               { name: "healthCheck.readiness.timeoutSeconds", type: "int" },
@@ -116,15 +111,15 @@ export default function ApplicationsDocPage() {
             ]}
           />
         </DocSubSection>
-        <DocSubSection title="RuntimeEnvironmentConfig">
+        <DocSubSection titleKey="doc.applications.runtime.envConfig.title">
           <FieldTable
             rows={[
               { name: "environment", type: "string", required: true },
-              { name: "cpuRequest", type: "string", description: "K8s 资源 quantity，例如 100m。" },
-              { name: "cpuLimit", type: "string", description: "例如 500m。" },
-              { name: "memoryRequest", type: "string", description: "例如 128Mi。" },
-              { name: "memoryLimit", type: "string", description: "例如 512Mi。" },
-              { name: "replicas", type: "int", description: "副本数，默认为 1。" },
+              { name: "cpuRequest", type: "string", descriptionKey: "doc.applications.runtime.envConfig.cpuRequest" },
+              { name: "cpuLimit", type: "string", descriptionKey: "doc.applications.runtime.envConfig.cpuLimit" },
+              { name: "memoryRequest", type: "string", descriptionKey: "doc.applications.runtime.envConfig.memoryRequest" },
+              { name: "memoryLimit", type: "string", descriptionKey: "doc.applications.runtime.envConfig.memoryLimit" },
+              { name: "replicas", type: "int", descriptionKey: "doc.applications.runtime.envConfig.replicas" },
             ]}
           />
         </DocSubSection>
@@ -132,51 +127,51 @@ export default function ApplicationsDocPage() {
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/environments/runtime-specs`}
-          summary="单独获取每环境运行时配置列表（不含 healthCheck）。"
+          summaryKey="doc.applications.runtime.envGet.summary"
         />
         <Endpoint
           method="PUT"
           path={`${PATH_PREFIX}/{name}/environments/runtime-specs`}
-          summary="覆盖式更新每环境运行时配置（请求体为 RuntimeEnvironmentConfig 数组）。"
+          summaryKey="doc.applications.runtime.envPut.summary"
         />
       </DocSection>
 
-      <DocSection title="环境绑定">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/environments`} summary="返回应用已绑定的环境列表。" />
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/environments`} summary="覆盖式更新应用的环境绑定。" />
-        <DocSubSection title="请求体元素 (EnvironmentBinding)">
+      <DocSection titleKey="doc.applications.environments.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/environments`} summaryKey="doc.applications.environments.get.summary" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/environments`} summaryKey="doc.applications.environments.put.summary" />
+        <DocSubSection titleKey="doc.applications.environments.body.title">
           <FieldTable
             rows={[
-              { name: "environment", type: "string", required: true, description: "目标环境名，需在 /openapi/environments 中存在。" },
+              { name: "environment", type: "string", required: true, descriptionKey: "doc.applications.environments.body.environment" },
             ]}
           />
         </DocSubSection>
       </DocSection>
 
-      <DocSection title="高级配置">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/expert-config`} summary="获取高级部署配置。" />
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/expert-config`} summary="更新高级部署配置。" />
-        <DocSubSection title="请求体 (ApplicationConfigDto.ExpertConfig)">
+      <DocSection titleKey="doc.applications.expert.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/expert-config`} summaryKey="doc.applications.expert.get.summary" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/expert-config`} summaryKey="doc.applications.expert.put.summary" />
+        <DocSubSection titleKey="doc.applications.expert.body.title">
           <FieldTable
             rows={[
-              { name: "environmentConfigs", type: "array", description: "每个环境的高级配置数组，元素结构见下方 ExpertEnvironmentConfig。" },
+              { name: "environmentConfigs", type: "array", descriptionKey: "doc.applications.expert.body.environmentConfigs" },
               { name: "environmentConfigs[].environment", type: "string", required: true },
-              { name: "environmentConfigs[].serviceAccountName", type: "string", description: "部署到该环境时使用的 Kubernetes ServiceAccount 名称。" },
+              { name: "environmentConfigs[].serviceAccountName", type: "string", descriptionKey: "doc.applications.expert.body.serviceAccountName" },
             ]}
           />
         </DocSubSection>
       </DocSection>
 
-      <DocSection title="Service 与域名">
-        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/service`} summary="获取 Service/Ingress 配置。" />
-        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/service`} summary="更新 Service/Ingress 配置。" />
-        <DocSubSection title="请求体 (ApplicationConfigDto.ServiceConfig)">
+      <DocSection titleKey="doc.applications.service.title">
+        <Endpoint method="GET" path={`${PATH_PREFIX}/{name}/service`} summaryKey="doc.applications.service.get.summary" />
+        <Endpoint method="PUT" path={`${PATH_PREFIX}/{name}/service`} summaryKey="doc.applications.service.put.summary" />
+        <DocSubSection titleKey="doc.applications.service.body.title">
           <FieldTable
             rows={[
-              { name: "port", type: "int", required: true, description: "容器内监听端口。" },
+              { name: "port", type: "int", required: true, descriptionKey: "doc.applications.service.body.port" },
               { name: "environmentConfigs[].environment", type: "string", required: true },
-              { name: "environmentConfigs[].host", type: "string", description: "外部访问域名，须在域名管理中存在。" },
-              { name: "environmentConfigs[].https", type: "boolean", description: "是否启用 HTTPS。" },
+              { name: "environmentConfigs[].host", type: "string", descriptionKey: "doc.applications.service.body.host" },
+              { name: "environmentConfigs[].https", type: "boolean", descriptionKey: "doc.applications.service.body.https" },
             ]}
           />
         </DocSubSection>
@@ -184,27 +179,27 @@ export default function ApplicationsDocPage() {
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/service/host-check?host=foo.example.com`}
-          summary="检查指定 host 是否已被其他应用占用。"
+          summaryKey="doc.applications.service.hostCheck.summary"
         />
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/service/cluster-domain?environment={env}`}
-          summary="返回应用在指定环境下的集群内访问域名。"
+          summaryKey="doc.applications.service.clusterDomain.summary"
         />
       </DocSection>
 
-      <DocSection title="状态与运维">
+      <DocSection titleKey="doc.applications.status.title">
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/status?environment={env}`}
-          summary="返回应用在指定环境下所有 Pod 的运行状态。"
+          summaryKey="doc.applications.status.get.summary"
         />
-        <DocSubSection title="响应数组元素 (ApplicationPodStatusView)">
+        <DocSubSection titleKey="doc.applications.status.podView.title">
           <FieldTable
             rows={[
-              { name: "name", type: "string", description: "Pod 名。" },
+              { name: "name", type: "string", descriptionKey: "doc.applications.status.podView.name" },
               { name: "namespace", type: "string" },
-              { name: "status", type: "string", description: "Running / Pending / Failed 等。" },
+              { name: "status", type: "string", descriptionKey: "doc.applications.status.podView.status" },
               { name: "podIP", type: "string" },
               { name: "nodeName", type: "string" },
               { name: "containers[].name", type: "string" },
@@ -220,32 +215,32 @@ export default function ApplicationsDocPage() {
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/status/watch?environment={env}`}
-          summary="通过 Server-Sent Events 推送 Pod 状态变化（响应非 Result 包裹）。"
+          summaryKey="doc.applications.status.watch.summary"
         />
 
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/current-image?environment={env}`}
-          summary="返回指定环境当前运行的镜像。"
+          summaryKey="doc.applications.status.currentImage.summary"
         />
 
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/last-successful-pipeline`}
-          summary="返回应用最近一次成功的流水线信息。"
+          summaryKey="doc.applications.status.lastPipeline.summary"
         />
 
         <Endpoint
           method="GET"
           path={`${PATH_PREFIX}/{name}/resources?environment={env}`}
-          summary="返回应用拥有的 Kubernetes 资源清单，用于只读专家视图。"
+          summaryKey="doc.applications.status.resources.summary"
         />
-        <DocSubSection title="响应数组元素 (ApplicationResourceView)">
+        <DocSubSection titleKey="doc.applications.status.resourceView.title">
           <FieldTable
             rows={[
-              { name: "kind", type: "string", description: "资源类型，例如 StatefulSet / Service / IngressRoute。" },
-              { name: "name", type: "string", description: "资源名称。" },
-              { name: "data", type: "string", description: "YAML/JSON 形式的资源内容。" },
+              { name: "kind", type: "string", descriptionKey: "doc.applications.status.resourceView.kind" },
+              { name: "name", type: "string", descriptionKey: "doc.applications.status.resourceView.name" },
+              { name: "data", type: "string", descriptionKey: "doc.applications.status.resourceView.data" },
             ]}
           />
         </DocSubSection>
@@ -253,7 +248,7 @@ export default function ApplicationsDocPage() {
         <Endpoint
           method="PUT"
           path={`${PATH_PREFIX}/{name}/pods/{pod}/restart?environment={env}`}
-          summary="重启指定 Pod。请求体为空。"
+          summaryKey="doc.applications.status.restart.summary"
         />
       </DocSection>
     </DocLayout>

@@ -1,10 +1,11 @@
 "use client"
 
-import { ReactNode, useState } from "react"
+import { useState } from "react"
 import { Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useDocContext } from "./doc-context"
+import { DocMarkup } from "./doc-markup"
 import { useLanguage } from "@/contexts/language-context"
 
 type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "WS"
@@ -21,7 +22,7 @@ const methodStyles: Record<Method, string> = {
 interface EndpointProps {
   method: Method
   path: string
-  summary?: ReactNode
+  summaryKey?: string
 }
 
 function buildCurl(method: Method, url: string, token: string): string {
@@ -38,7 +39,7 @@ function buildCurl(method: Method, url: string, token: string): string {
   return lines.join("\n")
 }
 
-export function Endpoint({ method, path, summary }: EndpointProps) {
+export function Endpoint({ method, path, summaryKey }: EndpointProps) {
   const { accessToken, baseUrl } = useDocContext()
   const { t } = useLanguage()
   const [copied, setCopied] = useState(false)
@@ -69,7 +70,11 @@ export function Endpoint({ method, path, summary }: EndpointProps) {
         </span>
         <code className="font-mono text-sm break-all">{path}</code>
       </div>
-      {summary && <div className="text-sm text-muted-foreground">{summary}</div>}
+      {summaryKey && (
+        <div className="text-sm text-muted-foreground">
+          <DocMarkup text={t(summaryKey)} />
+        </div>
+      )}
       {method !== "WS" && (
       <div className="relative">
         <pre className="overflow-x-auto rounded-md border bg-background/60 p-2 pr-9 text-[11px] leading-relaxed font-mono [font-variant-ligatures:none] [font-feature-settings:'liga'_0,'clig'_0,'calt'_0]">

@@ -375,6 +375,9 @@ Frontend also stores `userId`, `username`, and `role` in `localStorage` (keys `a
 ### Localization
 Four locales: `zh-CN` (default), `en-US`, `zh-TW`, `ja-JP`. Stored in cookie `locale` (max-age 1 year) and `localStorage`. Use `web/locales/` for all user-facing strings. `t()` falls back to the key itself if a translation is missing.
 
+### OpenAPI Docs Copy
+The `/help/docs` pages hold no prose — every title, endpoint summary, field description and paragraph is a key in `locales/*/doc.ts` (`doc.<topic>.<section>.<slot>`), passed down as `titleKey` / `summaryKey` / `descriptionKey` / `textKey` so the pages stay server components. Paragraph strings carry an inline markup dialect rendered by `components/doc/doc-markup.tsx`: `` `text` `` → `InlineCode`, `**text**` → bold, and bold may wrap code. Code spans are opaque, so a glob like `` `/openapi/**` `` is never read as a bold marker. Section anchors are derived from the key by `doc-anchor.ts`, never from the rendered title, which keeps `#configmaps-write` pointing at the same heading in every locale — pass an explicit `id` only to keep an existing anchor alive.
+
 ### Command Palette
 Triggered by pressing `/` (outside input/textarea). Two-stage: select command (Status, Deploy, IDEs, Pipeline, App), then search for an application via `/api/search/applications` with 150ms debounce. Most-recently-used app stored in Zustand persisted to `localStorage` key `oops:recent-app`. Backspace with empty input returns to command selection.
 

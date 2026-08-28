@@ -72,14 +72,6 @@ const common = {
   "terminal.files.deleteFailed": "Delete failed",
   "pods.missingEnv": "Missing env parameter",
   "common.error": "Error",
-  "doc.field": "Field",
-  "doc.type": "Type",
-  "doc.description": "Description",
-  "doc.anchorCopied": "Anchor link copied",
-  "doc.anchorNavigated": "Jumped to section",
-  "doc.copyAnchor": "Copy anchor link",
-  "doc.copyCurl": "Copy curl",
-  "doc.title": "OpenAPI Docs",
 }
 
 export default common
