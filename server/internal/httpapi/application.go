@@ -26,11 +26,9 @@ type applicationView struct {
 	SourceType        string               `json:"sourceType"`
 }
 
-func (s *Server) toApplicationViews(ctx context.Context, namespace string, applications []store.Application, withCollaborators bool) ([]applicationView, error) {
-	names := make([]string, 0, len(applications))
+func (s *Server) toApplicationViews(ctx context.Context, applications []store.Application, withCollaborators bool) ([]applicationView, error) {
 	userIDSet := map[string]struct{}{}
 	for _, application := range applications {
-		names = append(names, application.Name)
 		if application.Owner != nil && *application.Owner != "" {
 			userIDSet[*application.Owner] = struct{}{}
 		}
@@ -41,7 +39,7 @@ func (s *Server) toApplicationViews(ctx context.Context, namespace string, appli
 	if len(applications) > 0 {
 		var err error
 		if withCollaborators {
-			if collaborators, err = s.store.CollaboratorsByApplication(ctx, namespace, names); err != nil {
+			if collaborators, err = s.store.CollaboratorsByApplication(ctx, applications); err != nil {
 				return nil, err
 			}
 			for _, userIDs := range collaborators {
@@ -50,7 +48,7 @@ func (s *Server) toApplicationViews(ctx context.Context, namespace string, appli
 				}
 			}
 		}
-		if sourceTypes, err = s.store.SourceTypesByApplication(ctx, namespace, names); err != nil {
+		if sourceTypes, err = s.store.SourceTypesByApplication(ctx, applications); err != nil {
 			return nil, err
 		}
 	}
@@ -66,7 +64,7 @@ func (s *Server) toApplicationViews(ctx context.Context, namespace string, appli
 
 	views := make([]applicationView, 0, len(applications))
 	for _, application := range applications {
-		key := namespace + "/" + application.Name
+		key := application.Namespace + "/" + application.Name
 		view := applicationView{
 			ID:                application.ID,
 			CreatedTime:       application.CreatedTime,
@@ -122,7 +120,7 @@ func (s *Server) listApplications(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}
-	views, err := s.toApplicationViews(ctx, namespace, applications, true)
+	views, err := s.toApplicationViews(ctx, applications, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
@@ -142,7 +140,7 @@ func (s *Server) searchApplications(c *gin.Context) {
 	// Search spans namespaces; resolve per-namespace metadata individually.
 	views := make([]applicationView, 0, len(applications))
 	for _, application := range applications {
-		singleView, err := s.toApplicationViews(ctx, application.Namespace, []store.Application{application}, false)
+		singleView, err := s.toApplicationViews(ctx, []store.Application{application}, false)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, fail(err.Error()))
 			return

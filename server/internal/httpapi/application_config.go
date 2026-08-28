@@ -34,7 +34,7 @@ func (s *Server) getApplication(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}
-	views, err := s.toApplicationViews(c.Request.Context(), namespace, []store.Application{*application}, true)
+	views, err := s.toApplicationViews(c.Request.Context(), []store.Application{*application}, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return

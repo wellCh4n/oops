@@ -9,6 +9,7 @@ import (
 	"github.com/wellch4n/oops/server/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"strings"
 )
 
@@ -44,11 +45,14 @@ func (s *Store) PageApplications(ctx context.Context, namespace, keyword, ownerI
 	}
 	applications := []Application{}
 	err := query.
-		Order(gorm.Expr(`(SELECT MAX(p.created_time) FROM pipeline p
-			WHERE p.namespace = application.namespace AND p.application_name = application.name
-			AND p.operator_id = ?) DESC`, viewerID)).
-		Order(gorm.Expr("CASE WHEN owner = ? THEN 0 ELSE 1 END", viewerID)).
-		Order("created_time DESC").
+		Clauses(clause.OrderBy{Expression: clause.Expr{
+			SQL: `(SELECT MAX(p.created_time) FROM pipeline p
+				WHERE p.namespace = application.namespace AND p.application_name = application.name
+				AND p.operator_id = ?) DESC,
+				CASE WHEN owner = ? THEN 0 ELSE 1 END,
+				created_time DESC`,
+			Vars: []any{viewerID, viewerID},
+		}}).
 		Limit(size).Offset((max(page, 1) - 1) * size).
 		Find(&applications).Error
 	return total, applications, err
@@ -88,41 +92,51 @@ type applicationCollaboratorRecord struct {
 
 func (applicationCollaboratorRecord) TableName() string { return "application_collaborator" }
 
-// CollaboratorsByApplication returns userIds per "namespace/name" key.
-func (s *Store) CollaboratorsByApplication(ctx context.Context, namespace string, names []string) (map[string][]string, error) {
+// CollaboratorsByApplication returns userIds per "namespace/name" key. The
+// applications carry their own namespaces so the all-namespaces listing
+// resolves correctly.
+func (s *Store) CollaboratorsByApplication(ctx context.Context, applications []Application) (map[string][]string, error) {
 	result := map[string][]string{}
-	if len(names) == 0 {
+	if len(applications) == 0 {
 		return result, nil
 	}
 	var rows []applicationCollaboratorRecord
 	if err := s.orm.WithContext(ctx).
-		Where("namespace = ? AND application_name IN ?", namespace, names).
+		Where("(namespace, application_name) IN ?", applicationKeyPairs(applications)).
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	for _, row := range rows {
-		key := namespace + "/" + row.ApplicationName
+		key := row.Namespace + "/" + row.ApplicationName
 		result[key] = append(result[key], row.UserID)
 	}
 	return result, nil
 }
 
+func applicationKeyPairs(applications []Application) [][]any {
+	pairs := make([][]any, 0, len(applications))
+	for _, application := range applications {
+		pairs = append(pairs, []any{application.Namespace, application.Name})
+	}
+	return pairs
+}
+
 // SourceTypesByApplication returns GIT/ZIP per "namespace/name" key.
-func (s *Store) SourceTypesByApplication(ctx context.Context, namespace string, names []string) (map[string]string, error) {
+func (s *Store) SourceTypesByApplication(ctx context.Context, applications []Application) (map[string]string, error) {
 	result := map[string]string{}
-	if len(names) == 0 {
+	if len(applications) == 0 {
 		return result, nil
 	}
 	var rows []buildConfigRecord
 	if err := s.orm.WithContext(ctx).
-		Select("application_name", "source_type").
-		Where("namespace = ? AND application_name IN ?", namespace, names).
+		Select("namespace", "application_name", "source_type").
+		Where("(namespace, application_name) IN ?", applicationKeyPairs(applications)).
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	for _, row := range rows {
 		if row.SourceType != nil && *row.SourceType != "" {
-			result[namespace+"/"+row.ApplicationName] = *row.SourceType
+			result[row.Namespace+"/"+row.ApplicationName] = *row.SourceType
 		}
 	}
 	return result, nil
