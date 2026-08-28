@@ -66,3 +66,19 @@ func upgradePathMessage(current int64) string {
 			"upgrade to the latest 2.x release first so its migrations complete, then upgrade to 3.x",
 		current, baselineFlywayVersion)
 }
+
+// MigrateDown rolls back the most recent goose migration — the operator's
+// escape hatch when a release must be rolled back past a schema change
+// (run with the -migrate-down flag before starting the previous release).
+func (s *Store) MigrateDown() error {
+	sqlDB, err := s.orm.DB()
+	if err != nil {
+		return err
+	}
+	goose.SetBaseFS(migrations)
+	goose.SetLogger(goose.NopLogger())
+	if err := goose.SetDialect("mysql"); err != nil {
+		return err
+	}
+	return goose.Down(sqlDB, "migrations")
+}

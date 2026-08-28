@@ -17,6 +17,7 @@ import (
 func main() {
 	configPath := flag.String("config", "config/application.yml", "path to the shared application.yml")
 	listen := flag.String("listen", ":8081", "listen address (Java runs on :8080 during migration)")
+	migrateDown := flag.Bool("migrate-down", false, "roll back the most recent database migration, then exit")
 	flag.Parse()
 
 	cfg, err := config.Load(*configPath)
@@ -35,6 +36,14 @@ func main() {
 		os.Exit(1)
 	}
 	defer st.Close()
+	if *migrateDown {
+		if err := st.MigrateDown(); err != nil {
+			slog.Error("roll back database migration", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("rolled back the most recent database migration")
+		return
+	}
 	if err := st.Migrate(); err != nil {
 		slog.Error("run database migrations", "error", err)
 		os.Exit(1)
