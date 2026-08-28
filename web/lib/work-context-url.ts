@@ -12,6 +12,11 @@ import { ALL_NAMESPACES, type AppRef } from "@/store/work-context"
 
 export type WorkContextParam = "namespace" | "app" | "env"
 
+/** The URL query key a context param is spelled as ("env" travels as "environment"). */
+export function urlKeyFor(param: WorkContextParam): string {
+  return param === "env" ? "environment" : param
+}
+
 const ROUTE_PARAMS: { match: (pathname: string) => boolean; params: WorkContextParam[] }[] = [
   { match: (pathname) => pathname === "/apps", params: ["namespace"] },
   { match: (pathname) => pathname === "/pipelines", params: ["namespace", "app", "env"] },

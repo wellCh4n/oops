@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ALL_NAMESPACES, useWorkContextStore, type AppRef } from "@/store/work-context"
-import { contextParamsFor, effectiveContextParams } from "@/lib/work-context-url"
+import { contextParamsFor, effectiveContextParams, urlKeyFor } from "@/lib/work-context-url"
 
 /**
  * Reads the work context for the current route and gives back the setters that
@@ -80,9 +80,10 @@ export function useWorkContext() {
       const params = new URLSearchParams(searchParams.toString())
       const values = effectiveContextParams(accepted, next)
       accepted.forEach((param) => {
-        const value = values[param]
-        if (value) params.set(param, value)
-        else params.delete(param)
+        const key = urlKeyFor(param)
+        const value = values[key]
+        if (value) params.set(key, value)
+        else params.delete(key)
       })
       Object.entries(extraParams ?? {}).forEach(([key, value]) => {
         if (value) params.set(key, value)
