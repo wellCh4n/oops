@@ -1,6 +1,10 @@
 package store
 
-import "context"
+import (
+	"context"
+
+	"github.com/wellch4n/oops/server/internal/domain"
+)
 
 type Namespace struct {
 	ID          string         `json:"id"`
@@ -19,7 +23,7 @@ func (s *Store) ListNamespaces(ctx context.Context) ([]Namespace, error) {
 
 func (s *Store) CreateNamespace(ctx context.Context, name, description string) error {
 	namespace := Namespace{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Name: name, Description: &description,
 	}
 	return s.orm.WithContext(ctx).Create(&namespace).Error

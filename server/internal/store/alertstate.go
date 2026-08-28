@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"gorm.io/gorm"
 )
 
@@ -52,7 +53,7 @@ func (s *Store) SaveAlertState(ctx context.Context, namespace, applicationName, 
 	_, err := s.FindAlertState(ctx, namespace, applicationName, environmentName, metric)
 	if errors.Is(err, ErrNotFound) {
 		record := alertStateRecord{
-			ID: NewNanoID(), CreatedTime: Now(),
+			ID: domain.NewID(), CreatedTime: Now(),
 			Namespace: namespace, ApplicationName: applicationName,
 			EnvironmentName: environmentName, Metric: metric,
 			Firing: firing, LastNotified: &now,

@@ -4,8 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/wellch4n/oops/server/internal/store"
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
 type namespaceRequest struct {
@@ -39,7 +38,7 @@ func (s *Server) createNamespace(c *gin.Context) {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
 	}
-	if !store.IsValidResourceName(request.Name) {
+	if !domain.IsValidResourceName(request.Name) {
 		c.JSON(http.StatusOK, fail("Invalid resource name"))
 		return
 	}

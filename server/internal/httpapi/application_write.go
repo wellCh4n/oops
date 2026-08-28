@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/store"
 )
 
@@ -23,7 +24,7 @@ func (s *Server) createApplication(c *gin.Context) {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
 	}
-	if !store.IsValidResourceName(request.Name) {
+	if !domain.IsValidResourceName(request.Name) {
 		c.JSON(http.StatusOK, fail("Invalid resource name"))
 		return
 	}

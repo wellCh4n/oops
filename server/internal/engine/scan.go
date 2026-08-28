@@ -9,6 +9,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/k8s"
 	"github.com/wellch4n/oops/server/internal/store"
 )
@@ -67,7 +68,7 @@ func (engine *Engine) loop(ctx context.Context, scan func(context.Context)) {
 }
 
 func (engine *Engine) scanPipelineJobs(ctx context.Context) {
-	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, store.StatusRunning)
+	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, domain.PipelineRunning)
 	if err != nil {
 		log.Printf("pipeline scan: %v", err)
 		return
@@ -80,8 +81,8 @@ func (engine *Engine) scanPipelineJobs(ctx context.Context) {
 			if message == "" {
 				message = "发布任务执行失败，请查看日志。"
 			}
-			deployingUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, store.StatusDeploying, store.StatusError, message)
-			runningUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, store.StatusRunning, store.StatusError, message)
+			deployingUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineError, message)
+			runningUpdated, _ := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineError, message)
 			if deployingUpdated > 0 || runningUpdated > 0 {
 				log.Printf("pipeline %s marked ERROR: %s", pipeline.ID, message)
 			}
@@ -112,14 +113,14 @@ func (engine *Engine) scanOneRunning(ctx context.Context, pipeline *store.Pipeli
 	switch {
 	case job.Status.Succeeded == 1:
 		if pipeline.DeployMode != nil && *pipeline.DeployMode == "MANUAL" {
-			updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, store.StatusRunning, store.StatusBuildSucceeded)
+			updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineBuildSucceeded)
 			if err == nil && updated > 0 {
 				log.Printf("pipeline %s build succeeded, awaiting manual deploy", pipeline.ID)
 				engine.notifyPipeline(pipeline, "BUILD_SUCCEEDED", "镜像构建完成，等待手动发布。")
 			}
 			return err
 		}
-		claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, store.StatusRunning, store.StatusDeploying)
+		claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineDeploying)
 		if err != nil || claimed == 0 {
 			return err
 		}
@@ -128,14 +129,14 @@ func (engine *Engine) scanOneRunning(ctx context.Context, pipeline *store.Pipeli
 		if err := engine.deployArtifact(ctx, cluster, environment, pipeline); err != nil {
 			return err
 		}
-		if _, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, store.StatusDeploying, store.StatusRollingOut); err != nil {
+		if _, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineRollingOut); err != nil {
 			return err
 		}
 		log.Printf("pipeline %s rolling out", pipeline.ID)
 		engine.notifyPipeline(pipeline, "ROLLING_OUT", "正在等待新版本发布生效…")
 	case job.Status.Failed > 0:
 		message := "镜像构建失败，请查看流水线日志。"
-		updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, store.StatusRunning, store.StatusError, message)
+		updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRunning, domain.PipelineError, message)
 		if err == nil && updated > 0 {
 			log.Printf("pipeline %s build failed", pipeline.ID)
 			engine.notifyPipeline(pipeline, "FAILED", message)
@@ -194,7 +195,7 @@ func (engine *Engine) deployArtifact(ctx context.Context, cluster *k8s.Cluster, 
 }
 
 func (engine *Engine) scanRollingOutPipelines(ctx context.Context) {
-	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, store.StatusRollingOut)
+	pipelines, err := engine.Store.FindPipelinesByStatus(ctx, domain.PipelineRollingOut)
 	if err != nil {
 		log.Printf("rollout scan: %v", err)
 		return
@@ -257,7 +258,7 @@ func (engine *Engine) scanOneRollingOut(ctx context.Context, pipeline *store.Pip
 	case failureReason != "":
 		return engine.failRollout(ctx, pipeline, "新版本部署失败："+failureReason)
 	case rolloutComplete:
-		updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, store.StatusRollingOut, store.StatusSucceeded)
+		updated, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineRollingOut, domain.PipelineSucceeded)
 		if err == nil && updated > 0 {
 			log.Printf("pipeline %s succeeded", pipeline.ID)
 			engine.notifyPipeline(pipeline, "SUCCEEDED", "应用已经成功发布。")
@@ -277,7 +278,7 @@ func (engine *Engine) scanOneRollingOut(ctx context.Context, pipeline *store.Pip
 }
 
 func (engine *Engine) failRollout(ctx context.Context, pipeline *store.PipelineView, message string) error {
-	updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, store.StatusRollingOut, store.StatusError, message)
+	updated, err := engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineRollingOut, domain.PipelineError, message)
 	if err == nil && updated > 0 {
 		log.Printf("pipeline %s failed rollout: %s", pipeline.ID, message)
 		engine.notifyPipeline(pipeline, "FAILED", message)

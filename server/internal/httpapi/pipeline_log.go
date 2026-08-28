@@ -11,8 +11,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/k8s"
-	"github.com/wellch4n/oops/server/internal/store"
 )
 
 func sendJSON(sink *wsSink, payload map[string]any) error {
@@ -110,7 +110,7 @@ func (s *Server) pipelineLogWebSocket(c *gin.Context) {
 }
 
 func isFinishedStatus(status string) bool {
-	return status == store.StatusSucceeded || status == store.StatusError || status == store.StatusStopped
+	return status == domain.PipelineSucceeded || status == domain.PipelineError || status == domain.PipelineStopped
 }
 
 func (s *Server) streamJobContainerLogs(ctx context.Context, cluster *k8s.Cluster, workNamespace, jobName, containerName string, sink *wsSink) {

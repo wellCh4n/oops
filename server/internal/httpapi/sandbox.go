@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"github.com/wellch4n/oops/server/internal/k8s"
 	"github.com/wellch4n/oops/server/internal/store"
 )
@@ -143,7 +144,7 @@ func (s *Server) sandboxExecute(c *gin.Context) {
 		Env:                     sanitizeSandboxEnv(request.Env),
 		CreatedByUserID:         principalFrom(c).UserID,
 	}
-	sandboxID := store.NewNanoID()
+	sandboxID := domain.NewID()
 
 	if request.Stream != nil && *request.Stream {
 		s.streamSandboxRun(c, func(emit func(string) error) (int, error) {
@@ -219,7 +220,7 @@ func (s *Server) createSandboxInstance(c *gin.Context) {
 		return
 	}
 	callerID := principalFrom(c).UserID
-	sandboxID := store.NewNanoID()
+	sandboxID := domain.NewID()
 	resolvedName := name
 	if resolvedName == "" {
 		resolvedName = sandboxID

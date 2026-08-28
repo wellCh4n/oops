@@ -115,7 +115,7 @@ func (s *Store) FindPipeline(ctx context.Context, namespace, applicationName, id
 func (s *Store) FindLastSuccessfulPipeline(ctx context.Context, namespace, applicationName string) (*PipelineView, error) {
 	var record pipelineRecord
 	err := s.orm.WithContext(ctx).
-		Where("namespace = ? AND application_name = ? AND status = ?", namespace, applicationName, StatusSucceeded).
+		Where("namespace = ? AND application_name = ? AND status = ?", namespace, applicationName, domain.PipelineSucceeded).
 		Order("created_time DESC").
 		First(&record).Error
 	if err != nil {
@@ -184,14 +184,11 @@ type ActiveDeployment struct {
 	CreatedTime     *LocalDateTime `json:"createdTime"`
 }
 
-// ActivePipelineStatuses mirrors DeploymentConcurrencyPolicy.
-var ActivePipelineStatuses = domain.ActivePipelineStatuses
-
 // FindActiveDeployments returns in-flight pipelines, newest first. Namespace
 // "all" spans every namespace, matching PipelineService.getActiveDeployments.
 func (s *Store) FindActiveDeployments(ctx context.Context, namespace string) ([]ActiveDeployment, error) {
 	query := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
-		Where("status IN ?", ActivePipelineStatuses)
+		Where("status IN ?", domain.ActivePipelineStatuses)
 	if !strings.EqualFold(namespace, "all") {
 		query = query.Where("namespace = ?", namespace)
 	}

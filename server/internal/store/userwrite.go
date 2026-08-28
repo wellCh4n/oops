@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/wellch4n/oops/server/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -23,7 +24,7 @@ func (s *Store) CreateUser(ctx context.Context, username, email, rawPassword str
 		return err
 	}
 	user := User{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Username: username, Email: email, Password: hash,
 		Role: "USER", Enabled: true,
 	}
@@ -79,7 +80,7 @@ func (s *Store) ChangePassword(ctx context.Context, id, oldPassword, newPassword
 
 // ResetAccessToken mirrors resetMyAccessToken: "sk-oops-" + NanoId.
 func (s *Store) ResetAccessToken(ctx context.Context, id string) (string, error) {
-	token := "sk-oops-" + NewNanoID()
+	token := "sk-oops-" + domain.NewID()
 	err := s.orm.WithContext(ctx).Model(&User{}).
 		Where("id = ?", id).Update("access_token", token).Error
 	return token, err

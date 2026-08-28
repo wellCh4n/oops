@@ -156,13 +156,13 @@ func (engine *Engine) DeployApplication(ctx context.Context, namespace, applicat
 	})
 	if err != nil {
 		message := err.Error()
-		_, _ = engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipelineID, store.StatusInitialized, store.StatusError, message)
+		_, _ = engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipelineID, domain.PipelineInitialized, domain.PipelineError, message)
 		return "", err
 	}
 	if err := engine.Store.UpdatePipelineArtifact(ctx, pipelineID, artifact); err != nil {
 		return "", err
 	}
-	if _, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipelineID, store.StatusInitialized, store.StatusRunning); err != nil {
+	if _, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, pipelineID, domain.PipelineInitialized, domain.PipelineRunning); err != nil {
 		return "", err
 	}
 	return pipelineID, nil
@@ -174,7 +174,7 @@ func (engine *Engine) ManualDeploy(ctx context.Context, namespace, applicationNa
 	if err != nil {
 		return bizf("Pipeline not found")
 	}
-	if pipeline.Status == nil || *pipeline.Status != store.StatusBuildSucceeded {
+	if pipeline.Status == nil || *pipeline.Status != domain.PipelineBuildSucceeded {
 		return bizf("Pipeline is not in BUILD_SUCCEEDED state")
 	}
 	active, err := engine.Store.HasActivePipeline(ctx, namespace, applicationName)
@@ -184,7 +184,7 @@ func (engine *Engine) ManualDeploy(ctx context.Context, namespace, applicationNa
 	if active {
 		return bizf("Application is being deployed")
 	}
-	claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, id, store.StatusBuildSucceeded, store.StatusDeploying)
+	claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, id, domain.PipelineBuildSucceeded, domain.PipelineDeploying)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (engine *Engine) Rollback(ctx context.Context, namespace, applicationName, 
 	if err != nil {
 		return "", bizf("Target pipeline not found")
 	}
-	if source.Status == nil || *source.Status != store.StatusSucceeded {
+	if source.Status == nil || *source.Status != domain.PipelineSucceeded {
 		return "", bizf("Only succeeded pipelines can be rolled back to")
 	}
 	if source.Artifact == nil || *source.Artifact == "" {
@@ -237,7 +237,7 @@ func (engine *Engine) Rollback(ctx context.Context, namespace, applicationName, 
 	if err := engine.Store.UpdatePipelineArtifact(ctx, rollbackID, *source.Artifact); err != nil {
 		return "", err
 	}
-	claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, rollbackID, store.StatusInitialized, store.StatusDeploying)
+	claimed, err := engine.Store.UpdatePipelineStatusIfMatch(ctx, rollbackID, domain.PipelineInitialized, domain.PipelineDeploying)
 	if err != nil {
 		return "", err
 	}
@@ -267,10 +267,10 @@ func (engine *Engine) finishDeployPhase(ctx context.Context, pipeline *store.Pip
 	}
 	if err != nil {
 		message := err.Error()
-		_, _ = engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, store.StatusDeploying, store.StatusError, message)
+		_, _ = engine.Store.UpdatePipelineStatusAndMessageIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineError, message)
 		return err
 	}
-	_, err = engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, store.StatusDeploying, store.StatusRollingOut)
+	_, err = engine.Store.UpdatePipelineStatusIfMatch(ctx, pipeline.ID, domain.PipelineDeploying, domain.PipelineRollingOut)
 	return err
 }
 
@@ -301,10 +301,10 @@ func (engine *Engine) Stop(ctx context.Context, namespace, applicationName, id s
 	if pipeline.Status != nil {
 		current = *pipeline.Status
 	}
-	if err := domain.EnsurePipelineTransition(current, store.StatusStopped); err != nil {
+	if err := domain.EnsurePipelineTransition(current, domain.PipelineStopped); err != nil {
 		return bizf("%s", err.Error())
 	}
-	if current != store.StatusBuildSucceeded {
+	if current != domain.PipelineBuildSucceeded {
 		environmentName := ""
 		if pipeline.Environment != nil {
 			environmentName = *pipeline.Environment
@@ -321,7 +321,7 @@ func (engine *Engine) Stop(ctx context.Context, namespace, applicationName, id s
 		_, _ = cluster.Clientset.BatchV1().Jobs(workNamespace).
 			Patch(ctx, pipeline.Name, types.MergePatchType, suspendPatch, metav1.PatchOptions{})
 	}
-	_, err = engine.Store.UpdatePipelineStatusIfMatch(ctx, id, current, store.StatusStopped)
+	_, err = engine.Store.UpdatePipelineStatusIfMatch(ctx, id, current, domain.PipelineStopped)
 	if err == nil {
 		engine.notifyPipeline(pipeline, "STOPPED", "发布任务已被手动停止。")
 	}

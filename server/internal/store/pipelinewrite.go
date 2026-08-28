@@ -7,25 +7,13 @@ import (
 	"github.com/wellch4n/oops/server/internal/domain"
 )
 
-// Pipeline statuses re-exported from domain for existing call sites.
-const (
-	StatusInitialized    = domain.PipelineInitialized
-	StatusRunning        = domain.PipelineRunning
-	StatusBuildSucceeded = domain.PipelineBuildSucceeded
-	StatusDeploying      = domain.PipelineDeploying
-	StatusRollingOut     = domain.PipelineRollingOut
-	StatusSucceeded      = domain.PipelineSucceeded
-	StatusError          = domain.PipelineError
-	StatusStopped        = domain.PipelineStopped
-)
-
 // CreatePipeline inserts an INITIALIZED pipeline and returns its id.
 func (s *Store) CreatePipeline(ctx context.Context, namespace, applicationName, environment,
 	publishType string, publishConfig any, deployMode, operatorID, triggerType, rollbackFromPipelineID string) (string, error) {
 
-	status := StatusInitialized
+	status := domain.PipelineInitialized
 	record := pipelineRecord{
-		ID:              NewNanoID(),
+		ID:              domain.NewID(),
 		CreatedTime:     Now(),
 		Namespace:       namespace,
 		ApplicationName: applicationName,
@@ -83,7 +71,7 @@ func (s *Store) HasActivePipeline(ctx context.Context, namespace, applicationNam
 	var count int64
 	err := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
 		Where("namespace = ? AND application_name = ? AND status IN ?",
-			namespace, applicationName, ActivePipelineStatuses).
+			namespace, applicationName, domain.ActivePipelineStatuses).
 		Count(&count).Error
 	return count > 0, err
 }

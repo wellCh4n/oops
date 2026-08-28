@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"errors"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
 // ExternalAccount mirrors the entity.
@@ -37,7 +39,7 @@ func (s *Store) SaveExternalAccount(ctx context.Context, provider, providerUserI
 	existing, err := s.FindExternalAccountByProviderUser(ctx, provider, providerUserID)
 	if errors.Is(err, ErrNotFound) {
 		account := ExternalAccount{
-			ID: NewNanoID(), CreatedTime: Now(),
+			ID: domain.NewID(), CreatedTime: Now(),
 			Email: &email, Provider: provider,
 			ProviderUserID: providerUserID, UserID: userID,
 		}
@@ -61,7 +63,7 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (*User, error
 // CreateExternalUser creates an OAuth-provisioned USER account with no password.
 func (s *Store) CreateExternalUser(ctx context.Context, username, email string) (*User, error) {
 	user := User{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Username: username, Email: email,
 		Role: "USER", Enabled: true,
 	}

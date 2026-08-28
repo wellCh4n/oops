@@ -10,13 +10,6 @@ import (
 	"github.com/wellch4n/oops/server/internal/domain"
 )
 
-// The host policy and BizError live in domain; thin aliases keep call sites terse.
-func bizErrorf(format string, args ...any) error { return domain.Bizf(format, args...) }
-
-func NormalizeHost(host string) string { return domain.NormalizeHost(host) }
-
-func ValidateHost(host string) error { return domain.ValidateHost(host) }
-
 // UpsertDomainCommand mirrors the Java command object.
 type UpsertDomainCommand struct {
 	Host            string  `json:"host"`
@@ -37,11 +30,11 @@ type certMeta struct {
 func parseCertificate(certPem string) (*certMeta, error) {
 	block, _ := pem.Decode([]byte(certPem))
 	if block == nil || block.Type != "CERTIFICATE" {
-		return nil, bizErrorf("Invalid certificate PEM")
+		return nil, domain.Bizf("Invalid certificate PEM")
 	}
 	certificate, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
-		return nil, bizErrorf("Invalid certificate PEM")
+		return nil, domain.Bizf("Invalid certificate PEM")
 	}
 	dnsNames := certificate.DNSNames
 	if len(dnsNames) == 0 && certificate.Subject.CommonName != "" {
@@ -57,7 +50,7 @@ func parseCertificate(certPem string) (*certMeta, error) {
 func validatePrivateKey(keyPem string) error {
 	block, _ := pem.Decode([]byte(keyPem))
 	if block == nil || !strings.Contains(block.Type, "PRIVATE KEY") {
-		return bizErrorf("Invalid private key PEM")
+		return domain.Bizf("Invalid private key PEM")
 	}
 	return nil
 }
@@ -80,11 +73,11 @@ func certificateHostMatches(host string, dnsNames []string) bool {
 
 func (s *Store) requireDomainEnvironment(ctx context.Context, environmentName *string) (string, error) {
 	if environmentName == nil || strings.TrimSpace(*environmentName) == "" {
-		return "", bizErrorf("Domain environment is required")
+		return "", domain.Bizf("Domain environment is required")
 	}
 	trimmed := strings.TrimSpace(*environmentName)
 	if !s.environmentExists(ctx, trimmed) {
-		return "", bizErrorf("Environment not found: %s", trimmed)
+		return "", domain.Bizf("Environment not found: %s", trimmed)
 	}
 	return trimmed, nil
 }
@@ -99,7 +92,7 @@ func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainComman
 		return nil
 	}
 	if request.CertMode == nil || *request.CertMode == "" {
-		return bizErrorf("Certificate mode is required when HTTPS is enabled")
+		return domain.Bizf("Certificate mode is required when HTTPS is enabled")
 	}
 	record.CertMode = request.CertMode
 	if *request.CertMode == "AUTO" {
@@ -111,7 +104,7 @@ func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainComman
 	hasNewCert := request.CertPem != nil && strings.TrimSpace(*request.CertPem) != ""
 	hasNewKey := request.KeyPem != nil && strings.TrimSpace(*request.KeyPem) != ""
 	if hasNewCert != hasNewKey {
-		return bizErrorf("Certificate and private key must be provided together")
+		return domain.Bizf("Certificate and private key must be provided together")
 	}
 	if hasNewCert {
 		host := ""
@@ -126,7 +119,7 @@ func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainComman
 			return err
 		}
 		if !certificateHostMatches(host, meta.dnsNames) {
-			return bizErrorf("Certificate does not match domain, certificate is for: %s",
+			return domain.Bizf("Certificate does not match domain, certificate is for: %s",
 				strings.Join(meta.dnsNames, ", "))
 		}
 		record.CertPem = request.CertPem
@@ -137,7 +130,7 @@ func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainComman
 		return nil
 	}
 	if record.CertPem == nil || strings.TrimSpace(*record.CertPem) == "" {
-		return bizErrorf("UPLOADED mode requires certificate and private key")
+		return domain.Bizf("UPLOADED mode requires certificate and private key")
 	}
 	return nil
 }
@@ -150,21 +143,21 @@ func (s *Store) domainHostExists(ctx context.Context, host string) (bool, error)
 }
 
 func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainCommand) (*DomainView, error) {
-	host := NormalizeHost(request.Host)
-	if err := ValidateHost(host); err != nil {
+	host := domain.NormalizeHost(request.Host)
+	if err := domain.ValidateHost(host); err != nil {
 		return nil, err
 	}
 	if exists, err := s.domainHostExists(ctx, host); err != nil {
 		return nil, err
 	} else if exists {
-		return nil, bizErrorf("Domain already exists: %s", host)
+		return nil, domain.Bizf("Domain already exists: %s", host)
 	}
 	environmentName, err := s.requireDomainEnvironment(ctx, request.EnvironmentName)
 	if err != nil {
 		return nil, err
 	}
 	record := domainRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Host: &host, Description: request.Description, EnvironmentName: &environmentName,
 	}
 	if err := s.applyCertFields(&record, request); err != nil {
@@ -180,7 +173,7 @@ func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainCommand) (
 func (s *Store) FindDomain(ctx context.Context, id string) (*DomainView, error) {
 	var record domainRecord
 	if err := s.orm.WithContext(ctx).Where("id = ?", id).First(&record).Error; err != nil {
-		return nil, bizErrorf("Domain not found: %s", id)
+		return nil, domain.Bizf("Domain not found: %s", id)
 	}
 	view := domainRecordToView(&record)
 	return &view, nil
@@ -189,17 +182,17 @@ func (s *Store) FindDomain(ctx context.Context, id string) (*DomainView, error) 
 func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomainCommand) (*DomainView, error) {
 	var record domainRecord
 	if err := s.orm.WithContext(ctx).Where("id = ?", id).First(&record).Error; err != nil {
-		return nil, bizErrorf("Domain not found: %s", id)
+		return nil, domain.Bizf("Domain not found: %s", id)
 	}
-	newHost := NormalizeHost(request.Host)
-	if err := ValidateHost(newHost); err != nil {
+	newHost := domain.NormalizeHost(request.Host)
+	if err := domain.ValidateHost(newHost); err != nil {
 		return nil, err
 	}
 	if record.Host == nil || newHost != *record.Host {
 		if exists, err := s.domainHostExists(ctx, newHost); err != nil {
 			return nil, err
 		} else if exists {
-			return nil, bizErrorf("Domain already exists: %s", newHost)
+			return nil, domain.Bizf("Domain already exists: %s", newHost)
 		}
 	}
 	environmentName, err := s.requireDomainEnvironment(ctx, request.EnvironmentName)
@@ -285,7 +278,7 @@ func (s *Store) rejectRebindingWhileInUse(ctx context.Context, record *domainRec
 				if config.EnvironmentName != nil {
 					environmentLabel = *config.EnvironmentName
 				}
-				return bizErrorf("Domain is in use by application %s/%s (host %s, environment %s), remove that host first",
+				return domain.Bizf("Domain is in use by application %s/%s (host %s, environment %s), remove that host first",
 					serviceConfig.Namespace, serviceConfig.ApplicationName, host, environmentLabel)
 			}
 		}
@@ -299,7 +292,7 @@ func (s *Store) DeleteDomain(ctx context.Context, id string) error {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return bizErrorf("Domain not found: %s", id)
+		return domain.Bizf("Domain not found: %s", id)
 	}
 	return nil
 }

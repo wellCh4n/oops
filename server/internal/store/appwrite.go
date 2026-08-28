@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/wellch4n/oops/server/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -18,7 +19,7 @@ func isDuplicateKey(err error) bool {
 
 func (s *Store) CreateApplication(ctx context.Context, namespace, name, description, icon, ownerID string) (string, error) {
 	application := Application{
-		ID:          NewNanoID(),
+		ID:          domain.NewID(),
 		CreatedTime: Now(),
 		Name:        name,
 		Namespace:   namespace,
@@ -78,7 +79,7 @@ func (s *Store) UpdateApplicationProfile(ctx context.Context, namespace, name, d
 			}
 			seen[userID] = struct{}{}
 			row := applicationCollaboratorRecord{
-				ID: NewNanoID(), CreatedTime: Now(),
+				ID: domain.NewID(), CreatedTime: Now(),
 				Namespace: namespace, ApplicationName: name, UserID: userID,
 			}
 			if err := transaction.Create(&row).Error; err != nil {
@@ -121,7 +122,7 @@ func (s *Store) ReplaceEnvironmentBindings(ctx context.Context, namespace, appli
 		for environmentName := range wanted {
 			if _, present := existing[environmentName]; !present {
 				binding := EnvironmentBinding{
-					ID: NewNanoID(), CreatedTime: Now(),
+					ID: domain.NewID(), CreatedTime: Now(),
 					Namespace: namespace, ApplicationName: applicationName,
 					EnvironmentName: environmentName,
 				}
@@ -173,7 +174,7 @@ func (s *Store) SaveBuildConfig(ctx context.Context, namespace, applicationName 
 		dockerFileField = jsonOf(dockerFile)
 	}
 	record := buildConfigRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		SourceType:         &resolvedType,
 		SourceConfig:       jsonOf(sourceConfig),
@@ -192,7 +193,7 @@ func (s *Store) SaveBuildConfig(ctx context.Context, namespace, applicationName 
 
 func (s *Store) SaveBuildEnvironmentConfigs(ctx context.Context, namespace, applicationName string, configs []BuildEnvironmentConfig) error {
 	record := buildConfigRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		EnvironmentConfigs: jsonOf(configs),
 	}
@@ -208,7 +209,7 @@ func (s *Store) SaveRuntimeSpec(ctx context.Context, namespace, applicationName 
 		healthCheckField = jsonOf(healthCheck)
 	}
 	record := runtimeSpecRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		EnvironmentConfigs: jsonOf(environmentConfigs),
 		HealthCheck:        healthCheckField,
@@ -221,7 +222,7 @@ func (s *Store) SaveRuntimeSpec(ctx context.Context, namespace, applicationName 
 
 func (s *Store) SaveRuntimeSpecEnvironmentConfigs(ctx context.Context, namespace, applicationName string, configs []RuntimeEnvironmentConfig) error {
 	record := runtimeSpecRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		EnvironmentConfigs: jsonOf(configs),
 	}
@@ -283,7 +284,7 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 	}
 
 	record := serviceConfigRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		Port:               port,
 		InternalPorts:      jsonOf(internalPorts),
@@ -298,7 +299,7 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 
 func (s *Store) SaveExpertConfig(ctx context.Context, namespace, applicationName string, environmentConfigs []ExpertEnvironmentConfig) error {
 	record := expertConfigRecord{
-		ID: NewNanoID(), CreatedTime: Now(),
+		ID: domain.NewID(), CreatedTime: Now(),
 		Namespace: namespace, ApplicationName: applicationName,
 		EnvironmentConfigs: jsonOf(environmentConfigs),
 	}

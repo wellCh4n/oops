@@ -15,8 +15,6 @@ type Codec interface {
 
 func (s *Store) SetCodec(codec Codec) { s.codec = codec }
 
-func IsValidEnvironmentName(name string) bool { return domain.IsValidEnvironmentName(name) }
-
 // GitCredential mirrors Environment.GitCredential; the whole JSON blob is
 // encrypted at rest by GitCredentialConverter.
 type GitCredential struct {
@@ -155,13 +153,13 @@ func (s *Store) encryptGitCredential(credential *GitCredential) (*string, error)
 }
 
 func (s *Store) CreateEnvironment(ctx context.Context, environment *EnvironmentFull) (string, error) {
-	if !IsValidEnvironmentName(environment.Name) {
-		return "", bizErrorf("Invalid environment name: %s", environment.Name)
+	if !domain.IsValidEnvironmentName(environment.Name) {
+		return "", domain.Bizf("Invalid environment name: %s", environment.Name)
 	}
 	if s.environmentExists(ctx, environment.Name) {
-		return "", bizErrorf("Environment already exists: %s", environment.Name)
+		return "", domain.Bizf("Environment already exists: %s", environment.Name)
 	}
-	record := environmentRecord{ID: NewNanoID(), Name: environment.Name,
+	record := environmentRecord{ID: domain.NewID(), Name: environment.Name,
 		WorkNamespace: environment.WorkNamespace, BuildStorageClass: environment.BuildStorageClass}
 	var err error
 	if environment.KubernetesApiServer != nil {
@@ -190,7 +188,7 @@ func (s *Store) requireEnvironmentRow(ctx context.Context, id string) error {
 		return err
 	}
 	if count == 0 {
-		return bizErrorf("Environment with id %s does not exist.", id)
+		return domain.Bizf("Environment with id %s does not exist.", id)
 	}
 	return nil
 }
