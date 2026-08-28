@@ -22,10 +22,12 @@ func (s *Store) CreateUser(ctx context.Context, username, email, rawPassword str
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO user (id, created_time, username, email, password, role, enabled)
-		 VALUES (?, ?, ?, ?, ?, 'USER', 1)`,
-		NewNanoID(), Now(), username, email, hash)
+	user := User{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Username: username, Email: email, Password: hash,
+		Role: "USER", Enabled: true,
+	}
+	err = s.orm.WithContext(ctx).Create(&user).Error
 	if isDuplicateKey(err) {
 		return ErrDuplicateUser
 	}
@@ -35,34 +37,28 @@ func (s *Store) CreateUser(ctx context.Context, username, email, rawPassword str
 // UpdateUser mirrors UserService.updateUser: role and email always set, the
 // password only when non-blank, enabled only when provided.
 func (s *Store) UpdateUser(ctx context.Context, id, role, email, rawPassword string, enabled *bool) error {
-	query := "UPDATE user SET role = ?, email = ?"
-	args := []any{role, email}
+	updates := map[string]any{"role": role, "email": email}
 	if rawPassword != "" {
 		hash, err := hashPassword(rawPassword)
 		if err != nil {
 			return err
 		}
-		query += ", password = ?"
-		args = append(args, hash)
+		updates["password"] = hash
 	}
 	if enabled != nil {
-		query += ", enabled = ?"
-		args = append(args, *enabled)
+		updates["enabled"] = *enabled
 	}
-	query += " WHERE id = ?"
-	args = append(args, id)
-	_, err := s.db.ExecContext(ctx, query, args...)
-	return err
+	return s.orm.WithContext(ctx).Model(&User{}).
+		Where("id = ?", id).Updates(updates).Error
 }
 
 func (s *Store) DeleteUser(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM user WHERE id = ?", id)
-	return err
+	return s.orm.WithContext(ctx).Where("id = ?", id).Delete(&User{}).Error
 }
 
 func (s *Store) UpdateUserEmail(ctx context.Context, id, email string) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE user SET email = ? WHERE id = ?", email, id)
-	return err
+	return s.orm.WithContext(ctx).Model(&User{}).
+		Where("id = ?", id).Update("email", email).Error
 }
 
 func (s *Store) ChangePassword(ctx context.Context, id, oldPassword, newPassword string) error {
@@ -77,22 +73,24 @@ func (s *Store) ChangePassword(ctx context.Context, id, oldPassword, newPassword
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, "UPDATE user SET password = ? WHERE id = ?", hash, id)
-	return err
+	return s.orm.WithContext(ctx).Model(&User{}).
+		Where("id = ?", id).Update("password", hash).Error
 }
 
 // ResetAccessToken mirrors resetMyAccessToken: "sk-oops-" + NanoId.
 func (s *Store) ResetAccessToken(ctx context.Context, id string) (string, error) {
 	token := "sk-oops-" + NewNanoID()
-	_, err := s.db.ExecContext(ctx, "UPDATE user SET access_token = ? WHERE id = ?", token, id)
+	err := s.orm.WithContext(ctx).Model(&User{}).
+		Where("id = ?", id).Update("access_token", token).Error
 	return token, err
 }
 
 // FindUserByAccessToken backs the /openapi surface's OpenApiAuthFilter.
 func (s *Store) FindUserByAccessToken(ctx context.Context, accessToken string) (*User, error) {
-	row := s.db.QueryRowContext(ctx,
-		"SELECT "+userColumns+" FROM user WHERE access_token = ? LIMIT 1", accessToken)
-	return scanUser(row)
+	var user User
+	err := s.orm.WithContext(ctx).
+		Where("access_token = ?", accessToken).First(&user).Error
+	return &user, notFound(err)
 }
 
 // DeactivateUser mirrors UserService.deactivateUser: disable rather than
@@ -105,15 +103,16 @@ func (s *Store) DeactivateUser(ctx context.Context, id string) (bool, error) {
 		return false, nil
 	}
 	if user.Role == "ADMIN" {
-		var enabledAdmins int
-		if err := s.db.QueryRowContext(ctx,
-			"SELECT COUNT(*) FROM user WHERE role = 'ADMIN' AND enabled = 1").Scan(&enabledAdmins); err != nil {
+		var enabledAdmins int64
+		if err := s.orm.WithContext(ctx).Model(&User{}).
+			Where("role = 'ADMIN' AND enabled = 1").Count(&enabledAdmins).Error; err != nil {
 			return false, err
 		}
 		if enabledAdmins <= 1 {
 			return false, nil // last-admin guard; the caller logs
 		}
 	}
-	_, err = s.db.ExecContext(ctx, "UPDATE user SET enabled = 0 WHERE id = ?", id)
+	err = s.orm.WithContext(ctx).Model(&User{}).
+		Where("id = ?", id).Update("enabled", false).Error
 	return err == nil, err
 }

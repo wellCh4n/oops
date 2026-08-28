@@ -2,15 +2,14 @@ package store
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
 )
 
-// The per-application config tables all follow one shape: identity columns plus
-// JSON blob columns whose field names match the Jackson output, so the blobs
-// pass through decode/encode without renaming.
+// The per-application config tables all follow one shape: identity columns
+// plus JSON blob columns (JSONField, the GORM counterpart of the Java
+// @AttributeConverter) whose field names match the Jackson output.
+
+var ErrNotFound = errors.New("not found")
 
 type DockerFileConfig struct {
 	Type    *string `json:"type"`
@@ -22,6 +21,26 @@ type BuildEnvironmentConfig struct {
 	EnvironmentName *string `json:"environmentName"`
 	BuildCommand    *string `json:"buildCommand"`
 }
+
+// sourceConfigBlob is the source_config JSON with its type discriminator.
+type sourceConfigBlob struct {
+	Type       string  `json:"type"`
+	Repository *string `json:"repository,omitempty"`
+}
+
+type buildConfigRecord struct {
+	ID                 string
+	CreatedTime        *LocalDateTime
+	Namespace          string
+	ApplicationName    string
+	SourceType         *string
+	SourceConfig       JSONField[sourceConfigBlob]  `gorm:"column:source_config"`
+	DockerFileConfig   JSONField[*DockerFileConfig] `gorm:"column:docker_file_config"`
+	BuildImage         *string
+	EnvironmentConfigs JSONField[[]BuildEnvironmentConfig] `gorm:"column:environment_configs"`
+}
+
+func (buildConfigRecord) TableName() string { return "application_build_config" }
 
 // BuildConfigView mirrors ApplicationConfigDto.BuildConfig.
 type BuildConfigView struct {
@@ -36,49 +55,33 @@ type BuildConfigView struct {
 	EnvironmentConfigs []BuildEnvironmentConfig `json:"environmentConfigs"`
 }
 
-var ErrNotFound = errors.New("not found")
-
-func decodeJSONColumn[T any](column sql.NullString, target *T) error {
-	if !column.Valid || column.String == "" {
-		return nil
-	}
-	if err := json.Unmarshal([]byte(column.String), target); err != nil {
-		return fmt.Errorf("decode json column: %w", err)
-	}
-	return nil
-}
-
 func (s *Store) FindBuildConfig(ctx context.Context, namespace, applicationName string) (*BuildConfigView, error) {
-	var view BuildConfigView
-	var sourceConfig, dockerFile, environmentConfigs sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, created_time, namespace, application_name, source_type, source_config,
-		        docker_file_config, build_image, environment_configs
-		 FROM application_build_config WHERE namespace = ? AND application_name = ?`,
-		namespace, applicationName).
-		Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName, &view.SourceType,
-			&sourceConfig, &dockerFile, &view.BuildImage, &environmentConfigs)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	var record buildConfigRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
+	}
+	view := &BuildConfigView{
+		ID:              record.ID,
+		CreatedTime:     record.CreatedTime,
+		Namespace:       record.Namespace,
+		ApplicationName: record.ApplicationName,
+		SourceType:      record.SourceType,
+		BuildImage:      record.BuildImage,
 	}
 	// The repository accessor reads the GIT variant of the source_config blob.
-	var source struct {
-		Repository *string `json:"repository"`
+	if record.SourceConfig.Valid {
+		view.Repository = record.SourceConfig.Data.Repository
 	}
-	if err := decodeJSONColumn(sourceConfig, &source); err != nil {
-		return nil, err
+	if record.DockerFileConfig.Valid {
+		view.DockerFileConfig = record.DockerFileConfig.Data
 	}
-	view.Repository = source.Repository
-	if err := decodeJSONColumn(dockerFile, &view.DockerFileConfig); err != nil {
-		return nil, err
+	if record.EnvironmentConfigs.Valid {
+		view.EnvironmentConfigs = record.EnvironmentConfigs.Data
 	}
-	if err := decodeJSONColumn(environmentConfigs, &view.EnvironmentConfigs); err != nil {
-		return nil, err
-	}
-	return &view, nil
+	return view, nil
 }
 
 func (s *Store) FindBuildEnvironmentConfigs(ctx context.Context, namespace, applicationName string) ([]BuildEnvironmentConfig, error) {
@@ -118,6 +121,17 @@ type HealthCheck struct {
 	Readiness *Probe `json:"readiness"`
 }
 
+type runtimeSpecRecord struct {
+	ID                 string
+	CreatedTime        *LocalDateTime
+	Namespace          string
+	ApplicationName    string
+	EnvironmentConfigs JSONField[[]RuntimeEnvironmentConfig] `gorm:"column:environment_configs"`
+	HealthCheck        JSONField[*HealthCheck]               `gorm:"column:health_check"`
+}
+
+func (runtimeSpecRecord) TableName() string { return "application_runtime_spec" }
+
 // RuntimeSpecView mirrors ApplicationConfigDto.RuntimeSpec.
 type RuntimeSpecView struct {
 	ID                 *string                    `json:"id"`
@@ -133,17 +147,9 @@ type RuntimeSpecView struct {
 // 30/10/3/3), returned when the application has no stored spec yet.
 func DefaultRuntimeSpec(namespace, applicationName string) *RuntimeSpecView {
 	defaultProbe := func() *Probe {
-		enabled := false
-		path := "/"
-		initialDelay, period, timeout, failureThreshold := 30, 10, 3, 3
-		return &Probe{
-			Enabled:             &enabled,
-			Path:                &path,
-			InitialDelaySeconds: &initialDelay,
-			PeriodSeconds:       &period,
-			TimeoutSeconds:      &timeout,
-			FailureThreshold:    &failureThreshold,
-		}
+		probe := &Probe{}
+		normalizeProbe(probe)
+		return probe
 	}
 	return &RuntimeSpecView{
 		Namespace:          namespace,
@@ -154,28 +160,27 @@ func DefaultRuntimeSpec(namespace, applicationName string) *RuntimeSpecView {
 }
 
 func (s *Store) FindRuntimeSpec(ctx context.Context, namespace, applicationName string) (*RuntimeSpecView, error) {
-	var view RuntimeSpecView
-	var environmentConfigs, healthCheck sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, created_time, namespace, application_name, environment_configs, health_check
-		 FROM application_runtime_spec WHERE namespace = ? AND application_name = ?`,
-		namespace, applicationName).
-		Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName,
-			&environmentConfigs, &healthCheck)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	var record runtimeSpecRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
 	}
-	if err := decodeJSONColumn(environmentConfigs, &view.EnvironmentConfigs); err != nil {
-		return nil, err
+	view := &RuntimeSpecView{
+		ID:              &record.ID,
+		CreatedTime:     record.CreatedTime,
+		Namespace:       record.Namespace,
+		ApplicationName: record.ApplicationName,
 	}
-	if err := decodeJSONColumn(healthCheck, &view.HealthCheck); err != nil {
-		return nil, err
+	if record.EnvironmentConfigs.Valid {
+		view.EnvironmentConfigs = record.EnvironmentConfigs.Data
+	}
+	if record.HealthCheck.Valid {
+		view.HealthCheck = record.HealthCheck.Data
 	}
 	normalizeHealthCheck(view.HealthCheck)
-	return &view, nil
+	return view, nil
 }
 
 // normalizeHealthCheck fills the Java entity's field defaults for keys absent
@@ -219,6 +224,29 @@ func normalizeProbe(probe *Probe) {
 	setInt(&probe.FailureThreshold, 3)
 }
 
+// ListAllRuntimeSpecs backs the resource-alert target collection.
+func (s *Store) ListAllRuntimeSpecs(ctx context.Context) ([]RuntimeSpecView, error) {
+	var records []runtimeSpecRecord
+	if err := s.orm.WithContext(ctx).Find(&records).Error; err != nil {
+		return nil, err
+	}
+	specs := make([]RuntimeSpecView, 0, len(records))
+	for i := range records {
+		record := &records[i]
+		view := RuntimeSpecView{
+			ID:              &record.ID,
+			CreatedTime:     record.CreatedTime,
+			Namespace:       record.Namespace,
+			ApplicationName: record.ApplicationName,
+		}
+		if record.EnvironmentConfigs.Valid {
+			view.EnvironmentConfigs = record.EnvironmentConfigs.Data
+		}
+		specs = append(specs, view)
+	}
+	return specs, nil
+}
+
 type serviceEnvironmentConfigRow struct {
 	EnvironmentName       *string `json:"environmentName"`
 	Host                  *string `json:"host"`
@@ -227,6 +255,10 @@ type serviceEnvironmentConfigRow struct {
 	BasicAuthUsername     *string `json:"basicAuthUsername"`
 	BasicAuthPasswordHash *string `json:"basicAuthPasswordHash"`
 }
+
+// ServiceEnvironmentConfigStored is the persisted row shape, hash included —
+// used by the deploy engine, never serialized to clients.
+type ServiceEnvironmentConfigStored = serviceEnvironmentConfigRow
 
 // ServiceEnvironmentConfig is the outbound form: the stored hash never leaves,
 // only the basicAuthPasswordSet marker does (see ServiceEnvironmentConfig in
@@ -241,9 +273,17 @@ type ServiceEnvironmentConfig struct {
 	BasicAuthPasswordSet bool    `json:"basicAuthPasswordSet"`
 }
 
-// ServiceEnvironmentConfigStored is the persisted row shape, hash included —
-// used by the deploy engine, never serialized to clients.
-type ServiceEnvironmentConfigStored = serviceEnvironmentConfigRow
+type serviceConfigRecord struct {
+	ID                 string
+	CreatedTime        *LocalDateTime
+	Namespace          string
+	ApplicationName    string
+	Port               *int
+	InternalPorts      JSONField[[]int]                         `gorm:"column:internal_ports"`
+	EnvironmentConfigs JSONField[[]serviceEnvironmentConfigRow] `gorm:"column:environment_configs"`
+}
+
+func (serviceConfigRecord) TableName() string { return "application_service_config" }
 
 // ServiceConfigView mirrors ApplicationConfigDto.ServiceConfig.
 type ServiceConfigView struct {
@@ -258,44 +298,41 @@ type ServiceConfigView struct {
 }
 
 func (s *Store) FindServiceConfig(ctx context.Context, namespace, applicationName string) (*ServiceConfigView, error) {
-	var view ServiceConfigView
-	var internalPorts, environmentConfigs sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, created_time, namespace, application_name, port, internal_ports, environment_configs
-		 FROM application_service_config WHERE namespace = ? AND application_name = ?`,
-		namespace, applicationName).
-		Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName, &view.Port,
-			&internalPorts, &environmentConfigs)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	var record serviceConfigRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
 	}
-	if err := decodeJSONColumn(internalPorts, &view.InternalPorts); err != nil {
-		return nil, err
+	view := &ServiceConfigView{
+		ID:              record.ID,
+		CreatedTime:     record.CreatedTime,
+		Namespace:       record.Namespace,
+		ApplicationName: record.ApplicationName,
+		Port:            record.Port,
 	}
-	var rows []serviceEnvironmentConfigRow
-	if err := decodeJSONColumn(environmentConfigs, &rows); err != nil {
-		return nil, err
+	if record.InternalPorts.Valid {
+		view.InternalPorts = record.InternalPorts.Data
 	}
-	view.StoredEnvironmentConfigs = rows
-	if rows != nil {
+	if record.EnvironmentConfigs.Valid {
+		rows := record.EnvironmentConfigs.Data
+		view.StoredEnvironmentConfigs = rows
 		// A stored "[]" renders as [] like the Java converter; only a NULL
 		// column stays null.
 		view.EnvironmentConfigs = []ServiceEnvironmentConfig{}
+		for _, row := range rows {
+			view.EnvironmentConfigs = append(view.EnvironmentConfigs, ServiceEnvironmentConfig{
+				EnvironmentName:      row.EnvironmentName,
+				Host:                 row.Host,
+				HTTPS:                row.HTTPS,
+				BasicAuthEnabled:     row.BasicAuthEnabled,
+				BasicAuthUsername:    row.BasicAuthUsername,
+				BasicAuthPasswordSet: row.BasicAuthPasswordHash != nil && *row.BasicAuthPasswordHash != "",
+			})
+		}
 	}
-	for _, row := range rows {
-		view.EnvironmentConfigs = append(view.EnvironmentConfigs, ServiceEnvironmentConfig{
-			EnvironmentName:      row.EnvironmentName,
-			Host:                 row.Host,
-			HTTPS:                row.HTTPS,
-			BasicAuthEnabled:     row.BasicAuthEnabled,
-			BasicAuthUsername:    row.BasicAuthUsername,
-			BasicAuthPasswordSet: row.BasicAuthPasswordHash != nil && *row.BasicAuthPasswordHash != "",
-		})
-	}
-	return &view, nil
+	return view, nil
 }
 
 type ExpertEnvironmentConfig struct {
@@ -307,6 +344,16 @@ type ExpertEnvironmentConfig struct {
 	NodeNames               []string `json:"nodeNames"`
 }
 
+type expertConfigRecord struct {
+	ID                 string
+	CreatedTime        *LocalDateTime
+	Namespace          string
+	ApplicationName    string
+	EnvironmentConfigs JSONField[[]ExpertEnvironmentConfig] `gorm:"column:environment_configs"`
+}
+
+func (expertConfigRecord) TableName() string { return "application_expert_config" }
+
 // ExpertConfigView mirrors ApplicationConfigDto.ExpertConfig.
 type ExpertConfigView struct {
 	ID                 *string                   `json:"id"`
@@ -316,48 +363,42 @@ type ExpertConfigView struct {
 	EnvironmentConfigs []ExpertEnvironmentConfig `json:"environmentConfigs"`
 }
 
-// ListAllExpertConfigs backs the scheduled-restart scan.
-func (s *Store) ListAllExpertConfigs(ctx context.Context) ([]ExpertConfigView, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, created_time, namespace, application_name, environment_configs
-		 FROM application_expert_config`)
-	if err != nil {
-		return nil, err
+func expertRecordToView(record *expertConfigRecord) ExpertConfigView {
+	view := ExpertConfigView{
+		ID:              &record.ID,
+		CreatedTime:     record.CreatedTime,
+		Namespace:       record.Namespace,
+		ApplicationName: record.ApplicationName,
 	}
-	defer rows.Close()
-	configs := []ExpertConfigView{}
-	for rows.Next() {
-		var view ExpertConfigView
-		var environmentConfigs sql.NullString
-		if err := rows.Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName, &environmentConfigs); err != nil {
-			return nil, err
-		}
-		if err := decodeJSONColumn(environmentConfigs, &view.EnvironmentConfigs); err != nil {
-			return nil, err
-		}
-		configs = append(configs, view)
+	if record.EnvironmentConfigs.Valid {
+		view.EnvironmentConfigs = record.EnvironmentConfigs.Data
 	}
-	return configs, rows.Err()
+	return view
 }
 
 func (s *Store) FindExpertConfig(ctx context.Context, namespace, applicationName string) (*ExpertConfigView, error) {
-	var view ExpertConfigView
-	var environmentConfigs sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, created_time, namespace, application_name, environment_configs
-		 FROM application_expert_config WHERE namespace = ? AND application_name = ?`,
-		namespace, applicationName).
-		Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName, &environmentConfigs)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	var record expertConfigRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
 	}
-	if err := decodeJSONColumn(environmentConfigs, &view.EnvironmentConfigs); err != nil {
-		return nil, err
-	}
+	view := expertRecordToView(&record)
 	return &view, nil
+}
+
+// ListAllExpertConfigs backs the scheduled-restart scan.
+func (s *Store) ListAllExpertConfigs(ctx context.Context) ([]ExpertConfigView, error) {
+	var records []expertConfigRecord
+	if err := s.orm.WithContext(ctx).Find(&records).Error; err != nil {
+		return nil, err
+	}
+	configs := make([]ExpertConfigView, 0, len(records))
+	for i := range records {
+		configs = append(configs, expertRecordToView(&records[i]))
+	}
+	return configs, nil
 }
 
 // EnvironmentBinding mirrors ApplicationConfigDto.EnvironmentBinding.
@@ -369,68 +410,25 @@ type EnvironmentBinding struct {
 	EnvironmentName string         `json:"environmentName"`
 }
 
+func (EnvironmentBinding) TableName() string { return "application_environment" }
+
 // ListEnvironmentBindings filters to environments that still exist, like
 // getApplicationEnvironments does.
 func (s *Store) ListEnvironmentBindings(ctx context.Context, namespace, applicationName string) ([]EnvironmentBinding, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT binding.id, binding.created_time, binding.namespace, binding.application_name, binding.environment_name
-		 FROM application_environment binding
-		 JOIN environment ON environment.name = binding.environment_name
-		 WHERE binding.namespace = ? AND binding.application_name = ?
-		 ORDER BY binding.created_time`, namespace, applicationName)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 	bindings := []EnvironmentBinding{}
-	for rows.Next() {
-		var binding EnvironmentBinding
-		if err := rows.Scan(&binding.ID, &binding.CreatedTime, &binding.Namespace,
-			&binding.ApplicationName, &binding.EnvironmentName); err != nil {
-			return nil, err
-		}
-		bindings = append(bindings, binding)
-	}
-	return bindings, rows.Err()
+	err := s.orm.WithContext(ctx).
+		Joins("JOIN environment ON environment.name = application_environment.environment_name").
+		Where("application_environment.namespace = ? AND application_environment.application_name = ?",
+			namespace, applicationName).
+		Order("application_environment.created_time").
+		Find(&bindings).Error
+	return bindings, err
 }
 
 func (s *Store) FindApplication(ctx context.Context, namespace, name string) (*Application, error) {
-	row := s.db.QueryRowContext(ctx,
-		"SELECT "+applicationColumns+" FROM application WHERE namespace = ? AND name = ?",
-		namespace, name)
 	var application Application
-	err := row.Scan(&application.ID, &application.CreatedTime, &application.Name,
-		&application.Description, &application.Icon, &application.Namespace, &application.Owner)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	return &application, nil
-}
-
-// ListAllRuntimeSpecs backs the resource-alert target collection.
-func (s *Store) ListAllRuntimeSpecs(ctx context.Context) ([]RuntimeSpecView, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, created_time, namespace, application_name, environment_configs, health_check
-		 FROM application_runtime_spec`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	specs := []RuntimeSpecView{}
-	for rows.Next() {
-		var view RuntimeSpecView
-		var environmentConfigs, healthCheck sql.NullString
-		if err := rows.Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName,
-			&environmentConfigs, &healthCheck); err != nil {
-			return nil, err
-		}
-		if err := decodeJSONColumn(environmentConfigs, &view.EnvironmentConfigs); err != nil {
-			return nil, err
-		}
-		specs = append(specs, view)
-	}
-	return specs, rows.Err()
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND name = ?", namespace, name).
+		First(&application).Error
+	return &application, notFound(err)
 }

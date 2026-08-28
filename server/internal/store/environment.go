@@ -1,22 +1,23 @@
 package store
 
-import (
-	"context"
-	"database/sql"
-)
+import "context"
 
-// EnvironmentView mirrors EnvironmentDto. Secrets (API server token, registry
-// password, git credential) stay redacted until the crypto port lands — the
-// Java side stores the token AES-encrypted with oops.crypto.secret-key.
-type EnvironmentView struct {
-	ID                  string               `json:"id"`
-	Name                string               `json:"name"`
-	KubernetesApiServer *KubernetesApiServer `json:"kubernetesApiServer"`
-	WorkNamespace       *string              `json:"workNamespace"`
-	BuildStorageClass   *string              `json:"buildStorageClass"`
-	ImageRepository     *ImageRepository     `json:"imageRepository"`
-	GitCredential       *struct{}            `json:"gitCredential"`
+// environmentRecord is the GORM model of the environment table; token,
+// registry password and the git credential JSON are encrypted at rest.
+type environmentRecord struct {
+	ID                      string
+	Name                    string
+	APIServerURL            *string `gorm:"column:api_server_url"`
+	APIServerToken          *string `gorm:"column:api_server_token"`
+	WorkNamespace           *string
+	BuildStorageClass       *string
+	ImageRepositoryURL      *string `gorm:"column:image_repository_url"`
+	ImageRepositoryUsername *string `gorm:"column:image_repository_username"`
+	ImageRepositoryPassword *string `gorm:"column:image_repository_password"`
+	GitCredential           *string `gorm:"column:git_credential"`
 }
+
+func (environmentRecord) TableName() string { return "environment" }
 
 type KubernetesApiServer struct {
 	URL   *string `json:"url"`
@@ -37,51 +38,20 @@ type EnvironmentCredentials struct {
 }
 
 func (s *Store) FindEnvironmentCredentials(ctx context.Context, name string) (*EnvironmentCredentials, error) {
-	var credentials EnvironmentCredentials
-	var url, token sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		"SELECT api_server_url, api_server_token FROM environment WHERE name = ?", name).
-		Scan(&url, &token)
+	var record environmentRecord
+	err := s.orm.WithContext(ctx).
+		Select("api_server_url", "api_server_token").
+		Where("name = ?", name).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
 	}
-	credentials.APIServerURL = url.String
-	credentials.Token = token.String
-	return &credentials, nil
-}
-
-func (s *Store) ListEnvironments(ctx context.Context) ([]EnvironmentView, error) {
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, name, api_server_url, work_namespace, build_storage_class,
-		        image_repository_url, image_repository_username
-		 FROM environment ORDER BY name`)
-	if err != nil {
-		return nil, err
+	credentials := &EnvironmentCredentials{}
+	if record.APIServerURL != nil {
+		credentials.APIServerURL = *record.APIServerURL
 	}
-	defer rows.Close()
-	environments := []EnvironmentView{}
-	for rows.Next() {
-		var environment EnvironmentView
-		var apiServerURL, imageRepositoryURL, imageRepositoryUsername sql.NullString
-		if err := rows.Scan(&environment.ID, &environment.Name, &apiServerURL,
-			&environment.WorkNamespace, &environment.BuildStorageClass,
-			&imageRepositoryURL, &imageRepositoryUsername); err != nil {
-			return nil, err
-		}
-		if apiServerURL.Valid {
-			environment.KubernetesApiServer = &KubernetesApiServer{URL: &apiServerURL.String}
-		}
-		if imageRepositoryURL.Valid || imageRepositoryUsername.Valid {
-			repository := &ImageRepository{}
-			if imageRepositoryURL.Valid {
-				repository.URL = &imageRepositoryURL.String
-			}
-			if imageRepositoryUsername.Valid {
-				repository.Username = &imageRepositoryUsername.String
-			}
-			environment.ImageRepository = repository
-		}
-		environments = append(environments, environment)
+	if record.APIServerToken != nil {
+		credentials.Token = *record.APIServerToken
 	}
-	return environments, rows.Err()
+	return credentials, nil
 }

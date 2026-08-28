@@ -1,12 +1,13 @@
 package httpapi
 
 import (
-	"database/sql"
 	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/wellch4n/oops/server/internal/store"
 )
 
 type loginRequest struct {
@@ -23,7 +24,7 @@ func (s *Server) login(c *gin.Context) {
 	}
 	user, err := s.store.FindUserByUsernameOrEmail(c.Request.Context(), request.Username)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
+		if !errors.Is(err, store.ErrNotFound) {
 			c.JSON(http.StatusInternalServerError, fail("Internal error"))
 			return
 		}

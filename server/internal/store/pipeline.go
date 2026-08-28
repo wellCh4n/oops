@@ -2,24 +2,32 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
-
-	"errors"
 	"fmt"
-	"github.com/wellch4n/oops/server/internal/domain"
 	"strings"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
-// ActiveDeployment mirrors ActiveDeploymentDto.
-type ActiveDeployment struct {
-	Namespace       string         `json:"namespace"`
-	ApplicationName string         `json:"applicationName"`
-	PipelineID      string         `json:"pipelineId"`
-	Environment     *string        `json:"environment"`
-	Status          string         `json:"status"`
-	CreatedTime     *LocalDateTime `json:"createdTime"`
+// pipelineRecord is the GORM model of the pipeline table.
+type pipelineRecord struct {
+	ID                     string
+	CreatedTime            *LocalDateTime
+	Namespace              string
+	ApplicationName        string
+	Status                 *string
+	Artifact               *string
+	Environment            *string
+	PublishType            *string
+	PublishConfig          *string `gorm:"column:publish_config"`
+	DeployMode             *string
+	OperatorID             *string `gorm:"column:operator_id"`
+	Message                *string
+	TriggerType            *string
+	RollbackFromPipelineID *string `gorm:"column:rollback_from_pipeline_id"`
 }
+
+func (pipelineRecord) TableName() string { return "pipeline" }
 
 // PipelineView mirrors PipelineDto. Name is computed as
 // "{applicationName}-pipeline-{id}" like Pipeline.getName(); publishConfig is
@@ -43,112 +51,92 @@ type PipelineView struct {
 	RollbackFromPipelineID *string         `json:"rollbackFromPipelineId"`
 }
 
-const pipelineColumns = `id, created_time, namespace, application_name, status, artifact,
-	environment, publish_type, publish_config, deploy_mode, operator_id, message,
-	trigger_type, rollback_from_pipeline_id`
+func pipelineRecordToView(record *pipelineRecord) PipelineView {
+	view := PipelineView{
+		ID:                     record.ID,
+		CreatedTime:            record.CreatedTime,
+		Namespace:              record.Namespace,
+		ApplicationName:        record.ApplicationName,
+		Name:                   fmt.Sprintf("%s-pipeline-%s", record.ApplicationName, record.ID),
+		Status:                 record.Status,
+		Artifact:               record.Artifact,
+		Environment:            record.Environment,
+		PublishType:            record.PublishType,
+		DeployMode:             record.DeployMode,
+		OperatorID:             record.OperatorID,
+		Message:                record.Message,
+		TriggerType:            record.TriggerType,
+		RollbackFromPipelineID: record.RollbackFromPipelineID,
+	}
+	if record.PublishConfig != nil && *record.PublishConfig != "" {
+		view.PublishConfig = json.RawMessage(*record.PublishConfig)
+	}
+	return view
+}
 
-func scanPipeline(scanner interface{ Scan(...any) error }) (*PipelineView, error) {
-	var view PipelineView
-	var publishConfig sql.NullString
-	err := scanner.Scan(&view.ID, &view.CreatedTime, &view.Namespace, &view.ApplicationName,
-		&view.Status, &view.Artifact, &view.Environment, &view.PublishType, &publishConfig,
-		&view.DeployMode, &view.OperatorID, &view.Message, &view.TriggerType, &view.RollbackFromPipelineID)
-	if err != nil {
-		return nil, err
+func pipelineRecordsToViews(records []pipelineRecord) []PipelineView {
+	views := make([]PipelineView, 0, len(records))
+	for i := range records {
+		views = append(views, pipelineRecordToView(&records[i]))
 	}
-	view.Name = fmt.Sprintf("%s-pipeline-%s", view.ApplicationName, view.ID)
-	if publishConfig.Valid && publishConfig.String != "" {
-		view.PublishConfig = json.RawMessage(publishConfig.String)
-	}
-	return &view, nil
+	return views
 }
 
 func (s *Store) PagePipelines(ctx context.Context, namespace, applicationName, environment string, page, size int) (int64, []PipelineView, error) {
-	where := "namespace = ? AND application_name = ?"
-	args := []any{namespace, applicationName}
+	query := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName)
 	if environment != "" {
-		where += " AND environment = ?"
-		args = append(args, environment)
+		query = query.Where("environment = ?", environment)
 	}
-
 	var total int64
-	if err := s.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM pipeline WHERE "+where, args...).Scan(&total); err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return 0, nil, err
 	}
-
-	offset := (max(page, 1) - 1) * size
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT "+pipelineColumns+" FROM pipeline WHERE "+where+
-			" ORDER BY created_time DESC LIMIT ? OFFSET ?",
-		append(args, size, offset)...)
-	if err != nil {
-		return 0, nil, err
-	}
-	defer rows.Close()
-	pipelines := []PipelineView{}
-	for rows.Next() {
-		view, err := scanPipeline(rows)
-		if err != nil {
-			return 0, nil, err
-		}
-		pipelines = append(pipelines, *view)
-	}
-	return total, pipelines, rows.Err()
+	var records []pipelineRecord
+	err := query.Order("created_time DESC").
+		Limit(size).Offset((max(page, 1) - 1) * size).
+		Find(&records).Error
+	return total, pipelineRecordsToViews(records), err
 }
 
 func (s *Store) FindPipeline(ctx context.Context, namespace, applicationName, id string) (*PipelineView, error) {
-	row := s.db.QueryRowContext(ctx,
-		"SELECT "+pipelineColumns+" FROM pipeline WHERE namespace = ? AND application_name = ? AND id = ?",
-		namespace, applicationName, id)
-	view, err := scanPipeline(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+	var record pipelineRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ? AND id = ?", namespace, applicationName, id).
+		First(&record).Error
+	if err != nil {
+		return nil, notFound(err)
 	}
-	return view, err
+	view := pipelineRecordToView(&record)
+	return &view, nil
 }
 
 // FindLastSuccessfulPipeline backs the redeploy prefill.
 func (s *Store) FindLastSuccessfulPipeline(ctx context.Context, namespace, applicationName string) (*PipelineView, error) {
-	row := s.db.QueryRowContext(ctx,
-		"SELECT "+pipelineColumns+` FROM pipeline
-		 WHERE namespace = ? AND application_name = ? AND status = 'SUCCEEDED'
-		 ORDER BY created_time DESC LIMIT 1`,
-		namespace, applicationName)
-	view, err := scanPipeline(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
+	var record pipelineRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ? AND status = ?", namespace, applicationName, StatusSucceeded).
+		Order("created_time DESC").
+		First(&record).Error
+	if err != nil {
+		return nil, notFound(err)
 	}
-	return view, err
+	view := pipelineRecordToView(&record)
+	return &view, nil
 }
 
 // QueryPipelines backs POST /api/index/pipelines.
 func (s *Store) QueryPipelines(ctx context.Context, namespace, applicationName string) ([]PipelineView, error) {
-	where := "1=1"
-	args := []any{}
+	query := s.orm.WithContext(ctx).Model(&pipelineRecord{})
 	if namespace != "" {
-		where += " AND namespace = ?"
-		args = append(args, namespace)
+		query = query.Where("namespace = ?", namespace)
 	}
 	if applicationName != "" {
-		where += " AND application_name = ?"
-		args = append(args, applicationName)
+		query = query.Where("application_name = ?", applicationName)
 	}
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT "+pipelineColumns+" FROM pipeline WHERE "+where+" ORDER BY created_time DESC", args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	pipelines := []PipelineView{}
-	for rows.Next() {
-		view, err := scanPipeline(rows)
-		if err != nil {
-			return nil, err
-		}
-		pipelines = append(pipelines, *view)
-	}
-	return pipelines, rows.Err()
+	var records []pipelineRecord
+	err := query.Order("created_time DESC").Find(&records).Error
+	return pipelineRecordsToViews(records), err
 }
 
 // FindHostConflict mirrors findHostConflictApplication: another application in
@@ -157,39 +145,43 @@ func (s *Store) FindHostConflict(ctx context.Context, namespace, applicationName
 	if host == "" {
 		return nil, nil
 	}
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT namespace, application_name, environment_configs FROM application_service_config
-		 WHERE environment_configs LIKE ? AND NOT (namespace = ? AND application_name = ?)`,
-		"%\""+host+"\"%", namespace, applicationName)
-	if err != nil {
+	var records []serviceConfigRecord
+	if err := s.orm.WithContext(ctx).
+		Where("environment_configs LIKE ? AND NOT (namespace = ? AND application_name = ?)",
+			"%\""+host+"\"%", namespace, applicationName).
+		Find(&records).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var conflictNamespace, conflictApplication string
-		var blob sql.NullString
-		if err := rows.Scan(&conflictNamespace, &conflictApplication, &blob); err != nil {
-			return nil, err
-		}
-		var configs []serviceEnvironmentConfigRow
-		if err := decodeJSONColumn(blob, &configs); err != nil {
+	for i := range records {
+		record := &records[i]
+		if !record.EnvironmentConfigs.Valid {
 			continue
 		}
-		for _, config := range configs {
+		for _, config := range record.EnvironmentConfigs.Data {
 			if config.Host != nil && *config.Host == host {
 				environmentName := ""
 				if config.EnvironmentName != nil {
 					environmentName = *config.EnvironmentName
 				}
 				return map[string]string{
-					"namespace":       conflictNamespace,
-					"applicationName": conflictApplication,
+					"namespace":       record.Namespace,
+					"applicationName": record.ApplicationName,
 					"environmentName": environmentName,
 				}, nil
 			}
 		}
 	}
-	return nil, rows.Err()
+	return nil, nil
+}
+
+// ActiveDeployment mirrors ActiveDeploymentDto.
+type ActiveDeployment struct {
+	Namespace       string         `json:"namespace"`
+	ApplicationName string         `json:"applicationName"`
+	PipelineID      string         `json:"pipelineId"`
+	Environment     *string        `json:"environment"`
+	Status          string         `json:"status"`
+	CreatedTime     *LocalDateTime `json:"createdTime"`
 }
 
 // ActivePipelineStatuses mirrors DeploymentConcurrencyPolicy.
@@ -198,31 +190,30 @@ var ActivePipelineStatuses = domain.ActivePipelineStatuses
 // FindActiveDeployments returns in-flight pipelines, newest first. Namespace
 // "all" spans every namespace, matching PipelineService.getActiveDeployments.
 func (s *Store) FindActiveDeployments(ctx context.Context, namespace string) ([]ActiveDeployment, error) {
-	statusPlaceholders := strings.TrimSuffix(strings.Repeat("?,", len(ActivePipelineStatuses)), ",")
-	query := "SELECT namespace, application_name, id, environment, status, created_time FROM pipeline WHERE status IN (" + statusPlaceholders + ")"
-	args := make([]any, 0, len(ActivePipelineStatuses)+1)
-	for _, status := range ActivePipelineStatuses {
-		args = append(args, status)
-	}
+	query := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("status IN ?", ActivePipelineStatuses)
 	if !strings.EqualFold(namespace, "all") {
-		query += " AND namespace = ?"
-		args = append(args, namespace)
+		query = query.Where("namespace = ?", namespace)
 	}
-	query += " ORDER BY created_time DESC"
-
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
+	var records []pipelineRecord
+	if err := query.Order("created_time DESC").Find(&records).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	deployments := []ActiveDeployment{}
-	for rows.Next() {
-		var deployment ActiveDeployment
-		if err := rows.Scan(&deployment.Namespace, &deployment.ApplicationName, &deployment.PipelineID,
-			&deployment.Environment, &deployment.Status, &deployment.CreatedTime); err != nil {
-			return nil, err
+	deployments := make([]ActiveDeployment, 0, len(records))
+	for i := range records {
+		record := &records[i]
+		status := ""
+		if record.Status != nil {
+			status = *record.Status
 		}
-		deployments = append(deployments, deployment)
+		deployments = append(deployments, ActiveDeployment{
+			Namespace:       record.Namespace,
+			ApplicationName: record.ApplicationName,
+			PipelineID:      record.ID,
+			Environment:     record.Environment,
+			Status:          status,
+			CreatedTime:     record.CreatedTime,
+		})
 	}
-	return deployments, rows.Err()
+	return deployments, nil
 }

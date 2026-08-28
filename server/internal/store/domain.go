@@ -2,8 +2,24 @@ package store
 
 import (
 	"context"
-	"database/sql"
 )
+
+// domainRecord is the GORM model of the domain table.
+type domainRecord struct {
+	ID              string
+	CreatedTime     *LocalDateTime
+	Host            *string
+	Description     *string
+	HTTPS           *bool `gorm:"column:https"`
+	CertMode        *string
+	CertPem         *string
+	KeyPem          *string
+	CertSubject     *string
+	CertNotAfter    *LocalDateTime
+	EnvironmentName *string
+}
+
+func (domainRecord) TableName() string { return "domain" }
 
 // DomainView mirrors DomainDto: cert/key PEM bodies never leave the backend,
 // only the hasUploadedCert marker does.
@@ -20,6 +36,33 @@ type DomainView struct {
 	EnvironmentName *string        `json:"environmentName"`
 }
 
+func domainRecordToView(record *domainRecord) DomainView {
+	return DomainView{
+		ID:              record.ID,
+		Host:            record.Host,
+		Description:     record.Description,
+		HTTPS:           record.HTTPS,
+		CertMode:        record.CertMode,
+		HasUploadedCert: record.CertPem != nil && *record.CertPem != "",
+		CertSubject:     record.CertSubject,
+		CertNotAfter:    record.CertNotAfter,
+		CreatedTime:     record.CreatedTime,
+		EnvironmentName: record.EnvironmentName,
+	}
+}
+
+func (s *Store) ListDomains(ctx context.Context) ([]DomainView, error) {
+	var records []domainRecord
+	if err := s.orm.WithContext(ctx).Order("created_time").Find(&records).Error; err != nil {
+		return nil, err
+	}
+	views := []DomainView{}
+	for i := range records {
+		views = append(views, domainRecordToView(&records[i]))
+	}
+	return views, nil
+}
+
 // DomainFull carries the PEM bodies for the deploy engine's TLS secret sync.
 type DomainFull struct {
 	ID       string
@@ -30,56 +73,23 @@ type DomainFull struct {
 }
 
 func (s *Store) ListDomainsFull(ctx context.Context) ([]DomainFull, error) {
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT id, host, cert_mode, cert_pem, key_pem FROM domain")
-	if err != nil {
+	var records []domainRecord
+	if err := s.orm.WithContext(ctx).Find(&records).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	domains := []DomainFull{}
-	for rows.Next() {
-		var domain DomainFull
-		var host, certMode, certPem, keyPem sql.NullString
-		if err := rows.Scan(&domain.ID, &host, &certMode, &certPem, &keyPem); err != nil {
-			return nil, err
+	domains := make([]DomainFull, 0, len(records))
+	for _, record := range records {
+		full := DomainFull{ID: record.ID, CertMode: record.CertMode}
+		if record.Host != nil {
+			full.Host = *record.Host
 		}
-		domain.Host = host.String
-		if certMode.Valid {
-			domain.CertMode = &certMode.String
+		if record.CertPem != nil {
+			full.CertPem = *record.CertPem
 		}
-		domain.CertPem, domain.KeyPem = certPem.String, keyPem.String
-		domains = append(domains, domain)
-	}
-	return domains, rows.Err()
-}
-
-func (s *Store) ListDomains(ctx context.Context) ([]DomainView, error) {
-	// environment_name arrived in V21; migrations are Java-owned, so a dev
-	// database that has not been migrated yet may lack the column. Fall back
-	// to NULL rather than failing the whole listing.
-	environmentColumn := "environment_name"
-	if !s.columnExists(ctx, "domain", "environment_name") {
-		environmentColumn = "NULL"
-	}
-	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, host, description, https, cert_mode, cert_pem, cert_subject,
-		        cert_not_after, created_time, `+environmentColumn+`
-		 FROM domain ORDER BY created_time`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	domains := []DomainView{}
-	for rows.Next() {
-		var domain DomainView
-		var certPem sql.NullString
-		if err := rows.Scan(&domain.ID, &domain.Host, &domain.Description, &domain.HTTPS,
-			&domain.CertMode, &certPem, &domain.CertSubject, &domain.CertNotAfter,
-			&domain.CreatedTime, &domain.EnvironmentName); err != nil {
-			return nil, err
+		if record.KeyPem != nil {
+			full.KeyPem = *record.KeyPem
 		}
-		domain.HasUploadedCert = certPem.Valid && certPem.String != ""
-		domains = append(domains, domain)
+		domains = append(domains, full)
 	}
-	return domains, rows.Err()
+	return domains, nil
 }

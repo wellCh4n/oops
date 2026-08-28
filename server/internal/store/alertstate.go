@@ -2,10 +2,25 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"time"
+
+	"gorm.io/gorm"
 )
+
+type alertStateRecord struct {
+	ID              string
+	CreatedTime     *LocalDateTime
+	Namespace       string
+	ApplicationName string
+	EnvironmentName string
+	Metric          string
+	Firing          bool
+	FiringSince     *time.Time
+	LastNotified    *time.Time `gorm:"column:last_notified_time"`
+}
+
+func (alertStateRecord) TableName() string { return "application_alert_state" }
 
 // AlertState is one row of application_alert_state (edge-trigger memory).
 type AlertState struct {
@@ -15,60 +30,53 @@ type AlertState struct {
 }
 
 func (s *Store) FindAlertState(ctx context.Context, namespace, applicationName, environmentName, metric string) (*AlertState, error) {
-	var state AlertState
-	var firingSince, lastNotified sql.NullTime
-	err := s.db.QueryRowContext(ctx,
-		`SELECT firing, firing_since, last_notified_time FROM application_alert_state
-		 WHERE namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?`,
-		namespace, applicationName, environmentName, metric).
-		Scan(&state.Firing, &firingSince, &lastNotified)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
+	var record alertStateRecord
+	err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?",
+			namespace, applicationName, environmentName, metric).
+		First(&record).Error
 	if err != nil {
-		return nil, err
+		return nil, notFound(err)
 	}
-	if firingSince.Valid {
-		state.FiringSince = &firingSince.Time
-	}
-	if lastNotified.Valid {
-		state.LastNotified = &lastNotified.Time
-	}
-	return &state, nil
+	return &AlertState{
+		Firing:       record.Firing,
+		FiringSince:  record.FiringSince,
+		LastNotified: record.LastNotified,
+	}, nil
 }
 
 // SaveAlertState upserts the target's state, stamping firing_since on a fresh
 // edge and last_notified_time on every save (a save only happens on notify).
 func (s *Store) SaveAlertState(ctx context.Context, namespace, applicationName, environmentName, metric string, firing bool) error {
-	now := Now()
+	now := time.Now().UTC()
 	_, err := s.FindAlertState(ctx, namespace, applicationName, environmentName, metric)
 	if errors.Is(err, ErrNotFound) {
-		var firingSince any
-		if firing {
-			firingSince = now
+		record := alertStateRecord{
+			ID: NewNanoID(), CreatedTime: Now(),
+			Namespace: namespace, ApplicationName: applicationName,
+			EnvironmentName: environmentName, Metric: metric,
+			Firing: firing, LastNotified: &now,
 		}
-		_, err := s.db.ExecContext(ctx,
-			`INSERT INTO application_alert_state
-			 (id, created_time, namespace, application_name, environment_name, metric, firing, firing_since, last_notified_time)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			NewNanoID(), now, namespace, applicationName, environmentName, metric, firing, firingSince, now)
-		return err
+		if firing {
+			record.FiringSince = &now
+		}
+		return s.orm.WithContext(ctx).Create(&record).Error
 	}
 	if err != nil {
 		return err
 	}
+	target := s.orm.WithContext(ctx).Model(&alertStateRecord{}).
+		Where("namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?",
+			namespace, applicationName, environmentName, metric)
 	if firing {
-		_, err = s.db.ExecContext(ctx,
-			`UPDATE application_alert_state
-			 SET firing = 1, firing_since = COALESCE(firing_since, ?), last_notified_time = ?
-			 WHERE namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?`,
-			now, now, namespace, applicationName, environmentName, metric)
-		return err
+		return target.Updates(map[string]any{
+			"firing":             true,
+			"firing_since":       gorm.Expr("COALESCE(firing_since, ?)", now),
+			"last_notified_time": now,
+		}).Error
 	}
-	_, err = s.db.ExecContext(ctx,
-		`UPDATE application_alert_state
-		 SET firing = 0, last_notified_time = ?
-		 WHERE namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?`,
-		now, namespace, applicationName, environmentName, metric)
-	return err
+	return target.Updates(map[string]any{
+		"firing":             false,
+		"last_notified_time": now,
+	}).Error
 }

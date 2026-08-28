@@ -2,14 +2,11 @@ package store
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"strings"
 
 	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var ErrDuplicateName = errors.New("application name already exists")
@@ -20,175 +17,141 @@ func isDuplicateKey(err error) bool {
 }
 
 func (s *Store) CreateApplication(ctx context.Context, namespace, name, description, icon, ownerID string) (string, error) {
-	id := NewNanoID()
-	_, err := s.db.ExecContext(ctx,
-		`INSERT INTO application (id, created_time, name, description, icon, namespace, owner)
-		 VALUES (?, ?, ?, ?, NULLIF(?, ''), ?, ?)`,
-		id, Now(), name, description, icon, namespace, ownerID)
+	application := Application{
+		ID:          NewNanoID(),
+		CreatedTime: Now(),
+		Name:        name,
+		Namespace:   namespace,
+		Owner:       &ownerID,
+	}
+	if description != "" {
+		application.Description = &description
+	} else {
+		empty := ""
+		application.Description = &empty
+	}
+	if icon != "" {
+		application.Icon = &icon
+	}
+	err := s.orm.WithContext(ctx).Create(&application).Error
 	if isDuplicateKey(err) {
 		return "", ErrDuplicateName
 	}
-	return id, err
+	return application.ID, err
 }
 
 // UpdateApplicationProfile mirrors Application.changeProfile +
 // changeCollaborators: description/owner/icon plus the collaborator set
 // (de-duplicated, owner excluded).
 func (s *Store) UpdateApplicationProfile(ctx context.Context, namespace, name, description, owner, icon string, collaborators []string) error {
-	transaction, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer transaction.Rollback()
-
-	result, err := transaction.ExecContext(ctx,
-		`UPDATE application SET description = ?, owner = NULLIF(?, ''), icon = NULLIF(?, '')
-		 WHERE namespace = ? AND name = ?`,
-		description, owner, icon, namespace, name)
-	if err != nil {
-		return err
-	}
-	if rows, _ := result.RowsAffected(); rows == 0 {
-		// The row may exist with identical values; ensure it exists at all.
-		var exists int
-		if err := transaction.QueryRowContext(ctx,
-			"SELECT COUNT(*) FROM application WHERE namespace = ? AND name = ?",
-			namespace, name).Scan(&exists); err != nil {
+	return s.orm.WithContext(ctx).Transaction(func(transaction *gorm.DB) error {
+		var application Application
+		if err := transaction.Where("namespace = ? AND name = ?", namespace, name).
+			First(&application).Error; err != nil {
+			return notFound(err)
+		}
+		updates := map[string]any{"description": description, "owner": nil, "icon": nil}
+		if owner != "" {
+			updates["owner"] = owner
+		}
+		if icon != "" {
+			updates["icon"] = icon
+		}
+		if err := transaction.Model(&Application{}).
+			Where("namespace = ? AND name = ?", namespace, name).
+			Updates(updates).Error; err != nil {
 			return err
 		}
-		if exists == 0 {
-			return ErrNotFound
-		}
-	}
 
-	if _, err := transaction.ExecContext(ctx,
-		"DELETE FROM application_collaborator WHERE namespace = ? AND application_name = ?",
-		namespace, name); err != nil {
-		return err
-	}
-	seen := map[string]struct{}{}
-	for _, userID := range collaborators {
-		if userID == "" || userID == owner {
-			continue
-		}
-		if _, duplicate := seen[userID]; duplicate {
-			continue
-		}
-		seen[userID] = struct{}{}
-		if _, err := transaction.ExecContext(ctx,
-			`INSERT INTO application_collaborator (id, created_time, namespace, application_name, user_id)
-			 VALUES (?, ?, ?, ?, ?)`,
-			NewNanoID(), Now(), namespace, name, userID); err != nil {
+		if err := transaction.
+			Where("namespace = ? AND application_name = ?", namespace, name).
+			Delete(&applicationCollaboratorRecord{}).Error; err != nil {
 			return err
 		}
-	}
-	return transaction.Commit()
+		seen := map[string]struct{}{}
+		for _, userID := range collaborators {
+			if userID == "" || userID == owner {
+				continue
+			}
+			if _, duplicate := seen[userID]; duplicate {
+				continue
+			}
+			seen[userID] = struct{}{}
+			row := applicationCollaboratorRecord{
+				ID: NewNanoID(), CreatedTime: Now(),
+				Namespace: namespace, ApplicationName: name, UserID: userID,
+			}
+			if err := transaction.Create(&row).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // ReplaceEnvironmentBindings rewrites the application_environment rows,
 // keeping rows whose environment is still bound (their id and created_time
 // carry the binding history).
 func (s *Store) ReplaceEnvironmentBindings(ctx context.Context, namespace, applicationName string, environmentNames []string) error {
-	transaction, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer transaction.Rollback()
-
-	wanted := map[string]struct{}{}
-	for _, environmentName := range environmentNames {
-		if environmentName != "" {
-			wanted[environmentName] = struct{}{}
+	return s.orm.WithContext(ctx).Transaction(func(transaction *gorm.DB) error {
+		wanted := map[string]struct{}{}
+		for _, environmentName := range environmentNames {
+			if environmentName != "" {
+				wanted[environmentName] = struct{}{}
+			}
 		}
-	}
-
-	rows, err := transaction.QueryContext(ctx,
-		"SELECT environment_name FROM application_environment WHERE namespace = ? AND application_name = ?",
-		namespace, applicationName)
-	if err != nil {
-		return err
-	}
-	existing := map[string]struct{}{}
-	for rows.Next() {
-		var environmentName string
-		if err := rows.Scan(&environmentName); err != nil {
-			rows.Close()
+		var existingRows []EnvironmentBinding
+		if err := transaction.
+			Where("namespace = ? AND application_name = ?", namespace, applicationName).
+			Find(&existingRows).Error; err != nil {
 			return err
 		}
-		existing[environmentName] = struct{}{}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	for environmentName := range existing {
-		if _, keep := wanted[environmentName]; !keep {
-			if _, err := transaction.ExecContext(ctx,
-				`DELETE FROM application_environment
-				 WHERE namespace = ? AND application_name = ? AND environment_name = ?`,
-				namespace, applicationName, environmentName); err != nil {
-				return err
+		existing := map[string]struct{}{}
+		for _, row := range existingRows {
+			existing[row.EnvironmentName] = struct{}{}
+			if _, keep := wanted[row.EnvironmentName]; !keep {
+				if err := transaction.
+					Where("namespace = ? AND application_name = ? AND environment_name = ?",
+						namespace, applicationName, row.EnvironmentName).
+					Delete(&EnvironmentBinding{}).Error; err != nil {
+					return err
+				}
 			}
 		}
-	}
-	for environmentName := range wanted {
-		if _, present := existing[environmentName]; !present {
-			if _, err := transaction.ExecContext(ctx,
-				`INSERT INTO application_environment (id, created_time, namespace, application_name, environment_name)
-				 VALUES (?, ?, ?, ?, ?)`,
-				NewNanoID(), Now(), namespace, applicationName, environmentName); err != nil {
-				return err
+		for environmentName := range wanted {
+			if _, present := existing[environmentName]; !present {
+				binding := EnvironmentBinding{
+					ID: NewNanoID(), CreatedTime: Now(),
+					Namespace: namespace, ApplicationName: applicationName,
+					EnvironmentName: environmentName,
+				}
+				if err := transaction.Create(&binding).Error; err != nil {
+					return err
+				}
 			}
 		}
-	}
-	return transaction.Commit()
+		return nil
+	})
 }
 
-func encodeJSON(value any) (any, error) {
-	if value == nil {
-		return nil, nil
-	}
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	return string(encoded), nil
-}
+// upsertRecord rewrites a single-row-per-application config table: update the
+// existing row's payload columns or insert a fresh identity.
+func upsertRecord[T any](ctx context.Context, orm *gorm.DB, namespace, applicationName string,
+	record *T, updates map[string]any) error {
 
-// upsert rewrites a single-row-per-application config table.
-func (s *Store) upsert(ctx context.Context, table, namespace, applicationName string, columns map[string]any) error {
-	var id string
-	err := s.db.QueryRowContext(ctx,
-		fmt.Sprintf("SELECT id FROM %s WHERE namespace = ? AND application_name = ?", table),
-		namespace, applicationName).Scan(&id)
-	if errors.Is(err, sql.ErrNoRows) {
-		names := []string{"id", "created_time", "namespace", "application_name"}
-		values := []any{NewNanoID(), Now(), namespace, applicationName}
-		for column, value := range columns {
-			names = append(names, column)
-			values = append(values, value)
-		}
-		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(names)), ",")
-		_, err = s.db.ExecContext(ctx,
-			fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", table, strings.Join(names, ", "), placeholders),
-			values...)
-		return err
+	var existing T
+	err := orm.WithContext(ctx).Model(record).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&existing).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return orm.WithContext(ctx).Create(record).Error
 	}
 	if err != nil {
 		return err
 	}
-	assignments := []string{}
-	values := []any{}
-	for column, value := range columns {
-		assignments = append(assignments, column+" = ?")
-		values = append(values, value)
-	}
-	values = append(values, id)
-	_, err = s.db.ExecContext(ctx,
-		fmt.Sprintf("UPDATE %s SET %s WHERE id = ?", table, strings.Join(assignments, ", ")),
-		values...)
-	return err
+	return orm.WithContext(ctx).Model(record).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		Updates(updates).Error
 }
 
 // SaveBuildConfig mirrors updateApplicationBuildConfig: a full rewrite, with
@@ -201,64 +164,69 @@ func (s *Store) SaveBuildConfig(ctx context.Context, namespace, applicationName 
 	if sourceType != nil && *sourceType != "" {
 		resolvedType = *sourceType
 	}
-	sourceConfig := map[string]any{"type": resolvedType}
+	sourceConfig := sourceConfigBlob{Type: resolvedType}
 	if resolvedType == "GIT" {
-		sourceConfig["repository"] = repository
+		sourceConfig.Repository = repository
 	}
-	sourceConfigJSON, err := encodeJSON(sourceConfig)
-	if err != nil {
-		return err
+	dockerFileField := JSONField[*DockerFileConfig]{}
+	if dockerFile != nil {
+		dockerFileField = jsonOf(dockerFile)
 	}
-	dockerFileJSON, err := encodeJSON(dockerFile)
-	if err != nil {
-		return err
+	record := buildConfigRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		SourceType:         &resolvedType,
+		SourceConfig:       jsonOf(sourceConfig),
+		DockerFileConfig:   dockerFileField,
+		BuildImage:         buildImage,
+		EnvironmentConfigs: jsonOf(environmentConfigs),
 	}
-	environmentConfigsJSON, err := encodeJSON(environmentConfigs)
-	if err != nil {
-		return err
-	}
-	return s.upsert(ctx, "application_build_config", namespace, applicationName, map[string]any{
-		"source_type":         resolvedType,
-		"source_config":       sourceConfigJSON,
-		"docker_file_config":  dockerFileJSON,
-		"build_image":         buildImage,
-		"environment_configs": environmentConfigsJSON,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"source_type":         record.SourceType,
+		"source_config":       record.SourceConfig,
+		"docker_file_config":  record.DockerFileConfig,
+		"build_image":         record.BuildImage,
+		"environment_configs": record.EnvironmentConfigs,
 	})
 }
 
 func (s *Store) SaveBuildEnvironmentConfigs(ctx context.Context, namespace, applicationName string, configs []BuildEnvironmentConfig) error {
-	encoded, err := encodeJSON(configs)
-	if err != nil {
-		return err
+	record := buildConfigRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		EnvironmentConfigs: jsonOf(configs),
 	}
-	return s.upsert(ctx, "application_build_config", namespace, applicationName, map[string]any{
-		"environment_configs": encoded,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"environment_configs": record.EnvironmentConfigs,
 	})
 }
 
 func (s *Store) SaveRuntimeSpec(ctx context.Context, namespace, applicationName string,
 	environmentConfigs []RuntimeEnvironmentConfig, healthCheck *HealthCheck) error {
-	environmentConfigsJSON, err := encodeJSON(environmentConfigs)
-	if err != nil {
-		return err
+	healthCheckField := JSONField[*HealthCheck]{}
+	if healthCheck != nil {
+		healthCheckField = jsonOf(healthCheck)
 	}
-	healthCheckJSON, err := encodeJSON(healthCheck)
-	if err != nil {
-		return err
+	record := runtimeSpecRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		EnvironmentConfigs: jsonOf(environmentConfigs),
+		HealthCheck:        healthCheckField,
 	}
-	return s.upsert(ctx, "application_runtime_spec", namespace, applicationName, map[string]any{
-		"environment_configs": environmentConfigsJSON,
-		"health_check":        healthCheckJSON,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"environment_configs": record.EnvironmentConfigs,
+		"health_check":        record.HealthCheck,
 	})
 }
 
 func (s *Store) SaveRuntimeSpecEnvironmentConfigs(ctx context.Context, namespace, applicationName string, configs []RuntimeEnvironmentConfig) error {
-	encoded, err := encodeJSON(configs)
-	if err != nil {
-		return err
+	record := runtimeSpecRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		EnvironmentConfigs: jsonOf(configs),
 	}
-	return s.upsert(ctx, "application_runtime_spec", namespace, applicationName, map[string]any{
-		"environment_configs": encoded,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"environment_configs": record.EnvironmentConfigs,
 	})
 }
 
@@ -279,8 +247,11 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 	port *int, internalPorts []int, environmentConfigs []ServiceEnvironmentConfigInput) error {
 
 	storedHashes := map[string]string{}
-	if existing, err := s.findServiceEnvironmentRows(ctx, namespace, applicationName); err == nil {
-		for _, row := range existing {
+	var existing serviceConfigRecord
+	if err := s.orm.WithContext(ctx).
+		Where("namespace = ? AND application_name = ?", namespace, applicationName).
+		First(&existing).Error; err == nil && existing.EnvironmentConfigs.Valid {
+		for _, row := range existing.EnvironmentConfigs.Data {
 			if row.EnvironmentName != nil && row.Host != nil && row.BasicAuthPasswordHash != nil {
 				storedHashes[*row.EnvironmentName+"|"+*row.Host] = *row.BasicAuthPasswordHash
 			}
@@ -311,42 +282,27 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 		rows = append(rows, row)
 	}
 
-	internalPortsJSON, err := encodeJSON(internalPorts)
-	if err != nil {
-		return err
+	record := serviceConfigRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		Port:               port,
+		InternalPorts:      jsonOf(internalPorts),
+		EnvironmentConfigs: jsonOf(rows),
 	}
-	environmentConfigsJSON, err := encodeJSON(rows)
-	if err != nil {
-		return err
-	}
-	return s.upsert(ctx, "application_service_config", namespace, applicationName, map[string]any{
-		"port":                port,
-		"internal_ports":      internalPortsJSON,
-		"environment_configs": environmentConfigsJSON,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"port":                record.Port,
+		"internal_ports":      record.InternalPorts,
+		"environment_configs": record.EnvironmentConfigs,
 	})
 }
 
-func (s *Store) findServiceEnvironmentRows(ctx context.Context, namespace, applicationName string) ([]serviceEnvironmentConfigRow, error) {
-	var blob sql.NullString
-	err := s.db.QueryRowContext(ctx,
-		"SELECT environment_configs FROM application_service_config WHERE namespace = ? AND application_name = ?",
-		namespace, applicationName).Scan(&blob)
-	if err != nil {
-		return nil, err
-	}
-	var rows []serviceEnvironmentConfigRow
-	if err := decodeJSONColumn(blob, &rows); err != nil {
-		return nil, err
-	}
-	return rows, nil
-}
-
 func (s *Store) SaveExpertConfig(ctx context.Context, namespace, applicationName string, environmentConfigs []ExpertEnvironmentConfig) error {
-	encoded, err := encodeJSON(environmentConfigs)
-	if err != nil {
-		return err
+	record := expertConfigRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Namespace: namespace, ApplicationName: applicationName,
+		EnvironmentConfigs: jsonOf(environmentConfigs),
 	}
-	return s.upsert(ctx, "application_expert_config", namespace, applicationName, map[string]any{
-		"environment_configs": encoded,
+	return upsertRecord(ctx, s.orm, namespace, applicationName, &record, map[string]any{
+		"environment_configs": record.EnvironmentConfigs,
 	})
 }

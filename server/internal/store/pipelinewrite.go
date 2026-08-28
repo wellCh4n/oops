@@ -23,74 +23,68 @@ const (
 func (s *Store) CreatePipeline(ctx context.Context, namespace, applicationName, environment,
 	publishType string, publishConfig any, deployMode, operatorID, triggerType, rollbackFromPipelineID string) (string, error) {
 
-	id := NewNanoID()
-	publishConfigJSON, err := encodeJSON(publishConfig)
-	if err != nil {
-		return "", err
+	status := StatusInitialized
+	record := pipelineRecord{
+		ID:              NewNanoID(),
+		CreatedTime:     Now(),
+		Namespace:       namespace,
+		ApplicationName: applicationName,
+		Status:          &status,
+		Environment:     &environment,
+		PublishType:     &publishType,
+		DeployMode:      &deployMode,
+		OperatorID:      &operatorID,
+		TriggerType:     &triggerType,
 	}
-	var rollbackFrom any
+	if publishConfig != nil {
+		encoded, err := json.Marshal(publishConfig)
+		if err != nil {
+			return "", err
+		}
+		blob := string(encoded)
+		record.PublishConfig = &blob
+	}
 	if rollbackFromPipelineID != "" {
-		rollbackFrom = rollbackFromPipelineID
+		record.RollbackFromPipelineID = &rollbackFromPipelineID
 	}
-	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO pipeline (id, created_time, namespace, application_name, status, environment,
-		        publish_type, publish_config, deploy_mode, operator_id, trigger_type, rollback_from_pipeline_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		id, Now(), namespace, applicationName, StatusInitialized, environment,
-		publishType, publishConfigJSON, deployMode, operatorID, triggerType, rollbackFrom)
-	return id, err
+	return record.ID, s.orm.WithContext(ctx).Create(&record).Error
 }
 
 // UpdatePipelineStatusIfMatch is the optimistic-lock transition: a conditional
 // UPDATE whose row count decides who won the race (PipelineRepository semantics).
 func (s *Store) UpdatePipelineStatusIfMatch(ctx context.Context, id, expected, target string) (int64, error) {
-	result, err := s.db.ExecContext(ctx,
-		"UPDATE pipeline SET status = ? WHERE id = ? AND status = ?", target, id, expected)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	result := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("id = ? AND status = ?", id, expected).
+		Update("status", target)
+	return result.RowsAffected, result.Error
 }
 
 func (s *Store) UpdatePipelineStatusAndMessageIfMatch(ctx context.Context, id, expected, target, message string) (int64, error) {
-	result, err := s.db.ExecContext(ctx,
-		"UPDATE pipeline SET status = ?, message = ? WHERE id = ? AND status = ?", target, message, id, expected)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+	result := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("id = ? AND status = ?", id, expected).
+		Updates(map[string]any{"status": target, "message": message})
+	return result.RowsAffected, result.Error
 }
 
 func (s *Store) UpdatePipelineArtifact(ctx context.Context, id, artifact string) error {
-	_, err := s.db.ExecContext(ctx, "UPDATE pipeline SET artifact = ? WHERE id = ?", artifact, id)
-	return err
+	return s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("id = ?", id).
+		Update("artifact", artifact).Error
 }
 
 func (s *Store) FindPipelinesByStatus(ctx context.Context, status string) ([]PipelineView, error) {
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT "+pipelineColumns+" FROM pipeline WHERE status = ?", status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	pipelines := []PipelineView{}
-	for rows.Next() {
-		view, err := scanPipeline(rows)
-		if err != nil {
-			return nil, err
-		}
-		pipelines = append(pipelines, *view)
-	}
-	return pipelines, rows.Err()
+	var records []pipelineRecord
+	err := s.orm.WithContext(ctx).Where("status = ?", status).Find(&records).Error
+	return pipelineRecordsToViews(records), err
 }
 
 // HasActivePipeline is the duplicate-deploy guard.
 func (s *Store) HasActivePipeline(ctx context.Context, namespace, applicationName string) (bool, error) {
-	var count int
-	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM pipeline
-		 WHERE namespace = ? AND application_name = ? AND status IN ('RUNNING', 'DEPLOYING', 'ROLLING_OUT')`,
-		namespace, applicationName).Scan(&count)
+	var count int64
+	err := s.orm.WithContext(ctx).Model(&pipelineRecord{}).
+		Where("namespace = ? AND application_name = ? AND status IN ?",
+			namespace, applicationName, ActivePipelineStatuses).
+		Count(&count).Error
 	return count > 0, err
 }
 
@@ -137,6 +131,5 @@ func DecodePublishConfig(raw json.RawMessage) (git *GitPublishConfig, zip *ZipPu
 
 // DeletePipelineByID removes a pipeline row (verification cleanup only).
 func (s *Store) DeletePipelineByID(ctx context.Context, id string) error {
-	_, err := s.db.ExecContext(ctx, "DELETE FROM pipeline WHERE id = ?", id)
-	return err
+	return s.orm.WithContext(ctx).Where("id = ?", id).Delete(&pipelineRecord{}).Error
 }

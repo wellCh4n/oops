@@ -3,13 +3,11 @@ package store
 import (
 	"context"
 	"crypto/x509"
-	"database/sql"
 	"encoding/pem"
-	"errors"
-
-	"github.com/wellch4n/oops/server/internal/domain"
 	"strings"
 	"time"
+
+	"github.com/wellch4n/oops/server/internal/domain"
 )
 
 // The host policy and BizError live in domain; thin aliases keep call sites terse.
@@ -80,29 +78,22 @@ func certificateHostMatches(host string, dnsNames []string) bool {
 	return false
 }
 
-type domainRecord struct {
-	ID              string
-	Host            string
-	Description     *string
-	HTTPS           bool
-	CertMode        *string
-	CertPem         *string
-	KeyPem          *string
-	CertSubject     *string
-	CertNotAfter    *LocalDateTime
-	EnvironmentName *string
+func (s *Store) requireDomainEnvironment(ctx context.Context, environmentName *string) (string, error) {
+	if environmentName == nil || strings.TrimSpace(*environmentName) == "" {
+		return "", bizErrorf("Domain environment is required")
+	}
+	trimmed := strings.TrimSpace(*environmentName)
+	if !s.environmentExists(ctx, trimmed) {
+		return "", bizErrorf("Environment not found: %s", trimmed)
+	}
+	return trimmed, nil
 }
 
-func (s *Store) environmentExists(ctx context.Context, name string) bool {
-	var count int
-	err := s.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM environment WHERE name = ?", name).Scan(&count)
-	return err == nil && count > 0
-}
-
-func (record *domainRecord) applyCertFields(request UpsertDomainCommand) error {
-	record.HTTPS = request.HTTPS != nil && *request.HTTPS
-	if !record.HTTPS {
+// applyCertFields mirrors DomainService.applyCertFields.
+func (s *Store) applyCertFields(record *domainRecord, request UpsertDomainCommand) error {
+	https := request.HTTPS != nil && *request.HTTPS
+	record.HTTPS = &https
+	if !https {
 		record.CertMode, record.CertPem, record.KeyPem = nil, nil, nil
 		record.CertSubject, record.CertNotAfter = nil, nil
 		return nil
@@ -123,6 +114,10 @@ func (record *domainRecord) applyCertFields(request UpsertDomainCommand) error {
 		return bizErrorf("Certificate and private key must be provided together")
 	}
 	if hasNewCert {
+		host := ""
+		if record.Host != nil {
+			host = *record.Host
+		}
 		meta, err := parseCertificate(*request.CertPem)
 		if err != nil {
 			return err
@@ -130,7 +125,7 @@ func (record *domainRecord) applyCertFields(request UpsertDomainCommand) error {
 		if err := validatePrivateKey(*request.KeyPem); err != nil {
 			return err
 		}
-		if !certificateHostMatches(record.Host, meta.dnsNames) {
+		if !certificateHostMatches(host, meta.dnsNames) {
 			return bizErrorf("Certificate does not match domain, certificate is for: %s",
 				strings.Join(meta.dnsNames, ", "))
 		}
@@ -147,30 +142,11 @@ func (record *domainRecord) applyCertFields(request UpsertDomainCommand) error {
 	return nil
 }
 
-func (record *domainRecord) toView() DomainView {
-	view := DomainView{
-		ID:              record.ID,
-		Host:            &record.Host,
-		Description:     record.Description,
-		HTTPS:           &record.HTTPS,
-		CertMode:        record.CertMode,
-		HasUploadedCert: record.CertPem != nil && *record.CertPem != "",
-		CertSubject:     record.CertSubject,
-		CertNotAfter:    record.CertNotAfter,
-		EnvironmentName: record.EnvironmentName,
-	}
-	return view
-}
-
-func (s *Store) requireDomainEnvironment(ctx context.Context, environmentName *string) (string, error) {
-	if environmentName == nil || strings.TrimSpace(*environmentName) == "" {
-		return "", bizErrorf("Domain environment is required")
-	}
-	trimmed := strings.TrimSpace(*environmentName)
-	if !s.environmentExists(ctx, trimmed) {
-		return "", bizErrorf("Environment not found: %s", trimmed)
-	}
-	return trimmed, nil
+func (s *Store) domainHostExists(ctx context.Context, host string) (bool, error) {
+	var count int64
+	err := s.orm.WithContext(ctx).Model(&domainRecord{}).
+		Where("host = ?", host).Count(&count).Error
+	return count > 0, err
 }
 
 func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainCommand) (*DomainView, error) {
@@ -178,73 +154,51 @@ func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainCommand) (
 	if err := ValidateHost(host); err != nil {
 		return nil, err
 	}
-	var exists int
-	if err := s.db.QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM domain WHERE host = ?", host).Scan(&exists); err != nil {
+	if exists, err := s.domainHostExists(ctx, host); err != nil {
 		return nil, err
-	}
-	if exists > 0 {
+	} else if exists {
 		return nil, bizErrorf("Domain already exists: %s", host)
 	}
 	environmentName, err := s.requireDomainEnvironment(ctx, request.EnvironmentName)
 	if err != nil {
 		return nil, err
 	}
-	record := domainRecord{ID: NewNanoID(), Host: host, Description: request.Description, EnvironmentName: &environmentName}
-	if err := record.applyCertFields(request); err != nil {
+	record := domainRecord{
+		ID: NewNanoID(), CreatedTime: Now(),
+		Host: &host, Description: request.Description, EnvironmentName: &environmentName,
+	}
+	if err := s.applyCertFields(&record, request); err != nil {
 		return nil, err
 	}
-	createdTime := Now()
-	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO domain (id, created_time, host, description, https, cert_mode, cert_pem, key_pem,
-		                     cert_subject, cert_not_after, environment_name)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		record.ID, createdTime, record.Host, record.Description, record.HTTPS, record.CertMode,
-		record.CertPem, record.KeyPem, record.CertSubject, record.CertNotAfter, record.EnvironmentName)
-	if err != nil {
+	if err := s.orm.WithContext(ctx).Create(&record).Error; err != nil {
 		return nil, err
 	}
-	view := record.toView()
-	view.CreatedTime = createdTime
+	view := domainRecordToView(&record)
 	return &view, nil
 }
 
-func (s *Store) findDomainRecord(ctx context.Context, id string) (*domainRecord, *LocalDateTime, error) {
+func (s *Store) FindDomain(ctx context.Context, id string) (*DomainView, error) {
 	var record domainRecord
-	var createdTime *LocalDateTime
-	var https sql.NullBool
-	err := s.db.QueryRowContext(ctx,
-		`SELECT id, created_time, host, description, https, cert_mode, cert_pem, key_pem,
-		        cert_subject, cert_not_after, environment_name
-		 FROM domain WHERE id = ?`, id).
-		Scan(&record.ID, &createdTime, &record.Host, &record.Description, &https, &record.CertMode,
-			&record.CertPem, &record.KeyPem, &record.CertSubject, &record.CertNotAfter, &record.EnvironmentName)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, bizErrorf("Domain not found: %s", id)
+	if err := s.orm.WithContext(ctx).Where("id = ?", id).First(&record).Error; err != nil {
+		return nil, bizErrorf("Domain not found: %s", id)
 	}
-	if err != nil {
-		return nil, nil, err
-	}
-	record.HTTPS = https.Valid && https.Bool
-	return &record, createdTime, nil
+	view := domainRecordToView(&record)
+	return &view, nil
 }
 
 func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomainCommand) (*DomainView, error) {
-	record, createdTime, err := s.findDomainRecord(ctx, id)
-	if err != nil {
-		return nil, err
+	var record domainRecord
+	if err := s.orm.WithContext(ctx).Where("id = ?", id).First(&record).Error; err != nil {
+		return nil, bizErrorf("Domain not found: %s", id)
 	}
 	newHost := NormalizeHost(request.Host)
 	if err := ValidateHost(newHost); err != nil {
 		return nil, err
 	}
-	if newHost != record.Host {
-		var exists int
-		if err := s.db.QueryRowContext(ctx,
-			"SELECT COUNT(*) FROM domain WHERE host = ?", newHost).Scan(&exists); err != nil {
+	if record.Host == nil || newHost != *record.Host {
+		if exists, err := s.domainHostExists(ctx, newHost); err != nil {
 			return nil, err
-		}
-		if exists > 0 {
+		} else if exists {
 			return nil, bizErrorf("Domain already exists: %s", newHost)
 		}
 	}
@@ -252,78 +206,79 @@ func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomai
 	if err != nil {
 		return nil, err
 	}
-	if err := s.rejectRebindingWhileInUse(ctx, record, newHost, environmentName); err != nil {
+	if err := s.rejectRebindingWhileInUse(ctx, &record, newHost, environmentName); err != nil {
 		return nil, err
 	}
-	record.Host = newHost
+	record.Host = &newHost
 	record.Description = request.Description
 	record.EnvironmentName = &environmentName
-	if err := record.applyCertFields(request); err != nil {
+	if err := s.applyCertFields(&record, request); err != nil {
 		return nil, err
 	}
-	_, err = s.db.ExecContext(ctx,
-		`UPDATE domain SET host = ?, description = ?, https = ?, cert_mode = ?, cert_pem = ?,
-		        key_pem = ?, cert_subject = ?, cert_not_after = ?, environment_name = ?
-		 WHERE id = ?`,
-		record.Host, record.Description, record.HTTPS, record.CertMode, record.CertPem,
-		record.KeyPem, record.CertSubject, record.CertNotAfter, record.EnvironmentName, id)
+	err = s.orm.WithContext(ctx).Model(&domainRecord{}).
+		Where("id = ?", id).
+		Updates(map[string]any{
+			"host": record.Host, "description": record.Description,
+			"https": record.HTTPS, "cert_mode": record.CertMode,
+			"cert_pem": record.CertPem, "key_pem": record.KeyPem,
+			"cert_subject": record.CertSubject, "cert_not_after": record.CertNotAfter,
+			"environment_name": record.EnvironmentName,
+		}).Error
 	if err != nil {
 		return nil, err
 	}
-	view := record.toView()
-	view.CreatedTime = createdTime
+	view := domainRecordToView(&record)
 	return &view, nil
 }
 
 // rejectRebindingWhileInUse mirrors DomainService: a domain that currently
 // governs an application host (longest-suffix match) cannot be moved away.
-func (s *Store) rejectRebindingWhileInUse(ctx context.Context, domain *domainRecord, newHost, newEnvironmentName string) error {
-	hostUnchanged := newHost == domain.Host
-	environmentUnchanged := domain.EnvironmentName != nil && newEnvironmentName == *domain.EnvironmentName
-	if hostUnchanged && environmentUnchanged {
+func (s *Store) rejectRebindingWhileInUse(ctx context.Context, record *domainRecord, newHost, newEnvironmentName string) error {
+	currentHost := ""
+	if record.Host != nil {
+		currentHost = *record.Host
+	}
+	currentEnvironment := ""
+	if record.EnvironmentName != nil {
+		currentEnvironment = *record.EnvironmentName
+	}
+	if newHost == currentHost && newEnvironmentName == currentEnvironment {
 		return nil
 	}
 	domains, err := s.ListDomains(ctx)
 	if err != nil {
 		return err
 	}
-	rows, err := s.db.QueryContext(ctx,
-		"SELECT namespace, application_name, environment_configs FROM application_service_config")
-	if err != nil {
+	var serviceConfigs []serviceConfigRecord
+	if err := s.orm.WithContext(ctx).Find(&serviceConfigs).Error; err != nil {
 		return err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var namespace, applicationName string
-		var blob sql.NullString
-		if err := rows.Scan(&namespace, &applicationName, &blob); err != nil {
-			return err
-		}
-		var configs []serviceEnvironmentConfigRow
-		if err := decodeJSONColumn(blob, &configs); err != nil {
+	for i := range serviceConfigs {
+		serviceConfig := &serviceConfigs[i]
+		if !serviceConfig.EnvironmentConfigs.Valid {
 			continue
 		}
-		for _, config := range configs {
+		for _, config := range serviceConfig.EnvironmentConfigs.Data {
 			if config.Host == nil || *config.Host == "" {
 				continue
 			}
 			host := strings.ToLower(strings.TrimSpace(*config.Host))
 			var governing *DomainView
 			longest := -1
-			for i := range domains {
-				candidateHost := domains[i].Host
+			for j := range domains {
+				candidateHost := domains[j].Host
 				if candidateHost == nil {
 					continue
 				}
-				if (host == *candidateHost || strings.HasSuffix(host, "."+*candidateHost)) && len(*candidateHost) > longest {
-					governing = &domains[i]
+				if domain.HostCoveredBy(host, *candidateHost) && len(*candidateHost) > longest {
+					governing = &domains[j]
 					longest = len(*candidateHost)
 				}
 			}
-			if governing == nil || governing.ID != domain.ID {
+			if governing == nil || governing.ID != record.ID {
 				continue
 			}
-			stillCovered := (host == newHost || strings.HasSuffix(host, "."+newHost)) &&
+			stillCovered := domain.HostCoveredBy(host, newHost) &&
 				config.EnvironmentName != nil && newEnvironmentName == *config.EnvironmentName
 			if !stillCovered {
 				environmentLabel := ""
@@ -331,30 +286,20 @@ func (s *Store) rejectRebindingWhileInUse(ctx context.Context, domain *domainRec
 					environmentLabel = *config.EnvironmentName
 				}
 				return bizErrorf("Domain is in use by application %s/%s (host %s, environment %s), remove that host first",
-					namespace, applicationName, host, environmentLabel)
+					serviceConfig.Namespace, serviceConfig.ApplicationName, host, environmentLabel)
 			}
 		}
-	}
-	return rows.Err()
-}
-
-func (s *Store) DeleteDomain(ctx context.Context, id string) error {
-	result, err := s.db.ExecContext(ctx, "DELETE FROM domain WHERE id = ?", id)
-	if err != nil {
-		return err
-	}
-	if affected, _ := result.RowsAffected(); affected == 0 {
-		return bizErrorf("Domain not found: %s", id)
 	}
 	return nil
 }
 
-func (s *Store) FindDomain(ctx context.Context, id string) (*DomainView, error) {
-	record, createdTime, err := s.findDomainRecord(ctx, id)
-	if err != nil {
-		return nil, err
+func (s *Store) DeleteDomain(ctx context.Context, id string) error {
+	result := s.orm.WithContext(ctx).Where("id = ?", id).Delete(&domainRecord{})
+	if result.Error != nil {
+		return result.Error
 	}
-	view := record.toView()
-	view.CreatedTime = createdTime
-	return &view, nil
+	if result.RowsAffected == 0 {
+		return bizErrorf("Domain not found: %s", id)
+	}
+	return nil
 }
