@@ -109,6 +109,7 @@ func (s *Server) podLogWebSocket(c *gin.Context) {
 
 	scanner := bufio.NewScanner(logStream)
 	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Split(k8s.ScanLogLines)
 	for scanner.Scan() {
 		if sink.sendText(scanner.Text()) != nil {
 			return

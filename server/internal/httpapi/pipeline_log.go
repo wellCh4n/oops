@@ -147,6 +147,7 @@ func (s *Server) streamJobContainerLogs(ctx context.Context, cluster *k8s.Cluste
 	defer logStream.Close()
 	scanner := bufio.NewScanner(logStream)
 	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	scanner.Split(k8s.ScanLogLines)
 	for scanner.Scan() {
 		if sendJSON(sink, map[string]any{
 			"type": "step", "data": "[" + containerName + "] " + scanner.Text(), "container": containerName,

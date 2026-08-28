@@ -69,6 +69,7 @@ func RunSandboxJob(ctx context.Context, cluster *Cluster, workNamespace, sandbox
 	if err == nil {
 		scanner := bufio.NewScanner(logStream)
 		scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+		scanner.Split(ScanLogLines)
 		for scanner.Scan() {
 			if emit(scanner.Text()) != nil {
 				break
