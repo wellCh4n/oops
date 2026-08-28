@@ -36,7 +36,7 @@ const EDIT_TABS: { tab: string; labelKey: string }[] = [
 // Shared segmented nav rendered in the ContentPage header `actions` slot on
 // every application detail page, so Edit / Publish / Status are one click apart
 // without bouncing back to the app list. Wrapped in its own Suspense boundary
-// because it reads `?env=` via useSearchParams — callers need not provide one
+// because it reads `?environment=` via useSearchParams — callers need not provide one
 // themselves.
 export function AppDetailNav(props: AppDetailNavProps) {
   return (
@@ -57,10 +57,10 @@ const itemClass = (isActive: boolean) =>
 function AppDetailNavInner({ namespace, name, active }: AppDetailNavProps) {
   const { t } = useLanguage()
   const searchParams = useSearchParams()
-  const env = searchParams.get("env")
+  const env = searchParams.get("environment")
 
   const base = `/apps/${namespace}/${name}`
-  const envParam = env ? `env=${encodeURIComponent(env)}` : ""
+  const envParam = env ? `environment=${encodeURIComponent(env)}` : ""
   const withEnv = (query: string) => {
     const parts = [query, envParam].filter(Boolean)
     return parts.length ? `?${parts.join("&")}` : ""

@@ -311,7 +311,7 @@ func (s *Server) updateExpertConfig(c *gin.Context) {
 
 func (s *Server) updateEnvironmentBindings(c *gin.Context) {
 	var bindings []struct {
-		EnvironmentName string `json:"environmentName"`
+		Environment string `json:"environment"`
 	}
 	if err := c.ShouldBindJSON(&bindings); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
@@ -319,7 +319,7 @@ func (s *Server) updateEnvironmentBindings(c *gin.Context) {
 	}
 	names := make([]string, 0, len(bindings))
 	for _, binding := range bindings {
-		names = append(names, binding.EnvironmentName)
+		names = append(names, binding.Environment)
 	}
 	if err := s.store.ReplaceEnvironmentBindings(c.Request.Context(), c.Param("namespace"), c.Param("name"), names); err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))

@@ -160,8 +160,8 @@ func (s *Store) FindHostConflict(ctx context.Context, namespace, applicationName
 		for _, config := range record.EnvironmentConfigs.Data {
 			if config.Host != nil && *config.Host == host {
 				environmentName := ""
-				if config.EnvironmentName != nil {
-					environmentName = *config.EnvironmentName
+				if config.Environment != nil {
+					environmentName = *config.Environment
 				}
 				return map[string]string{
 					"namespace":       record.Namespace,

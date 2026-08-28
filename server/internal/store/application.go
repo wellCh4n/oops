@@ -218,11 +218,11 @@ func (s *Store) ReplaceEnvironmentBindings(ctx context.Context, namespace, appli
 		}
 		existing := map[string]struct{}{}
 		for _, row := range existingRows {
-			existing[row.EnvironmentName] = struct{}{}
-			if _, keep := wanted[row.EnvironmentName]; !keep {
+			existing[row.Environment] = struct{}{}
+			if _, keep := wanted[row.Environment]; !keep {
 				if err := transaction.
-					Where("namespace = ? AND application_name = ? AND environment_name = ?",
-						namespace, applicationName, row.EnvironmentName).
+					Where("namespace = ? AND application_name = ? AND environment = ?",
+						namespace, applicationName, row.Environment).
 					Delete(&EnvironmentBinding{}).Error; err != nil {
 					return err
 				}
@@ -233,7 +233,7 @@ func (s *Store) ReplaceEnvironmentBindings(ctx context.Context, namespace, appli
 				binding := EnvironmentBinding{
 					ID: domain.NewID(), CreatedTime: Now(),
 					Namespace: namespace, ApplicationName: applicationName,
-					EnvironmentName: environmentName,
+					Environment: environmentName,
 				}
 				if err := transaction.Create(&binding).Error; err != nil {
 					return err
@@ -342,7 +342,7 @@ func (s *Store) SaveRuntimeSpecEnvironmentConfigs(ctx context.Context, namespace
 
 // ServiceEnvironmentConfigInput carries the write-only plaintext password.
 type ServiceEnvironmentConfigInput struct {
-	EnvironmentName   *string `json:"environmentName"`
+	Environment       *string `json:"environment"`
 	Host              *string `json:"host"`
 	HTTPS             *bool   `json:"https"`
 	BasicAuthEnabled  *bool   `json:"basicAuthEnabled"`
@@ -362,8 +362,8 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 		Where("namespace = ? AND application_name = ?", namespace, applicationName).
 		First(&existing).Error; err == nil && existing.EnvironmentConfigs.Valid {
 		for _, row := range existing.EnvironmentConfigs.Data {
-			if row.EnvironmentName != nil && row.Host != nil && row.BasicAuthPasswordHash != nil {
-				storedHashes[*row.EnvironmentName+"|"+*row.Host] = *row.BasicAuthPasswordHash
+			if row.Environment != nil && row.Host != nil && row.BasicAuthPasswordHash != nil {
+				storedHashes[*row.Environment+"|"+*row.Host] = *row.BasicAuthPasswordHash
 			}
 		}
 	}
@@ -371,7 +371,7 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 	rows := make([]serviceEnvironmentConfigRow, 0, len(environmentConfigs))
 	for _, input := range environmentConfigs {
 		row := serviceEnvironmentConfigRow{
-			EnvironmentName:   input.EnvironmentName,
+			Environment:       input.Environment,
 			Host:              input.Host,
 			HTTPS:             input.HTTPS,
 			BasicAuthEnabled:  input.BasicAuthEnabled,
@@ -384,8 +384,8 @@ func (s *Store) SaveServiceConfig(ctx context.Context, namespace, applicationNam
 			}
 			hashed := string(hash)
 			row.BasicAuthPasswordHash = &hashed
-		} else if input.EnvironmentName != nil && input.Host != nil {
-			if stored, found := storedHashes[*input.EnvironmentName+"|"+*input.Host]; found {
+		} else if input.Environment != nil && input.Host != nil {
+			if stored, found := storedHashes[*input.Environment+"|"+*input.Host]; found {
 				row.BasicAuthPasswordHash = &stored
 			}
 		}

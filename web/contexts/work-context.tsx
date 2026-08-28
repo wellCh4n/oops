@@ -37,7 +37,7 @@ export function useWorkContext() {
 
   const urlNamespace = accepted.includes("namespace") ? searchParams.get("namespace") : null
   const urlApp = accepted.includes("app") ? searchParams.get("app") : null
-  const urlEnv = accepted.includes("env") ? searchParams.get("env") : null
+  const urlEnv = accepted.includes("env") ? searchParams.get("environment") : null
 
   // URL wins; the store fills the gaps.
   const namespace = urlNamespace ?? storedNamespace

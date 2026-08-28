@@ -36,7 +36,7 @@ interface Props {
 type HostFormValue = ApplicationServiceFormValues["environmentConfigs"][number]["hosts"][number]
 
 interface HostEditorTarget {
-  environmentName: string
+  environment: string
   /** Undefined while adding a new host. */
   hostIndex?: number
 }
@@ -45,7 +45,7 @@ function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig)
   const grouped = new Map<string, ApplicationServiceFormValues["environmentConfigs"][number]["hosts"]>()
 
   initialServiceConfig?.environmentConfigs?.forEach((config) => {
-    const hosts = grouped.get(config.environmentName) ?? []
+    const hosts = grouped.get(config.environment) ?? []
     hosts.push({
       host: config.host?.replace(/^https?:\/\//i, "") ?? "",
       https: config.https ?? true,
@@ -54,14 +54,14 @@ function buildServiceFormValues(initialServiceConfig?: ApplicationServiceConfig)
       basicAuthPassword: "",
       basicAuthPasswordSet: config.basicAuthPasswordSet ?? false,
     })
-    grouped.set(config.environmentName, hosts)
+    grouped.set(config.environment, hosts)
   })
 
   return {
     port: initialServiceConfig?.port != null ? String(initialServiceConfig.port) : "",
     internalPorts: (initialServiceConfig?.internalPorts ?? []).map((port) => String(port)),
-    environmentConfigs: Array.from(grouped.entries()).map(([environmentName, hosts]) => ({
-      environmentName,
+    environmentConfigs: Array.from(grouped.entries()).map(([environment, hosts]) => ({
+      environment,
       hosts,
     })),
   }
@@ -105,14 +105,14 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
   const environmentConfigs = useMemo(() => environmentConfigsWatch ?? [], [environmentConfigsWatch])
 
   const environmentIndexByName = useMemo(() => {
-    return new Map(environmentConfigs.map((group, index) => [group.environmentName, index]))
+    return new Map(environmentConfigs.map((group, index) => [group.environment, index]))
   }, [environmentConfigs])
 
   const editingHost = useMemo<HostFormValue | undefined>(() => {
     if (!hostEditorTarget || hostEditorTarget.hostIndex == null) {
       return undefined
     }
-    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environmentName)
+    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environment)
     if (environmentIndex == null) {
       return undefined
     }
@@ -124,7 +124,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     internalPorts: (values.internalPorts ?? []).map((port) => port.trim()),
     pendingInternalPort: pendingInternalPortRef.current.trim(),
     environmentConfigs: (values.environmentConfigs ?? []).map((group) => ({
-      environmentName: group.environmentName,
+      environment: group.environment,
       hosts: group.hosts.map((host) => ({
         host: host.host,
         https: host.https,
@@ -135,8 +135,8 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     })),
   }), [form])
 
-  const setHosts = useCallback((environmentName: string, nextHosts: ApplicationServiceFormValues["environmentConfigs"][number]["hosts"]) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
+  const setHosts = useCallback((environment: string, nextHosts: ApplicationServiceFormValues["environmentConfigs"][number]["hosts"]) => {
+    const environmentIndex = environmentIndexByName.get(environment)
     if (environmentIndex == null) {
       return
     }
@@ -159,9 +159,9 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     for (const group of environmentConfigs) {
       for (let index = 0; index < group.hosts.length; index += 1) {
-        const isSelf = group.environmentName === hostEditorTarget.environmentName && index === hostEditorTarget.hostIndex
+        const isSelf = group.environment === hostEditorTarget.environment && index === hostEditorTarget.hostIndex
         if (!isSelf && group.hosts[index].host.trim() === host) {
-          return formatMessage(applicationName, namespace, group.environmentName)
+          return formatMessage(applicationName, namespace, group.environment)
         }
       }
     }
@@ -170,7 +170,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
       const result = await checkApplicationServiceHost(namespace, applicationName, host)
       const duplicatedHost = result.data
       if (result.success && duplicatedHost) {
-        return formatMessage(duplicatedHost.applicationName, duplicatedHost.namespace, duplicatedHost.environmentName)
+        return formatMessage(duplicatedHost.applicationName, duplicatedHost.namespace, duplicatedHost.environment)
       }
     } catch {
       // transient errors are re-checked server-side on save
@@ -180,24 +180,24 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
   const confirmHostEditor = useCallback((value: HostEditorValue) => {
     if (!hostEditorTarget) return
-    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environmentName)
+    const environmentIndex = environmentIndexByName.get(hostEditorTarget.environment)
     if (environmentIndex == null) return
 
     const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
     const nextHosts = hostEditorTarget.hostIndex == null
       ? [...hosts, value]
       : hosts.map((host, index) => (index === hostEditorTarget.hostIndex ? value : host))
-    setHosts(hostEditorTarget.environmentName, nextHosts)
+    setHosts(hostEditorTarget.environment, nextHosts)
   }, [environmentIndexByName, form, hostEditorTarget, setHosts])
 
-  const removeHost = useCallback((environmentName: string, hostIndex: number) => {
-    const environmentIndex = environmentIndexByName.get(environmentName)
+  const removeHost = useCallback((environment: string, hostIndex: number) => {
+    const environmentIndex = environmentIndexByName.get(environment)
     if (environmentIndex == null) {
       return
     }
 
     const hosts = form.getValues(`environmentConfigs.${environmentIndex}.hosts`)
-    setHosts(environmentName, hosts.filter((_, index) => index !== hostIndex))
+    setHosts(environment, hosts.filter((_, index) => index !== hostIndex))
   }, [environmentIndexByName, form, setHosts])
 
 
@@ -223,16 +223,16 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
     const mergedConfigs = currentConfigs.map((current) => {
       const builtGroup = built.environmentConfigs.find(
-        (g) => g.environmentName === current.environmentName
+        (g) => g.environment === current.environment
       )
       return {
-        environmentName: current.environmentName,
+        environment: current.environment,
         hosts: builtGroup?.hosts ?? [],
       }
     })
 
     built.environmentConfigs.forEach((builtGroup) => {
-      if (!mergedConfigs.some((c) => c.environmentName === builtGroup.environmentName)) {
+      if (!mergedConfigs.some((c) => c.environment === builtGroup.environment)) {
         mergedConfigs.push(builtGroup)
       }
     })
@@ -246,16 +246,16 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
   useEffect(() => {
     if (environmentConfigs.length > 0 && !activeTab) {
-      setActiveTab(environmentConfigs[0].environmentName)
+      setActiveTab(environmentConfigs[0].environment)
     }
   }, [activeTab, environmentConfigs])
 
   const handleEnvironmentsLoaded = useCallback((environments: ApplicationEnvironment[]) => {
     const currentConfigs = form.getValues("environmentConfigs")
     const nextConfigs = environments.map((environment) => {
-      const existing = currentConfigs.find((config) => config.environmentName === environment.environmentName)
+      const existing = currentConfigs.find((config) => config.environment === environment.environment)
       return existing ?? {
-        environmentName: environment.environmentName,
+        environment: environment.environment,
         hosts: [],
       }
     })
@@ -267,7 +267,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
     })
 
     if (nextConfigs.length > 0 && !activeTab) {
-      setActiveTab(nextConfigs[0].environmentName)
+      setActiveTab(nextConfigs[0].environment)
     }
   }, [activeTab, form])
 
@@ -323,7 +323,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
         }
 
         environmentConfigsPayload.push({
-          environmentName: group.environmentName,
+          environment: group.environment,
           host: host.host.trim(),
           https: host.https,
           basicAuthEnabled: host.basicAuthEnabled,
@@ -497,11 +497,11 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                     return null
                   }
                   const environmentDomains = domains.filter(
-                    (domain) => domain.environmentName === group.environmentName
+                    (domain) => domain.environment === group.environment
                   )
 
                   return (
-                    <TabsContent key={field.id} value={group.environmentName}>
+                    <TabsContent key={field.id} value={group.environment}>
                       <div className="grid gap-4">
                         {environmentDomains.length === 0 ? (
                           <div className="text-sm text-muted-foreground px-3 py-2 border rounded-md border-dashed">
@@ -522,7 +522,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                               {group.hosts.map((hostConfig, hostIndex) => {
                                 const url = `${hostConfig.https ? "https" : "http"}://${hostConfig.host}`
                                 return (
-                                  <div key={`${group.environmentName}-${hostIndex}`} className="flex items-center gap-2 px-3 py-2">
+                                  <div key={`${group.environment}-${hostIndex}`} className="flex items-center gap-2 px-3 py-2">
                                     {hostConfig.https
                                       ? <Lock className="size-4 shrink-0 text-emerald-600 dark:text-emerald-500" />
                                       : <LockOpen className="size-4 shrink-0 text-muted-foreground" />}
@@ -553,7 +553,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                       variant="ghost"
                                       size="icon"
                                       aria-label={t("apps.service.editHost")}
-                                      onClick={() => setHostEditorTarget({ environmentName: group.environmentName, hostIndex })}
+                                      onClick={() => setHostEditorTarget({ environment: group.environment, hostIndex })}
                                     >
                                       <Pencil className="size-4" />
                                     </Button>
@@ -562,7 +562,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                                       variant="ghost"
                                       size="icon"
                                       aria-label={t("common.delete")}
-                                      onClick={() => removeHost(group.environmentName, hostIndex)}
+                                      onClick={() => removeHost(group.environment, hostIndex)}
                                     >
                                       <Trash2 className="size-4 text-destructive" />
                                     </Button>
@@ -578,7 +578,7 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
                             type="button"
                             variant="outline"
                             className="w-full"
-                            onClick={() => setHostEditorTarget({ environmentName: group.environmentName })}
+                            onClick={() => setHostEditorTarget({ environment: group.environment })}
                           >
                             <Plus className="size-4 mr-1" />
                             {t("apps.service.addHost")}
@@ -601,9 +601,9 @@ export const ApplicationServiceInfo = forwardRef<ApplicationTabHandle, Props>(fu
 
       {hostEditorTarget && (
         <HostEditorDialog
-          key={`${hostEditorTarget.environmentName}-${hostEditorTarget.hostIndex ?? "new"}`}
+          key={`${hostEditorTarget.environment}-${hostEditorTarget.hostIndex ?? "new"}`}
           value={editingHost}
-          domains={domains.filter((domain) => domain.environmentName === hostEditorTarget.environmentName)}
+          domains={domains.filter((domain) => domain.environment === hostEditorTarget.environment)}
           onOpenChange={(open) => { if (!open) setHostEditorTarget(null) }}
           checkHost={checkHost}
           onConfirm={confirmHostEditor}

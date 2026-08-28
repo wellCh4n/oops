@@ -31,7 +31,7 @@ func processIngressRoutes(ctx context.Context, cluster *k8s.Cluster, input *depl
 	}
 	hostConfigs := []store.ServiceEnvironmentConfigStored{}
 	for _, config := range input.ServiceConfig.StoredEnvironmentConfigs {
-		if config.EnvironmentName != nil && *config.EnvironmentName == input.Environment.Name &&
+		if config.Environment != nil && *config.Environment == input.Environment.Name &&
 			config.Host != nil && *config.Host != "" {
 			hostConfigs = append(hostConfigs, config)
 		}

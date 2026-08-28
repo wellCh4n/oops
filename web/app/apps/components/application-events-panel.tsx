@@ -12,7 +12,7 @@ import { useLanguage } from "@/contexts/language-context"
 interface ApplicationEventsPanelProps {
   namespace: string
   applicationName: string
-  environmentName: string
+  environment: string
   since?: string
   limit?: number
   refreshIntervalMs?: number
@@ -22,7 +22,7 @@ interface ApplicationEventsPanelProps {
 export function ApplicationEventsPanel({
   namespace,
   applicationName,
-  environmentName,
+  environment,
   since,
   limit = 200,
   refreshIntervalMs = 5000,
@@ -37,16 +37,16 @@ export function ApplicationEventsPanel({
   useEffect(() => {
     setEvents([])
     setLoading(false)
-  }, [namespace, applicationName, environmentName, since, limit])
+  }, [namespace, applicationName, environment, since, limit])
 
   useEffect(() => {
-    if (!environmentName) return
+    if (!environment) return
 
     let cancelled = false
     const loadEvents = async (showLoading = false) => {
       if (showLoading) setLoading(true)
       try {
-        const response = await getApplicationEvents(namespace, applicationName, environmentName, { since, limit: effectiveLimit })
+        const response = await getApplicationEvents(namespace, applicationName, environment, { since, limit: effectiveLimit })
         if (!cancelled) setEvents(response.data ?? [])
       } catch {
         if (!cancelled) setEvents([])
@@ -61,7 +61,7 @@ export function ApplicationEventsPanel({
       cancelled = true
       clearInterval(intervalId)
     }
-  }, [namespace, applicationName, environmentName, since, effectiveLimit, refreshIntervalMs])
+  }, [namespace, applicationName, environment, since, effectiveLimit, refreshIntervalMs])
 
   const warningCount = events.filter((event) => event.type === "Warning").length
   const latestEvent = events[0]

@@ -85,7 +85,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
 
   const buildSnapshot = useCallback((values: ApplicationRuntimeSpecFormValues = form.getValues()) => JSON.stringify({
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
-      environmentName: config.environmentName,
+      environment: config.environment,
       replicas: config.replicas,
       cpuRequest: config.cpuRequest ?? "",
       cpuLimit: config.cpuLimit ?? "",
@@ -117,11 +117,11 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
     const currentConfigs = form.getValues("environmentConfigs") || []
     const newConfigs = envs.map((env) => {
       const existing = currentConfigs.find(
-        (c) => c.environmentName === env.environmentName
+        (c) => c.environment === env.environment
       )
       return (
         existing || {
-          environmentName: env.environmentName,
+          environment: env.environment,
           replicas: 0,
           cpuRequest: "",
           cpuLimit: "",
@@ -140,14 +140,14 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
-      setActiveTab(newConfigs[0].environmentName)
+      setActiveTab(newConfigs[0].environment)
     }
   }
 
   // Initialize activeTab
   useEffect(() => {
     if (fields.length > 0 && !activeTab) {
-      setActiveTab(fields[0].environmentName)
+      setActiveTab(fields[0].environment)
     }
   }, [fields, activeTab])
 
@@ -217,7 +217,7 @@ export const ApplicationRuntimeSpec = forwardRef<ApplicationTabHandle, Applicati
                   className="w-full"
                 >
                   {fields.map((field, index) => (
-                    <TabsContent key={field.id} value={field.environmentName}>
+                    <TabsContent key={field.id} value={field.environment}>
                       <SingleEnvironmentConfig
                         index={index}
                       />

@@ -3,7 +3,7 @@ import { apiFetch } from "./client"
 
 export async function fetchServiceAccounts(namespace: string, env: string): Promise<ApiResponse<string[]>> {
   const params = new URLSearchParams()
-  params.set("env", env)
+  params.set("environment", env)
 
   const res = await apiFetch(`/api/namespaces/${namespace}/service-accounts?${params.toString()}`)
   if (!res.ok) {

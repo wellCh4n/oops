@@ -50,7 +50,7 @@ export function effectiveContextParams(
   }
   if (params.includes("env") && env) {
     // On detail pages the app comes from the path, so env stands on its own.
-    if (!params.includes("app") || appInScope) result.env = env
+    if (!params.includes("app") || appInScope) result.environment = env
   }
   return result
 }

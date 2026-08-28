@@ -21,7 +21,7 @@ func (s *Server) ideSettings() k8s.IDESettings {
 }
 
 func (s *Server) ideWorkTarget(c *gin.Context) (*k8s.Cluster, string, bool) {
-	cluster, _, workNamespace, err := s.sandboxEnvironment(c.Request.Context(), c.Query("env"))
+	cluster, _, workNamespace, err := s.sandboxEnvironment(c.Request.Context(), c.Query("environment"))
 	if err != nil {
 		c.JSON(http.StatusOK, fail(err.Error()))
 		return nil, "", false

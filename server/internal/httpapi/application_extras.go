@@ -11,7 +11,7 @@ import (
 )
 
 func (s *Server) getApplicationResources(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}
@@ -24,7 +24,7 @@ func (s *Server) getApplicationResources(c *gin.Context) {
 }
 
 func (s *Server) getCurrentImage(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}

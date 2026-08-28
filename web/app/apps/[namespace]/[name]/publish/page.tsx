@@ -99,9 +99,9 @@ export default function PublishPage({ params }: PageProps) {
             // Prefer the environment carried in the work context so publishing
             // lands on the same env the user was just looking at.
             const carried = useWorkContextStore.getState().env
-            const initialEnv = envRes.data.some((env) => env.environmentName === carried)
+            const initialEnv = envRes.data.some((env) => env.environment === carried)
               ? carried
-              : envRes.data[0].environmentName
+              : envRes.data[0].environment
             if (initialEnv) {
               setSelectedEnv(initialEnv)
               envInitialized.current = true
@@ -160,7 +160,7 @@ export default function PublishPage({ params }: PageProps) {
     }
 
     const replicas = latestRuntimeSpec?.environmentConfigs?.find(
-      (config) => config.environmentName === selectedEnv
+      (config) => config.environment === selectedEnv
     )?.replicas
     if (!replicas) {
       setLoading(false)
@@ -323,17 +323,17 @@ export default function PublishPage({ params }: PageProps) {
           {environments.length > 0 ? (
             <div className="flex flex-wrap gap-3">
               {environments.map(env => {
-                const selected = selectedEnv === env.environmentName
+                const selected = selectedEnv === env.environment
                 return (
                   <div
-                    key={env.environmentName}
+                    key={env.environment}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setSelectedEnv(env.environmentName)}
+                    onClick={() => setSelectedEnv(env.environment)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault()
-                        setSelectedEnv(env.environmentName)
+                        setSelectedEnv(env.environment)
                       }
                     }}
                     className={cn(
@@ -343,7 +343,7 @@ export default function PublishPage({ params }: PageProps) {
                         : "border-border hover:bg-accent/50"
                     )}
                   >
-                    <span className="text-sm font-medium">{env.environmentName}</span>
+                    <span className="text-sm font-medium">{env.environment}</span>
                     {selected ? (
                       <div className="flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
                         <Check className="size-3" />

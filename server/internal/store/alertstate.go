@@ -14,7 +14,7 @@ type alertStateRecord struct {
 	CreatedTime     *LocalDateTime
 	Namespace       string
 	ApplicationName string
-	EnvironmentName string
+	Environment     string
 	Metric          string
 	Firing          bool
 	FiringSince     *time.Time
@@ -33,7 +33,7 @@ type AlertState struct {
 func (s *Store) FindAlertState(ctx context.Context, namespace, applicationName, environmentName, metric string) (*AlertState, error) {
 	var record alertStateRecord
 	err := s.orm.WithContext(ctx).
-		Where("namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?",
+		Where("namespace = ? AND application_name = ? AND environment = ? AND metric = ?",
 			namespace, applicationName, environmentName, metric).
 		First(&record).Error
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *Store) SaveAlertState(ctx context.Context, namespace, applicationName, 
 		record := alertStateRecord{
 			ID: domain.NewID(), CreatedTime: Now(),
 			Namespace: namespace, ApplicationName: applicationName,
-			EnvironmentName: environmentName, Metric: metric,
+			Environment: environmentName, Metric: metric,
 			Firing: firing, LastNotified: &now,
 		}
 		if firing {
@@ -67,7 +67,7 @@ func (s *Store) SaveAlertState(ctx context.Context, namespace, applicationName, 
 		return err
 	}
 	target := s.orm.WithContext(ctx).Model(&alertStateRecord{}).
-		Where("namespace = ? AND application_name = ? AND environment_name = ? AND metric = ?",
+		Where("namespace = ? AND application_name = ? AND environment = ? AND metric = ?",
 			namespace, applicationName, environmentName, metric)
 	if firing {
 		return target.Updates(map[string]any{

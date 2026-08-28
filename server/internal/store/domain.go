@@ -12,17 +12,17 @@ import (
 
 // domainRecord is the GORM model of the domain table.
 type domainRecord struct {
-	ID              string
-	CreatedTime     *LocalDateTime
-	Host            *string
-	Description     *string
-	HTTPS           *bool `gorm:"column:https"`
-	CertMode        *string
-	CertPem         *string
-	KeyPem          *string
-	CertSubject     *string
-	CertNotAfter    *LocalDateTime
-	EnvironmentName *string
+	ID           string
+	CreatedTime  *LocalDateTime
+	Host         *string
+	Description  *string
+	HTTPS        *bool `gorm:"column:https"`
+	CertMode     *string
+	CertPem      *string
+	KeyPem       *string
+	CertSubject  *string
+	CertNotAfter *LocalDateTime
+	Environment  *string
 }
 
 func (domainRecord) TableName() string { return "domain" }
@@ -39,7 +39,7 @@ type DomainView struct {
 	CertSubject     *string        `json:"certSubject"`
 	CertNotAfter    *LocalDateTime `json:"certNotAfter"`
 	CreatedTime     *LocalDateTime `json:"createdTime"`
-	EnvironmentName *string        `json:"environmentName"`
+	Environment     *string        `json:"environment"`
 }
 
 func domainRecordToView(record *domainRecord) DomainView {
@@ -53,7 +53,7 @@ func domainRecordToView(record *domainRecord) DomainView {
 		CertSubject:     record.CertSubject,
 		CertNotAfter:    record.CertNotAfter,
 		CreatedTime:     record.CreatedTime,
-		EnvironmentName: record.EnvironmentName,
+		Environment:     record.Environment,
 	}
 }
 
@@ -102,13 +102,13 @@ func (s *Store) ListDomainsFull(ctx context.Context) ([]DomainFull, error) {
 
 // UpsertDomainRequest mirrors the Java command object.
 type UpsertDomainRequest struct {
-	Host            string  `json:"host"`
-	Description     *string `json:"description"`
-	HTTPS           *bool   `json:"https"`
-	CertMode        *string `json:"certMode"`
-	CertPem         *string `json:"certPem"`
-	KeyPem          *string `json:"keyPem"`
-	EnvironmentName *string `json:"environmentName"`
+	Host        string  `json:"host"`
+	Description *string `json:"description"`
+	HTTPS       *bool   `json:"https"`
+	CertMode    *string `json:"certMode"`
+	CertPem     *string `json:"certPem"`
+	KeyPem      *string `json:"keyPem"`
+	Environment *string `json:"environment"`
 }
 
 type certMeta struct {
@@ -242,13 +242,13 @@ func (s *Store) CreateDomain(ctx context.Context, request UpsertDomainRequest) (
 	} else if exists {
 		return nil, domain.Bizf("Domain already exists: %s", host)
 	}
-	environmentName, err := s.requireDomainEnvironment(ctx, request.EnvironmentName)
+	environmentName, err := s.requireDomainEnvironment(ctx, request.Environment)
 	if err != nil {
 		return nil, err
 	}
 	record := domainRecord{
 		ID: domain.NewID(), CreatedTime: Now(),
-		Host: &host, Description: request.Description, EnvironmentName: &environmentName,
+		Host: &host, Description: request.Description, Environment: &environmentName,
 	}
 	if err := s.applyCertFields(&record, request); err != nil {
 		return nil, err
@@ -285,7 +285,7 @@ func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomai
 			return nil, domain.Bizf("Domain already exists: %s", newHost)
 		}
 	}
-	environmentName, err := s.requireDomainEnvironment(ctx, request.EnvironmentName)
+	environmentName, err := s.requireDomainEnvironment(ctx, request.Environment)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +294,7 @@ func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomai
 	}
 	record.Host = &newHost
 	record.Description = request.Description
-	record.EnvironmentName = &environmentName
+	record.Environment = &environmentName
 	if err := s.applyCertFields(&record, request); err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func (s *Store) UpdateDomain(ctx context.Context, id string, request UpsertDomai
 			"https": record.HTTPS, "cert_mode": record.CertMode,
 			"cert_pem": record.CertPem, "key_pem": record.KeyPem,
 			"cert_subject": record.CertSubject, "cert_not_after": record.CertNotAfter,
-			"environment_name": record.EnvironmentName,
+			"environment": record.Environment,
 		}).Error
 	if err != nil {
 		return nil, err
@@ -322,8 +322,8 @@ func (s *Store) rejectRebindingWhileInUse(ctx context.Context, record *domainRec
 		currentHost = *record.Host
 	}
 	currentEnvironment := ""
-	if record.EnvironmentName != nil {
-		currentEnvironment = *record.EnvironmentName
+	if record.Environment != nil {
+		currentEnvironment = *record.Environment
 	}
 	if newHost == currentHost && newEnvironmentName == currentEnvironment {
 		return nil
@@ -362,11 +362,11 @@ func (s *Store) rejectRebindingWhileInUse(ctx context.Context, record *domainRec
 				continue
 			}
 			stillCovered := domain.HostCoveredBy(host, newHost) &&
-				config.EnvironmentName != nil && newEnvironmentName == *config.EnvironmentName
+				config.Environment != nil && newEnvironmentName == *config.Environment
 			if !stillCovered {
 				environmentLabel := ""
-				if config.EnvironmentName != nil {
-					environmentLabel = *config.EnvironmentName
+				if config.Environment != nil {
+					environmentLabel = *config.Environment
 				}
 				return domain.Bizf("Domain is in use by application %s/%s (host %s, environment %s), remove that host first",
 					serviceConfig.Namespace, serviceConfig.ApplicationName, host, environmentLabel)

@@ -65,7 +65,7 @@ func (sink *wsSink) heartbeat(ctx context.Context) {
 // podLogWebSocket mirrors PodLogWebSocketHandler: tail the last 2000 lines,
 // stream line-by-line as text frames, answer text "ping" with "pong".
 func (s *Server) podLogWebSocket(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}

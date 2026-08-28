@@ -57,7 +57,7 @@ function SandboxesContent() {
   const [sandboxes, setSandboxes] = useState<SandboxInstance[]>([])
   const [loading, setLoading] = useState(false)
   const [initialLoad, setInitialLoad] = useState(true)
-  const envFilter = searchParams.get("env") ?? ""
+  const envFilter = searchParams.get("environment") ?? ""
   const [nameFilter, setNameFilter] = useState<string>("")
   const [nameFilterInput, setNameFilterInput] = useState<string>("")
 
@@ -99,7 +99,7 @@ function SandboxesContent() {
       .then((res) => {
         const envs = res.data ?? []
         setEnvironments(envs)
-        if (envs.length > 0 && !searchParams.get("env")) {
+        if (envs.length > 0 && !searchParams.get("environment")) {
           updateParams({ env: envs[0].name })
         }
       })

@@ -18,8 +18,8 @@ type DockerFileConfig struct {
 }
 
 type BuildEnvironmentConfig struct {
-	EnvironmentName *string `json:"environmentName"`
-	BuildCommand    *string `json:"buildCommand"`
+	Environment  *string `json:"environment"`
+	BuildCommand *string `json:"buildCommand"`
 }
 
 // sourceConfigBlob is the source_config JSON with its type discriminator.
@@ -99,12 +99,12 @@ func (s *Store) FindBuildEnvironmentConfigs(ctx context.Context, namespace, appl
 }
 
 type RuntimeEnvironmentConfig struct {
-	EnvironmentName *string `json:"environmentName"`
-	CPURequest      *string `json:"cpuRequest"`
-	CPULimit        *string `json:"cpuLimit"`
-	MemoryRequest   *string `json:"memoryRequest"`
-	MemoryLimit     *string `json:"memoryLimit"`
-	Replicas        *int    `json:"replicas"`
+	Environment   *string `json:"environment"`
+	CPURequest    *string `json:"cpuRequest"`
+	CPULimit      *string `json:"cpuLimit"`
+	MemoryRequest *string `json:"memoryRequest"`
+	MemoryLimit   *string `json:"memoryLimit"`
+	Replicas      *int    `json:"replicas"`
 }
 
 type Probe struct {
@@ -248,7 +248,7 @@ func (s *Store) ListAllRuntimeSpecs(ctx context.Context) ([]RuntimeSpecView, err
 }
 
 type serviceEnvironmentConfigRow struct {
-	EnvironmentName       *string `json:"environmentName"`
+	Environment           *string `json:"environment"`
 	Host                  *string `json:"host"`
 	HTTPS                 *bool   `json:"https"`
 	BasicAuthEnabled      *bool   `json:"basicAuthEnabled"`
@@ -264,7 +264,7 @@ type ServiceEnvironmentConfigStored = serviceEnvironmentConfigRow
 // only the basicAuthPasswordSet marker does (see ServiceEnvironmentConfig in
 // ApplicationConfigDto).
 type ServiceEnvironmentConfig struct {
-	EnvironmentName      *string `json:"environmentName"`
+	Environment          *string `json:"environment"`
 	Host                 *string `json:"host"`
 	HTTPS                *bool   `json:"https"`
 	BasicAuthEnabled     *bool   `json:"basicAuthEnabled"`
@@ -323,7 +323,7 @@ func (s *Store) FindServiceConfig(ctx context.Context, namespace, applicationNam
 		view.EnvironmentConfigs = []ServiceEnvironmentConfig{}
 		for _, row := range rows {
 			view.EnvironmentConfigs = append(view.EnvironmentConfigs, ServiceEnvironmentConfig{
-				EnvironmentName:      row.EnvironmentName,
+				Environment:          row.Environment,
 				Host:                 row.Host,
 				HTTPS:                row.HTTPS,
 				BasicAuthEnabled:     row.BasicAuthEnabled,
@@ -336,7 +336,7 @@ func (s *Store) FindServiceConfig(ctx context.Context, namespace, applicationNam
 }
 
 type ExpertEnvironmentConfig struct {
-	EnvironmentName         *string  `json:"environmentName"`
+	Environment             *string  `json:"environment"`
 	ServiceAccountName      *string  `json:"serviceAccountName"`
 	Priority                *string  `json:"priority"`
 	ScheduledRestartEnabled bool     `json:"scheduledRestartEnabled"`
@@ -407,7 +407,7 @@ type EnvironmentBinding struct {
 	CreatedTime     *LocalDateTime `json:"createdTime"`
 	Namespace       string         `json:"namespace"`
 	ApplicationName string         `json:"applicationName"`
-	EnvironmentName string         `json:"environmentName"`
+	Environment     string         `json:"environment"`
 }
 
 func (EnvironmentBinding) TableName() string { return "application_environment" }
@@ -417,7 +417,7 @@ func (EnvironmentBinding) TableName() string { return "application_environment" 
 func (s *Store) ListEnvironmentBindings(ctx context.Context, namespace, applicationName string) ([]EnvironmentBinding, error) {
 	bindings := []EnvironmentBinding{}
 	err := s.orm.WithContext(ctx).
-		Joins("JOIN environment ON environment.name = application_environment.environment_name").
+		Joins("JOIN environment ON environment.name = application_environment.environment").
 		Where("application_environment.namespace = ? AND application_environment.application_name = ?",
 			namespace, applicationName).
 		Order("application_environment.created_time").

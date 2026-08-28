@@ -87,7 +87,7 @@ export default function ApplicationsDocPage() {
         <DocSubSection title="请求体元素 (BuildEnvironmentConfig)">
           <FieldTable
             rows={[
-              { name: "environmentName", type: "string", required: true },
+              { name: "environment", type: "string", required: true },
               { name: "buildCommand", type: "string", description: "该环境下的自定义构建命令。" },
             ]}
           />
@@ -119,7 +119,7 @@ export default function ApplicationsDocPage() {
         <DocSubSection title="RuntimeEnvironmentConfig">
           <FieldTable
             rows={[
-              { name: "environmentName", type: "string", required: true },
+              { name: "environment", type: "string", required: true },
               { name: "cpuRequest", type: "string", description: "K8s 资源 quantity，例如 100m。" },
               { name: "cpuLimit", type: "string", description: "例如 500m。" },
               { name: "memoryRequest", type: "string", description: "例如 128Mi。" },
@@ -147,7 +147,7 @@ export default function ApplicationsDocPage() {
         <DocSubSection title="请求体元素 (EnvironmentBinding)">
           <FieldTable
             rows={[
-              { name: "environmentName", type: "string", required: true, description: "目标环境名，需在 /openapi/environments 中存在。" },
+              { name: "environment", type: "string", required: true, description: "目标环境名，需在 /openapi/environments 中存在。" },
             ]}
           />
         </DocSubSection>
@@ -160,7 +160,7 @@ export default function ApplicationsDocPage() {
           <FieldTable
             rows={[
               { name: "environmentConfigs", type: "array", description: "每个环境的高级配置数组，元素结构见下方 ExpertEnvironmentConfig。" },
-              { name: "environmentConfigs[].environmentName", type: "string", required: true },
+              { name: "environmentConfigs[].environment", type: "string", required: true },
               { name: "environmentConfigs[].serviceAccountName", type: "string", description: "部署到该环境时使用的 Kubernetes ServiceAccount 名称。" },
             ]}
           />
@@ -174,7 +174,7 @@ export default function ApplicationsDocPage() {
           <FieldTable
             rows={[
               { name: "port", type: "int", required: true, description: "容器内监听端口。" },
-              { name: "environmentConfigs[].environmentName", type: "string", required: true },
+              { name: "environmentConfigs[].environment", type: "string", required: true },
               { name: "environmentConfigs[].host", type: "string", description: "外部访问域名，须在域名管理中存在。" },
               { name: "environmentConfigs[].https", type: "boolean", description: "是否启用 HTTPS。" },
             ]}
@@ -188,7 +188,7 @@ export default function ApplicationsDocPage() {
         />
         <Endpoint
           method="GET"
-          path={`${PATH_PREFIX}/{name}/service/cluster-domain?env={env}`}
+          path={`${PATH_PREFIX}/{name}/service/cluster-domain?environment={env}`}
           summary="返回应用在指定环境下的集群内访问域名。"
         />
       </DocSection>
@@ -196,7 +196,7 @@ export default function ApplicationsDocPage() {
       <DocSection title="状态与运维">
         <Endpoint
           method="GET"
-          path={`${PATH_PREFIX}/{name}/status?env={env}`}
+          path={`${PATH_PREFIX}/{name}/status?environment={env}`}
           summary="返回应用在指定环境下所有 Pod 的运行状态。"
         />
         <DocSubSection title="响应数组元素 (ApplicationPodStatusView)">
@@ -219,13 +219,13 @@ export default function ApplicationsDocPage() {
 
         <Endpoint
           method="GET"
-          path={`${PATH_PREFIX}/{name}/status/watch?env={env}`}
+          path={`${PATH_PREFIX}/{name}/status/watch?environment={env}`}
           summary="通过 Server-Sent Events 推送 Pod 状态变化（响应非 Result 包裹）。"
         />
 
         <Endpoint
           method="GET"
-          path={`${PATH_PREFIX}/{name}/current-image?env={env}`}
+          path={`${PATH_PREFIX}/{name}/current-image?environment={env}`}
           summary="返回指定环境当前运行的镜像。"
         />
 
@@ -237,7 +237,7 @@ export default function ApplicationsDocPage() {
 
         <Endpoint
           method="GET"
-          path={`${PATH_PREFIX}/{name}/resources?env={env}`}
+          path={`${PATH_PREFIX}/{name}/resources?environment={env}`}
           summary="返回应用拥有的 Kubernetes 资源清单，用于只读专家视图。"
         />
         <DocSubSection title="响应数组元素 (ApplicationResourceView)">
@@ -252,7 +252,7 @@ export default function ApplicationsDocPage() {
 
         <Endpoint
           method="PUT"
-          path={`${PATH_PREFIX}/{name}/pods/{pod}/restart?env={env}`}
+          path={`${PATH_PREFIX}/{name}/pods/{pod}/restart?environment={env}`}
           summary="重启指定 Pod。请求体为空。"
         />
       </DocSection>

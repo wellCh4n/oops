@@ -41,7 +41,7 @@ func (engine *Engine) scanScheduledRestarts(ctx context.Context, minute time.Tim
 		for _, environmentConfig := range config.EnvironmentConfigs {
 			if !environmentConfig.ScheduledRestartEnabled ||
 				environmentConfig.ScheduledRestartCron == nil || *environmentConfig.ScheduledRestartCron == "" ||
-				environmentConfig.EnvironmentName == nil {
+				environmentConfig.Environment == nil {
 				continue
 			}
 			schedule, err := cron.Parse(*environmentConfig.ScheduledRestartCron)
@@ -52,7 +52,7 @@ func (engine *Engine) scanScheduledRestarts(ctx context.Context, minute time.Tim
 				continue
 			}
 			namespace, application := config.Namespace, config.ApplicationName
-			environmentName := *environmentConfig.EnvironmentName
+			environmentName := *environmentConfig.Environment
 			go func() {
 				if err := engine.rolloutRestart(ctx, environmentName, namespace, application); err != nil {
 					slog.Error("scheduled restart failed", "namespace", namespace, "application", application, "environment", environmentName, "error", err)

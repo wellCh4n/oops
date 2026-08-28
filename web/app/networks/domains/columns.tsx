@@ -27,11 +27,11 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Domain>[] => [
       : <span className="text-muted-foreground">-</span>,
   },
   {
-    accessorKey: "environmentName",
+    accessorKey: "environment",
     header: t("domains.col.environment"),
     size: 100,
-    cell: ({ row }) => row.original.environmentName
-      ? <span>{row.original.environmentName}</span>
+    cell: ({ row }) => row.original.environment
+      ? <span>{row.original.environment}</span>
       : <span className="text-muted-foreground">{t("domains.environment.unbound")}</span>,
   },
   {

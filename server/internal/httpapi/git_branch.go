@@ -91,9 +91,9 @@ func (s *Server) getApplicationBranches(c *gin.Context) {
 		c.JSON(http.StatusOK, ok([]gitBranchView{}))
 		return
 	}
-	environment, err := s.store.FindEnvironmentFullByName(c.Request.Context(), c.Query("env"))
+	environment, err := s.store.FindEnvironmentFullByName(c.Request.Context(), c.Query("environment"))
 	if err != nil {
-		c.JSON(http.StatusOK, fail("Environment not found: "+c.Query("env")))
+		c.JSON(http.StatusOK, fail("Environment not found: "+c.Query("environment")))
 		return
 	}
 

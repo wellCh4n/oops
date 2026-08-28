@@ -28,7 +28,7 @@ func respondPodFS(c *gin.Context, err error) {
 
 // podFSTarget resolves the shared env/container/pod triple.
 func (s *Server) podFSTarget(c *gin.Context) (*k8s.Cluster, string, string, string, bool) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return nil, "", "", "", false
 	}

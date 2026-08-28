@@ -41,23 +41,23 @@ func (engine *Engine) MigrateNamespace(ctx context.Context, namespace, name, tar
 
 	// Phase 1: snapshot the live workload (image + config) of each bound environment.
 	type migrationPlan struct {
-		EnvironmentName string
-		Cluster         *k8s.Cluster
-		CurrentImage    string
-		ConfigMaps      []k8s.ConfigMapItem
+		Environment  string
+		Cluster      *k8s.Cluster
+		CurrentImage string
+		ConfigMaps   []k8s.ConfigMapItem
 	}
 	bindings, _ := engine.Store.ListEnvironmentBindings(ctx, namespace, name)
 	result := &MigrationResult{MigratedEnvironments: []string{}, FailedEnvironments: []string{}}
 	plans := []migrationPlan{}
 	for _, binding := range bindings {
-		cluster, _, err := engine.cluster(ctx, binding.EnvironmentName)
+		cluster, _, err := engine.cluster(ctx, binding.Environment)
 		if err != nil {
-			result.FailedEnvironments = append(result.FailedEnvironments, binding.EnvironmentName)
+			result.FailedEnvironments = append(result.FailedEnvironments, binding.Environment)
 			continue
 		}
 		image, err := k8s.FindCurrentImage(ctx, cluster, namespace, name)
 		if err != nil {
-			result.FailedEnvironments = append(result.FailedEnvironments, binding.EnvironmentName)
+			result.FailedEnvironments = append(result.FailedEnvironments, binding.Environment)
 			continue
 		}
 		if image == nil || *image == "" {
@@ -65,14 +65,14 @@ func (engine *Engine) MigrateNamespace(ctx context.Context, namespace, name, tar
 		}
 		configMaps, err := k8s.GetConfigMaps(ctx, cluster, namespace, name)
 		if err != nil {
-			result.FailedEnvironments = append(result.FailedEnvironments, binding.EnvironmentName)
+			result.FailedEnvironments = append(result.FailedEnvironments, binding.Environment)
 			continue
 		}
 		plans = append(plans, migrationPlan{
-			EnvironmentName: binding.EnvironmentName,
-			Cluster:         cluster,
-			CurrentImage:    *image,
-			ConfigMaps:      configMaps,
+			Environment:  binding.Environment,
+			Cluster:      cluster,
+			CurrentImage: *image,
+			ConfigMaps:   configMaps,
 		})
 	}
 
@@ -83,16 +83,16 @@ func (engine *Engine) MigrateNamespace(ctx context.Context, namespace, name, tar
 
 	// Phase 3: recreate each running workload in the target, then delete the old.
 	for _, plan := range plans {
-		err := engine.redeployToTarget(ctx, plan.Cluster, plan.ConfigMaps, plan.EnvironmentName, target, name, plan.CurrentImage)
+		err := engine.redeployToTarget(ctx, plan.Cluster, plan.ConfigMaps, plan.Environment, target, name, plan.CurrentImage)
 		if err != nil {
-			slog.Error("failed to migrate workload", "namespace", namespace, "application", name, "environment", plan.EnvironmentName, "error", err)
-			result.FailedEnvironments = append(result.FailedEnvironments, plan.EnvironmentName)
+			slog.Error("failed to migrate workload", "namespace", namespace, "application", name, "environment", plan.Environment, "error", err)
+			result.FailedEnvironments = append(result.FailedEnvironments, plan.Environment)
 			continue
 		}
 		if err := DeleteWorkload(ctx, plan.Cluster, namespace, name); err != nil {
-			slog.Error("failed to delete old workload", "namespace", namespace, "application", name, "environment", plan.EnvironmentName, "error", err)
+			slog.Error("failed to delete old workload", "namespace", namespace, "application", name, "environment", plan.Environment, "error", err)
 		}
-		result.MigratedEnvironments = append(result.MigratedEnvironments, plan.EnvironmentName)
+		result.MigratedEnvironments = append(result.MigratedEnvironments, plan.Environment)
 	}
 	return result, nil
 }

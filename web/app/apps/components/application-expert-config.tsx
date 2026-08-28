@@ -66,7 +66,7 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
 
   const buildSnapshot = useCallback((values: ApplicationExpertConfigFormValues = form.getValues()) => JSON.stringify({
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
-      environmentName: config.environmentName,
+      environment: config.environment,
       serviceAccountName: config.serviceAccountName ?? "",
       priority: config.priority || "NORMAL",
       scheduledRestartEnabled: config.scheduledRestartEnabled ?? false,
@@ -78,9 +78,9 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     const currentConfigs = form.getValues("environmentConfigs") || []
     const newConfigs = envs.map((env) => {
-      const existing = currentConfigs.find((c) => c.environmentName === env.environmentName)
+      const existing = currentConfigs.find((c) => c.environment === env.environment)
       return existing || {
-        environmentName: env.environmentName,
+        environment: env.environment,
         serviceAccountName: "",
         priority: "NORMAL",
         scheduledRestartEnabled: false,
@@ -93,13 +93,13 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
     captureBaseline()
 
     if (newConfigs.length > 0 && !activeTab) {
-      setActiveTab(newConfigs[0].environmentName)
+      setActiveTab(newConfigs[0].environment)
     }
   }
 
   useEffect(() => {
     if (fields.length > 0 && !activeTab) {
-      setActiveTab(fields[0].environmentName)
+      setActiveTab(fields[0].environment)
     }
   }, [fields, activeTab])
 
@@ -170,11 +170,11 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
                   className="w-full"
                 >
                   {fields.map((field, index) => (
-                    <TabsContent key={field.id} value={field.environmentName}>
+                    <TabsContent key={field.id} value={field.environment}>
                       <SingleExpertEnvironmentConfig
                         index={index}
                         namespace={namespace}
-                        environmentName={field.environmentName}
+                        environment={field.environment}
                       />
                     </TabsContent>
                   ))}
@@ -196,10 +196,10 @@ export const ApplicationExpertConfig = forwardRef<ApplicationTabHandle, Applicat
 interface SingleExpertEnvironmentConfigProps {
   index: number
   namespace?: string
-  environmentName: string
+  environment: string
 }
 
-function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: SingleExpertEnvironmentConfigProps) {
+function SingleExpertEnvironmentConfig({ index, namespace, environment }: SingleExpertEnvironmentConfigProps) {
   const { control } = useFormContext<ApplicationExpertConfigFormValues>()
   const { t, locale } = useLanguage()
   const [serviceAccounts, setServiceAccounts] = useState<string[]>([])
@@ -213,12 +213,12 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
   const [cronInvalid, setCronInvalid] = useState(false)
 
   useEffect(() => {
-    if (!namespace || !environmentName) return
+    if (!namespace || !environment) return
     let cancelled = false
     const load = async () => {
       setSaLoading(true)
       try {
-        const res = await fetchServiceAccounts(namespace, environmentName)
+        const res = await fetchServiceAccounts(namespace, environment)
         if (!cancelled) setServiceAccounts(res.data ?? [])
       } catch {
         if (!cancelled) setServiceAccounts([])
@@ -228,15 +228,15 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
     }
     load()
     return () => { cancelled = true }
-  }, [namespace, environmentName])
+  }, [namespace, environment])
 
   useEffect(() => {
-    if (!environmentName) return
+    if (!environment) return
     let cancelled = false
     const load = async () => {
       setNodesLoading(true)
       try {
-        const res = await fetchNodes(environmentName)
+        const res = await fetchNodes(environment)
         if (!cancelled) setNodes(res.data ?? [])
       } catch {
         if (!cancelled) setNodes([])
@@ -246,7 +246,7 @@ function SingleExpertEnvironmentConfig({ index, namespace, environmentName }: Si
     }
     load()
     return () => { cancelled = true }
-  }, [environmentName])
+  }, [environment])
 
   useEffect(() => {
     if (!restartEnabled || !restartCron?.trim()) {

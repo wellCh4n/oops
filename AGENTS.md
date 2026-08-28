@@ -197,12 +197,12 @@ The K8s client is created per-task and closed via try-with-resources in `Artifac
 - `ApplicationRuntimeSpec`: Stores per-environment resource limits (`cpuRequest`, `cpuLimit`, `memoryRequest`, `memoryLimit`, `replicas`) plus global health check settings split into `liveness` and `readiness` probes. Frontend: `application-runtime-spec.tsx`.
 - `ApplicationExpertConfig`: Stores per-environment advanced deployment settings: the ServiceAccount name applied to the StatefulSet pod template, plus the scheduled-restart fields (`scheduledRestartEnabled`, `scheduledRestartCron`). Frontend: `application-expert-config.tsx` (the cron picker is `apps/components/cron-schedule-builder.tsx`); service account options come from `ServiceAccountController`.
 
-**Application resource viewer**: `GET /api/namespaces/{namespace}/applications/{name}/resources?env=...` returns read-only Kubernetes resources for expert inspection.
+**Application resource viewer**: `GET /api/namespaces/{namespace}/applications/{name}/resources?environment=...` returns read-only Kubernetes resources for expert inspection.
 
-**Application status & metrics**: `GET .../applications/{name}/status?env=...` returns per-pod status views and `GET .../applications/{name}/events?env=...` returns recent K8s events. Resource usage comes from two independent sources:
+**Application status & metrics**: `GET .../applications/{name}/status?environment=...` returns per-pod status views and `GET .../applications/{name}/events?environment=...` returns recent K8s events. Resource usage comes from two independent sources:
 
-- **Live readings** — `GET .../applications/{name}/metrics?env=...` returns `List<PodMetricSnapshot>` (`podName`, `cpuMillis`, `memoryBytes`) via `ApplicationMetricsGateway` → `KubernetesApplicationMetricsGateway`, which reads the K8s `PodMetrics` API (requires metrics-server). The status table renders per-pod CPU/memory from this.
-- **History** — `GET .../applications/{name}/metrics/history?env=&range=&agg=` returns `PodMetricHistory` for the usage charts. **OOPS stores no history of its own**: `PodMetricHistoryService` resolves the window and bucket width (snapping both ends to the bucket grid, so refreshing does not shift every point), then `PodMetricHistoryProvider` → `PrometheusPodMetricHistoryProvider` runs a `query_range` against whatever Prometheus-compatible backend the cluster already runs. `ApiServerProxyPrometheusTransport` reaches that in-cluster ClusterIP through the API server service proxy, so no ingress or second credential is needed — but the environment's token needs `services/proxy`. Pods are matched by StatefulSet naming (`{app}-[0-9]+`) rather than the `oops.app.name` label, because kubelet/cAdvisor metrics carry no pod labels; namespace and application names are validated before being interpolated into the PromQL matcher. With no backend reachable the service throws `MONITORING_NOT_AVAILABLE`, which the drawer renders as a setup prompt rather than an empty chart.
+- **Live readings** — `GET .../applications/{name}/metrics?environment=...` returns `List<PodMetricSnapshot>` (`podName`, `cpuMillis`, `memoryBytes`) via `ApplicationMetricsGateway` → `KubernetesApplicationMetricsGateway`, which reads the K8s `PodMetrics` API (requires metrics-server). The status table renders per-pod CPU/memory from this.
+- **History** — `GET .../applications/{name}/metrics/history?environment=&range=&agg=` returns `PodMetricHistory` for the usage charts. **OOPS stores no history of its own**: `PodMetricHistoryService` resolves the window and bucket width (snapping both ends to the bucket grid, so refreshing does not shift every point), then `PodMetricHistoryProvider` → `PrometheusPodMetricHistoryProvider` runs a `query_range` against whatever Prometheus-compatible backend the cluster already runs. `ApiServerProxyPrometheusTransport` reaches that in-cluster ClusterIP through the API server service proxy, so no ingress or second credential is needed — but the environment's token needs `services/proxy`. Pods are matched by StatefulSet naming (`{app}-[0-9]+`) rather than the `oops.app.name` label, because kubelet/cAdvisor metrics carry no pod labels; namespace and application names are validated before being interpolated into the PromQL matcher. With no backend reachable the service throws `MONITORING_NOT_AVAILABLE`, which the drawer renders as a setup prompt rather than an empty chart.
 
 Frontend: `apps/[namespace]/[name]/status/page.tsx`; the charts live in `apps/components/application-metrics-drawer.tsx`, which also draws the environment's `ApplicationRuntimeSpec` request/limit as reference lines.
 
@@ -295,7 +295,7 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 **Exceptions to namespacing:**
 - `GET /api/health` — health check, no auth required (explicitly permitted in `SecurityConfig`)
 - `GET /api/search/applications?keyword=&size=5` — cross-namespace application search for command palette (defaults to 5 results)
-- `GET /api/nodes?env={envName}` — node list for a given environment (frontend route `/clusters/nodes`)
+- `GET /api/nodes?environment={envName}` — node list for a given environment (frontend route `/clusters/nodes`)
 - `GET|POST /api/users`, `PUT|DELETE /api/users/{id}` — user management (ADMIN-only writes)
 - `GET /api/users/me` — current user from JWT principal
 - `PUT /api/users/me`, `PUT /api/users/me/password`, `POST /api/users/me/access-token/reset` — profile, password, and OpenAPI access token self-service
@@ -305,7 +305,7 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 - `POST /api/image-repositories/validations` — validate image registry credentials
 - `POST /api/kubernetes/validations` — validate K8s connectivity
 - `POST /api/kubernetes/namespaces` — create a K8s namespace
-- `GET /api/namespaces/{namespace}/service-accounts?env={envName}` — list ServiceAccounts for application expert config
+- `GET /api/namespaces/{namespace}/service-accounts?environment={envName}` — list ServiceAccounts for application expert config
 - `GET /api/cron/next?expression=&count=` — preview upcoming fire times for a 5-field cron expression (scheduled-restart UI)
 - `POST /api/index/pipelines`, `POST /api/index/applications` — cross-namespace queries
 

@@ -51,7 +51,7 @@ func (s *Server) deleteApplication(c *gin.Context) {
 		return
 	}
 	for _, binding := range bindings {
-		environment, err := s.store.FindEnvironmentFullByName(ctx, binding.EnvironmentName)
+		environment, err := s.store.FindEnvironmentFullByName(ctx, binding.Environment)
 		if err != nil {
 			continue
 		}
@@ -60,7 +60,7 @@ func (s *Server) deleteApplication(c *gin.Context) {
 			err = engine.DeleteWorkload(ctx, cluster, namespace, name)
 		}
 		if err != nil {
-			slog.Error("failed to delete K8s resources", "namespace", namespace, "application", name, "environment", binding.EnvironmentName, "error", err)
+			slog.Error("failed to delete K8s resources", "namespace", namespace, "application", name, "environment", binding.Environment, "error", err)
 			c.JSON(http.StatusOK, fail("Application deletion failed"))
 			return
 		}

@@ -162,7 +162,7 @@ func (engine *Engine) deployArtifact(ctx context.Context, cluster *k8s.Cluster, 
 	if runtimeSpec != nil {
 		for i := range runtimeSpec.EnvironmentConfigs {
 			config := &runtimeSpec.EnvironmentConfigs[i]
-			if config.EnvironmentName != nil && pipeline.Environment != nil && *config.EnvironmentName == *pipeline.Environment {
+			if config.Environment != nil && pipeline.Environment != nil && *config.Environment == *pipeline.Environment {
 				environmentConfig = config
 				break
 			}
@@ -177,7 +177,7 @@ func (engine *Engine) deployArtifact(ctx context.Context, cluster *k8s.Cluster, 
 	if expertConfig, err := engine.Store.FindExpertConfig(ctx, namespace, applicationName); err == nil {
 		for i := range expertConfig.EnvironmentConfigs {
 			config := &expertConfig.EnvironmentConfigs[i]
-			if config.EnvironmentName != nil && pipeline.Environment != nil && *config.EnvironmentName == *pipeline.Environment {
+			if config.Environment != nil && pipeline.Environment != nil && *config.Environment == *pipeline.Environment {
 				expertEnvironmentConfig = config
 				break
 			}

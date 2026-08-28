@@ -91,14 +91,14 @@ func (engine *Engine) collectAlertTargets(ctx context.Context, config AlertConfi
 	targets := []alertTarget{}
 	for _, spec := range specs {
 		for _, environmentConfig := range spec.EnvironmentConfigs {
-			if environmentConfig.EnvironmentName == nil {
+			if environmentConfig.Environment == nil {
 				continue
 			}
 			if environmentConfig.CPULimit != nil {
 				if limit, valid := parseCPUMillis(*environmentConfig.CPULimit); valid && limit > 0 {
 					targets = append(targets, alertTarget{
 						Namespace: spec.Namespace, ApplicationName: spec.ApplicationName,
-						Environment: *environmentConfig.EnvironmentName, Metric: "CPU",
+						Environment: *environmentConfig.Environment, Metric: "CPU",
 						Threshold: limit * int64(config.CPUThresholdPercent) / 100,
 						Window:    time.Duration(config.CPUSustainedMinutes) * time.Minute,
 					})
@@ -108,7 +108,7 @@ func (engine *Engine) collectAlertTargets(ctx context.Context, config AlertConfi
 				if limit, valid := parseMemoryBytes(*environmentConfig.MemoryLimit); valid && limit > 0 {
 					targets = append(targets, alertTarget{
 						Namespace: spec.Namespace, ApplicationName: spec.ApplicationName,
-						Environment: *environmentConfig.EnvironmentName, Metric: "MEMORY",
+						Environment: *environmentConfig.Environment, Metric: "MEMORY",
 						Threshold: limit * int64(config.MemThresholdPercent) / 100,
 						Window:    time.Duration(config.MemSustainedMinutes) * time.Minute,
 					})

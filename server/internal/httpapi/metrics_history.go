@@ -9,7 +9,7 @@ import (
 )
 
 func (s *Server) getApplicationMetricsHistory(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}

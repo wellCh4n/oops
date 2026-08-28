@@ -147,7 +147,7 @@ export interface DeployRequest {
 }
 
 export interface ApplicationBuildEnvironmentConfig {
-  environmentName: string
+  environment: string
   buildCommand?: string
 }
 
@@ -155,7 +155,7 @@ export interface ApplicationEnvironment {
   id?: string
   namespace: string
   applicationName: string
-  environmentName: string
+  environment: string
 }
 
 export interface ApplicationRuntimeSpec {
@@ -167,7 +167,7 @@ export interface ApplicationRuntimeSpec {
 }
 
 export interface ApplicationRuntimeSpecEnvironmentConfig {
-  environmentName: string
+  environment: string
   replicas?: number
   cpuRequest?: string
   cpuLimit?: string
@@ -183,7 +183,7 @@ export interface ApplicationExpertConfig {
 }
 
 export interface ApplicationExpertConfigEnvironmentConfig {
-  environmentName: string
+  environment: string
   serviceAccountName?: string
   priority?: string
   scheduledRestartEnabled?: boolean
@@ -317,7 +317,7 @@ export interface ApplicationServiceConfig {
 }
 
 export interface ApplicationServiceEnvironmentConfig {
-  environmentName: string
+  environment: string
   host?: string
   https?: boolean
   basicAuthEnabled?: boolean

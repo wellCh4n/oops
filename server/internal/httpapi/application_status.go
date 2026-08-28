@@ -15,7 +15,7 @@ import (
 // stored token, like the environmentRepository + KubernetesClients pair.
 func (s *Server) cluster(c *gin.Context, environmentName string) (*k8s.Cluster, bool) {
 	if environmentName == "" {
-		c.JSON(http.StatusOK, fail("env is required"))
+		c.JSON(http.StatusOK, fail("environment is required"))
 		return nil, false
 	}
 	credentials, err := s.store.FindEnvironmentCredentials(c.Request.Context(), environmentName)
@@ -37,7 +37,7 @@ func (s *Server) cluster(c *gin.Context, environmentName string) (*k8s.Cluster, 
 }
 
 func (s *Server) getApplicationStatus(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}
@@ -50,7 +50,7 @@ func (s *Server) getApplicationStatus(c *gin.Context) {
 }
 
 func (s *Server) getApplicationEvents(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}
@@ -71,7 +71,7 @@ func (s *Server) getApplicationEvents(c *gin.Context) {
 }
 
 func (s *Server) getApplicationMetrics(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}
@@ -86,7 +86,7 @@ func (s *Server) getApplicationMetrics(c *gin.Context) {
 
 func (s *Server) getClusterDomain(c *gin.Context) {
 	namespace, name := c.Param("namespace"), c.Param("name")
-	environmentName := c.Query("env")
+	environmentName := c.Query("environment")
 	cluster, connected := s.cluster(c, environmentName)
 	if !connected {
 		return
@@ -101,7 +101,7 @@ func (s *Server) getClusterDomain(c *gin.Context) {
 	serviceConfig, err := s.store.FindServiceConfig(c.Request.Context(), namespace, name)
 	if err == nil && serviceConfig != nil {
 		for _, environmentConfig := range serviceConfig.EnvironmentConfigs {
-			if environmentConfig.EnvironmentName == nil || *environmentConfig.EnvironmentName != environmentName {
+			if environmentConfig.Environment == nil || *environmentConfig.Environment != environmentName {
 				continue
 			}
 			if environmentConfig.Host == nil || *environmentConfig.Host == "" {
@@ -121,7 +121,7 @@ func (s *Server) getClusterDomain(c *gin.Context) {
 }
 
 func (s *Server) restartApplicationPod(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}
@@ -135,7 +135,7 @@ func (s *Server) restartApplicationPod(c *gin.Context) {
 // watchApplicationStatus streams SSE "status" events carrying the full pod
 // snapshot, mirroring the Java SseEmitter behaviour.
 func (s *Server) watchApplicationStatus(c *gin.Context) {
-	cluster, connected := s.cluster(c, c.Query("env"))
+	cluster, connected := s.cluster(c, c.Query("environment"))
 	if !connected {
 		return
 	}

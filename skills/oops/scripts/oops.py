@@ -199,7 +199,7 @@ def cmd_domain_ls(client: Client, args: argparse.Namespace) -> None:
         ["HOST", "ENVIRONMENT", "HTTPS", "CERT MODE", "UPLOADED", "DESCRIPTION"],
         [[
             dash(d.get("host")),
-            dash(d.get("environmentName")),
+            dash(d.get("environment")),
             str(bool(d.get("https"))),
             dash(d.get("certMode")),
             str(bool(d.get("hasUploadedCert"))),
@@ -281,7 +281,7 @@ def cmd_app_service_get(client: Client, args: argparse.Namespace) -> None:
         envs = c.get("environmentConfigs") or []
         print_table(
             ["ENV", "HOST", "HTTPS"],
-            [[dash(e.get("environmentName")), dash(e.get("host")), str(bool(e.get("https")))] for e in envs],
+            [[dash(e.get("environment")), dash(e.get("host")), str(bool(e.get("https")))] for e in envs],
         )
     render(args.json, config, human)
 
@@ -295,7 +295,7 @@ def cmd_app_service_set(client: Client, args: argparse.Namespace) -> None:
             host, https = parts[0], parts[1] == "https"
         else:
             host, https = rest, False
-        env_configs.append({"environmentName": env_name, "host": host, "https": https})
+        env_configs.append({"environment": env_name, "host": host, "https": https})
     body = {
         "namespace": args.namespace,
         "applicationName": args.name,
@@ -317,7 +317,7 @@ def cmd_app_runtime_get(client: Client, args: argparse.Namespace) -> None:
         print_table(
             ["ENV", "CPU req/limit", "MEM req/limit", "REPLICAS"],
             [[
-                dash(e.get("environmentName")),
+                dash(e.get("environment")),
                 fmt_rl(e.get("cpuRequest"), e.get("cpuLimit")),
                 fmt_rl(e.get("memoryRequest"), e.get("memoryLimit")),
                 dash(e.get("replicas")),
@@ -340,7 +340,7 @@ def cmd_app_runtime_get(client: Client, args: argparse.Namespace) -> None:
 
 def _parse_env_runtime(entry: str) -> Dict[str, Any]:
     env_name, rest = entry.split("=", 1)
-    result: Dict[str, Any] = {"environmentName": env_name}
+    result: Dict[str, Any] = {"environment": env_name}
     for pair in rest.split(","):
         key, value = pair.split(":", 1)
         if key == "cpu":
@@ -395,12 +395,12 @@ def cmd_app_env_ls(client: Client, args: argparse.Namespace) -> None:
     items = client.get(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/environments")
     render(args.json, items, lambda lst: print_table(
         ["ENV"],
-        [[dash(b.get("environmentName"))] for b in lst],
+        [[dash(b.get("environment"))] for b in lst],
     ))
 
 
 def cmd_app_env_set(client: Client, args: argparse.Namespace) -> None:
-    body = [{"namespace": args.namespace, "applicationName": args.name, "environmentName": env} for env in args.env]
+    body = [{"namespace": args.namespace, "applicationName": args.name, "environment": env} for env in args.env]
     client.put(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/environments", body)
     render(args.json, {"updated": True, "count": len(args.env)}, lambda _: print(f"Bound {args.namespace}/{args.name} to {len(args.env)} environment(s)"))
 

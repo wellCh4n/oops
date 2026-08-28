@@ -131,7 +131,7 @@ func (engine *Engine) DeployApplication(ctx context.Context, namespace, applicat
 
 	buildCommand := ""
 	for _, config := range buildConfig.EnvironmentConfigs {
-		if config.EnvironmentName != nil && *config.EnvironmentName == environment.Name && config.BuildCommand != nil {
+		if config.Environment != nil && *config.Environment == environment.Name && config.BuildCommand != nil {
 			buildCommand = *config.BuildCommand
 		}
 	}

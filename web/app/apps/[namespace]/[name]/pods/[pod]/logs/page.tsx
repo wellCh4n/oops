@@ -21,7 +21,7 @@ function ApplicationPodLogsContent() {
   const namespace = params.namespace as string
   const name = params.name as string
   const pod = params.pod as string
-  const env = searchParams.get("env")
+  const env = searchParams.get("environment")
 
   const [logs, setLogs] = useState<LogLine[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +41,7 @@ function ApplicationPodLogsContent() {
       ? API_BASE_URL.replace(/^http/, 'ws')
       : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
 
-    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?env=${env}&token=${getToken()}`
+    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?environment=${env}&token=${getToken()}`
     let ws: WebSocket | null = null
 
     let heartbeatInterval: ReturnType<typeof setInterval> | null = null
