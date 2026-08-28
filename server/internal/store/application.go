@@ -273,7 +273,7 @@ func upsertRecord[T any](ctx context.Context, orm *gorm.DB, namespace, applicati
 	record *T, updates map[string]any) error {
 
 	var existing T
-	err := orm.WithContext(ctx).Model(record).
+	err := orm.WithContext(ctx).Model(&existing).
 		Where("namespace = ? AND application_name = ?", namespace, applicationName).
 		First(&existing).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -282,7 +282,11 @@ func upsertRecord[T any](ctx context.Context, orm *gorm.DB, namespace, applicati
 	if err != nil {
 		return err
 	}
-	return orm.WithContext(ctx).Model(record).
+	// The update model must be a zero value: GORM folds a non-zero primary key
+	// on the model into the WHERE clause, and record carries a freshly minted
+	// id that matches no row, so the update would silently touch nothing.
+	var model T
+	return orm.WithContext(ctx).Model(&model).
 		Where("namespace = ? AND application_name = ?", namespace, applicationName).
 		Updates(updates).Error
 }
