@@ -12,6 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -142,4 +143,19 @@ func ListNodes(ctx context.Context, client *kubernetes.Clientset) ([]NodeStatusV
 		views = append(views, view)
 	}
 	return views, nil
+}
+
+// SetNodeSchedulable cordons or uncordons a node, matching the Java gateway:
+// Kubernetes treats an absent unschedulable flag as schedulable, so uncordon
+// clears the field instead of writing false.
+func SetNodeSchedulable(ctx context.Context, client *kubernetes.Clientset, nodeName string, schedulable bool) error {
+	patch := []byte(`{"spec":{"unschedulable":true}}`)
+	if schedulable {
+		patch = []byte(`{"spec":{"unschedulable":null}}`)
+	}
+	_, err := client.CoreV1().Nodes().Patch(ctx, nodeName, types.MergePatchType, patch, metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("patch node %s: %w", nodeName, err)
+	}
+	return nil
 }

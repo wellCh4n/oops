@@ -74,6 +74,7 @@ func (s *Server) registerPlatformRoutes(authed *gin.RouterGroup) {
 	admin.DELETE("/domains/:id", s.deleteDomain)
 
 	authed.GET("/nodes", s.listNodes)
+	admin.POST("/nodes/:name/schedulable", s.setNodeSchedulable)
 	authed.POST("/kubernetes/validations", s.validateKubernetes)
 	authed.POST("/kubernetes/namespaces", s.createKubernetesNamespace)
 	authed.POST("/image-repositories/validations", s.validateImageRepository)
