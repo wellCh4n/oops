@@ -16,6 +16,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
@@ -136,6 +137,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+      <SidebarSeparator className="mx-0" />
       <SidebarContent className="gap-0">
         {navConfig.map((group) => {
           if (group.adminOnly && !isAdminUser) return null
@@ -201,6 +203,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           )
         })}
       </SidebarContent>
+      <SidebarSeparator className="mx-0" />
       <SidebarFooter>
         <SidebarMenu>
           {sidebarOpen && (
