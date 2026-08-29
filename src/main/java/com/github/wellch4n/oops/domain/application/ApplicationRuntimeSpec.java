@@ -15,7 +15,7 @@ public class ApplicationRuntimeSpec extends BaseDomainObject {
 
     @Data
     public static class EnvironmentConfig {
-        private String environmentName;
+        private String environment;
         private String cpuRequest;
         private String cpuLimit;
         private String memoryRequest;

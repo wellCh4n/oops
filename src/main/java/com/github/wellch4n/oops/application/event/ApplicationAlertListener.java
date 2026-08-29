@@ -67,7 +67,7 @@ public class ApplicationAlertListener {
     private ExternalUserMessage buildMessage(ApplicationAlertEvent event) {
         List<ExternalUserFact> facts = new ArrayList<>();
         facts.add(new ExternalUserFact("应用", event.namespace() + "/" + event.applicationName()));
-        facts.add(new ExternalUserFact("环境", event.environmentName()));
+        facts.add(new ExternalUserFact("环境", event.environment()));
         facts.add(new ExternalUserFact("指标", metricName(event.metric())));
         facts.add(new ExternalUserFact("阈值", event.thresholdPercent() + "%（"
                 + formatValue(event.metric(), event.threshold()) + " / "

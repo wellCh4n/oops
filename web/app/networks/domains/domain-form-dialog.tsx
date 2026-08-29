@@ -60,7 +60,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
   const [certPem, setCertPem] = useState("")
   const [keyPem, setKeyPem] = useState("")
   const [replaceCert, setReplaceCert] = useState(false)
-  const [environmentName, setEnvironmentName] = useState("")
+  const [environment, setEnvironmentName] = useState("")
   const [environments, setEnvironments] = useState<Environment[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -82,7 +82,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       setCertPem("")
       setKeyPem("")
       setReplaceCert(false)
-      setEnvironmentName(target.environmentName ?? "")
+      setEnvironmentName(target.environment ?? "")
     } else {
       setHost("")
       setDescription("")
@@ -106,7 +106,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
       toast.error(t("domains.field.hostInvalid"))
       return
     }
-    if (!environmentName) {
+    if (!environment) {
       toast.error(t("domains.field.environmentRequired"))
       return
     }
@@ -116,7 +116,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
         host: trimmedHost,
         description: description.trim() || undefined,
         https,
-        environmentName,
+        environment,
       }
       if (https) {
         request.certMode = certMode
@@ -192,7 +192,7 @@ export function DomainFormDialog({ open, onOpenChange, target, onSaved, onDelete
 
           <div className="space-y-2">
             <Label>{t("domains.field.environment")}</Label>
-            <Select value={environmentName} onValueChange={(value) => setEnvironmentName(value ?? "")}>
+            <Select value={environment} onValueChange={(value) => setEnvironmentName(value ?? "")}>
               <SelectTrigger className="w-full cursor-pointer">
                 <SelectValue placeholder={t("domains.field.environmentPlaceholder")} />
               </SelectTrigger>

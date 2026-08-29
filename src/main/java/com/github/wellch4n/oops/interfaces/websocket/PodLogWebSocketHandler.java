@@ -37,7 +37,7 @@ public class PodLogWebSocketHandler extends AbstractWebSocketHandler {
 
         Map<String, String> params = UriComponentsBuilder.fromUri(uri)
                 .build().getQueryParams().toSingleValueMap();
-        String environmentName = params.get("env");
+        String environmentName = params.get("environment");
         Environment environment = environmentService.getEnvironment(environmentName);
         if (environment == null) {
             WebSocketSessionSupport.close(session, "Environment not found");

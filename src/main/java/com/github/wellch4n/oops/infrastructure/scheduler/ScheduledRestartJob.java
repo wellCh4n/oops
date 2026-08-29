@@ -88,10 +88,10 @@ public class ScheduledRestartJob {
                 if (!isDue(environmentConfig, now)) {
                     continue;
                 }
-                Environment environment = environmentsByName.get(environmentConfig.getEnvironmentName());
+                Environment environment = environmentsByName.get(environmentConfig.getEnvironment());
                 if (environment == null) {
                     log.warn("Scheduled restart skipped, environment not found: {}",
-                            environmentConfig.getEnvironmentName());
+                            environmentConfig.getEnvironment());
                     continue;
                 }
                 dueRestarts.add(new DueRestart(

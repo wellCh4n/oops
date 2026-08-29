@@ -30,7 +30,7 @@ function buildFileBaseUrl(params: PodFileBaseParams): string {
 }
 
 function appendCommonParams(search: URLSearchParams, params: PodFileBaseParams) {
-  search.set("env", params.env)
+  search.set("environment", params.env)
   if (params.container) {
     search.set("container", params.container)
   }

@@ -397,7 +397,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <span className="whitespace-pre-wrap break-words">{pipeline.message}</span>
                 {crashLoopPods.length === 1 && (
-                  <Button render={<Link href={`/apps/${namespace}/${name}/pods/${crashLoopPods[0].name}/logs?env=${encodeURIComponent(pipeline.environment)}`} />} variant="destructive" size="xs" className="shrink-0">
+                  <Button render={<Link href={`/apps/${namespace}/${name}/pods/${crashLoopPods[0].name}/logs?environment=${encodeURIComponent(pipeline.environment)}`} />} variant="destructive" size="xs" className="shrink-0">
                     <FileText className="size-3" />
                     {t("apps.pipeline.viewLogs")}
                   </Button>
@@ -424,7 +424,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                         {crashLoopPods.map((pod) => (
                           <Link
                             key={pod.name}
-                            href={`/apps/${namespace}/${name}/pods/${pod.name}/logs?env=${encodeURIComponent(pipeline.environment)}`}
+                            href={`/apps/${namespace}/${name}/pods/${pod.name}/logs?environment=${encodeURIComponent(pipeline.environment)}`}
                             className="cursor-pointer truncate rounded-sm px-2 py-1.5 text-sm text-foreground hover:bg-accent"
                             onClick={() => setErrorLogsMenuOpen(false)}
                           >
@@ -545,7 +545,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <h3 className="font-semibold">{t("apps.pipeline.runningStatus")}</h3>
               {pipeline?.environment && (
                 <Link
-                  href={`/apps/${namespace}/${name}/status?env=${pipeline.environment}`}
+                  href={`/apps/${namespace}/${name}/status?environment=${pipeline.environment}`}
                   className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {t("apps.pipeline.viewDetails")}
@@ -581,7 +581,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <ApplicationEventsPanel
                 namespace={namespace}
                 applicationName={name}
-                environmentName={pipeline.environment}
+                environment={pipeline.environment}
                 since={applicationEventSince}
                 limit={100}
                 compact

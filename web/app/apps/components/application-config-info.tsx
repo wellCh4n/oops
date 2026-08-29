@@ -535,7 +535,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
 
   const handleEnvironmentsLoaded = (envs: ApplicationEnvironment[]) => {
     if (envs.length > 0 && !activeTab) {
-      setActiveTab(envs[0].environmentName)
+      setActiveTab(envs[0].environment)
     }
   }
 

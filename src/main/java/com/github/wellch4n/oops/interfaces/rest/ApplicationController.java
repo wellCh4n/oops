@@ -135,8 +135,8 @@ public class ApplicationController {
     @GetMapping("/{name}/branches")
     public Result<List<GitBranchView>> getApplicationBranches(@PathVariable String namespace,
                                                        @PathVariable String name,
-                                                       @RequestParam String env) {
-        return Result.success(gitBranchService.listBranches(namespace, name, env));
+                                                       @RequestParam String environment) {
+        return Result.success(gitBranchService.listBranches(namespace, name, environment));
     }
 
     @PutMapping("/{name}/build/config")
@@ -210,25 +210,25 @@ public class ApplicationController {
     @GetMapping("/{name}/resources")
     public Result<List<ApplicationResourceView>> getApplicationResources(@PathVariable String namespace,
                                                                          @PathVariable String name,
-                                                                         @RequestParam String env) {
-        return Result.success(applicationService.getApplicationResources(namespace, name, env));
+                                                                         @RequestParam String environment) {
+        return Result.success(applicationService.getApplicationResources(namespace, name, environment));
     }
 
     @GetMapping("/{name}/metrics")
     public Result<List<PodMetricSnapshot>> getApplicationMetrics(@PathVariable String namespace,
                                                                  @PathVariable String name,
-                                                                 @RequestParam String env) {
-        return Result.success(applicationService.getApplicationMetrics(namespace, name, env));
+                                                                 @RequestParam String environment) {
+        return Result.success(applicationService.getApplicationMetrics(namespace, name, environment));
     }
 
     @GetMapping("/{name}/metrics/history")
     public Result<PodMetricHistory> getApplicationMetricsHistory(
             @PathVariable String namespace,
             @PathVariable String name,
-            @RequestParam String env,
+            @RequestParam String environment,
             @RequestParam(required = false, defaultValue = "1h") String range,
             @RequestParam(required = false, defaultValue = "avg") String agg) {
-        return Result.success(podMetricHistoryService.getHistory(namespace, name, env, range, agg));
+        return Result.success(podMetricHistoryService.getHistory(namespace, name, environment, range, agg));
     }
 
     @GetMapping("/{name}/environments")
@@ -277,38 +277,38 @@ public class ApplicationController {
 
     @GetMapping("/{name}/service/cluster-domain")
     public Result<ClusterDomainView> getClusterDomain(@PathVariable String namespace, @PathVariable String name,
-                                                          @RequestParam String env) {
-        return Result.success(applicationService.getClusterDomain(namespace, name, env));
+                                                          @RequestParam String environment) {
+        return Result.success(applicationService.getClusterDomain(namespace, name, environment));
     }
 
     @GetMapping("/{name}/status")
     public Result<List<ApplicationPodStatusView>> getApplicationStatus(@PathVariable String namespace,
                                                                             @PathVariable String name,
-                                                                            @RequestParam String env) {
-        return Result.success(applicationService.getApplicationStatus(namespace, name, env));
+                                                                            @RequestParam String environment) {
+        return Result.success(applicationService.getApplicationStatus(namespace, name, environment));
     }
 
     @GetMapping("/{name}/events")
     public Result<List<ApplicationEventView>> getApplicationEvents(@PathVariable String namespace,
                                                                    @PathVariable String name,
-                                                                   @RequestParam String env,
+                                                                   @RequestParam String environment,
                                                                    @RequestParam(required = false) Instant since,
                                                                    @RequestParam(required = false) Integer limit) {
-        return Result.success(applicationService.getApplicationEvents(namespace, name, env, since, limit));
+        return Result.success(applicationService.getApplicationEvents(namespace, name, environment, since, limit));
     }
 
     @GetMapping("/{name}/current-image")
     public Result<String> getCurrentImage(@PathVariable String namespace,
                                           @PathVariable String name,
-                                          @RequestParam String env) {
-        return Result.success(applicationService.getCurrentImage(namespace, name, env));
+                                          @RequestParam String environment) {
+        return Result.success(applicationService.getCurrentImage(namespace, name, environment));
     }
 
     @GetMapping("/{name}/status/watch")
     public SseEmitter watchApplicationStatus(@PathVariable String namespace,
                                               @PathVariable String name,
-                                              @RequestParam String env) {
-        return applicationService.watchApplicationStatus(namespace, name, env);
+                                              @RequestParam String environment) {
+        return applicationService.watchApplicationStatus(namespace, name, environment);
     }
 
     @PutMapping("/{name}/pods/{pod}/restart")
@@ -316,8 +316,8 @@ public class ApplicationController {
     public Result<Boolean> restartApplication(@PathVariable String namespace,
                                               @PathVariable String name,
                                               @PathVariable String pod,
-                                              @RequestParam String env) {
-        return Result.success(applicationService.restartApplication(namespace, name, pod, env));
+                                              @RequestParam String environment) {
+        return Result.success(applicationService.restartApplication(namespace, name, pod, environment));
     }
 
 }

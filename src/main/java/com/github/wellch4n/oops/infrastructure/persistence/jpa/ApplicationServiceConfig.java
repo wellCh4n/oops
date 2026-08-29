@@ -39,13 +39,13 @@ public class ApplicationServiceConfig extends BaseDataObject {
             return List.of();
         }
         return environmentConfigs.stream()
-                .filter(config -> environmentName.equals(config.getEnvironmentName()))
+                .filter(config -> environmentName.equals(config.getEnvironment()))
                 .toList();
     }
 
     @Data
     public static class EnvironmentConfig {
-        private String environmentName;
+        private String environment;
 
         private String host;
 

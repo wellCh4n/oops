@@ -133,9 +133,9 @@ function IDEPageContent() {
   // left to render an empty list.
   useEffect(() => {
     if (!selectedApp || environments.length === 0) return
-    const known = environments.some((environment) => environment.environmentName === selectedEnv)
+    const known = environments.some((environment) => environment.environment === selectedEnv)
     if (!selectedEnv || !known) {
-      selectEnv(environments[0].environmentName ?? "")
+      selectEnv(environments[0].environment ?? "")
     }
   }, [selectedApp, selectedEnv, environments, selectEnv])
 

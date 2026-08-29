@@ -65,7 +65,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       dockerFileConfig: normalizedDockerFileConfig,
       buildImage: initialBuildConfig?.buildImage ?? "",
       environmentConfigs: initialEnvConfigs.map((config) => ({
-        environmentName: config.environmentName,
+        environment: config.environment,
         buildCommand: config.buildCommand ?? "",
       })),
     },
@@ -123,7 +123,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     dockerFileConfig: values.dockerFileConfig ?? { type: "BUILTIN", path: "Dockerfile" },
     buildImage: values.buildImage ?? "",
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
-      environmentName: config.environmentName,
+      environment: config.environment,
       buildCommand: config.buildCommand ?? "",
     })),
   }), [form])
@@ -133,11 +133,11 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     const currentConfigs = form.getValues("environmentConfigs") || []
     const newConfigs = envs.map((env) => {
       const existing = currentConfigs.find(
-        (c) => c.environmentName === env.environmentName
+        (c) => c.environment === env.environment
       )
       return (
         existing || {
-          environmentName: env.environmentName,
+          environment: env.environment,
           buildCommand: "",
         }
       )
@@ -152,14 +152,14 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
     // Set active tab if not set
     if (newConfigs.length > 0 && !activeTab) {
-      setActiveTab(newConfigs[0].environmentName)
+      setActiveTab(newConfigs[0].environment)
     }
   }
 
   // Initialize activeTab
   useEffect(() => {
     if (fields.length > 0 && !activeTab) {
-      setActiveTab(fields[0].environmentName)
+      setActiveTab(fields[0].environment)
     }
   }, [fields, activeTab])
 
@@ -192,7 +192,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
       // 2. Save environment configs
       const envConfigs: ApplicationBuildEnvironmentConfig[] = data.environmentConfigs.map((config) => ({
-        environmentName: config.environmentName,
+        environment: config.environment,
         buildCommand: config.buildCommand ?? undefined,
       }))
       await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
@@ -237,7 +237,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
   const { resolvedTheme } = useTheme()
   const editorTheme = resolvedTheme === "dark" ? "vs-dark" : "vs"
-  const activeEnvironmentIndex = fields.findIndex((f) => f.environmentName === activeTab)
+  const activeEnvironmentIndex = fields.findIndex((f) => f.environment === activeTab)
 
   return (
     <>

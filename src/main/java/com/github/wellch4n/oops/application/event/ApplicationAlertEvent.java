@@ -19,7 +19,7 @@ public record ApplicationAlertEvent(
         ApplicationAlertType type,
         String namespace,
         String applicationName,
-        String environmentName,
+        String environment,
         ResourceMetric metric,
         int thresholdPercent,
         long threshold,

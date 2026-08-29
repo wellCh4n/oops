@@ -26,7 +26,7 @@ public class ApplicationAlertState extends BaseDataObject {
     private String applicationName;
 
     /** Environment name, following every other table. */
-    private String environmentName;
+    private String environment;
 
     /** {@link com.github.wellch4n.oops.application.dto.ResourceMetric} name. */
     private String metric;

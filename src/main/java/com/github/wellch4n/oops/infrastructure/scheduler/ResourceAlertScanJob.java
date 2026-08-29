@@ -132,7 +132,7 @@ public class ResourceAlertScanJob {
                 continue;
             }
             for (ApplicationRuntimeSpec.EnvironmentConfig environmentConfig : environmentConfigs) {
-                Environment environment = environmentsByName.get(environmentConfig.getEnvironmentName());
+                Environment environment = environmentsByName.get(environmentConfig.getEnvironment());
                 if (environment == null) {
                     continue;
                 }
@@ -238,7 +238,7 @@ public class ResourceAlertScanJob {
         Map<String, ApplicationAlertState> statesByKey = new HashMap<>();
         for (ApplicationAlertState state : alertStateRepository.findAll()) {
             statesByKey.put(stateKey(state.getNamespace(), state.getApplicationName(),
-                    state.getEnvironmentName(), state.getMetric()), state);
+                    state.getEnvironment(), state.getMetric()), state);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -301,7 +301,7 @@ public class ResourceAlertScanJob {
         ApplicationAlertState state = new ApplicationAlertState();
         state.setNamespace(target.namespace());
         state.setApplicationName(target.applicationName());
-        state.setEnvironmentName(target.environment().getName());
+        state.setEnvironment(target.environment().getName());
         state.setMetric(target.metric().name());
         return state;
     }

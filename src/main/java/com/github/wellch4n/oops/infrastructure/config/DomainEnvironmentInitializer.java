@@ -32,7 +32,7 @@ public class DomainEnvironmentInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         List<Domain> unbound = domainRepository.findAll().stream()
-                .filter(domain -> domain.getEnvironmentName() == null || domain.getEnvironmentName().isBlank())
+                .filter(domain -> domain.getEnvironment() == null || domain.getEnvironment().isBlank())
                 .toList();
         if (unbound.isEmpty()) {
             return;
@@ -49,7 +49,7 @@ public class DomainEnvironmentInitializer implements ApplicationRunner {
 
         String environmentName = environments.getFirst().getName();
         for (Domain domain : unbound) {
-            domain.setEnvironmentName(environmentName);
+            domain.setEnvironment(environmentName);
             domainRepository.save(domain);
             log.info("Bound domain {} to the only environment {}", domain.getHost(), environmentName);
         }

@@ -12,7 +12,7 @@ class DomainEnvironmentBindingTests {
     private Domain domain(String host, String environmentName) {
         Domain domain = new Domain();
         domain.setHost(host);
-        domain.setEnvironmentName(environmentName);
+        domain.setEnvironment(environmentName);
         return domain;
     }
 

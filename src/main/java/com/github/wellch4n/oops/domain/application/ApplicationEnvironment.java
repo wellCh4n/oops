@@ -9,5 +9,5 @@ import lombok.EqualsAndHashCode;
 public class ApplicationEnvironment extends BaseDomainObject {
     private String namespace;
     private String applicationName;
-    private String environmentName;
+    private String environment;
 }

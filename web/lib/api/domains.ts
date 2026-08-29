@@ -12,7 +12,7 @@ export interface Domain {
   hasUploadedCert: boolean
   certSubject: string | null
   certNotAfter: string | null
-  environmentName?: string | null
+  environment?: string | null
   createdTime?: string
 }
 
@@ -23,7 +23,7 @@ export interface DomainRequest {
   certMode?: DomainCertMode
   certPem?: string
   keyPem?: string
-  environmentName: string
+  environment: string
 }
 
 export async function fetchDomains(): Promise<Domain[]> {

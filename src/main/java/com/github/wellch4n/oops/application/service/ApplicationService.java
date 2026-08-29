@@ -174,14 +174,14 @@ public class ApplicationService {
                 ? exist.getEnvironments()
                 : Collections.emptyList();
         for (ApplicationEnvironment env : environments) {
-            Environment environment = environmentRepository.findFirstByName(env.getEnvironmentName());
+            Environment environment = environmentRepository.findFirstByName(env.getEnvironment());
             if (environment == null) {
                 continue;
             }
             try {
                 applicationRuntimeGateway.deleteWorkload(environment, namespace, name);
             } catch (Exception exception) {
-                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), exception.getMessage());
+                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironment(), exception.getMessage());
                 throw new BizException("Application deletion failed");
             }
         }
@@ -376,7 +376,7 @@ public class ApplicationService {
                                                           List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs) {
         for (ApplicationRuntimeSpec.EnvironmentConfig config : configs) {
             ApplicationRuntimeSpec.EnvironmentConfig existing = existingConfigs.stream()
-                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .filter(existingConfig -> existingConfig.getEnvironment().equals(config.getEnvironment()))
                     .findFirst().orElse(null);
 
             boolean replicasChanged = config.getReplicas() != null
@@ -389,11 +389,11 @@ public class ApplicationService {
             if (!replicasChanged && !resourceChanged) continue;
 
             try {
-                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironment());
                 if (environment == null) continue;
                 applicationRuntimeGateway.applyRuntimeSpec(environment, namespace, appName, config);
             } catch (Exception exception) {
-                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
+                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironment(), exception.getMessage());
             }
         }
     }
@@ -433,7 +433,7 @@ public class ApplicationService {
                                           List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs) {
         for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
             ApplicationExpertConfig.EnvironmentConfig existing = existingConfigs.stream()
-                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .filter(existingConfig -> existingConfig.getEnvironment().equals(config.getEnvironment()))
                     .findFirst().orElse(null);
 
             boolean serviceAccountChanged = !StringUtils.equals(
@@ -446,11 +446,11 @@ public class ApplicationService {
             if (!serviceAccountChanged && !priorityChanged && !nodeNamesChanged) continue;
 
             try {
-                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironment());
                 if (environment == null) continue;
                 applicationExpertConfigGateway.applyExpertConfig(environment, namespace, appName, config);
             } catch (Exception exception) {
-                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
+                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironment(), exception.getMessage());
             }
         }
     }
@@ -504,7 +504,7 @@ public class ApplicationService {
                 .map(Environment::getName)
                 .collect(Collectors.toSet());
         return all.stream()
-                .filter(binding -> existingEnvNames.contains(binding.getEnvironmentName()))
+                .filter(binding -> existingEnvNames.contains(binding.getEnvironment()))
                 .map(ApplicationConfigDto.EnvironmentBinding::from)
                 .toList();
     }
@@ -537,7 +537,7 @@ public class ApplicationService {
                     return new ServiceHostConflictView(
                             conflict.getNamespace(),
                             conflict.getApplicationName(),
-                            c.getEnvironmentName());
+                            c.getEnvironment());
                 }
             }
         }
@@ -554,11 +554,11 @@ public class ApplicationService {
                     continue;
                 }
                 domainPolicy.validateHost(host);
-                requireDomainAllowsEnvironment(host, envConfig.environmentName(), managedDomains);
+                requireDomainAllowsEnvironment(host, envConfig.environment(), managedDomains);
                 ServiceHostConflictView conflict = findHostConflictApplication(namespace, name, host);
                 if (conflict != null) {
                     throw new BizException("Host " + host + " is already used by environment "
-                            + conflict.environmentName() + " / namespace " + conflict.namespace()
+                            + conflict.environment() + " / namespace " + conflict.namespace()
                             + " / application " + conflict.applicationName());
                 }
             }
@@ -585,8 +585,8 @@ public class ApplicationService {
         }
         if (!governing.allowsEnvironment(environmentName)) {
             throw new BizException("Domain " + governing.getHost() + " is not available in environment "
-                    + environmentName + (governing.getEnvironmentName() != null
-                    ? " (its environment is " + governing.getEnvironmentName() + ")" : ""));
+                    + environmentName + (governing.getEnvironment() != null
+                    ? " (its environment is " + governing.getEnvironment() + ")" : ""));
         }
     }
 
@@ -606,7 +606,7 @@ public class ApplicationService {
         if (existingConfig != null && existingConfig.getEnvironmentConfigs() != null) {
             for (ApplicationServiceConfig.EnvironmentConfig stored : existingConfig.getEnvironmentConfigs()) {
                 if (StringUtils.isNotBlank(stored.getBasicAuthPasswordHash())) {
-                    storedHashes.put(basicAuthKey(stored.getEnvironmentName(), stored.getHost()),
+                    storedHashes.put(basicAuthKey(stored.getEnvironment(), stored.getHost()),
                             stored.getBasicAuthPasswordHash());
                 }
             }
@@ -630,7 +630,7 @@ public class ApplicationService {
                 return config;
             }
 
-            String storedHash = storedHashes.get(basicAuthKey(requested.environmentName(), requested.host()));
+            String storedHash = storedHashes.get(basicAuthKey(requested.environment(), requested.host()));
             if (StringUtils.isBlank(storedHash)) {
                 throw new BizException("Basic auth password is required for host " + requested.host());
             }

@@ -121,7 +121,7 @@ public class NamespaceMigrationService {
                 ? application.getEnvironments()
                 : List.of();
         for (ApplicationEnvironment binding : bindings) {
-            String environmentName = binding.getEnvironmentName();
+            String environmentName = binding.getEnvironment();
             Environment environment = environmentRepository.findFirstByName(environmentName);
             if (environment == null) {
                 continue;
