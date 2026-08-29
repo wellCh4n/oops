@@ -21,7 +21,7 @@ public class ServiceAccountController {
 
     @GetMapping
     public Result<List<String>> listServiceAccounts(@PathVariable String namespace,
-                                                    @RequestParam String env) {
-        return Result.success(serviceAccountService.listServiceAccountNames(namespace, env));
+                                                    @RequestParam String environment) {
+        return Result.success(serviceAccountService.listServiceAccountNames(namespace, environment));
     }
 }

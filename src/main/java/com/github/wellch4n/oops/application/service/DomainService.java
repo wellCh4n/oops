@@ -52,12 +52,12 @@ public class DomainService {
         if (domainRepository.existsByHost(host)) {
             throw new BizException("Domain already exists: " + host);
         }
-        String environmentName = requireValidEnvironment(request.getEnvironmentName());
+        String environmentName = requireValidEnvironment(request.getEnvironment());
 
         Domain domain = new Domain();
         domain.setHost(host);
         domain.setDescription(request.getDescription());
-        domain.setEnvironmentName(environmentName);
+        domain.setEnvironment(environmentName);
         applyCertFields(domain, request);
         return domainRepository.save(domain);
     }
@@ -73,11 +73,11 @@ public class DomainService {
         if (!newHost.equals(domain.getHost()) && domainRepository.existsByHost(newHost)) {
             throw new BizException("Domain already exists: " + newHost);
         }
-        String environmentName = requireValidEnvironment(request.getEnvironmentName());
+        String environmentName = requireValidEnvironment(request.getEnvironment());
         rejectRebindingWhileInUse(domain, newHost, environmentName);
         domain.setHost(newHost);
         domain.setDescription(request.getDescription());
-        domain.setEnvironmentName(environmentName);
+        domain.setEnvironment(environmentName);
         applyCertFields(domain, request);
         return domainRepository.saveAndFlush(domain);
     }
@@ -100,7 +100,7 @@ public class DomainService {
      */
     private void rejectRebindingWhileInUse(Domain domain, String newHost, String newEnvironmentName) {
         boolean hostUnchanged = newHost.equals(domain.getHost());
-        boolean environmentUnchanged = newEnvironmentName.equals(domain.getEnvironmentName());
+        boolean environmentUnchanged = newEnvironmentName.equals(domain.getEnvironment());
         if (hostUnchanged && environmentUnchanged) {
             return;
         }
@@ -120,11 +120,11 @@ public class DomainService {
                     continue;
                 }
                 boolean stillCovered = (host.equals(newHost) || host.endsWith("." + newHost))
-                        && newEnvironmentName.equals(environmentConfig.getEnvironmentName());
+                        && newEnvironmentName.equals(environmentConfig.getEnvironment());
                 if (!stillCovered) {
                     throw new BizException("Domain is in use by application " + serviceConfig.getNamespace()
                             + "/" + serviceConfig.getApplicationName() + " (host " + host + ", environment "
-                            + environmentConfig.getEnvironmentName() + "), remove that host first");
+                            + environmentConfig.getEnvironment() + "), remove that host first");
                 }
             }
         }

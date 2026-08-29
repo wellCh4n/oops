@@ -100,7 +100,7 @@ class ResourceAlertScanJobTests {
         runtimeSpec.setNamespace("ns");
         runtimeSpec.setApplicationName("my-app");
         ApplicationRuntimeSpec.EnvironmentConfig environmentConfig = new ApplicationRuntimeSpec.EnvironmentConfig();
-        environmentConfig.setEnvironmentName("prod");
+        environmentConfig.setEnvironment("prod");
         environmentConfig.setCpuLimit(cpuLimit);
         environmentConfig.setMemoryLimit(memoryLimit);
         runtimeSpec.setEnvironmentConfigs(List.of(environmentConfig));
@@ -111,7 +111,7 @@ class ResourceAlertScanJobTests {
         ApplicationAlertState state = new ApplicationAlertState();
         state.setNamespace("ns");
         state.setApplicationName("my-app");
-        state.setEnvironmentName("prod");
+        state.setEnvironment("prod");
         state.setMetric(metric.name());
         state.setFiring(true);
         state.setFiringSince(lastNotified.minusMinutes(2));

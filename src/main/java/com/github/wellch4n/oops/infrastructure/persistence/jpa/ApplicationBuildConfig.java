@@ -59,7 +59,7 @@ public class ApplicationBuildConfig extends BaseDataObject {
     @Data
     public static class EnvironmentConfig {
 
-        private String environmentName;
+        private String environment;
 
         private String buildCommand;
     }

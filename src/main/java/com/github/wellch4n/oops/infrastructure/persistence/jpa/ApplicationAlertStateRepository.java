@@ -11,8 +11,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ApplicationAlertStateRepository extends CrudRepository<ApplicationAlertState, String> {
 
-    Optional<ApplicationAlertState> findByNamespaceAndApplicationNameAndEnvironmentNameAndMetric(
-            String namespace, String applicationName, String environmentName, String metric);
+    Optional<ApplicationAlertState> findByNamespaceAndApplicationNameAndEnvironmentAndMetric(
+            String namespace, String applicationName, String environment, String metric);
 
     List<ApplicationAlertState> findByNamespaceAndApplicationName(String namespace, String applicationName);
 

@@ -13,7 +13,7 @@ class ApplicationServiceConfigTests {
 
     private EnvironmentConfig environmentConfig(String name) {
         EnvironmentConfig config = new EnvironmentConfig();
-        config.setEnvironmentName(name);
+        config.setEnvironment(name);
         return config;
     }
 

@@ -29,7 +29,7 @@ public class ApplicationExpertConfig extends BaseDataObject {
 
     @Data
     public static class EnvironmentConfig {
-        private String environmentName;
+        private String environment;
 
         private String serviceAccountName;
 

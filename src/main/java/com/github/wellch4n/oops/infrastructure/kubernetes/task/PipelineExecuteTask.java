@@ -159,7 +159,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
             return Optional.empty();
         }
         for (ApplicationBuildConfig.EnvironmentConfig config : buildConfig.getEnvironmentConfigs()) {
-            if (config != null && environmentName != null && environmentName.equals(config.getEnvironmentName())) {
+            if (config != null && environmentName != null && environmentName.equals(config.getEnvironment())) {
                 return Optional.ofNullable(config.getBuildCommand());
             }
         }

@@ -16,9 +16,22 @@ class ServiceEnvironmentConfigsConverterTests {
 
     private EnvironmentConfig host(String host) {
         EnvironmentConfig config = new EnvironmentConfig();
-        config.setEnvironmentName("Production");
+        config.setEnvironment("Production");
         config.setHost(host);
         return config;
+    }
+
+    /**
+     * The environment reference is spelled {@code environment} in the stored blob, the same as in
+     * the columns and in the query parameters. The frontend and the CLI read this key, and V22
+     * rewrote every stored row to it, so the writer must never go back to {@code environmentName}.
+     */
+    @Test
+    void writesTheEnvironmentReferenceAsEnvironment() {
+        String json = converter.convertToDatabaseColumn(List.of(host("app.example.com")));
+
+        assertTrue(json.contains("\"environment\":\"Production\""), json);
+        assertFalse(json.contains("environmentName"), json);
     }
 
     @Test
@@ -55,5 +68,8 @@ class ServiceEnvironmentConfigsConverterTests {
         assertEquals("app.example.com", configs.getFirst().getHost());
         assertEquals("visitor", configs.getFirst().getBasicAuthUsername());
         assertNull(configs.getFirst().getBasicAuthPasswordHash());
+        // The pre-V22 environmentName key is not read back into the renamed field: the row stays
+        // readable, but its environment reference is only restored by the migration.
+        assertNull(configs.getFirst().getEnvironment());
     }
 }

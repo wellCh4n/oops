@@ -13,5 +13,5 @@ public class ApplicationEnvironment extends BaseDataObject {
 
     private String applicationName;
 
-    private String environmentName;
+    private String environment;
 }

@@ -41,25 +41,25 @@ public class PodFileSystemController {
     public Result<List<PodFileEntry>> listDirectory(@PathVariable String namespace,
                                                     @PathVariable String name,
                                                     @PathVariable String pod,
-                                                    @RequestParam(value = "env") String env,
+                                                    @RequestParam(value = "environment") String environment,
                                                     @RequestParam(value = "container", required = false) String container,
                                                     @RequestParam(value = "path", required = false) String path) {
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
         String resolvedPath = (path == null || path.isBlank()) ? "/" : path;
-        return Result.success(podFileSystemService.listDirectory(env, namespace, pod, resolvedContainer, resolvedPath));
+        return Result.success(podFileSystemService.listDirectory(environment, namespace, pod, resolvedContainer, resolvedPath));
     }
 
     @GetMapping("/download")
     public void downloadFile(@PathVariable String namespace,
                              @PathVariable String name,
                              @PathVariable String pod,
-                             @RequestParam(value = "env") String env,
+                             @RequestParam(value = "environment") String environment,
                              @RequestParam(value = "container", required = false) String container,
                              @RequestParam(value = "path") String path,
                              HttpServletResponse response) throws Exception {
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
         String fileName = path.substring(path.lastIndexOf('/') + 1);
-        long fileSize = podFileSystemService.getFileSize(env, namespace, pod, resolvedContainer, path);
+        long fileSize = podFileSystemService.getFileSize(environment, namespace, pod, resolvedContainer, path);
         long maxDownloadSizeBytes = podFileSystemService.getMaxDownloadSizeBytes();
         if (fileSize > maxDownloadSizeBytes) {
             long maxMB = maxDownloadSizeBytes / (1024 * 1024);
@@ -71,19 +71,19 @@ public class PodFileSystemController {
         response.setContentType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
         response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
         response.setContentLengthLong(fileSize);
-        podFileSystemService.streamFile(env, namespace, pod, resolvedContainer, path, response.getOutputStream());
+        podFileSystemService.streamFile(environment, namespace, pod, resolvedContainer, path, response.getOutputStream());
     }
 
     @GetMapping("/content")
     public Result<FileContentResponse> getFileContent(@PathVariable String namespace,
                                                       @PathVariable String name,
                                                       @PathVariable String pod,
-                                                      @RequestParam(value = "env") String env,
+                                                      @RequestParam(value = "environment") String environment,
                                                       @RequestParam(value = "container", required = false) String container,
                                                       @RequestParam(value = "path") String path) {
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
-        Environment environment = resolveEnvironment(env);
-        String content = podFileSystemService.readTextFile(environment, namespace, pod, resolvedContainer, path);
+        String content = podFileSystemService.readTextFile(
+                resolveEnvironment(environment), namespace, pod, resolvedContainer, path);
         return Result.success(new FileContentResponse(path, content));
     }
 
@@ -91,15 +91,15 @@ public class PodFileSystemController {
     public Result<Void> saveFileContent(@PathVariable String namespace,
                                         @PathVariable String name,
                                         @PathVariable String pod,
-                                        @RequestParam(value = "env") String env,
+                                        @RequestParam(value = "environment") String environment,
                                         @RequestParam(value = "container", required = false) String container,
                                         @RequestBody FileSaveRequest request) {
         if (request == null || request.path() == null || request.path().isBlank()) {
             throw new BizException("Path is required");
         }
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
-        Environment environment = resolveEnvironment(env);
-        podFileSystemService.writeTextFile(environment, namespace, pod, resolvedContainer, request.path(), request.content());
+        podFileSystemService.writeTextFile(
+                resolveEnvironment(environment), namespace, pod, resolvedContainer, request.path(), request.content());
         return Result.success(null);
     }
 
@@ -107,7 +107,7 @@ public class PodFileSystemController {
     public Result<Void> uploadFile(@PathVariable String namespace,
                                    @PathVariable String name,
                                    @PathVariable String pod,
-                                   @RequestParam(value = "env") String env,
+                                   @RequestParam(value = "environment") String environment,
                                    @RequestParam(value = "container", required = false) String container,
                                    @RequestParam(value = "path") String path,
                                    @RequestParam("file") MultipartFile file) throws IOException {
@@ -121,7 +121,7 @@ public class PodFileSystemController {
         }
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
         String targetPath = resolveUploadTargetPath(path, file.getOriginalFilename());
-        podFileSystemService.uploadFile(env, namespace, pod, resolvedContainer, targetPath, file.getInputStream());
+        podFileSystemService.uploadFile(environment, namespace, pod, resolvedContainer, targetPath, file.getInputStream());
         return Result.success(null);
     }
 
@@ -129,11 +129,11 @@ public class PodFileSystemController {
     public Result<Void> deletePath(@PathVariable String namespace,
                                    @PathVariable String name,
                                    @PathVariable String pod,
-                                   @RequestParam(value = "env") String env,
+                                   @RequestParam(value = "environment") String environment,
                                    @RequestParam(value = "container", required = false) String container,
                                    @RequestParam(value = "path") String path) {
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
-        podFileSystemService.deletePath(env, namespace, pod, resolvedContainer, path);
+        podFileSystemService.deletePath(environment, namespace, pod, resolvedContainer, path);
         return Result.success(null);
     }
 
@@ -141,14 +141,14 @@ public class PodFileSystemController {
     public Result<Void> createDirectory(@PathVariable String namespace,
                                         @PathVariable String name,
                                         @PathVariable String pod,
-                                        @RequestParam(value = "env") String env,
+                                        @RequestParam(value = "environment") String environment,
                                         @RequestParam(value = "container", required = false) String container,
                                         @RequestBody DirectoryCreateRequest request) {
         if (request == null || request.path() == null || request.path().isBlank()) {
             throw new BizException("Path is required");
         }
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
-        podFileSystemService.createDirectory(env, namespace, pod, resolvedContainer, request.path());
+        podFileSystemService.createDirectory(environment, namespace, pod, resolvedContainer, request.path());
         return Result.success(null);
     }
 
@@ -156,7 +156,7 @@ public class PodFileSystemController {
     public Result<Void> renamePath(@PathVariable String namespace,
                                    @PathVariable String name,
                                    @PathVariable String pod,
-                                   @RequestParam(value = "env") String env,
+                                   @RequestParam(value = "environment") String environment,
                                    @RequestParam(value = "container", required = false) String container,
                                    @RequestBody FileRenameRequest request) {
         if (request == null || request.fromPath() == null || request.fromPath().isBlank()
@@ -164,7 +164,7 @@ public class PodFileSystemController {
             throw new BizException("fromPath and toPath are required");
         }
         String resolvedContainer = (container == null || container.isBlank()) ? name : container;
-        podFileSystemService.renamePath(env, namespace, pod, resolvedContainer, request.fromPath(), request.toPath());
+        podFileSystemService.renamePath(environment, namespace, pod, resolvedContainer, request.fromPath(), request.toPath());
         return Result.success(null);
     }
 

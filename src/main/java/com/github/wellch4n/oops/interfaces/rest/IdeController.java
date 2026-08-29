@@ -22,8 +22,8 @@ public class IdeController {
     }
 
     @GetMapping
-    public Result<List<IdeDto>> listIDEs(@PathVariable String application, @RequestParam String env) {
-        return Result.success(ideService.list(application, env));
+    public Result<List<IdeDto>> listIDEs(@PathVariable String application, @RequestParam String environment) {
+        return Result.success(ideService.list(application, environment));
     }
 
     @DeleteMapping("/{name}")
@@ -31,20 +31,20 @@ public class IdeController {
     public Result<Void> deleteIDE(@PathVariable String namespace,
                                   @PathVariable String application,
                                   @PathVariable String name,
-                                  @RequestParam String env) {
-        ideService.delete(name, env);
+                                  @RequestParam String environment) {
+        ideService.delete(name, environment);
         return Result.success(null);
     }
 
     @GetMapping("/config/default")
-    public Result<IdeConfigDto> getDefaultIDEConfig(@RequestParam String env) {
-        return Result.success(ideService.getDefaultIDEConfig(env));
+    public Result<IdeConfigDto> getDefaultIDEConfig(@RequestParam String environment) {
+        return Result.success(ideService.getDefaultIDEConfig(environment));
     }
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public Result<String> createIDE(@PathVariable String namespace, @PathVariable String application,
-                                    @RequestParam String env, @RequestBody CreateIdeCommand request) {
-        return Result.success(ideService.create(namespace, application, env, request));
+                                    @RequestParam String environment, @RequestBody CreateIdeCommand request) {
+        return Result.success(ideService.create(namespace, application, environment, request));
     }
 }

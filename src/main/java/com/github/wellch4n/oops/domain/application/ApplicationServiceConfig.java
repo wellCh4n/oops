@@ -19,7 +19,7 @@ public class ApplicationServiceConfig extends BaseDomainObject {
             return List.of();
         }
         return environmentConfigs.stream()
-                .filter(config -> environmentName.equals(config.getEnvironmentName()))
+                .filter(config -> environmentName.equals(config.getEnvironment()))
                 .toList();
     }
 
@@ -40,7 +40,7 @@ public class ApplicationServiceConfig extends BaseDomainObject {
 
     @Data
     public static class EnvironmentConfig {
-        private String environmentName;
+        private String environment;
         private String host;
         private Boolean https = true;
         private Boolean basicAuthEnabled;

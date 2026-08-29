@@ -109,19 +109,19 @@ public final class ApplicationConfigDto {
     }
 
     public record BuildEnvironmentConfig(
-            String environmentName,
+            String environment,
             String buildCommand
     ) {
         public static BuildEnvironmentConfig from(ApplicationBuildConfig.EnvironmentConfig config) {
             if (config == null) {
                 return null;
             }
-            return new BuildEnvironmentConfig(config.getEnvironmentName(), config.getBuildCommand());
+            return new BuildEnvironmentConfig(config.getEnvironment(), config.getBuildCommand());
         }
 
         public ApplicationBuildConfig.EnvironmentConfig toDomain() {
             ApplicationBuildConfig.EnvironmentConfig config = new ApplicationBuildConfig.EnvironmentConfig();
-            config.setEnvironmentName(environmentName);
+            config.setEnvironment(environment);
             config.setBuildCommand(buildCommand);
             return config;
         }
@@ -162,7 +162,7 @@ public final class ApplicationConfigDto {
     }
 
     public record RuntimeEnvironmentConfig(
-            String environmentName,
+            String environment,
             String cpuRequest,
             String cpuLimit,
             String memoryRequest,
@@ -174,7 +174,7 @@ public final class ApplicationConfigDto {
                 return null;
             }
             return new RuntimeEnvironmentConfig(
-                    config.getEnvironmentName(),
+                    config.getEnvironment(),
                     config.getCpuRequest(),
                     config.getCpuLimit(),
                     config.getMemoryRequest(),
@@ -185,7 +185,7 @@ public final class ApplicationConfigDto {
 
         public ApplicationRuntimeSpec.EnvironmentConfig toDomain() {
             ApplicationRuntimeSpec.EnvironmentConfig config = new ApplicationRuntimeSpec.EnvironmentConfig();
-            config.setEnvironmentName(environmentName);
+            config.setEnvironment(environment);
             config.setCpuRequest(cpuRequest);
             config.setCpuLimit(cpuLimit);
             config.setMemoryRequest(memoryRequest);
@@ -256,7 +256,7 @@ public final class ApplicationConfigDto {
             LocalDateTime createdTime,
             String namespace,
             String applicationName,
-            String environmentName
+            String environment
     ) {
         public static EnvironmentBinding from(ApplicationEnvironment environment) {
             if (environment == null) {
@@ -267,18 +267,18 @@ public final class ApplicationConfigDto {
                     environment.getCreatedTime(),
                     environment.getNamespace(),
                     environment.getApplicationName(),
-                    environment.getEnvironmentName()
+                    environment.getEnvironment()
             );
         }
 
         public ApplicationEnvironment toDomain() {
-            ApplicationEnvironment environment = new ApplicationEnvironment();
-            environment.setId(id);
-            environment.setCreatedTime(createdTime);
-            environment.setNamespace(namespace);
-            environment.setApplicationName(applicationName);
-            environment.setEnvironmentName(environmentName);
-            return environment;
+            ApplicationEnvironment applicationEnvironment = new ApplicationEnvironment();
+            applicationEnvironment.setId(id);
+            applicationEnvironment.setCreatedTime(createdTime);
+            applicationEnvironment.setNamespace(namespace);
+            applicationEnvironment.setApplicationName(applicationName);
+            applicationEnvironment.setEnvironment(environment);
+            return applicationEnvironment;
         }
     }
 
@@ -326,7 +326,7 @@ public final class ApplicationConfigDto {
      *                             it can offer "leave blank to keep" instead of the hash itself.
      */
     public record ServiceEnvironmentConfig(
-            String environmentName,
+            String environment,
             String host,
             Boolean https,
             Boolean basicAuthEnabled,
@@ -339,7 +339,7 @@ public final class ApplicationConfigDto {
                 return null;
             }
             return new ServiceEnvironmentConfig(
-                    config.getEnvironmentName(),
+                    config.getEnvironment(),
                     config.getHost(),
                     config.getHttps(),
                     config.getBasicAuthEnabled(),
@@ -351,7 +351,7 @@ public final class ApplicationConfigDto {
 
         public ApplicationServiceConfig.EnvironmentConfig toDomain() {
             ApplicationServiceConfig.EnvironmentConfig config = new ApplicationServiceConfig.EnvironmentConfig();
-            config.setEnvironmentName(environmentName);
+            config.setEnvironment(environment);
             config.setHost(host);
             config.setHttps(https);
             config.setBasicAuthEnabled(basicAuthEnabled);
@@ -392,7 +392,7 @@ public final class ApplicationConfigDto {
     }
 
     public record ExpertEnvironmentConfig(
-            String environmentName,
+            String environment,
             String serviceAccountName,
             String priority,
             Boolean scheduledRestartEnabled,
@@ -404,7 +404,7 @@ public final class ApplicationConfigDto {
                 return null;
             }
             return new ExpertEnvironmentConfig(
-                    config.getEnvironmentName(),
+                    config.getEnvironment(),
                     config.getServiceAccountName(),
                     config.getPriority(),
                     config.isScheduledRestartEnabled(),
@@ -414,7 +414,7 @@ public final class ApplicationConfigDto {
 
         public ApplicationExpertConfig.EnvironmentConfig toDomain() {
             ApplicationExpertConfig.EnvironmentConfig config = new ApplicationExpertConfig.EnvironmentConfig();
-            config.setEnvironmentName(environmentName);
+            config.setEnvironment(environment);
             config.setServiceAccountName(serviceAccountName);
             config.setPriority(priority);
             config.setScheduledRestartEnabled(Boolean.TRUE.equals(scheduledRestartEnabled));

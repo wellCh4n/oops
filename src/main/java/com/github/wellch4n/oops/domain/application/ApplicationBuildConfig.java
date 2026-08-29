@@ -36,7 +36,7 @@ public class ApplicationBuildConfig extends BaseDomainObject {
 
     @Data
     public static class EnvironmentConfig {
-        private String environmentName;
+        private String environment;
         private String buildCommand;
     }
 }

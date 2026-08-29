@@ -23,16 +23,16 @@ public class NodeController {
     }
 
     @GetMapping
-    public Result<List<NodeStatusView>> getNodes(@RequestParam String env) {
-        return Result.success(nodeService.getNodes(env));
+    public Result<List<NodeStatusView>> getNodes(@RequestParam String environment) {
+        return Result.success(nodeService.getNodes(environment));
     }
 
     @PostMapping("/{name}/schedulable")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Boolean> setSchedulable(@PathVariable String name,
-                                          @RequestParam String env,
+                                          @RequestParam String environment,
                                           @RequestParam boolean schedulable) {
-        nodeService.setSchedulable(env, name, schedulable);
+        nodeService.setSchedulable(environment, name, schedulable);
         return Result.success(true);
     }
 }

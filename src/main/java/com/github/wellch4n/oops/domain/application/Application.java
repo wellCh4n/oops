@@ -176,7 +176,7 @@ public class Application extends BaseAggregateRoot {
 
     public ApplicationExpertConfig.EnvironmentConfig expertEnvironmentConfigOrDefault(String environmentName) {
         return expertEnvironmentConfigs().stream()
-                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironmentName()))
+                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironment()))
                 .findFirst()
                 .orElseGet(ApplicationExpertConfig.EnvironmentConfig::new);
     }
@@ -208,7 +208,7 @@ public class Application extends BaseAggregateRoot {
 
     public ApplicationRuntimeSpec.EnvironmentConfig runtimeEnvironmentConfigOrDefault(String environmentName) {
         return runtimeEnvironmentConfigs().stream()
-                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironmentName()))
+                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironment()))
                 .findFirst()
                 .orElseGet(ApplicationRuntimeSpec.EnvironmentConfig::new);
     }
