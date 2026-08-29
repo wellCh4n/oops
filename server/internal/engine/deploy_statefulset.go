@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -38,6 +37,12 @@ func processPriorityClass(ctx context.Context, cluster *k8s.Cluster, input *depl
 	if input.ExpertConfig != nil {
 		priority = input.ExpertConfig.Priority
 	}
+	return ensurePriorityClass(ctx, cluster, priority)
+}
+
+// ensurePriorityClass creates the tier's PriorityClass unless the cluster
+// already carries one, mirroring KubernetesPriorityClasses.ensure.
+func ensurePriorityClass(ctx context.Context, cluster *k8s.Cluster, priority *string) error {
 	name, value := priorityClassNameOf(priority)
 	if name == "" {
 		return nil
@@ -117,18 +122,8 @@ func processStatefulSet(ctx context.Context, cluster *k8s.Cluster, input *deploy
 	if runtimeSpec == nil {
 		runtimeSpec = &store.RuntimeEnvironmentConfig{}
 	}
-	requests, limits := corev1.ResourceList{}, corev1.ResourceList{}
-	setQuantity := func(list corev1.ResourceList, name corev1.ResourceName, value *string, suffix string) {
-		if value != nil && *value != "" {
-			list[name] = resource.MustParse(*value + suffix)
-		}
-	}
-	setQuantity(requests, corev1.ResourceCPU, runtimeSpec.CPURequest, "")
-	setQuantity(limits, corev1.ResourceCPU, runtimeSpec.CPULimit, "")
-	setQuantity(requests, corev1.ResourceMemory, runtimeSpec.MemoryRequest, "Mi")
-	setQuantity(limits, corev1.ResourceMemory, runtimeSpec.MemoryLimit, "Mi")
-	if len(requests) > 0 || len(limits) > 0 {
-		container.Resources = corev1.ResourceRequirements{Requests: requests, Limits: limits}
+	if resources, present := runtimeResourceRequirements(runtimeSpec); present {
+		container.Resources = resources
 	}
 
 	var applicationPort *int

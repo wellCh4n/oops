@@ -243,18 +243,32 @@ type runtimeSpecRequest struct {
 	HealthCheck        *store.HealthCheck               `json:"healthCheck"`
 }
 
+// storedRuntimeEnvironmentConfigs reads the configs a runtime-spec save is
+// about to replace, so the apply step can tell what actually changed.
+func (s *Server) storedRuntimeEnvironmentConfigs(ctx context.Context, namespace, applicationName string) []store.RuntimeEnvironmentConfig {
+	spec, err := s.store.FindRuntimeSpec(ctx, namespace, applicationName)
+	if err != nil || spec == nil {
+		return nil
+	}
+	return spec.EnvironmentConfigs
+}
+
 func (s *Server) updateRuntimeSpec(c *gin.Context) {
 	var request runtimeSpecRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
 	}
-	err := s.store.SaveRuntimeSpec(c.Request.Context(), c.Param("namespace"), c.Param("name"),
+	ctx := c.Request.Context()
+	namespace, applicationName := c.Param("namespace"), c.Param("name")
+	existingConfigs := s.storedRuntimeEnvironmentConfigs(ctx, namespace, applicationName)
+	err := s.store.SaveRuntimeSpec(ctx, namespace, applicationName,
 		request.EnvironmentConfigs, request.HealthCheck)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}
+	s.engine.ApplyRuntimeSpecNow(ctx, namespace, applicationName, request.EnvironmentConfigs, existingConfigs)
 	c.JSON(http.StatusOK, ok(true))
 }
 
@@ -264,10 +278,14 @@ func (s *Server) updateRuntimeSpecEnvironmentConfigs(c *gin.Context) {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
 	}
-	if err := s.store.SaveRuntimeSpecEnvironmentConfigs(c.Request.Context(), c.Param("namespace"), c.Param("name"), configs); err != nil {
+	ctx := c.Request.Context()
+	namespace, applicationName := c.Param("namespace"), c.Param("name")
+	existingConfigs := s.storedRuntimeEnvironmentConfigs(ctx, namespace, applicationName)
+	if err := s.store.SaveRuntimeSpecEnvironmentConfigs(ctx, namespace, applicationName, configs); err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}
+	s.engine.ApplyRuntimeSpecNow(ctx, namespace, applicationName, configs, existingConfigs)
 	c.JSON(http.StatusOK, ok(true))
 }
 
@@ -292,6 +310,16 @@ func (s *Server) updateServiceConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, ok(true))
 }
 
+// storedExpertEnvironmentConfigs reads the configs an expert-config save is
+// about to replace, so the apply step can tell what actually changed.
+func (s *Server) storedExpertEnvironmentConfigs(ctx context.Context, namespace, applicationName string) []store.ExpertEnvironmentConfig {
+	config, err := s.store.FindExpertConfig(ctx, namespace, applicationName)
+	if err != nil || config == nil {
+		return nil
+	}
+	return config.EnvironmentConfigs
+}
+
 func (s *Server) updateExpertConfig(c *gin.Context) {
 	var request struct {
 		EnvironmentConfigs []store.ExpertEnvironmentConfig `json:"environmentConfigs"`
@@ -300,10 +328,14 @@ func (s *Server) updateExpertConfig(c *gin.Context) {
 		c.JSON(http.StatusOK, fail("Invalid request"))
 		return
 	}
-	if err := s.store.SaveExpertConfig(c.Request.Context(), c.Param("namespace"), c.Param("name"), request.EnvironmentConfigs); err != nil {
+	ctx := c.Request.Context()
+	namespace, applicationName := c.Param("namespace"), c.Param("name")
+	existingConfigs := s.storedExpertEnvironmentConfigs(ctx, namespace, applicationName)
+	if err := s.store.SaveExpertConfig(ctx, namespace, applicationName, request.EnvironmentConfigs); err != nil {
 		c.JSON(http.StatusInternalServerError, fail(err.Error()))
 		return
 	}
+	s.engine.ApplyExpertConfigNow(ctx, namespace, applicationName, request.EnvironmentConfigs, existingConfigs)
 	c.JSON(http.StatusOK, ok(true))
 }
 
