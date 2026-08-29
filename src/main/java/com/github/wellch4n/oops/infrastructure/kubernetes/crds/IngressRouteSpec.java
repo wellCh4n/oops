@@ -1,0 +1,61 @@
+package com.github.wellch4n.oops.infrastructure.kubernetes.crds;
+
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * @author wellCh4n
+ * @date 2026/3/14
+ */
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class IngressRouteSpec {
+
+    private List<String> entryPoints;
+    private List<Route> routes;
+    private Tls tls;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Route {
+        private String match;
+        private String syntax;
+        private String kind;
+        private List<Service> services;
+        private List<Middleware> middlewares;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Middleware {
+        private String name;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Service {
+        private String name;
+        private int port;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Tls {
+        private String certResolver;
+        private String secretName;
+    }
+}

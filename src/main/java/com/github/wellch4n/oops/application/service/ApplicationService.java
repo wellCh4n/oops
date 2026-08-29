@@ -1,0 +1,766 @@
+package com.github.wellch4n.oops.application.service;
+
+import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
+import com.github.wellch4n.oops.application.port.ApplicationMetricsGateway;
+import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
+import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
+import com.github.wellch4n.oops.application.port.repository.DomainRepository;
+import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationEnvironment;
+import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationPriority;
+import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
+import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfigPolicy;
+import com.github.wellch4n.oops.domain.application.HealthCheckPolicy;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.routing.Domain;
+import com.github.wellch4n.oops.domain.routing.DomainPolicy;
+import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.shared.util.CronSchedule;
+import com.github.wellch4n.oops.application.dto.ApplicationEventView;
+import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
+import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
+import com.github.wellch4n.oops.application.dto.ApplicationDto;
+import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
+import com.github.wellch4n.oops.application.dto.ClusterDomainView;
+import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
+import com.github.wellch4n.oops.application.dto.Page;
+import java.time.Instant;
+import java.util.stream.Collectors;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+/**
+ * @author wellCh4n
+ * @date 2025/7/28
+ */
+
+@Slf4j
+@Service
+public class ApplicationService {
+
+    private static final String ENVIRONMENT_NOT_FOUND = "Environment not found: ";
+
+    private final ApplicationRepository applicationRepository;
+    private final EnvironmentRepository environmentRepository;
+    private final UserService userService;
+    private final ApplicationRuntimeGateway applicationRuntimeGateway;
+    private final ApplicationExpertConfigGateway applicationExpertConfigGateway;
+    private final ApplicationMetricsGateway applicationMetricsGateway;
+    private final ApplicationBuildConfigPolicy buildConfigPolicy;
+    private final HealthCheckPolicy healthCheckPolicy;
+    private final DomainPolicy domainPolicy;
+    private final DomainRepository domainRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public ApplicationService(ApplicationRepository applicationRepository,
+                              EnvironmentRepository environmentRepository,
+                              UserService userService,
+                              ApplicationRuntimeGateway applicationRuntimeGateway,
+                              ApplicationExpertConfigGateway applicationExpertConfigGateway,
+                              ApplicationMetricsGateway applicationMetricsGateway,
+                              ApplicationBuildConfigPolicy buildConfigPolicy,
+                              HealthCheckPolicy healthCheckPolicy,
+                              DomainPolicy domainPolicy,
+                              DomainRepository domainRepository,
+                              PasswordEncoder passwordEncoder) {
+        this.applicationRepository = applicationRepository;
+        this.environmentRepository = environmentRepository;
+        this.userService = userService;
+        this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.applicationExpertConfigGateway = applicationExpertConfigGateway;
+        this.applicationMetricsGateway = applicationMetricsGateway;
+        this.buildConfigPolicy = buildConfigPolicy;
+        this.healthCheckPolicy = healthCheckPolicy;
+        this.domainPolicy = domainPolicy;
+        this.domainRepository = domainRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public Application getApplication(String namespace, String name) {
+        return applicationRepository.findAggregate(namespace, name);
+    }
+
+    public ApplicationDto getApplicationResponse(String namespace, String name) {
+        return toApplicationResponse(applicationRepository.findAggregate(namespace, name));
+    }
+
+    public Page<ApplicationDto> getApplications(String namespace, String keyword, int page, int size, String currentUserId, boolean ownerOnly) {
+        String ownerId = ownerOnly ? currentUserId : null;
+        var applicationPage = applicationRepository.findPageByNamespaceAndKeywordOrderedByOwner(
+                namespace, StringUtils.defaultIfBlank(keyword, ""), currentUserId, ownerId, page, size);
+        return new Page<>(
+                applicationPage.totalElements(),
+                toApplicationResponses(namespace, applicationPage.content()),
+                applicationPage.size(),
+                applicationPage.totalPages()
+        );
+    }
+
+    public List<ApplicationDto> searchApplications(String keyword, int size) {
+        List<Application> applications = applicationRepository.findByNameContainingIgnoreCase(
+                StringUtils.defaultIfBlank(keyword, ""));
+        List<Application> limitedApplications = applications.stream().limit(size).toList();
+        Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(limitedApplications);
+        Set<String> ownerIds = limitedApplications.stream()
+                .map(Application::getOwner)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
+        return limitedApplications.stream()
+                .map(application -> ApplicationDto.from(application,
+                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        List.of(),
+                        Map.of(),
+                        sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
+                .toList();
+    }
+
+    @Transactional
+    public String createApplication(String namespace, ApplicationConfigDto.Profile request, String creatorUserId) {
+        Application application = request.toDomain();
+        application.placeInNamespace(namespace);
+        application.setOwner(normalizeOwner(creatorUserId));
+        try {
+            application = applicationRepository.saveAndFlush(application);
+        } catch (DataIntegrityViolationException exception) {
+            throw new BizException("Application name already exists");
+        }
+        return application.getId();
+    }
+
+    @Transactional
+    public Boolean updateApplication(String namespace, String name, ApplicationConfigDto.Profile request) {
+        Application exist = requireAggregate(namespace, name);
+        exist.changeProfile(request.description(), normalizeOwner(request.owner()), request.icon());
+        exist.changeCollaborators(normalizeCollaborators(request.collaborators(), exist.getOwner()));
+        applicationRepository.saveAggregate(exist);
+        return true;
+    }
+
+    public Boolean deleteApplication(String namespace, String name, String currentUserId) {
+        Application exist = applicationRepository.findAggregate(namespace, name);
+        if (exist == null) {
+            throw new BizException("Application not found");
+        }
+
+        boolean isAdmin = userService.findById(currentUserId)
+                .filter(user -> user.getRole() == UserRole.ADMIN)
+                .isPresent();
+        if (!isAdmin && !currentUserId.equals(exist.getOwner())) {
+            throw new BizException("Permission denied");
+        }
+
+        List<ApplicationEnvironment> environments = exist.getEnvironments() != null
+                ? exist.getEnvironments()
+                : Collections.emptyList();
+        for (ApplicationEnvironment env : environments) {
+            Environment environment = environmentRepository.findFirstByName(env.getEnvironmentName());
+            if (environment == null) {
+                continue;
+            }
+            try {
+                applicationRuntimeGateway.deleteWorkload(environment, namespace, name);
+            } catch (Exception exception) {
+                log.error("Failed to delete K8s resources for app {}/{} in env {}: {}", namespace, name, env.getEnvironmentName(), exception.getMessage());
+                throw new BizException("Application deletion failed");
+            }
+        }
+
+        applicationRepository.deleteAggregate(namespace, name);
+
+        return true;
+    }
+
+    private String normalizeOwner(String owner) {
+        if (StringUtils.isBlank(owner)) {
+            return null;
+        }
+        Optional<User> user = userService.findById(owner);
+        if (user.isEmpty()) {
+            throw new BizException("Owner user not found");
+        }
+        return owner;
+    }
+
+    private List<String> normalizeCollaborators(List<String> collaborators, String owner) {
+        if (collaborators == null || collaborators.isEmpty()) {
+            return List.of();
+        }
+        List<String> distinct = collaborators.stream()
+                .filter(StringUtils::isNotBlank)
+                .filter(userId -> !userId.equals(owner))
+                .distinct()
+                .toList();
+        if (distinct.isEmpty()) {
+            return List.of();
+        }
+        Map<String, String> usernameMap = userService.getUsernameMapByIds(distinct);
+        List<String> missing = distinct.stream()
+                .filter(userId -> !usernameMap.containsKey(userId))
+                .toList();
+        if (!missing.isEmpty()) {
+            throw new BizException("Collaborator user not found: " + String.join(", ", missing));
+        }
+        return distinct;
+    }
+
+    private List<ApplicationDto> toApplicationResponses(String namespace, List<Application> applications) {
+        Set<String> ownerIds = applications.stream()
+                .map(Application::getOwner)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Map<String, String> ownerNameMap = userService.getUsernameMapByIds(ownerIds);
+        Map<String, ApplicationSourceType> sourceTypeMap = getApplicationSourceTypeMap(namespace, applications);
+        return applications.stream()
+                .map(application -> ApplicationDto.from(application,
+                        StringUtils.isNotBlank(application.getOwner()) ? ownerNameMap.get(application.getOwner()) : null,
+                        List.of(),
+                        Map.of(),
+                        sourceTypeMap.getOrDefault(application.getNamespace() + "/" + application.getName(), ApplicationSourceType.GIT)))
+                .toList();
+    }
+
+    private ApplicationDto toApplicationResponse(Application application) {
+        if (application == null) {
+            return null;
+        }
+        String ownerName = null;
+        if (StringUtils.isNotBlank(application.getOwner())) {
+            ownerName = userService.findById(application.getOwner())
+                    .map(User::getUsername)
+                    .orElse(null);
+        }
+        List<String> collaboratorIds = application.collaboratorUserIds();
+        Map<String, String> collaboratorNames = collaboratorIds.isEmpty()
+                ? Map.of()
+                : userService.getUsernameMapByIds(collaboratorIds);
+        return ApplicationDto.from(application, ownerName, collaboratorIds, collaboratorNames, application.sourceType());
+    }
+
+    private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(String namespace, List<Application> applications) {
+        if (StringUtils.isBlank(namespace) || applications == null || applications.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> applicationNames = applications.stream()
+                .map(Application::getName)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        return applicationRepository.findBuildConfigs(namespace, applicationNames).stream()
+                .collect(Collectors.toMap(
+                        config -> config.getNamespace() + "/" + config.getApplicationName(),
+                        config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
+                        (left, right) -> right
+                ));
+    }
+
+    private Map<String, ApplicationSourceType> getApplicationSourceTypeMap(List<Application> applications) {
+        if (applications == null || applications.isEmpty()) {
+            return Map.of();
+        }
+        Set<String> namespaces = applications.stream()
+                .map(Application::getNamespace)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        Set<String> applicationNames = applications.stream()
+                .map(Application::getName)
+                .filter(StringUtils::isNotBlank)
+                .collect(Collectors.toSet());
+        return applicationRepository.findBuildConfigs(namespaces, applicationNames).stream()
+                .collect(Collectors.toMap(
+                        config -> config.getNamespace() + "/" + config.getApplicationName(),
+                        config -> config.getSourceType() != null ? config.getSourceType() : ApplicationSourceType.GIT,
+                        (left, right) -> right
+                ));
+    }
+
+    @Transactional
+    public Boolean updateApplicationBuildConfig(String namespace, String name, ApplicationConfigDto.BuildConfig request) {
+        Application application = requireAggregate(namespace, name);
+        application.updateBuildConfig(request.toDomain(), buildConfigPolicy);
+        applicationRepository.saveAggregate(application);
+        return true;
+    }
+
+    public ApplicationConfigDto.BuildConfig getApplicationBuildConfig(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        ApplicationBuildConfig buildConfig = application != null ? application.getBuildConfig() : null;
+        if (buildConfig != null && buildConfig.getSourceType() == null) {
+            buildConfig.setSourceType(ApplicationSourceType.GIT);
+        }
+        return ApplicationConfigDto.BuildConfig.from(buildConfig);
+    }
+
+    public List<ApplicationConfigDto.BuildEnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        return application != null
+                ? application.buildEnvironmentConfigs().stream().map(ApplicationConfigDto.BuildEnvironmentConfig::from).toList()
+                : Collections.emptyList();
+    }
+
+    public List<ApplicationConfigDto.RuntimeEnvironmentConfig> getApplicationRuntimeSpecEnvironmentConfigs(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        return application != null
+                ? application.runtimeEnvironmentConfigs().stream().map(ApplicationConfigDto.RuntimeEnvironmentConfig::from).toList()
+                : Collections.emptyList();
+    }
+
+    public ApplicationConfigDto.RuntimeSpec getApplicationRuntimeSpec(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        if (application == null) {
+            return ApplicationConfigDto.RuntimeSpec.from(defaultRuntimeSpec(namespace, name));
+        }
+        return ApplicationConfigDto.RuntimeSpec.from(application.runtimeSpecOrDefault(healthCheckPolicy));
+    }
+
+    @Transactional
+    public Boolean updateApplicationBuildEnvironmentConfigs(
+            String namespace,
+            String appName,
+            List<ApplicationConfigDto.BuildEnvironmentConfig> configs
+    ) {
+        Application application = requireAggregate(namespace, appName);
+        application.updateBuildEnvironmentConfigs(toBuildEnvironmentConfigDomains(configs));
+        applicationRepository.saveAggregate(application);
+        return true;
+    }
+
+    public Boolean updateApplicationRuntimeSpecEnvironmentConfigs(
+            String namespace,
+            String appName,
+            List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs
+    ) {
+        Application application = requireAggregate(namespace, appName);
+        List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs = application.runtimeEnvironmentConfigs();
+        application.updateRuntimeEnvironmentConfigs(toRuntimeEnvironmentConfigDomains(configs), healthCheckPolicy);
+        applicationRepository.saveAggregate(application);
+        applyRuntimeSpecEnvironmentConfigUpdates(
+                namespace, appName, application.runtimeEnvironmentConfigs(), existingConfigs);
+        return true;
+    }
+
+    public Boolean updateApplicationRuntimeSpec(String namespace, String appName, ApplicationConfigDto.RuntimeSpec request) {
+        Application application = requireAggregate(namespace, appName);
+        List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs = application.runtimeEnvironmentConfigs();
+        application.updateRuntimeSpec(request.toDomain(), healthCheckPolicy);
+        applicationRepository.saveAggregate(application);
+
+        applyRuntimeSpecEnvironmentConfigUpdates(
+                namespace, appName, application.runtimeEnvironmentConfigs(), existingConfigs);
+
+        return true;
+    }
+
+    private void applyRuntimeSpecEnvironmentConfigUpdates(String namespace,
+                                                          String appName,
+                                                          List<ApplicationRuntimeSpec.EnvironmentConfig> configs,
+                                                          List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs) {
+        for (ApplicationRuntimeSpec.EnvironmentConfig config : configs) {
+            ApplicationRuntimeSpec.EnvironmentConfig existing = existingConfigs.stream()
+                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .findFirst().orElse(null);
+
+            boolean replicasChanged = config.getReplicas() != null
+                    && !config.getReplicas().equals(existing != null ? existing.getReplicas() : null);
+            boolean resourceChanged = !StringUtils.equals(config.getCpuRequest(), existing != null ? existing.getCpuRequest() : null)
+                    || !StringUtils.equals(config.getCpuLimit(), existing != null ? existing.getCpuLimit() : null)
+                    || !StringUtils.equals(config.getMemoryRequest(), existing != null ? existing.getMemoryRequest() : null)
+                    || !StringUtils.equals(config.getMemoryLimit(), existing != null ? existing.getMemoryLimit() : null);
+
+            if (!replicasChanged && !resourceChanged) continue;
+
+            try {
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                if (environment == null) continue;
+                applicationRuntimeGateway.applyRuntimeSpec(environment, namespace, appName, config);
+            } catch (Exception exception) {
+                log.warn("Failed to apply runtime spec for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
+            }
+        }
+    }
+
+    public ApplicationConfigDto.ExpertConfig getApplicationExpertConfig(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        if (application == null) {
+            return ApplicationConfigDto.ExpertConfig.from(defaultExpertConfig(namespace, name));
+        }
+        return ApplicationConfigDto.ExpertConfig.from(application.expertConfigOrDefault());
+    }
+
+    public Boolean updateApplicationExpertConfig(String namespace, String appName, ApplicationConfigDto.ExpertConfig request) {
+        Application application = requireAggregate(namespace, appName);
+        List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs = application.expertEnvironmentConfigs();
+        List<ApplicationExpertConfig.EnvironmentConfig> newConfigs = request.environmentConfigs() != null
+                ? request.environmentConfigs().stream().map(ApplicationConfigDto.ExpertEnvironmentConfig::toDomain).toList()
+                : Collections.emptyList();
+        validateScheduledRestartCrons(newConfigs);
+        application.updateExpertEnvironmentConfigs(newConfigs);
+        applicationRepository.saveAggregate(application);
+        applyExpertConfigUpdates(namespace, appName, application.expertEnvironmentConfigs(), existingConfigs);
+        return true;
+    }
+
+    private void validateScheduledRestartCrons(List<ApplicationExpertConfig.EnvironmentConfig> configs) {
+        for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
+            if (config.isScheduledRestartEnabled() && !CronSchedule.isValid(config.getScheduledRestartCron())) {
+                throw new BizException("Invalid cron expression: " + config.getScheduledRestartCron());
+            }
+        }
+    }
+
+    private void applyExpertConfigUpdates(String namespace,
+                                          String appName,
+                                          List<ApplicationExpertConfig.EnvironmentConfig> configs,
+                                          List<ApplicationExpertConfig.EnvironmentConfig> existingConfigs) {
+        for (ApplicationExpertConfig.EnvironmentConfig config : configs) {
+            ApplicationExpertConfig.EnvironmentConfig existing = existingConfigs.stream()
+                    .filter(existingConfig -> existingConfig.getEnvironmentName().equals(config.getEnvironmentName()))
+                    .findFirst().orElse(null);
+
+            boolean serviceAccountChanged = !StringUtils.equals(
+                    config.getServiceAccountName(), existing != null ? existing.getServiceAccountName() : null);
+            boolean priorityChanged = ApplicationPriority.fromValue(config.getPriority())
+                    != ApplicationPriority.fromValue(existing != null ? existing.getPriority() : null);
+            boolean nodeNamesChanged = !Objects.equals(
+                    normalizeNodeNames(config.getNodeNames()),
+                    normalizeNodeNames(existing != null ? existing.getNodeNames() : null));
+            if (!serviceAccountChanged && !priorityChanged && !nodeNamesChanged) continue;
+
+            try {
+                Environment environment = environmentRepository.findFirstByName(config.getEnvironmentName());
+                if (environment == null) continue;
+                applicationExpertConfigGateway.applyExpertConfig(environment, namespace, appName, config);
+            } catch (Exception exception) {
+                log.warn("Failed to apply expert config for app={} env={}: {}", appName, config.getEnvironmentName(), exception.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Normalizes a node-name list for change detection: null and empty both collapse to an empty list
+     * (both mean "no node constraint"), and ordering is ignored so reordering the same set of nodes
+     * is not treated as a change.
+     */
+    private List<String> normalizeNodeNames(List<String> nodeNames) {
+        if (nodeNames == null) {
+            return Collections.emptyList();
+        }
+        return nodeNames.stream()
+                .filter(StringUtils::isNotBlank)
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private ApplicationExpertConfig defaultExpertConfig(String namespace, String name) {
+        ApplicationExpertConfig expertConfig = new ApplicationExpertConfig();
+        expertConfig.setNamespace(namespace);
+        expertConfig.setApplicationName(name);
+        expertConfig.setEnvironmentConfigs(Collections.emptyList());
+        return expertConfig;
+    }
+
+    public List<ApplicationResourceView> getApplicationResources(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationExpertConfigGateway.getApplicationResources(environment, namespace, name);
+    }
+
+    public List<PodMetricSnapshot> getApplicationMetrics(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationMetricsGateway.getCurrentMetrics(environment, namespace, name);
+    }
+
+    public List<ApplicationConfigDto.EnvironmentBinding> getApplicationEnvironments(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        List<ApplicationEnvironment> all = application != null && application.getEnvironments() != null
+                ? application.getEnvironments()
+                : Collections.emptyList();
+        Set<String> existingEnvNames = environmentRepository.findAll().stream()
+                .map(Environment::getName)
+                .collect(Collectors.toSet());
+        return all.stream()
+                .filter(binding -> existingEnvNames.contains(binding.getEnvironmentName()))
+                .map(ApplicationConfigDto.EnvironmentBinding::from)
+                .toList();
+    }
+
+    @Transactional
+    public Boolean updateApplicationEnvironments(String namespace, String appName, List<ApplicationConfigDto.EnvironmentBinding> configs) {
+        Application application = requireAggregate(namespace, appName);
+        application.bindEnvironments(toEnvironmentDomains(configs));
+        applicationRepository.saveAggregate(application);
+        return true;
+    }
+
+    public ApplicationConfigDto.ServiceConfig getApplicationServiceConfig(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        return application != null ? ApplicationConfigDto.ServiceConfig.from(application.getServiceConfig()) : null;
+    }
+
+    public ServiceHostConflictView findHostConflictApplication(String namespace, String name, String host) {
+        if (host == null || host.isBlank()) {
+            return null;
+        }
+        List<ApplicationServiceConfig> conflicts = applicationRepository
+                .findServiceConfigsByHostLikeExcludingSelf("\"" + host + "\"", namespace, name);
+        for (ApplicationServiceConfig conflict : conflicts) {
+            if (conflict.getEnvironmentConfigs() == null) {
+                continue;
+            }
+            for (ApplicationServiceConfig.EnvironmentConfig c : conflict.getEnvironmentConfigs()) {
+                if (host.equals(c.getHost())) {
+                    return new ServiceHostConflictView(
+                            conflict.getNamespace(),
+                            conflict.getApplicationName(),
+                            c.getEnvironmentName());
+                }
+            }
+        }
+        return null;
+    }
+
+    @Transactional
+    public Boolean updateApplicationServiceConfig(String namespace, String name, ApplicationConfigDto.ServiceConfig request) {
+        if (request.environmentConfigs() != null) {
+            List<Domain> managedDomains = domainRepository.findAll();
+            for (ApplicationConfigDto.ServiceEnvironmentConfig envConfig : request.environmentConfigs()) {
+                String host = envConfig.host();
+                if (host == null || host.isBlank()) {
+                    continue;
+                }
+                domainPolicy.validateHost(host);
+                requireDomainAllowsEnvironment(host, envConfig.environmentName(), managedDomains);
+                ServiceHostConflictView conflict = findHostConflictApplication(namespace, name, host);
+                if (conflict != null) {
+                    throw new BizException("Host " + host + " is already used by environment "
+                            + conflict.environmentName() + " / namespace " + conflict.namespace()
+                            + " / application " + conflict.applicationName());
+                }
+            }
+        }
+
+        Application application = requireAggregate(namespace, name);
+        ApplicationServiceConfig serviceConfig = request.toDomain();
+        serviceConfig.setEnvironmentConfigs(
+                resolveBasicAuth(application.getServiceConfig(), request.environmentConfigs()));
+        application.updateServiceConfig(serviceConfig);
+        applicationRepository.saveAggregate(application);
+        return true;
+    }
+
+    /**
+     * A host may only be used in the environment its governing managed domain is bound to. Hosts
+     * under no managed domain stay allowed — they simply get no certificate configuration, which
+     * covers externally-managed or self-signed setups.
+     */
+    private void requireDomainAllowsEnvironment(String host, String environmentName, List<Domain> managedDomains) {
+        Domain governing = domainPolicy.findBestMatch(host, managedDomains, Domain::getHost).orElse(null);
+        if (governing == null) {
+            return;
+        }
+        if (!governing.allowsEnvironment(environmentName)) {
+            throw new BizException("Domain " + governing.getHost() + " is not available in environment "
+                    + environmentName + (governing.getEnvironmentName() != null
+                    ? " (its environment is " + governing.getEnvironmentName() + ")" : ""));
+        }
+    }
+
+    /**
+     * Turns the submitted basic auth credentials into what gets stored: a BCrypt hash, never the
+     * plaintext. A blank password on a host that already has one means "unchanged" — the UI cannot
+     * echo back a hash, so it sends an empty field and we carry the stored hash forward.
+     */
+    private List<ApplicationServiceConfig.EnvironmentConfig> resolveBasicAuth(
+            ApplicationServiceConfig existingConfig,
+            List<ApplicationConfigDto.ServiceEnvironmentConfig> requestedConfigs) {
+        if (requestedConfigs == null) {
+            return null;
+        }
+
+        Map<String, String> storedHashes = new HashMap<>();
+        if (existingConfig != null && existingConfig.getEnvironmentConfigs() != null) {
+            for (ApplicationServiceConfig.EnvironmentConfig stored : existingConfig.getEnvironmentConfigs()) {
+                if (StringUtils.isNotBlank(stored.getBasicAuthPasswordHash())) {
+                    storedHashes.put(basicAuthKey(stored.getEnvironmentName(), stored.getHost()),
+                            stored.getBasicAuthPasswordHash());
+                }
+            }
+        }
+
+        return requestedConfigs.stream().map(requested -> {
+            ApplicationServiceConfig.EnvironmentConfig config = requested.toDomain();
+            if (!Boolean.TRUE.equals(requested.basicAuthEnabled())) {
+                // Left null rather than false so the host stores nothing at all about basic auth.
+                config.setBasicAuthEnabled(null);
+                config.setBasicAuthUsername(null);
+                config.setBasicAuthPasswordHash(null);
+                return config;
+            }
+
+            if (StringUtils.isBlank(requested.basicAuthUsername())) {
+                throw new BizException("Basic auth username is required for host " + requested.host());
+            }
+            if (StringUtils.isNotBlank(requested.basicAuthPassword())) {
+                config.setBasicAuthPasswordHash(passwordEncoder.encode(requested.basicAuthPassword()));
+                return config;
+            }
+
+            String storedHash = storedHashes.get(basicAuthKey(requested.environmentName(), requested.host()));
+            if (StringUtils.isBlank(storedHash)) {
+                throw new BizException("Basic auth password is required for host " + requested.host());
+            }
+            config.setBasicAuthPasswordHash(storedHash);
+            return config;
+        }).toList();
+    }
+
+    private static String basicAuthKey(String environmentName, String host) {
+        return environmentName + "\n" + host;
+    }
+
+    public List<ApplicationPodStatusView> getApplicationStatus(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationRuntimeGateway.getPodStatuses(environment, namespace, name);
+    }
+
+    public List<ApplicationEventView> getApplicationEvents(String namespace,
+                                                           String name,
+                                                           String environmentName,
+                                                           Instant since,
+                                                           Integer limit) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        int effectiveLimit = limit == null ? 200 : Math.max(1, Math.min(limit, 500));
+        return applicationRuntimeGateway.getEvents(environment, namespace, name, since, effectiveLimit);
+    }
+
+    public String getCurrentImage(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationRuntimeGateway.findCurrentImage(environment, namespace, name);
+    }
+
+    public SseEmitter watchApplicationStatus(String namespace, String name, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return applicationRuntimeGateway.watchPodStatuses(environment, namespace, name);
+    }
+
+    public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        applicationRuntimeGateway.restartPod(environment, namespace, podName);
+        return true;
+    }
+
+    public ClusterDomainView getClusterDomain(String namespace, String name, String environmentName) {
+        try {
+            Environment environment = environmentRepository.findFirstByName(environmentName);
+            if (environment == null) {
+                throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+            }
+
+            String internalDomain = applicationRuntimeGateway.findInternalServiceDomain(environment, namespace, name);
+
+            Application application = applicationRepository.findAggregate(namespace, name);
+            List<String> externalDomains = application != null
+                    ? application.serviceConfigOrDefault().getEnvironmentConfigs(environmentName).stream()
+                            .filter(config -> config.getHost() != null && !config.getHost().isBlank())
+                            .map(config -> {
+                                String scheme = Boolean.TRUE.equals(config.getHttps()) ? "https" : "http";
+                                return scheme + "://" + config.getHost();
+                            })
+                            .toList()
+                    : null;
+
+            return new ClusterDomainView(internalDomain, externalDomains);
+        } catch (Exception exception) {
+            log.error("Failed to get cluster domain: {}", exception.getMessage(), exception);
+        }
+        return null;
+    }
+
+    private Application requireAggregate(String namespace, String name) {
+        Application application = applicationRepository.findAggregate(namespace, name);
+        if (application == null) {
+            throw new BizException("Application not found");
+        }
+        return application;
+    }
+
+    private List<ApplicationBuildConfig.EnvironmentConfig> toBuildEnvironmentConfigDomains(
+            List<ApplicationConfigDto.BuildEnvironmentConfig> configs
+    ) {
+        if (configs == null) {
+            return null;
+        }
+        return configs.stream()
+                .map(ApplicationConfigDto.BuildEnvironmentConfig::toDomain)
+                .toList();
+    }
+
+    private List<ApplicationRuntimeSpec.EnvironmentConfig> toRuntimeEnvironmentConfigDomains(
+            List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs
+    ) {
+        if (configs == null) {
+            return null;
+        }
+        return configs.stream()
+                .map(ApplicationConfigDto.RuntimeEnvironmentConfig::toDomain)
+                .toList();
+    }
+
+    private List<ApplicationEnvironment> toEnvironmentDomains(List<ApplicationConfigDto.EnvironmentBinding> configs) {
+        if (configs == null) {
+            return Collections.emptyList();
+        }
+        return configs.stream()
+                .map(ApplicationConfigDto.EnvironmentBinding::toDomain)
+                .toList();
+    }
+
+    private ApplicationRuntimeSpec defaultRuntimeSpec(String namespace, String name) {
+        ApplicationRuntimeSpec runtimeSpec = new ApplicationRuntimeSpec();
+        runtimeSpec.setNamespace(namespace);
+        runtimeSpec.setApplicationName(name);
+        runtimeSpec.setEnvironmentConfigs(Collections.emptyList());
+        runtimeSpec.setHealthCheck(new ApplicationRuntimeSpec.HealthCheck());
+        return runtimeSpec;
+    }
+}

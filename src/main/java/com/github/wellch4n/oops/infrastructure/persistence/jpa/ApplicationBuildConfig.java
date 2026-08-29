@@ -1,0 +1,133 @@
+package com.github.wellch4n.oops.infrastructure.persistence.jpa;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.domain.application.SourceConfig;
+import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.DockerFileType;
+import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.SourceConfigConverter;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Converter;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Lob;
+import java.util.List;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@Entity
+@EqualsAndHashCode(callSuper = true)
+public class ApplicationBuildConfig extends BaseDataObject {
+
+    private String namespace;
+
+    private String applicationName;
+
+    @Enumerated(EnumType.STRING)
+    private ApplicationSourceType sourceType;
+
+    @Column(name = "source_config", columnDefinition = "TEXT")
+    @Convert(converter = SourceConfigConverter.class)
+    private SourceConfig sourceConfig;
+
+    @Lob
+    @Column(name = "docker_file_config")
+    @Convert(converter = DockerFileConfigConverter.class)
+    private DockerFileConfig dockerFileConfig;
+
+    private String buildImage;
+
+    @Column(name = "environment_configs", columnDefinition = "TEXT")
+    @Convert(converter = EnvironmentConfigsConverter.class)
+    private List<EnvironmentConfig> environmentConfigs;
+
+    @Data
+    public static class DockerFileConfig {
+
+        private DockerFileType type;
+
+        private String path;
+
+        private String content;
+    }
+
+    @Data
+    public static class EnvironmentConfig {
+
+        private String environmentName;
+
+        private String buildCommand;
+    }
+
+    @Converter
+    public static class DockerFileConfigConverter implements AttributeConverter<DockerFileConfig, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        @Override
+        public String convertToDatabaseColumn(DockerFileConfig attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize dockerFileConfig", e);
+            }
+        }
+
+        @Override
+        public DockerFileConfig convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, DockerFileConfig.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize dockerFileConfig", e);
+            }
+        }
+    }
+
+    @Converter
+    public static class EnvironmentConfigsConverter implements AttributeConverter<List<EnvironmentConfig>, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        private static final TypeReference<List<EnvironmentConfig>> TYPE = new TypeReference<>() {};
+
+        @Override
+        public String convertToDatabaseColumn(List<EnvironmentConfig> attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize environmentConfigs", e);
+            }
+        }
+
+        @Override
+        public List<EnvironmentConfig> convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, TYPE);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize environmentConfigs", e);
+            }
+        }
+    }
+}

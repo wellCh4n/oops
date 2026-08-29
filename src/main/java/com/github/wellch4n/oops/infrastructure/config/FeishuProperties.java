@@ -1,0 +1,23 @@
+package com.github.wellch4n.oops.infrastructure.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
+
+@Data
+@Configuration
+@ConfigurationProperties(prefix = "oops.feishu")
+public class FeishuProperties {
+    private boolean enabled = false;
+    private String appId;
+    private String appSecret;
+    private String redirectUri;
+    private String callbackFrontUrl;
+    /**
+     * Whether a resignation in Feishu should disable the matching OOPS account.
+     *
+     * <p>Off by default: it takes people's access away on a signal from outside OOPS, so like resource alerts it
+     * waits to be asked for rather than starting on its own after an upgrade.
+     */
+    private boolean syncUserDeactivation = false;
+}

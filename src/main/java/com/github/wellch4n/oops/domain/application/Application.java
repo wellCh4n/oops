@@ -1,0 +1,274 @@
+package com.github.wellch4n.oops.domain.application;
+
+import com.github.wellch4n.oops.domain.shared.BaseAggregateRoot;
+import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.shared.exception.BizException;
+import java.util.Collections;
+import java.util.List;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class Application extends BaseAggregateRoot {
+    private static final int ICON_MAX_CODE_POINTS = 8;
+
+    private String name;
+    private String description;
+
+    /**
+     * An emoji standing in as the application's visual mark. When blank the UI falls back to the
+     * color block it derives from the application identity.
+     */
+    private String icon;
+
+    private String namespace;
+    private String owner;
+    private ApplicationBuildConfig buildConfig;
+    private ApplicationRuntimeSpec runtimeSpec;
+    private ApplicationServiceConfig serviceConfig;
+    private ApplicationExpertConfig expertConfig;
+    private List<ApplicationEnvironment> environments;
+    private List<ApplicationCollaborator> collaborators;
+
+    public void placeInNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
+    public void changeProfile(String description, String owner, String icon) {
+        this.description = description;
+        this.owner = owner;
+        changeIcon(icon);
+    }
+
+    /**
+     * Accepts the picked emoji, or clears the icon when blank. The UI only offers a curated set,
+     * but the OpenAPI surface takes whatever a caller sends, so keep out anything that is plainly
+     * not an emoji: ASCII text and sequences long enough to be a label rather than a mark.
+     */
+    public void changeIcon(String icon) {
+        if (icon == null || icon.isBlank()) {
+            this.icon = null;
+            return;
+        }
+        String trimmed = icon.trim();
+        if (trimmed.codePointCount(0, trimmed.length()) > ICON_MAX_CODE_POINTS) {
+            throw new BizException("Application icon must be a single emoji");
+        }
+        if (trimmed.codePoints().anyMatch(codePoint -> codePoint < 0x80)) {
+            throw new BizException("Application icon must be a single emoji");
+        }
+        this.icon = trimmed;
+    }
+
+    public ApplicationSourceType sourceType() {
+        return buildConfig != null && buildConfig.getSourceType() != null
+                ? buildConfig.getSourceType()
+                : ApplicationSourceType.GIT;
+    }
+
+    public void updateBuildConfig(
+            ApplicationBuildConfig request,
+            ApplicationBuildConfigPolicy buildConfigPolicy
+    ) {
+        ApplicationBuildConfig target = ensureBuildConfig();
+        var dockerFileConfig = request.getDockerFileConfig();
+        ApplicationSourceType sourceType = buildConfigPolicy.normalizeSourceType(request.getSourceType());
+        buildConfigPolicy.validate(
+                sourceType,
+                request.repository(),
+                dockerFileConfig != null ? dockerFileConfig.getType() : null,
+                dockerFileConfig != null ? dockerFileConfig.getContent() : null);
+        target.setSourceType(sourceType);
+        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, request.repository()));
+        target.setDockerFileConfig(dockerFileConfig);
+        target.setBuildImage(request.getBuildImage());
+        target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+    }
+
+    public void updateBuildEnvironmentConfigs(List<ApplicationBuildConfig.EnvironmentConfig> configs) {
+        ensureBuildConfig().setEnvironmentConfigs(configs);
+    }
+
+    public void updateRuntimeSpec(
+            ApplicationRuntimeSpec request,
+            HealthCheckPolicy healthCheckPolicy
+    ) {
+        ApplicationRuntimeSpec target = ensureRuntimeSpec();
+        target.setEnvironmentConfigs(request.getEnvironmentConfigs() != null
+                ? request.getEnvironmentConfigs()
+                : Collections.emptyList());
+        target.setHealthCheck(normalizeHealthCheck(request.getHealthCheck(), healthCheckPolicy));
+    }
+
+    public void updateRuntimeEnvironmentConfigs(
+            List<ApplicationRuntimeSpec.EnvironmentConfig> configs,
+            HealthCheckPolicy healthCheckPolicy
+    ) {
+        ApplicationRuntimeSpec target = ensureRuntimeSpec();
+        ApplicationRuntimeSpec request = new ApplicationRuntimeSpec();
+        request.setEnvironmentConfigs(configs);
+        request.setHealthCheck(target.getHealthCheck());
+        updateRuntimeSpec(request, healthCheckPolicy);
+    }
+
+    public void bindEnvironments(List<ApplicationEnvironment> configs) {
+        this.environments = configs == null ? Collections.emptyList() : configs;
+        this.environments.forEach(config -> {
+            config.setId(null);
+            config.setNamespace(namespace);
+            config.setApplicationName(name);
+        });
+    }
+
+    public void changeCollaborators(List<String> userIds) {
+        List<String> normalized = userIds == null ? Collections.emptyList() : userIds.stream()
+                .filter(userId -> userId != null && !userId.isBlank())
+                .filter(userId -> !userId.equals(owner))
+                .distinct()
+                .toList();
+        this.collaborators = normalized.stream().map(userId -> {
+            ApplicationCollaborator collaborator = new ApplicationCollaborator();
+            collaborator.setNamespace(namespace);
+            collaborator.setApplicationName(name);
+            collaborator.setUserId(userId);
+            return collaborator;
+        }).toList();
+    }
+
+    public List<String> collaboratorUserIds() {
+        if (collaborators == null) {
+            return Collections.emptyList();
+        }
+        return collaborators.stream()
+                .map(ApplicationCollaborator::getUserId)
+                .filter(userId -> userId != null && !userId.isBlank())
+                .toList();
+    }
+
+    public void updateServiceConfig(ApplicationServiceConfig request) {
+        ApplicationServiceConfig target = ensureServiceConfig();
+        target.setPort(request.getPort());
+        target.setInternalPorts(request.getInternalPorts());
+        target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+    }
+
+    public void updateExpertEnvironmentConfigs(List<ApplicationExpertConfig.EnvironmentConfig> configs) {
+        ensureExpertConfig().setEnvironmentConfigs(configs != null ? configs : Collections.emptyList());
+    }
+
+    public List<ApplicationExpertConfig.EnvironmentConfig> expertEnvironmentConfigs() {
+        if (expertConfig == null || expertConfig.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return expertConfig.getEnvironmentConfigs();
+    }
+
+    public ApplicationExpertConfig expertConfigOrDefault() {
+        ApplicationExpertConfig target = expertConfig != null ? expertConfig : new ApplicationExpertConfig();
+        target.setNamespace(namespace);
+        target.setApplicationName(name);
+        if (target.getEnvironmentConfigs() == null) {
+            target.setEnvironmentConfigs(Collections.emptyList());
+        }
+        return target;
+    }
+
+    public ApplicationExpertConfig.EnvironmentConfig expertEnvironmentConfigOrDefault(String environmentName) {
+        return expertEnvironmentConfigs().stream()
+                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironmentName()))
+                .findFirst()
+                .orElseGet(ApplicationExpertConfig.EnvironmentConfig::new);
+    }
+
+    public List<ApplicationBuildConfig.EnvironmentConfig> buildEnvironmentConfigs() {
+        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return buildConfig.getEnvironmentConfigs();
+    }
+
+    public List<ApplicationRuntimeSpec.EnvironmentConfig> runtimeEnvironmentConfigs() {
+        if (runtimeSpec == null || runtimeSpec.getEnvironmentConfigs() == null) {
+            return Collections.emptyList();
+        }
+        return runtimeSpec.getEnvironmentConfigs();
+    }
+
+    public ApplicationRuntimeSpec runtimeSpecOrDefault(HealthCheckPolicy healthCheckPolicy) {
+        ApplicationRuntimeSpec target = runtimeSpec != null ? runtimeSpec : new ApplicationRuntimeSpec();
+        target.setNamespace(namespace);
+        target.setApplicationName(name);
+        if (target.getEnvironmentConfigs() == null) {
+            target.setEnvironmentConfigs(Collections.emptyList());
+        }
+        target.setHealthCheck(normalizeHealthCheck(target.getHealthCheck(), healthCheckPolicy));
+        return target;
+    }
+
+    public ApplicationRuntimeSpec.EnvironmentConfig runtimeEnvironmentConfigOrDefault(String environmentName) {
+        return runtimeEnvironmentConfigs().stream()
+                .filter(config -> environmentName != null && environmentName.equals(config.getEnvironmentName()))
+                .findFirst()
+                .orElseGet(ApplicationRuntimeSpec.EnvironmentConfig::new);
+    }
+
+    public ApplicationRuntimeSpec.HealthCheck healthCheckOrDefault() {
+        return runtimeSpec != null && runtimeSpec.getHealthCheck() != null
+                ? runtimeSpec.getHealthCheck()
+                : new ApplicationRuntimeSpec.HealthCheck();
+    }
+
+    public ApplicationServiceConfig serviceConfigOrDefault() {
+        ApplicationServiceConfig target = serviceConfig != null ? serviceConfig : new ApplicationServiceConfig();
+        target.setNamespace(namespace);
+        target.setApplicationName(name);
+        if (target.getEnvironmentConfigs() == null) {
+            target.setEnvironmentConfigs(Collections.emptyList());
+        }
+        return target;
+    }
+
+    private ApplicationBuildConfig ensureBuildConfig() {
+        if (buildConfig == null) {
+            buildConfig = new ApplicationBuildConfig();
+            buildConfig.setNamespace(namespace);
+            buildConfig.setApplicationName(name);
+        }
+        return buildConfig;
+    }
+
+    private ApplicationRuntimeSpec ensureRuntimeSpec() {
+        if (runtimeSpec == null) {
+            runtimeSpec = new ApplicationRuntimeSpec();
+            runtimeSpec.setNamespace(namespace);
+            runtimeSpec.setApplicationName(name);
+        }
+        return runtimeSpec;
+    }
+
+    private ApplicationServiceConfig ensureServiceConfig() {
+        if (serviceConfig == null) {
+            serviceConfig = new ApplicationServiceConfig();
+            serviceConfig.setNamespace(namespace);
+            serviceConfig.setApplicationName(name);
+        }
+        return serviceConfig;
+    }
+
+    private ApplicationExpertConfig ensureExpertConfig() {
+        if (expertConfig == null) {
+            expertConfig = new ApplicationExpertConfig();
+            expertConfig.setNamespace(namespace);
+            expertConfig.setApplicationName(name);
+        }
+        return expertConfig;
+    }
+
+    private ApplicationRuntimeSpec.HealthCheck normalizeHealthCheck(
+            ApplicationRuntimeSpec.HealthCheck healthCheck,
+            HealthCheckPolicy healthCheckPolicy
+    ) {
+        return healthCheckPolicy.normalize(healthCheck);
+    }
+}

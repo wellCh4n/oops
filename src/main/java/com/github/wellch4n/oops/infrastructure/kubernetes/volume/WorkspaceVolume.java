@@ -1,0 +1,40 @@
+package com.github.wellch4n.oops.infrastructure.kubernetes.volume;
+
+import io.fabric8.kubernetes.api.model.*;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.Getter;
+
+/**
+ * @author wellCh4n
+ * @date 2025/7/7
+ */
+public class WorkspaceVolume {
+
+    @Getter
+    private final List<Volume> volumes = new ArrayList<>();
+
+    @Getter
+    private final List<VolumeMount> volumeMounts = new ArrayList<>();
+
+    public WorkspaceVolume() {
+        Volume volume = new VolumeBuilder()
+                .withName("workspace")
+                .withNewEmptyDir()
+                .endEmptyDir()
+                .build();
+        this.volumes.add(volume);
+
+        VolumeMount volumeMount = new VolumeMountBuilder()
+                .withName("workspace")
+                .withMountPath("/workspace")
+                .build();
+        this.volumeMounts.add(volumeMount);
+
+//        V1Volume volume = new V1Volume().name("workspace").emptyDir(new V1EmptyDirVolumeSource());
+//        this.volumes.add(volume);
+//
+//        V1VolumeMount volumeMount = new V1VolumeMount().name("workspace").mountPath("/workspace");
+//        this.volumeMounts.add(volumeMount);
+    }
+}

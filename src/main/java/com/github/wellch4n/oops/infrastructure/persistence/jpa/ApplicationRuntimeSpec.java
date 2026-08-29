@@ -1,0 +1,143 @@
+package com.github.wellch4n.oops.infrastructure.persistence.jpa;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
+import jakarta.persistence.Converter;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+import java.util.List;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@Entity
+@Table(name = "application_runtime_spec")
+@EqualsAndHashCode(callSuper = true)
+public class ApplicationRuntimeSpec extends BaseDataObject {
+
+    private String namespace;
+
+    private String applicationName;
+
+    @Column(name = "environment_configs", columnDefinition = "TEXT")
+    @Convert(converter = EnvironmentConfigsConverter.class)
+    private List<EnvironmentConfig> environmentConfigs;
+
+    @Lob
+    @Column(name = "health_check")
+    @Convert(converter = HealthCheckConverter.class)
+    private HealthCheck healthCheck;
+
+    @Data
+    public static class EnvironmentConfig {
+        private String environmentName;
+
+        private String cpuRequest;
+        private String cpuLimit;
+
+        private String memoryRequest;
+        private String memoryLimit;
+
+        private Integer replicas;
+    }
+
+    @Data
+    public static class HealthCheck {
+        private Probe liveness = new Probe();
+
+        private Probe readiness = new Probe();
+
+        @Data
+        public static class Probe {
+            public static final int DEFAULT_INITIAL_DELAY_SECONDS = 30;
+            public static final int DEFAULT_PERIOD_SECONDS = 10;
+            public static final int DEFAULT_TIMEOUT_SECONDS = 3;
+            public static final int DEFAULT_FAILURE_THRESHOLD = 3;
+            public static final String DEFAULT_PATH = "/";
+
+            private Boolean enabled = false;
+
+            private String path = DEFAULT_PATH;
+
+            private Integer initialDelaySeconds = DEFAULT_INITIAL_DELAY_SECONDS;
+
+            private Integer periodSeconds = DEFAULT_PERIOD_SECONDS;
+
+            private Integer timeoutSeconds = DEFAULT_TIMEOUT_SECONDS;
+
+            private Integer failureThreshold = DEFAULT_FAILURE_THRESHOLD;
+        }
+    }
+
+    @Converter
+    public static class EnvironmentConfigsConverter implements AttributeConverter<List<EnvironmentConfig>, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        private static final TypeReference<List<EnvironmentConfig>> TYPE = new TypeReference<>() {};
+
+        @Override
+        public String convertToDatabaseColumn(List<EnvironmentConfig> attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize environmentConfigs", e);
+            }
+        }
+
+        @Override
+        public List<EnvironmentConfig> convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, TYPE);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize environmentConfigs", e);
+            }
+        }
+    }
+
+    @Converter
+    public static class HealthCheckConverter implements AttributeConverter<HealthCheck, String> {
+
+        private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+                // A JSON blob column outlives the shape that wrote it: rows written by an older
+                // version can carry keys this class no longer has, and those must not break reads.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        @Override
+        public String convertToDatabaseColumn(HealthCheck attribute) {
+            if (attribute == null) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.writeValueAsString(attribute);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to serialize healthCheck", e);
+            }
+        }
+
+        @Override
+        public HealthCheck convertToEntityAttribute(String dbData) {
+            if (dbData == null || dbData.isBlank()) {
+                return null;
+            }
+            try {
+                return OBJECT_MAPPER.readValue(dbData, HealthCheck.class);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Failed to deserialize healthCheck", e);
+            }
+        }
+    }
+}

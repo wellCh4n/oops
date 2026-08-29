@@ -1,0 +1,110 @@
+package com.github.wellch4n.oops.interfaces.rest;
+
+import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.application.dto.ChangePasswordCommand;
+import com.github.wellch4n.oops.application.dto.CreateUserCommand;
+import com.github.wellch4n.oops.application.dto.Page;
+import com.github.wellch4n.oops.application.dto.UpdateMyProfileCommand;
+import com.github.wellch4n.oops.application.dto.UpdateUserCommand;
+import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
+import com.github.wellch4n.oops.interfaces.dto.Result;
+import com.github.wellch4n.oops.application.service.UserService;
+import java.util.List;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public Result<List<User>> listUsers() {
+        return Result.success(userService.listUsers());
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Page<User>> listUsersPage(@RequestParam(required = false) String keyword,
+                                            @RequestParam(defaultValue = "1") int page,
+                                            @RequestParam(defaultValue = "10") int size) {
+        return Result.success(userService.listUsers(keyword, page, size));
+    }
+
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public Result<User> me(Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return userService.findById(principal.userId())
+                .map(Result::success)
+                .orElse(Result.failure("User not found"));
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Boolean> createUser(@RequestBody CreateUserCommand request) {
+        if (request.username() == null || request.username().isBlank()) {
+            return Result.failure("Username is required");
+        }
+        if (request.email() == null || request.email().isBlank()) {
+            return Result.failure("Email is required");
+        }
+        userService.createUser(request.username(), request.email(), request.password(), UserRole.USER);
+        return Result.success(true);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Boolean> updateUser(@PathVariable String id, @RequestBody UpdateUserCommand request) {
+        userService.updateUser(id, request.role(), request.email(), request.password(), request.enabled());
+        return Result.success(true);
+    }
+
+    @PutMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Boolean> updateMyProfile(@RequestBody UpdateMyProfileCommand request,
+                                           Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        userService.updateMyProfile(principal.userId(), request.email());
+        return Result.success(true);
+    }
+
+    @PutMapping("/me/password")
+    @PreAuthorize("isAuthenticated()")
+    public Result<Boolean> changeMyPassword(@RequestBody ChangePasswordCommand request,
+                                            Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        userService.changeMyPassword(principal.userId(), request.oldPassword(), request.newPassword());
+        return Result.success(true);
+    }
+
+    @PostMapping("/me/access-token/reset")
+    @PreAuthorize("isAuthenticated()")
+    public Result<String> resetMyAccessToken(Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        return Result.success(userService.resetMyAccessToken(principal.userId()));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Boolean> deleteUser(@PathVariable String id) {
+        userService.deleteUser(id);
+        return Result.success(true);
+    }
+}

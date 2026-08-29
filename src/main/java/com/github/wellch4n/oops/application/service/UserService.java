@@ -1,0 +1,163 @@
+package com.github.wellch4n.oops.application.service;
+
+import com.github.wellch4n.oops.application.dto.Page;
+import com.github.wellch4n.oops.application.port.repository.PageResult;
+import com.github.wellch4n.oops.application.port.repository.UserRepository;
+import com.github.wellch4n.oops.domain.identity.User;
+import com.github.wellch4n.oops.domain.shared.Operator;
+import com.github.wellch4n.oops.domain.shared.UserRole;
+import com.github.wellch4n.oops.shared.exception.BizException;
+import com.github.wellch4n.oops.shared.util.NanoIdUtils;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+@Slf4j
+@Service
+public class UserService {
+
+    private static final String ACCESS_TOKEN_PREFIX = "sk-oops-";
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public Optional<User> findById(String id) {
+        return userRepository.findById(id);
+    }
+
+    public Operator findOperatorById(String userId) {
+        return userRepository.findById(userId)
+                .map(user -> new Operator(user.getId(), user.getRole(), !Boolean.FALSE.equals(user.getEnabled())))
+                .orElse(null);
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    public Map<String, String> getUsernameMapByIds(Collection<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(User::getId, User::getUsername, (left, right) -> left));
+    }
+
+    public Optional<User> findByUsernameOrEmail(String identifier) {
+        Optional<User> user = userRepository.findByUsername(identifier);
+        if (user.isPresent()) return user;
+        return userRepository.findByEmail(identifier);
+    }
+
+    public boolean checkPassword(User user, String rawPassword) {
+        return passwordEncoder.matches(rawPassword, user.getPassword());
+    }
+
+    public User createUser(String username, String email, String rawPassword, UserRole role) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        if (rawPassword != null && !rawPassword.isBlank()) {
+            user.setPassword(passwordEncoder.encode(rawPassword));
+        }
+        user.setRole(role);
+        user.setEnabled(true);
+        return userRepository.save(user);
+    }
+
+    public List<User> listUsers() {
+        return userRepository.findAll();
+    }
+
+    public Page<User> listUsers(String keyword, int page, int size) {
+        PageResult<User> result = userRepository.findPage(keyword, page, size);
+        return new Page<>(result.totalElements(), result.content(), result.size(), result.totalPages());
+    }
+
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
+    }
+
+    public void updateMyProfile(String userId, String email) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        user.setEmail(email == null || email.isBlank() ? null : email.trim());
+        userRepository.save(user);
+    }
+
+    public void changeMyPassword(String userId, String oldPassword, String newPassword) {
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new BizException("New password is required");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        if (!checkPassword(user, oldPassword)) {
+            throw new BizException("Old password is incorrect");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    public void updateUser(String id, UserRole role, String email, String rawPassword, Boolean enabled) {
+        userRepository.findById(id).ifPresent(user -> {
+            user.setRole(role);
+            user.setEmail(email);
+            if (rawPassword != null && !rawPassword.isBlank()) {
+                user.setPassword(passwordEncoder.encode(rawPassword));
+            }
+            if (enabled != null) {
+                user.setEnabled(enabled);
+            }
+            userRepository.save(user);
+        });
+    }
+
+    public boolean hasAdmin() {
+        return userRepository.existsByRole(UserRole.ADMIN);
+    }
+
+    /**
+     * Disables an account without deleting it, for callers acting on an external signal such as a resignation.
+     *
+     * <p>Refuses to disable the last enabled admin: an external directory has no idea it is holding the only key to
+     * this installation, and locking every admin out is far worse than leaving one account to be turned off by hand.
+     *
+     * @return whether this call is what changed the account, so the caller can stay quiet about repeat deliveries
+     */
+    public boolean deactivateUser(String id) {
+        User user = userRepository.findById(id).orElse(null);
+        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
+            return false;
+        }
+        if (user.getRole() == UserRole.ADMIN && userRepository.countEnabledByRole(UserRole.ADMIN) <= 1) {
+            log.warn("Refusing to disable user {} — it is the last enabled admin", id);
+            return false;
+        }
+        user.setEnabled(false);
+        userRepository.save(user);
+        return true;
+    }
+
+    public String resetMyAccessToken(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BizException("User not found"));
+        String token = ACCESS_TOKEN_PREFIX + NanoIdUtils.generate();
+        user.setAccessToken(token);
+        userRepository.save(user);
+        return token;
+    }
+}

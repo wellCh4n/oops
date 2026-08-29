@@ -97,9 +97,9 @@ docker compose -f docker/docker-compose.local.yml up -d --build
 ### Run from source
 
 ```bash
-# Backend (Go)
+# Backend
 cp config/application.yml.example config/application.yml
-cd server && go run ./cmd/oops -config ../config/application.yml -listen :8080
+./mvnw spring-boot:run
 
 # Frontend
 cd web && pnpm install && pnpm dev

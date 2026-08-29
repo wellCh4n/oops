@@ -1,0 +1,373 @@
+package com.github.wellch4n.oops.infrastructure.kubernetes.ide;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.application.port.IdeGateway;
+import com.github.wellch4n.oops.infrastructure.config.IdeProperties;
+import com.github.wellch4n.oops.infrastructure.config.IngressProperties;
+import com.github.wellch4n.oops.infrastructure.config.PipelineImageProperties;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.CloneContainer;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.CloneStrategyParam;
+import com.github.wellch4n.oops.infrastructure.kubernetes.container.clone.GitCloneParam;
+import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRoute;
+import com.github.wellch4n.oops.infrastructure.kubernetes.crds.IngressRouteSpec;
+import com.github.wellch4n.oops.domain.application.Application;
+import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
+import com.github.wellch4n.oops.domain.environment.Environment;
+import com.github.wellch4n.oops.domain.shared.OopsTypes;
+import com.github.wellch4n.oops.application.dto.IdeConfigDto;
+import com.github.wellch4n.oops.application.dto.CreateIdeCommand;
+import com.github.wellch4n.oops.application.dto.IdeDto;
+import com.github.wellch4n.oops.shared.util.NanoIdUtils;
+import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClientPool;
+import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
+import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
+import io.fabric8.kubernetes.api.model.*;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import io.fabric8.kubernetes.api.model.apps.StatefulSetBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.base.CustomResourceDefinitionContext;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StreamUtils;
+
+@Slf4j
+@Component
+@ConditionalOnBean(IdeProperties.class)
+public class KubernetesIdeGateway implements IdeGateway {
+
+    private static final String IDE_CONFIG_EXTENSIONS_KEY = "extensions";
+
+    private final PipelineImageProperties pipelineImageConfig;
+    private final IdeProperties ideConfig;
+    private final IngressProperties ingressConfig;
+    private final KubernetesClientPool clientPool;
+
+    public KubernetesIdeGateway(PipelineImageProperties pipelineImageConfig,
+                                IdeProperties ideConfig,
+                                IngressProperties ingressConfig,
+                                KubernetesClientPool clientPool) {
+        this.pipelineImageConfig = pipelineImageConfig;
+        this.ideConfig = ideConfig;
+        this.ingressConfig = ingressConfig;
+        this.clientPool = clientPool;
+    }
+
+    @Override
+    public IdeConfigDto getDefaultIDEConfig(Environment environment) {
+        IdeConfigDto fileDefaults = loadFileDefaults();
+
+        if (environment == null) {
+            return fileDefaults;
+        }
+
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        ConfigMap configMap = client.configMaps()
+                .inNamespace(environment.getWorkNamespace())
+                .withName("ide-config")
+                .get();
+
+        if (configMap != null && configMap.getData() != null
+                && configMap.getData().containsKey("settings.json")
+                && configMap.getData().containsKey(".env")
+                && configMap.getData().containsKey(IDE_CONFIG_EXTENSIONS_KEY)) {
+            return new IdeConfigDto(
+                    configMap.getData().get("settings.json"),
+                    configMap.getData().get(".env"),
+                    configMap.getData().get(IDE_CONFIG_EXTENSIONS_KEY));
+        }
+
+        Map<String, String> data = new HashMap<>();
+        if (configMap != null && configMap.getData() != null) {
+            data.putAll(configMap.getData());
+        }
+        data.put("settings.json", fileDefaults.getSettings());
+        data.put(".env", fileDefaults.getEnv());
+        data.put(IDE_CONFIG_EXTENSIONS_KEY, fileDefaults.getExtensions());
+
+        ConfigMap newConfigMap = new ConfigMapBuilder()
+                .withNewMetadata().withName("ide-config").withNamespace(environment.getWorkNamespace()).endMetadata()
+                .withData(data)
+                .build();
+        client.configMaps().inNamespace(environment.getWorkNamespace()).resource(newConfigMap).serverSideApply();
+
+        return fileDefaults;
+    }
+
+    private IdeConfigDto loadFileDefaults() {
+        try {
+            String raw = StreamUtils.copyToString(
+                    new ClassPathResource("ide-default-config.json").getInputStream(),
+                    StandardCharsets.UTF_8);
+            JsonNode root = new ObjectMapper().readTree(raw);
+            return new IdeConfigDto(root.path("settings").toString(), root.path("env").asText(""), root.path(IDE_CONFIG_EXTENSIONS_KEY).asText(""));
+        } catch (IOException e) {
+            log.warn("Failed to load ide-default-config.json, using empty defaults", e);
+            return new IdeConfigDto("{}", "", "");
+        }
+    }
+
+    @Override
+    public String create(String namespace,
+                         String applicationName,
+                         Environment environment,
+                         Application application,
+                         ApplicationBuildConfig applicationBuildConfig,
+                         CreateIdeCommand request) {
+        String ideId = NanoIdUtils.generate();
+
+        Map<String, String> labels = Map.of(
+                "oops.type", OopsTypes.IDE.name(),
+                "oops.app", application.getName(),
+                "oops.ide.id", ideId
+        );
+
+        Map<String, String> annotations = new HashMap<>();
+        if (request.getName() != null && !request.getName().isBlank()) {
+            annotations.put("oops.ide.name", request.getName());
+        }
+
+        WorkspaceVolume workspaceVolume = new WorkspaceVolume();
+        SecretVolume secretVolume = new SecretVolume();
+
+        CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam(applicationBuildConfig, request.getBranch()));
+        clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
+
+        String name = applicationName + "-ide-" + ideId;
+
+        String ideSettings = (request.getSettings() != null && !request.getSettings().isBlank())
+                ? request.getSettings().replaceAll("\\s+", " ").trim()
+                : getDefaultIDEConfig(environment).getSettings();
+        List<EnvVar> envVars = new ArrayList<>(request.getEnv() != null ? request.getEnv().lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank() && !line.startsWith("#") && line.contains("="))
+                .map(line -> {
+                    int idx = line.indexOf('=');
+                    return new EnvVarBuilder().withName(line.substring(0, idx).trim()).withValue(line.substring(idx + 1).trim()).build();
+                }).toList() : List.of());
+        envVars.add(new EnvVarBuilder().withName("EXTENSIONS_GALLERY").withValue("{\"serviceUrl\":\"https://marketplace.visualstudio.com/_apis/public/gallery\",\"itemUrl\":\"https://marketplace.visualstudio.com/items\"}").build());
+        List<String> installCmds = request.getExtensions() != null ? request.getExtensions().lines()
+                .map(String::trim)
+                .filter(line -> !line.isBlank())
+                .map(ext -> "code-server --install-extension " + ext)
+                .toList() : List.of();
+
+        List<String> startupCmds = new ArrayList<>();
+        startupCmds.add("cp -r /workspace /home/coder/" + applicationName);
+        startupCmds.add("mkdir -p /home/coder/.local/share/code-server/User");
+        startupCmds.add("echo '" + ideSettings + "' > /home/coder/.local/share/code-server/User/settings.json");
+        startupCmds.addAll(installCmds);
+        startupCmds.add("code-server --bind-addr 0.0.0.0:1114 --auth none --disable-workspace-trust"
+                + " --proxy-domain '{{port}}-{{host}}'" + " /home/coder/" + applicationName);
+
+        var client = clientPool.get(environment.getKubernetesApiServer());
+        StatefulSet statefulSet = new StatefulSetBuilder()
+                    .withNewMetadata().withName(name).withLabels(labels).withAnnotations(annotations).endMetadata()
+                    .withNewSpec()
+                        .withServiceName(name)
+                        .withReplicas(1)
+                        .withNewSelector()
+                            .addToMatchLabels(labels)
+                        .endSelector()
+                        .withNewTemplate()
+                            .withNewMetadata().withLabels(labels).endMetadata()
+                            .withNewSpec()
+                                .addToInitContainers(clone)
+                                .addNewContainer()
+                                    .withName(application.getName())
+                                    .withImage(ideConfig.getImage())
+                                    .withVolumeMounts(workspaceVolume.getVolumeMounts())
+                                    .withEnv(envVars)
+                                    .addNewPort().withContainerPort(1114).endPort()
+                                    .withCommand("sh", "-c", String.join(" && ", startupCmds))
+                                    .withNewReadinessProbe()
+                                        .withNewHttpGet()
+                                            .withPath("/")
+                                            .withNewPort(1114)
+                                        .endHttpGet()
+                                        .withInitialDelaySeconds(5)
+                                        .withPeriodSeconds(5)
+                                        .withFailureThreshold(60)
+                                    .endReadinessProbe()
+                                .endContainer()
+                                .addAllToVolumes(workspaceVolume.getVolumes())
+                                .addAllToVolumes(secretVolume.getVolumes())
+                            .endSpec()
+                        .endTemplate()
+                    .endSpec()
+                    .build();
+
+            // 1. 创建 StatefulSet，获取 UID 用于 ownerReference
+            StatefulSet created = client.apps().statefulSets()
+                    .inNamespace(environment.getWorkNamespace())
+                    .resource(statefulSet)
+                    .serverSideApply();
+
+            OwnerReference ownerRef = new OwnerReferenceBuilder()
+                    .withApiVersion("apps/v1")
+                    .withKind("StatefulSet")
+                    .withName(name)
+                    .withUid(created.getMetadata().getUid())
+                    .withController(true)
+                    .withBlockOwnerDeletion(true)
+                    .build();
+
+            // 2. 创建 Service，失败则回滚 StatefulSet
+            Service service = new ServiceBuilder()
+                    .withNewMetadata()
+                        .withName(name)
+                        .withLabels(labels)
+                        .withOwnerReferences(ownerRef)
+                    .endMetadata()
+                    .withNewSpec()
+                        .addNewPort()
+                            .withPort(80)
+                            .withTargetPort(new IntOrString(1114))
+                        .endPort()
+                        .withSelector(labels)
+                    .endSpec()
+                    .build();
+
+            try {
+                client.services()
+                        .inNamespace(environment.getWorkNamespace())
+                        .resource(service)
+                        .serverSideApply();
+            } catch (Exception e) {
+                log.error("Failed to create IDE Service, rolling back StatefulSet: {}", name, e);
+                client.apps().statefulSets().inNamespace(environment.getWorkNamespace()).withName(name).delete();
+                throw new RuntimeException("IDE creation failed at Service, rolled back", e);
+            }
+
+            // 3. 创建 IngressRoute，失败则回滚 StatefulSet（Service 通过 ownerReference 级联删除）
+            try {
+                createIngressRoute(client, environment.getWorkNamespace(), name, ownerRef);
+            } catch (Exception e) {
+                log.error("Failed to create IDE IngressRoute, rolling back StatefulSet: {}", name, e);
+                client.apps().statefulSets().inNamespace(environment.getWorkNamespace()).withName(name).delete();
+                throw new RuntimeException("IDE creation failed at IngressRoute, rolled back", e);
+            }
+
+        return ideId;
+    }
+
+    private CloneStrategyParam buildCloneStrategyParam(ApplicationBuildConfig applicationBuildConfig, String branch) {
+        return new GitCloneParam(
+                pipelineImageConfig.getClone(),
+                applicationBuildConfig != null ? applicationBuildConfig.repository() : null,
+                branch,
+                false
+        );
+    }
+
+    /**
+     * 只需删除 StatefulSet。Service 和 IngressRoute 通过 ownerReference 由 K8s GC 级联删除。
+     */
+    @Override
+    public void delete(Environment environment, String name) {
+        if (environment == null) {
+            return;
+        }
+
+        clientPool.get(environment.getKubernetesApiServer())
+                .apps().statefulSets()
+                .inNamespace(environment.getWorkNamespace())
+                .withName(name)
+                .delete();
+    }
+
+    @Override
+    public List<IdeDto> list(Environment environment, String applicationName) {
+        if (environment == null) {
+            return List.of();
+        }
+
+        return clientPool.get(environment.getKubernetesApiServer())
+                .apps().statefulSets()
+                .inNamespace(environment.getWorkNamespace())
+                .withLabel("oops.type", OopsTypes.IDE.name())
+                .withLabel("oops.app", applicationName)
+                .list()
+                .getItems()
+                .stream()
+                .sorted((left, right) -> {
+                    String leftTimestamp = left.getMetadata().getCreationTimestamp();
+                    String rightTimestamp = right.getMetadata().getCreationTimestamp();
+                    if (leftTimestamp == null && rightTimestamp == null) return 0;
+                    if (leftTimestamp == null) return 1;
+                    if (rightTimestamp == null) return -1;
+                    return rightTimestamp.compareTo(leftTimestamp);
+                })
+                .map(statefulSet -> {
+                    String id = statefulSet.getMetadata().getName();
+                    String annotationName = statefulSet.getMetadata().getAnnotations() != null
+                            ? statefulSet.getMetadata().getAnnotations().get("oops.ide.name") : null;
+                    String name = (annotationName != null && !annotationName.isBlank()) ? annotationName : id;
+                    String host = id + "." + ideConfig.getDomain();
+                    String createdAt = statefulSet.getMetadata().getCreationTimestamp();
+                    boolean ready = statefulSet.getStatus() != null
+                            && statefulSet.getStatus().getReadyReplicas() != null
+                            && statefulSet.getStatus().getReadyReplicas() > 0;
+                    return new IdeDto(id, name, host, ideConfig.isHttps(), createdAt, ready);
+                })
+                .toList();
+    }
+
+    private void createIngressRoute(KubernetesClient client, String namespace, String name,
+                                    OwnerReference ownerRef) {
+        var ingressRouteCrd = client.apiextensions().v1().customResourceDefinitions()
+                .withName(CustomResourceDefinitionContext.fromCustomResourceType(IngressRoute.class).getName())
+                .get();
+
+        if (ingressRouteCrd == null) {
+            log.warn("Could not find IngressRoute CRD, skipping ingress route creation for IDE: {}", name);
+            return;
+        }
+
+        String host = name + "." + ideConfig.getDomain();
+        String matchRule = "Host(`" + host + "`) || HostRegexp(`^[0-9]+-" + host.replace(".", "\\.") + "$`)";
+
+        List<IngressRouteSpec.Middleware> middlewares = ideConfig.getMiddlewares().stream()
+                .map(middlewareName -> IngressRouteSpec.Middleware.builder().name(middlewareName).build())
+                .toList();
+
+        IngressRouteSpec.IngressRouteSpecBuilder specBuilder = IngressRouteSpec.builder()
+                .entryPoints(List.of(ideConfig.isHttps() ? "websecure" : "web"))
+                .routes(List.of(
+                        IngressRouteSpec.Route.builder()
+                                .match(matchRule)
+                                .syntax("v3")
+                                .kind("Rule")
+                                .services(List.of(IngressRouteSpec.Service.builder().name(name).port(80).build()))
+                                .middlewares(middlewares)
+                                .build()
+                ));
+        if (ideConfig.isHttps()) {
+            specBuilder.tls(IngressRouteSpec.Tls.builder().certResolver(ingressConfig.getCertResolver()).build());
+        }
+
+        IngressRoute ingressRoute = new IngressRoute();
+        ingressRoute.setMetadata(new ObjectMetaBuilder()
+                .withName(name)
+                .withNamespace(namespace)
+                .withOwnerReferences(ownerRef)
+                .build()
+        );
+        ingressRoute.setSpec(specBuilder.build());
+
+        client.resources(IngressRoute.class)
+                .inNamespace(namespace)
+                .resource(ingressRoute)
+                .serverSideApply();
+    }
+
+
+}
