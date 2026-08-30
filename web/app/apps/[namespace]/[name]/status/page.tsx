@@ -323,14 +323,16 @@ function ApplicationStatusContent() {
               </div>
             )}
             {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
-              <div className="grid grid-cols-[auto_auto_auto] gap-x-2 gap-y-1 items-center w-fit text-sm text-muted-foreground">
+              <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-1 items-center w-fit text-sm text-muted-foreground">
                 {clusterDomain.externalDomains.map((domain, index) => (
                   <Fragment key={domain}>
                     <span className="font-medium text-foreground whitespace-nowrap">{index === 0 ? t("apps.status.externalDomain") : ""}</span>
-                    <Copyable value={domain} maxLength={Infinity} />
-                    <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                      <ExternalLink className="size-4" />
-                    </a>
+                    <span className="flex items-center gap-1.5">
+                      <Copyable value={domain} maxLength={Infinity} />
+                      <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                        <ExternalLink className="size-4" />
+                      </a>
+                    </span>
                   </Fragment>
                 ))}
               </div>
