@@ -5,6 +5,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationPriority;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesConfigMapGateway;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesNodeAffinities;
+import com.github.wellch4n.oops.infrastructure.kubernetes.pod.RolloutUnsticker;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
@@ -175,6 +176,10 @@ public class StatefulSetProcessor implements DeployProcessor {
                 .withController(true)
                 .withBlockOwnerDeletion(true)
                 .build());
+
+        // A pod a previous release left broken would block this rollout forever under OrderedReady;
+        // must run after the patch so replacements are built from the template just applied.
+        RolloutUnsticker.deleteRolloutBlockingPods(ctx.getClient(), namespace, ctx.getLabels());
     }
 
     /**

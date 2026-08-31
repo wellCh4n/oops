@@ -119,6 +119,79 @@ def test_deploy_reaches_succeeded(client, namespace, application, environment):
     assert indexes == sorted(indexes), f"pipeline status went backwards: {seen}"
 
 
+def put_inline_dockerfile(client, namespace, application, environment, content):
+    """Full-rewrite of the build config with an inline USER Dockerfile.
+
+    The PUT replaces the whole config, so everything `configure_for_build` set
+    has to travel again alongside the Dockerfile.
+    """
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "GIT",
+        "repository": SOURCE_REPOSITORY,
+        "dockerFileConfig": {"type": "USER", "content": content},
+        "environmentConfigs": [{"environment": environment, "buildCommand": ""}],
+    })
+
+
+def wait_for_terminal(client, namespace, application, pipeline_id, description):
+    def finished():
+        pipeline = client.get_pipeline(namespace, application, pipeline_id)
+        return pipeline if pipeline["status"] in TERMINAL_STATUSES else None
+
+    return wait_until(finished, timeout=DEPLOY_TIMEOUT, description=description)
+
+
+def test_deploy_recovers_from_a_crash_looping_previous_release(
+        client, namespace, application, environment):
+    """A release whose pod never becomes ready must not block the next one.
+
+    Under the default OrderedReady policy the StatefulSet controller refuses to
+    replace a pod that is not running-and-ready, so the crash-looping pod a
+    failed release leaves behind would pin every later template change forever —
+    the manual workaround used to be scaling to zero and back. The deploy path
+    deletes such pods right after applying the new template; this test locks
+    that behaviour end to end against a real controller.
+    """
+    configure_for_build(client, namespace, application, environment)
+
+    # A container whose only process exits immediately: CrashLoopBackOff within
+    # seconds of the rollout starting, and a pod that can never become ready.
+    put_inline_dockerfile(client, namespace, application, environment,
+                          'FROM alpine:3.20\nCMD ["sh", "-c", "exit 1"]')
+    bad = client.deploy(namespace, application, environment,
+                        strategy=git_strategy())
+    pipeline = wait_for_terminal(client, namespace, application, bad,
+                                 "the crash-looping release to fail")
+    assert pipeline["status"] == "ERROR", (
+        f"the broken release should fail its rollout, got {pipeline['status']}")
+
+    # Same base image, a process that stays up. Without the deploy-time unstick
+    # this pipeline hangs against the crash-looping pod until the rollout timeout.
+    put_inline_dockerfile(client, namespace, application, environment,
+                          'FROM alpine:3.20\n'
+                          'CMD ["sh", "-c", "while true; do sleep 30; done"]')
+    good = client.deploy(namespace, application, environment,
+                         strategy=git_strategy())
+    pipeline = wait_for_terminal(client, namespace, application, good,
+                                 "the follow-up release to converge")
+    assert pipeline["status"] == "SUCCEEDED", (
+        f"a release after a crash-looping one should still converge, got "
+        f"{pipeline['status']} ({pipeline.get('message')})")
+
+    # The original symptom was the pod silently keeping the old image while the
+    # StatefulSet claimed the new one. Artifact tags are pipeline ids, so the
+    # replacement is checkable directly.
+    pods = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/status"
+        f"?environment={environment}").data
+    images = [container["image"]
+              for pod in pods for container in pod.get("containers", [])]
+    assert any(image.endswith(f":{good}") for image in images), (
+        f"no pod is running the new artifact (tag :{good}); images: {images}")
+
+
 def test_in_flight_pipeline_blocks_a_second_deploy(client, namespace, application,
                                                    environment):
     """The duplicate-deploy guard: one active pipeline per application."""
