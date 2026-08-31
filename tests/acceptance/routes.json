@@ -1,0 +1,656 @@
+[
+  {
+    "method": "DELETE",
+    "path": "/api/assets",
+    "key": "DELETE /api/assets",
+    "controller": "StaticAssetController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/domains/{id}",
+    "key": "DELETE /api/domains/{}",
+    "controller": "DomainController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/environments/{id}",
+    "key": "DELETE /api/environments/{}",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/namespaces/{namespace}/applications/{name}",
+    "key": "DELETE /api/namespaces/{}/applications/{}",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/namespaces/{namespace}/applications/{application}/ides/{name}",
+    "key": "DELETE /api/namespaces/{}/applications/{}/ides/{}",
+    "controller": "IdeController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files",
+    "key": "DELETE /api/namespaces/{}/applications/{}/pods/{}/files",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/sandbox/instances/{id}",
+    "key": "DELETE /api/sandbox/instances/{}",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/sandbox/instances/{id}/files",
+    "key": "DELETE /api/sandbox/instances/{}/files",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/users/{id}",
+    "key": "DELETE /api/users/{}",
+    "controller": "UserController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/assets",
+    "key": "GET /api/assets",
+    "controller": "StaticAssetController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/external/providers",
+    "key": "GET /api/auth/external/providers",
+    "controller": "ExternalAccountController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cron/next",
+    "key": "GET /api/cron/next",
+    "controller": "CronController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/domains",
+    "key": "GET /api/domains",
+    "controller": "DomainController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/domains/{id}",
+    "key": "GET /api/domains/{}",
+    "controller": "DomainController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/environments",
+    "key": "GET /api/environments",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/environments/{id}",
+    "key": "GET /api/environments/{}",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/features",
+    "key": "GET /api/features",
+    "controller": "FeaturesController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/health",
+    "key": "GET /api/health",
+    "controller": "HealthController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces",
+    "key": "GET /api/namespaces",
+    "controller": "NamespaceController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications",
+    "key": "GET /api/namespaces/{}/applications",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/active-deployments",
+    "key": "GET /api/namespaces/{}/applications/active-deployments",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}",
+    "key": "GET /api/namespaces/{}/applications/{}",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/branches",
+    "key": "GET /api/namespaces/{}/applications/{}/branches",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/build/config",
+    "key": "GET /api/namespaces/{}/applications/{}/build/config",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{applicationName}/configmaps",
+    "key": "GET /api/namespaces/{}/applications/{}/configmaps",
+    "controller": "ConfigMapController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/current-image",
+    "key": "GET /api/namespaces/{}/applications/{}/current-image",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments",
+    "key": "GET /api/namespaces/{}/applications/{}/environments",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
+    "key": "GET /api/namespaces/{}/applications/{}/environments/build/configs",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
+    "key": "GET /api/namespaces/{}/applications/{}/environments/runtime-specs",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/events",
+    "key": "GET /api/namespaces/{}/applications/{}/events",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/expert-config",
+    "key": "GET /api/namespaces/{}/applications/{}/expert-config",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{application}/ides",
+    "key": "GET /api/namespaces/{}/applications/{}/ides",
+    "controller": "IdeController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{application}/ides/config/default",
+    "key": "GET /api/namespaces/{}/applications/{}/ides/config/default",
+    "controller": "IdeController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/last-successful-pipeline",
+    "key": "GET /api/namespaces/{}/applications/{}/last-successful-pipeline",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/metrics",
+    "key": "GET /api/namespaces/{}/applications/{}/metrics",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/metrics/history",
+    "key": "GET /api/namespaces/{}/applications/{}/metrics/history",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines",
+    "key": "GET /api/namespaces/{}/applications/{}/pipelines",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}",
+    "key": "GET /api/namespaces/{}/applications/{}/pipelines/{}",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files",
+    "key": "GET /api/namespaces/{}/applications/{}/pods/{}/files",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/content",
+    "key": "GET /api/namespaces/{}/applications/{}/pods/{}/files/content",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/download",
+    "key": "GET /api/namespaces/{}/applications/{}/pods/{}/files/download",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/resources",
+    "key": "GET /api/namespaces/{}/applications/{}/resources",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/runtime-spec",
+    "key": "GET /api/namespaces/{}/applications/{}/runtime-spec",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/service",
+    "key": "GET /api/namespaces/{}/applications/{}/service",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/service/cluster-domain",
+    "key": "GET /api/namespaces/{}/applications/{}/service/cluster-domain",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/service/host-check",
+    "key": "GET /api/namespaces/{}/applications/{}/service/host-check",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/status",
+    "key": "GET /api/namespaces/{}/applications/{}/status",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/status/watch",
+    "key": "GET /api/namespaces/{}/applications/{}/status/watch",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/service-accounts",
+    "key": "GET /api/namespaces/{}/service-accounts",
+    "controller": "ServiceAccountController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/nodes",
+    "key": "GET /api/nodes",
+    "controller": "NodeController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/images",
+    "key": "GET /api/sandbox/images",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/instances",
+    "key": "GET /api/sandbox/instances",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/instances/{id}",
+    "key": "GET /api/sandbox/instances/{}",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/instances/{id}/files",
+    "key": "GET /api/sandbox/instances/{}/files",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/instances/{id}/files/content",
+    "key": "GET /api/sandbox/instances/{}/files/content",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sandbox/instances/{id}/files/download",
+    "key": "GET /api/sandbox/instances/{}/files/download",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/search/applications",
+    "key": "GET /api/search/applications",
+    "controller": "SearchController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users",
+    "key": "GET /api/users",
+    "controller": "UserController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/me",
+    "key": "GET /api/users/me",
+    "controller": "UserController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/users/page",
+    "key": "GET /api/users/page",
+    "controller": "UserController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/assets/upload-url",
+    "key": "POST /api/assets/upload-url",
+    "controller": "StaticAssetController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "key": "POST /api/auth/login",
+    "controller": "AuthController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/domains",
+    "key": "POST /api/domains",
+    "controller": "DomainController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/environments",
+    "key": "POST /api/environments",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/image-repositories/validations",
+    "key": "POST /api/image-repositories/validations",
+    "controller": "ImageRepositoryController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/index/applications",
+    "key": "POST /api/index/applications",
+    "controller": "IndexController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/index/pipelines",
+    "key": "POST /api/index/pipelines",
+    "controller": "IndexController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/kubernetes/namespaces",
+    "key": "POST /api/kubernetes/namespaces",
+    "controller": "KubernetesController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/kubernetes/validations",
+    "key": "POST /api/kubernetes/validations",
+    "controller": "KubernetesController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces",
+    "key": "POST /api/namespaces",
+    "controller": "NamespaceController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications",
+    "key": "POST /api/namespaces/{}/applications",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/deployments",
+    "key": "POST /api/namespaces/{}/applications/{}/deployments",
+    "controller": "DeploymentController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/deployments/source-upload",
+    "key": "POST /api/namespaces/{}/applications/{}/deployments/source-upload",
+    "controller": "DeploymentController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{application}/ides",
+    "key": "POST /api/namespaces/{}/applications/{}/ides",
+    "controller": "IdeController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/namespace-migration",
+    "key": "POST /api/namespaces/{}/applications/{}/namespace-migration",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}/rollback",
+    "key": "POST /api/namespaces/{}/applications/{}/pipelines/{}/rollback",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/directory",
+    "key": "POST /api/namespaces/{}/applications/{}/pods/{}/files/directory",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/rename",
+    "key": "POST /api/namespaces/{}/applications/{}/pods/{}/files/rename",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/upload",
+    "key": "POST /api/namespaces/{}/applications/{}/pods/{}/files/upload",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/nodes/{name}/schedulable",
+    "key": "POST /api/nodes/{}/schedulable",
+    "controller": "NodeController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/executions",
+    "key": "POST /api/sandbox/executions",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/instances",
+    "key": "POST /api/sandbox/instances",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/instances/{id}/exec",
+    "key": "POST /api/sandbox/instances/{}/exec",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/instances/{id}/files/directory",
+    "key": "POST /api/sandbox/instances/{}/files/directory",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/instances/{id}/files/rename",
+    "key": "POST /api/sandbox/instances/{}/files/rename",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sandbox/instances/{id}/files/upload",
+    "key": "POST /api/sandbox/instances/{}/files/upload",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users",
+    "key": "POST /api/users",
+    "controller": "UserController"
+  },
+  {
+    "method": "POST",
+    "path": "/api/users/me/access-token/reset",
+    "key": "POST /api/users/me/access-token/reset",
+    "controller": "UserController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/domains/{id}",
+    "key": "PUT /api/domains/{}",
+    "controller": "DomainController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/environments/{id}/cluster",
+    "key": "PUT /api/environments/{}/cluster",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/environments/{id}/credentials",
+    "key": "PUT /api/environments/{}/credentials",
+    "controller": "EnvironmentController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces",
+    "key": "PUT /api/namespaces",
+    "controller": "NamespaceController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}",
+    "key": "PUT /api/namespaces/{}/applications/{}",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/build/config",
+    "key": "PUT /api/namespaces/{}/applications/{}/build/config",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{applicationName}/configmaps",
+    "key": "PUT /api/namespaces/{}/applications/{}/configmaps",
+    "controller": "ConfigMapController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments",
+    "key": "PUT /api/namespaces/{}/applications/{}/environments",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
+    "key": "PUT /api/namespaces/{}/applications/{}/environments/build/configs",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
+    "key": "PUT /api/namespaces/{}/applications/{}/environments/runtime-specs",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/expert-config",
+    "key": "PUT /api/namespaces/{}/applications/{}/expert-config",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}/deploy",
+    "key": "PUT /api/namespaces/{}/applications/{}/pipelines/{}/deploy",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}/stop",
+    "key": "PUT /api/namespaces/{}/applications/{}/pipelines/{}/stop",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/content",
+    "key": "PUT /api/namespaces/{}/applications/{}/pods/{}/files/content",
+    "controller": "PodFileSystemController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/restart",
+    "key": "PUT /api/namespaces/{}/applications/{}/pods/{}/restart",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/runtime-spec",
+    "key": "PUT /api/namespaces/{}/applications/{}/runtime-spec",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/namespaces/{namespace}/applications/{name}/service",
+    "key": "PUT /api/namespaces/{}/applications/{}/service",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/sandbox/instances/{id}/files/content",
+    "key": "PUT /api/sandbox/instances/{}/files/content",
+    "controller": "SandboxController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/me",
+    "key": "PUT /api/users/me",
+    "controller": "UserController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/me/password",
+    "key": "PUT /api/users/me/password",
+    "controller": "UserController"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/users/{id}",
+    "key": "PUT /api/users/{}",
+    "controller": "UserController"
+  }
+]

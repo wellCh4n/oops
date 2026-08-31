@@ -50,7 +50,6 @@ web/out/
 web/build
 
 # misc
-web/.DS_Store
 web/*.pem
 
 # debug
@@ -74,3 +73,17 @@ web/next-env.d.ts
 src/main/resources/application.properties
 src/main/resources/application.yml
 config/application.yml
+
+# macOS. Anywhere, not just under web/ — Finder leaves one in whatever
+# directory it has been asked to show.
+.DS_Store
+
+# Python acceptance suite. Unanchored, so they hold for every directory the
+# suite grows rather than only the two it has today.
+.venv/
+__pycache__/
+.pytest_cache/
+tests/acceptance/reports/
+tests/acceptance/scripts/.kubeconfig
+tests/acceptance/scripts/.registry-auth/
+tests/acceptance/scripts/.k3s/

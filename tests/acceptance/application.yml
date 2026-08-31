@@ -1,0 +1,119 @@
+# Backend configuration for acceptance runs.
+#
+# Points at the throwaway middleware in docker-compose.yml — non-standard ports
+# so a run can never touch a real database or bucket. Object storage is enabled
+# here even though it is off by default, because the ZIP source path is only
+# reachable with it on.
+#
+#   ./scripts/middleware-up.sh
+#   java -jar target/oops-0.0.1-SNAPSHOT.jar \
+#     --spring.config.location=file:tests/acceptance/application.yml
+
+spring:
+  application:
+    name: oops
+  task:
+    scheduling:
+      pool:
+        size: 3
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  datasource:
+    # Container names throughout: the backend runs in Docker alongside the
+    # middleware, so every address it dials is a service name on the compose
+    # network. Nothing here is reachable from the host, and nothing needs to be.
+    url: jdbc:mysql://mysql:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
+    username: root
+    password: acceptance
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+
+oops:
+  admin:
+    password: admin123
+  pipeline:
+    image:
+      clone: alpine/git:v2.49.0
+      zip: alpine/curl:8.17.0
+      push: quay.io/buildah/stable:v1.43.1
+      unzip-excludes:
+        - .git/*
+        - "*/.git/*"
+        - __MACOSX
+        - __MACOSX/*
+        - .DS_Store
+  metrics:
+    history:
+      interval-seconds: 30
+      max-range-hours: 24
+      backend:
+        # Blank namespace hides the usage charts. kind runs no Prometheus, and
+        # the suite makes no assertions about metrics.
+        namespace: ""
+        service-name: prometheus-operated
+        port: 9090
+    alert:
+      enabled: false
+      cpu:
+        threshold-percent: 95
+        sustained-minutes: 10
+      memory:
+        threshold-percent: 90
+        sustained-minutes: 5
+      repeat-interval-minutes: 30
+  pod-filesystem:
+    max-download-size-bytes: 52428800
+    max-upload-size-bytes: 52428800
+    max-edit-size-bytes: 1048576
+  ingress:
+    cert-resolver: letsencrypt-prod
+  crypto:
+    secret-key: acceptance-crypto-secret-key-not-for-production
+  jwt:
+    secret: acceptance-jwt-secret-key-not-for-production-at-least-32-chars-long
+    expiration: 604800000
+  feishu:
+    enabled: false
+    app-id: cli_acceptance
+    app-secret: acceptance
+    redirect-uri: http://localhost:3000/auth/feishu/callback
+    sync-user-deactivation: false
+  ide:
+    enabled: false
+    https: false
+    domain: ide.acceptance.invalid
+    image: codercom/code-server:4.112.0-39
+  object-storage:
+    enabled: true
+    # A container name, because everything that redeems a presigned URL in
+    # anger runs in Docker: the backend container and the pipeline's fetch
+    # container both resolve it. Only the test process sits outside, and it
+    # rewrites the address while keeping the Host header, which is the half
+    # SigV4 signs. Deliberately not a host address — a machine's LAN IP is
+    # absent offline, changes on a VPN, and differs on every CI runner.
+    endpoint: ${OOPS_S3_ENDPOINT:http://rustfs:9000}
+    region: us-east-1
+    bucket: oops-build-sources
+    access-key: acceptance
+    secret-key: acceptance-secret
+    # The store serves buckets as a path rather than as a virtual host, so the
+    # SDK has to be told not to fold the bucket name into the hostname.
+    path-style-access: true
+    key-prefix: build-sources
+    asset-key-prefix: oops-assets
+    upload-url-expiration-seconds: 900
+    download-url-expiration-seconds: 1800
+    max-file-size-bytes: 524288000
+  sandbox:
+    images:
+      - python:3.12-slim
+      - alpine:3.20
