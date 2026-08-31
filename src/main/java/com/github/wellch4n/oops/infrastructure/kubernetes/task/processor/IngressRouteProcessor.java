@@ -42,18 +42,21 @@ public class IngressRouteProcessor implements DeployProcessor {
                 .filter(config -> StringUtils.isNotEmpty(config.getHost()))
                 .toList();
 
-        if (envServiceConfigs.isEmpty()) {
-            log.info("No host configured for application: {}/{} in environment: {}, skipping ingress route creation",
-                    namespace, applicationName, ctx.getEnvironment().getName());
-            return;
-        }
-
         var ingressRouteCrd = ctx.getClient().apiextensions().v1().customResourceDefinitions()
                 .withName(CustomResourceDefinitionContext.fromCustomResourceType(IngressRoute.class).getName())
                 .get();
         if (ingressRouteCrd == null) {
             log.warn("Could not find ingress route crd");
             return;
+        }
+
+        // An application with no host still has to reach the pruning below. Returning
+        // early on an empty list would mean clearing the last host leaves its routes,
+        // its redirect and its basic auth credentials serving in the cluster, so the
+        // owner takes a hostname down and it keeps answering.
+        if (envServiceConfigs.isEmpty()) {
+            log.info("No host configured for application: {}/{} in environment: {}, withdrawing any ingress routes",
+                    namespace, applicationName, ctx.getEnvironment().getName());
         }
 
         DomainRepository domainRepository = SpringContext.getBean(DomainRepository.class);
