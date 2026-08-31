@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The only command you need to run the acceptance suite.
+# The only command you need to run the integration suite.
 #
 # Brings up MySQL, RustFS, Gitea and two registries, builds and starts the
 # backend, starts a k3s cluster, registers it as an environment, runs the
@@ -169,7 +169,7 @@ step_run() {
     | python3 "${SCRIPTS}/render_step.py" --prefix "#${STEP}" --log "$logfile"
 }
 
-BACKEND_CONTAINER=oops-acceptance-backend
+BACKEND_CONTAINER=oops-integration-backend
 BACKEND_LOG_PID=""
 CLEANED=0
 
@@ -197,7 +197,10 @@ cleanup() {
   docker compose -f "${HERE}/docker-compose.yml" \
     --profile cluster --profile backend down -v --remove-orphans \
     >>"${LOGS}/teardown.log" 2>&1
-  rm -rf "${HERE}/scripts/.registry-auth" "${HERE}/scripts/.k3s"
+  # Best effort: a leftover file the cluster wrote as root is worth a mention,
+  # not a failed run on top of whatever already failed.
+  rm -rf "${HERE}/scripts/.registry-auth" "${HERE}/scripts/.k3s" 2>/dev/null || \
+    printf "%s  could not remove %s/scripts/.k3s%s\n" "$DIM" "$HERE" "$RESET"
   return $status
 }
 trap cleanup EXIT
@@ -332,6 +335,12 @@ export PYTHONPATH="${SCRIPTS}${PYTHONPATH:+:${PYTHONPATH}}"
 
 step_begin "cluster"
 if needs_cluster; then
+  # Create the kubeconfig directory before Docker does. Docker creates a missing
+  # bind-mount source as root, and on Linux that is a directory this user cannot
+  # write — so rewriting the kubeconfig's address fails (sed -i renames a temp
+  # file *in* the directory) and so does the teardown that removes it. macOS
+  # never showed it, because Docker Desktop maps ownership to the host user.
+  mkdir -p "${HERE}/scripts/.k3s"
   step_run "${LOGS}/cluster.log" "${COMPOSE[@]}" --profile cluster up -d --wait k3s || {
     step_failed "the cluster did not come up; see ${LOGS}/cluster.log"; exit 1; }
   step_done
@@ -348,12 +357,12 @@ if needs_cluster; then
 
   step_begin "environment registration"
   step_run "${LOGS}/register.log" \
-    python "${SCRIPTS}/register_environment.py" --name acceptance || {
+    python "${SCRIPTS}/register_environment.py" --name integration || {
       step_failed "could not register the environment; see ${LOGS}/register.log"
       exit 1; }
   step_done
 
-  PYTEST_ARGS+=(--environment acceptance)
+  PYTEST_ARGS+=(--environment integration)
 else
   if [ "$CONTRACT_ONLY" -eq 1 ]; then
     step_skipped "--contract: only the tests that need no cluster"

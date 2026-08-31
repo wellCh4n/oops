@@ -5,7 +5,7 @@ Reads what `cluster-provision.sh` exported. `run.sh` calls both in order; doing
 it by hand looks like:
 
     eval "$(./scripts/cluster-provision.sh | grep '^  export' | sed 's/^  //')"
-    python scripts/register_environment.py --name acceptance
+    python scripts/register_environment.py --name integration
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from oops_client import OopsClient  # noqa: E402
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--name", default="acceptance",
+    parser.add_argument("--name", default="integration",
                         help="environment name in OOPS")
     parser.add_argument("--endpoint",
                         default=os.environ.get("OOPS_ENDPOINT", "http://localhost:8080"))

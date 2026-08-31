@@ -45,7 +45,7 @@ def traefik_available():
 
 
 def unique_host(label: str) -> str:
-    return f"{label}-{uuid.uuid4().hex[:8]}.acceptance.invalid"
+    return f"{label}-{uuid.uuid4().hex[:8]}.integration.invalid"
 
 
 def deploy_with_host(client, namespace, application, environment, host,
@@ -163,7 +163,7 @@ def test_basic_auth_lands_on_the_serving_route_only(
     """
     host = unique_host("guarded")
     deploy_with_host(client, namespace, application, environment, host,
-                     https=True, basic_auth=("acceptance", "acceptance-secret"))
+                     https=True, basic_auth=("integration", "integration-secret"))
 
     routes = wait_until(
         lambda: (lambda found: found if len(found) >= 2 else None)(
@@ -207,7 +207,7 @@ def test_the_basic_auth_password_is_never_returned(client, namespace,
     """
     host = unique_host("secret")
     deploy_with_host(client, namespace, application, environment, host,
-                     https=True, basic_auth=("acceptance", "acceptance-secret"))
+                     https=True, basic_auth=("integration", "integration-secret"))
 
     stored = client.get(
         f"/api/namespaces/{namespace}/applications/{application}/service").data
@@ -215,7 +215,7 @@ def test_the_basic_auth_password_is_never_returned(client, namespace,
                   if item["environment"] == environment)
 
     assert config.get("basicAuthEnabled") is True
-    assert config.get("basicAuthUsername") == "acceptance"
+    assert config.get("basicAuthUsername") == "integration"
     assert not config.get("basicAuthPassword"), (
         f"the basic auth password came back from the API: "
         f"{config.get('basicAuthPassword')!r}")

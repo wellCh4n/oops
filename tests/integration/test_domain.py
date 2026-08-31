@@ -94,7 +94,7 @@ def test_a_managed_domain_lifecycle(client, environment_names, domain_factory):
     environment = environment_names()
     host = unique_host("lifecycle")
 
-    created = domain_factory(host, environment, description="acceptance test",
+    created = domain_factory(host, environment, description="integration test",
                              https=True, certMode="AUTO")
 
     assert ID_PATTERN.match(created["id"]), (
@@ -146,14 +146,14 @@ def test_a_managed_domain_lifecycle(client, environment_names, domain_factory):
     renamed = unique_host("lifecycle-renamed")
     updated = client.put(f"/api/domains/{created['id']}", {
         "host": renamed,
-        "description": "renamed by the acceptance suite",
+        "description": "renamed by the integration suite",
         "https": False,
         "environment": environment,
     }).data
     assert updated["id"] == created["id"], (
         "the update minted a new identifier instead of editing the row in place")
     assert updated["host"] == renamed, "the host change was not stored"
-    assert updated["description"] == "renamed by the acceptance suite"
+    assert updated["description"] == "renamed by the integration suite"
     assert updated["https"] is False, "HTTPS was not switched off"
     assert updated["certMode"] is None, (
         "the certificate mode survived HTTPS being switched off, leaving the "

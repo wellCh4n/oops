@@ -27,7 +27,7 @@ CRON_RUN_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
 # A port nothing listens on, so the connection is refused rather than timing out.
 UNREACHABLE_REGISTRY = "http://127.0.0.1:1"
 
-PLATFORM_NAMESPACE = "acceptance-platform"
+PLATFORM_NAMESPACE = "integration-platform"
 
 
 # -- fixtures ---------------------------------------------------------------
@@ -45,7 +45,7 @@ def platform_namespace(client) -> str:
     if PLATFORM_NAMESPACE not in registered:
         client.post("/api/namespaces",
                     {"name": PLATFORM_NAMESPACE,
-                     "description": "created by the acceptance suite"})
+                     "description": "created by the integration suite"})
     return PLATFORM_NAMESPACE
 
 
@@ -351,7 +351,7 @@ def test_asset_upload_url_is_presigned_under_the_asset_prefix(client,
     key prefix, so a signed URL that escaped it would let the asset browser list
     and delete build sources."""
     upload = client.post("/api/assets/upload-url", {
-        "path": "acceptance",
+        "path": "integration",
         "fileName": "note.txt",
         "contentType": "text/plain",
         "fileSize": 12,
@@ -376,8 +376,8 @@ def test_an_uploaded_asset_is_listed_and_can_be_deleted(client, asset_keys):
     """The whole asset lifecycle, because each step is only observable through
     the next one: the signature is only proven by an upload, the upload only by
     the listing, and the delete only by the listing going empty again."""
-    folder = f"acceptance-{uuid.uuid4().hex[:8]}"
-    payload = b"acceptance asset\n"
+    folder = f"integration-{uuid.uuid4().hex[:8]}"
+    payload = b"integration asset\n"
 
     upload = client.post("/api/assets/upload-url", {
         "path": folder,
@@ -428,16 +428,16 @@ def test_asset_upload_url_validates_its_input(client, assets_available):
     refusing afterwards would mean paying for the transfer to learn it was
     never allowed."""
     rejected = [
-        ({"path": "acceptance", "fileName": "", "fileSize": 12},
+        ({"path": "integration", "fileName": "", "fileSize": 12},
          "a blank file name"),
-        ({"path": "acceptance", "fileName": "note.txt", "fileSize": 0},
+        ({"path": "integration", "fileName": "note.txt", "fileSize": 0},
          "a zero byte size"),
-        ({"path": "acceptance", "fileName": "note.txt",
+        ({"path": "integration", "fileName": "note.txt",
           "fileSize": 10 * 1024 * 1024 * 1024},
          "a size beyond the configured limit"),
         ({"path": "../escape", "fileName": "note.txt", "fileSize": 12},
          "a traversing path"),
-        ({"path": "acceptance", "fileName": "../escape.txt", "fileSize": 12},
+        ({"path": "integration", "fileName": "../escape.txt", "fileSize": 12},
          "a traversing file name"),
     ]
     for body, description in rejected:
@@ -693,7 +693,7 @@ def test_a_work_namespace_can_be_created_and_then_validates(
     button is one click away from the validation that offered it, and a double
     click must not leave the operator staring at a Kubernetes 409.
     """
-    name = f"acceptance-work-{uuid.uuid4().hex[:8]}"
+    name = f"integration-work-{uuid.uuid4().hex[:8]}"
     api_server = {
         "url": cluster_credentials["url"],
         "token": cluster_credentials["token"],

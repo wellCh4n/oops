@@ -20,11 +20,11 @@ import urllib.error
 import urllib.request
 
 DOCKERFILE = """FROM alpine:3.20
-RUN echo "acceptance fixture" > /message
+RUN echo "integration fixture" > /message
 CMD ["sh", "-c", "while true; do cat /message; sleep 30; done"]
 """
 
-README = "Fixture repository for the OOPS acceptance suite.\n"
+README = "Fixture repository for the OOPS integration suite.\n"
 
 
 def call(url: str, method: str = "GET", body: dict | None = None,
@@ -86,7 +86,7 @@ def ensure_repository(base: str, auth: tuple[str, str], name: str,
         f"{base}/api/v1/user/repos", "POST",
         {"name": name, "private": private, "auto_init": True,
          "default_branch": "main",
-         "description": "OOPS acceptance fixture"},
+         "description": "OOPS integration fixture"},
         auth=auth)
     if status not in (201, 409):
         raise SystemExit(f"could not create {name}: {status} {payload}")
@@ -125,7 +125,7 @@ def main() -> int:
     # out here.
     parser.add_argument("--base", default=os.environ.get(
         "OOPS_GITEA_PROBE_URL", "http://127.0.0.1:13000"))
-    parser.add_argument("--container", default="oops-acceptance-gitea")
+    parser.add_argument("--container", default="oops-integration-gitea")
     parser.add_argument("--username", default=os.environ.get(
         "OOPS_GITEA_USER", "oops"))
     parser.add_argument("--password", default=os.environ.get(

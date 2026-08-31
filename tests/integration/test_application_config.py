@@ -18,12 +18,12 @@ def test_the_profile_can_be_updated(client, namespace, application):
     client.put(f"/api/namespaces/{namespace}/applications/{application}", {
         "name": application,
         "namespace": namespace,
-        "description": "updated by the acceptance suite",
+        "description": "updated by the integration suite",
         "icon": "🚀",
     })
 
     profile = client.get_application(namespace, application).data
-    assert profile["description"] == "updated by the acceptance suite"
+    assert profile["description"] == "updated by the integration suite"
     assert profile["icon"] == "🚀", "the icon did not survive the round trip"
 
 
@@ -286,7 +286,7 @@ def test_host_conflict_check_answers(client, namespace, application):
     """
     free = client.get(
         f"/api/namespaces/{namespace}/applications/{application}"
-        f"/service/host-check?host=acceptance-unclaimed.example.invalid")
+        f"/service/host-check?host=integration-unclaimed.example.invalid")
     assert free.success is True
     assert free.data is None, (
         f"an unclaimed host reported a conflict: {free.data}")

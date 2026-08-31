@@ -1,6 +1,6 @@
 """The IDE endpoints, with the IDE feature switched off.
 
-`oops.ide.enabled` is `false` in `tests/acceptance/application.yml`, and that is
+`oops.ide.enabled` is `false` in `tests/integration/application.yml`, and that is
 deliberate: a code-server instance is a long-lived pod with a domain of its own,
 so enabling it would make every run depend on ingress and DNS that the kind
 fixture does not provide.
@@ -18,7 +18,7 @@ None of this needs a cluster: the routes are absent, so nothing is dispatched
 and the `environment` parameter is never read. The file is therefore not marked
 `cluster`, and it runs on a bare stack.
 
-**If the IDE is ever enabled in the acceptance config**, these tests stop being
+**If the IDE is ever enabled in the integration config**, these tests stop being
 meaningful and every one of them will skip with a message pointing here. Replace
 them with the enabled scenario: read the default config, create an instance,
 list it, delete it, and assert it is gone — modelled on `test_podfs.py`, which
@@ -66,7 +66,7 @@ def test_the_feature_flag_reports_the_ide_off(client):
         f"the IDE section on it and would fall back to hiding it forever")
     assert features["ide"] is False, (
         "the features endpoint reports the IDE as enabled, but "
-        "tests/acceptance/application.yml sets oops.ide.enabled=false — the "
+        "tests/integration/application.yml sets oops.ide.enabled=false — the "
         "flag is not being read from configuration")
     # Documented, not endorsed: the host and scheme fields stay in the payload
     # when the feature is off, with the host null rather than the configured

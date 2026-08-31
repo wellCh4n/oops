@@ -1,4 +1,4 @@
-# Backend configuration for acceptance runs.
+# Backend configuration for integration runs.
 #
 # Points at the throwaway middleware in docker-compose.yml — non-standard ports
 # so a run can never touch a real database or bucket. Object storage is enabled
@@ -7,7 +7,7 @@
 #
 #   ./scripts/middleware-up.sh
 #   java -jar target/oops-0.0.1-SNAPSHOT.jar \
-#     --spring.config.location=file:tests/acceptance/application.yml
+#     --spring.config.location=file:tests/integration/application.yml
 
 spring:
   application:
@@ -24,7 +24,7 @@ spring:
     # network. Nothing here is reachable from the host, and nothing needs to be.
     url: jdbc:mysql://mysql:3306/oops?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=utf8&useUnicode=true
     username: root
-    password: acceptance
+    password: integration
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     database-platform: org.hibernate.dialect.MySQLDialect
@@ -77,20 +77,20 @@ oops:
   ingress:
     cert-resolver: letsencrypt-prod
   crypto:
-    secret-key: acceptance-crypto-secret-key-not-for-production
+    secret-key: integration-crypto-secret-key-not-for-production
   jwt:
-    secret: acceptance-jwt-secret-key-not-for-production-at-least-32-chars-long
+    secret: integration-jwt-secret-key-not-for-production-at-least-32-chars-long
     expiration: 604800000
   feishu:
     enabled: false
-    app-id: cli_acceptance
-    app-secret: acceptance
+    app-id: cli_integration
+    app-secret: integration
     redirect-uri: http://localhost:3000/auth/feishu/callback
     sync-user-deactivation: false
   ide:
     enabled: false
     https: false
-    domain: ide.acceptance.invalid
+    domain: ide.integration.invalid
     image: codercom/code-server:4.112.0-39
   object-storage:
     enabled: true
@@ -103,8 +103,8 @@ oops:
     endpoint: ${OOPS_S3_ENDPOINT:http://rustfs:9000}
     region: us-east-1
     bucket: oops-build-sources
-    access-key: acceptance
-    secret-key: acceptance-secret
+    access-key: integration
+    secret-key: integration-secret
     # The store serves buckets as a path rather than as a virtual host, so the
     # SDK has to be told not to fold the bucket name into the hostname.
     path-style-access: true

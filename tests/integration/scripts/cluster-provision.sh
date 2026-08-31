@@ -62,7 +62,7 @@ wait_for "CoreDNS" 60 kubectl get configmap coredns -n kube-system || {
 NODE_HOSTS="$(kubectl get configmap coredns -n kube-system \
   -o jsonpath='{.data.NodeHosts}' 2>/dev/null || true)"
 for service in registry registry-auth gitea rustfs; do
-  address="$(docker inspect "oops-acceptance-${service}" \
+  address="$(docker inspect "oops-integration-${service}" \
     --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null || true)"
   [ -z "$address" ] && continue
   NODE_HOSTS="$(printf '%s\n' "$NODE_HOSTS" | grep -v " ${service}\$" || true)"
@@ -78,7 +78,7 @@ sleep 16
 kubectl create namespace "$WORK_NAMESPACE" --dry-run=client -o yaml \
   | kubectl apply -f - >/dev/null
 
-# cluster-admin, because acceptance runs create namespaces, exec into pods and
+# cluster-admin, because integration runs create namespaces, exec into pods and
 # reach Prometheus through the API server proxy. A narrower role here just turns
 # into confusing 403s halfway through a suite.
 kubectl create serviceaccount "$SERVICE_ACCOUNT" -n "$WORK_NAMESPACE" \

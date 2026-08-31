@@ -47,7 +47,7 @@ def main(path: Path) -> int:
     width = 68
 
     print("=" * width)
-    print("OOPS acceptance report".center(width))
+    print("OOPS integration report".center(width))
     print("=" * width)
     print(f"  {GREEN}passed{RESET}   {passed}")
     if failures:

@@ -1,26 +1,26 @@
-# Middleware for the acceptance suite.
+# Middleware for the integration suite.
 #
 # Everything OOPS talks to except Kubernetes itself, which kind provides —
 # see scripts/kind-up.sh. Kept separate from docker/docker-compose*.yml because
 # these are throwaway containers on non-standard ports, deliberately chosen so a
 # run cannot reach a real development database, bucket or registry.
 #
-#   docker compose -f tests/acceptance/docker-compose.yml up -d
-#   docker compose -f tests/acceptance/docker-compose.yml down -v
+#   docker compose -f tests/integration/docker-compose.yml up -d
+#   docker compose -f tests/integration/docker-compose.yml down -v
 
-name: oops-acceptance
+name: oops-integration
 
 services:
   mysql:
     image: mysql:8.0
-    container_name: oops-acceptance-mysql
+    container_name: oops-integration-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: acceptance
+      MYSQL_ROOT_PASSWORD: integration
       MYSQL_DATABASE: oops
     ports:
       - "127.0.0.1:13306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pacceptance", "--silent"]
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pintegration", "--silent"]
       interval: 3s
       timeout: 5s
       retries: 20
@@ -36,10 +36,10 @@ services:
   # AWS SDK — so this is a fixture choice, and swapping it is this block alone.
   rustfs:
     image: rustfs/rustfs:1.0.0-rc.4
-    container_name: oops-acceptance-rustfs
+    container_name: oops-integration-rustfs
     environment:
-      RUSTFS_ACCESS_KEY: acceptance
-      RUSTFS_SECRET_KEY: acceptance-secret
+      RUSTFS_ACCESS_KEY: integration
+      RUSTFS_SECRET_KEY: integration-secret
       RUSTFS_ADDRESS: "0.0.0.0:9000"
       RUSTFS_CONSOLE_ENABLE: "true"
       RUSTFS_VOLUMES: /data
@@ -65,13 +65,13 @@ services:
   # of object store.
   rustfs-init:
     image: amazon/aws-cli:2.28.11
-    container_name: oops-acceptance-rustfs-init
+    container_name: oops-integration-rustfs-init
     depends_on:
       rustfs:
         condition: service_healthy
     environment:
-      AWS_ACCESS_KEY_ID: acceptance
-      AWS_SECRET_ACCESS_KEY: acceptance-secret
+      AWS_ACCESS_KEY_ID: integration
+      AWS_SECRET_ACCESS_KEY: integration-secret
       AWS_DEFAULT_REGION: us-east-1
     entrypoint: >
       /bin/sh -c "
@@ -92,7 +92,7 @@ services:
   # path it is exercising.
   gitea:
     image: gitea/gitea:1.22
-    container_name: oops-acceptance-gitea
+    container_name: oops-integration-gitea
     environment:
       USER_UID: "1000"
       USER_GID: "1000"
@@ -120,7 +120,7 @@ services:
   # credentials and OOPS therefore writes no dockerhub secret.
   registry:
     image: registry:2
-    container_name: oops-acceptance-registry
+    container_name: oops-integration-registry
     restart: always
     ports:
       - "127.0.0.1:5001:5000"
@@ -130,7 +130,7 @@ services:
   # consumes them, and nothing has to remember to run a script first.
   registry-auth-init:
     image: httpd:2
-    container_name: oops-acceptance-registry-auth-init
+    container_name: oops-integration-registry-auth-init
     entrypoint: >
       /bin/sh -c "htpasswd -Bbn
       $${OOPS_AUTH_REGISTRY_USER:-oops}
@@ -143,7 +143,7 @@ services:
   # for buildah's push, copied into the application namespace, used to pull.
   registry-auth:
     image: registry:2
-    container_name: oops-acceptance-registry-auth
+    container_name: oops-integration-registry-auth
     restart: always
     environment:
       REGISTRY_AUTH: htpasswd
@@ -170,7 +170,7 @@ services:
   # those CRDs are absent, so the ingress half of every deploy silently skipped.
   k3s:
     image: rancher/k3s:v1.32.2-k3s1
-    container_name: oops-acceptance-k3s
+    container_name: oops-integration-k3s
     profiles: [cluster]
     privileged: true
     command: server --write-kubeconfig-mode=644 --disable=metrics-server
@@ -201,11 +201,11 @@ services:
   # absent offline, changes on a VPN and differs on every CI runner. In here it
   # simply resolves them by service name.
   #
-  # Behind a profile because the cluster tier attaches it to kind's network
-  # afterwards, and because `middleware-up.sh` is also useful on its own.
+  # Behind a profile so the middleware can be brought up without it — the suite
+  # can also be pointed at a backend running somewhere else entirely.
   backend:
     image: eclipse-temurin:25-jre
-    container_name: oops-acceptance-backend
+    container_name: oops-integration-backend
     profiles: [backend]
     depends_on:
       mysql:
@@ -232,4 +232,4 @@ services:
 
 networks:
   default:
-    name: oops-acceptance
+    name: oops-integration

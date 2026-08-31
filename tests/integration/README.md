@@ -1,4 +1,4 @@
-# Acceptance suite
+# Integration suite
 
 Black-box tests against the OOPS HTTP and WebSocket API. They import nothing from
 the backend and know nothing about its language, so the same suite is the
@@ -34,7 +34,7 @@ started arriving as an HTTP 500 instead of `success: false`.
 One command, from a clean checkout:
 
 ```bash
-cd tests/acceptance
+cd tests/integration
 ./run.sh                          # everything, then tears it all down
 ./run.sh --module ingress         # one module
 ./run.sh --module deploy,ingress  # a few
@@ -91,8 +91,8 @@ container plumbing, and you can still watch the plumbing while it happens.
 
 ```
 #2 middleware — mysql, rustfs, gitea, two registries
-#2  Container oops-acceptance-mysql Healthy      <- these scroll in place,
-#2  Container oops-acceptance-gitea Waiting         then disappear
+#2  Container oops-integration-mysql Healthy      <- these scroll in place,
+#2  Container oops-integration-gitea Waiting         then disappear
 #2 DONE 22s
 
 #7 [10/20] ingress — Exposing an application on a host: IngressRoutes, TLS and basic auth.
@@ -115,9 +115,9 @@ pytest's own output is in none of that. It goes to `reports/<timestamp>/`, along
 with everything else, announced when the run starts and kept afterwards:
 
 ```bash
-tail -f tests/acceptance/reports/*/pytest.log      # the test output
-tail -f tests/acceptance/reports/*/backend.log     # what OOPS is doing
-docker logs -f oops-acceptance-backend             # the same, live
+tail -f tests/integration/reports/*/pytest.log      # the test output
+tail -f tests/integration/reports/*/backend.log     # what OOPS is doing
+docker logs -f oops-integration-backend             # the same, live
 ```
 
 The backend log is followed from the moment the backend answers, rather than
@@ -132,7 +132,7 @@ summary. It exits non-zero when anything failed, so it drops straight into CI.
 
 ```
 ====================================================================
-                       OOPS acceptance report
+                       OOPS integration report
 ====================================================================
   passed   15
   total    15   in 1.0s
@@ -144,7 +144,7 @@ To drive pytest directly instead:
 
 ```bash
 pytest -m "not cluster"
-pytest --environment acceptance
+pytest --environment integration
 ```
 
 Configuration comes from flags or environment variables:
@@ -152,7 +152,7 @@ Configuration comes from flags or environment variables:
 | Variable | Flag | Default |
 |---|---|---|
 | `OOPS_ENDPOINT` | `--endpoint` | `http://localhost:8080` |
-| `OOPS_NAMESPACE` | `--namespace` | `acceptance` |
+| `OOPS_NAMESPACE` | `--namespace` | `integration` |
 | `OOPS_ENVIRONMENT` | `--environment` | the only registered environment, if there is exactly one |
 | `OOPS_USERNAME` / `OOPS_PASSWORD` | — | `admin` / `admin123` |
 | `OOPS_TEST_REPOSITORY` | — | a small public repo with a root Dockerfile |
@@ -171,8 +171,8 @@ long-lived token, and waits for the Traefik CRDs to register.
 ```bash
 docker compose -f docker-compose.yml --profile cluster up -d --wait k3s
 eval "$(./scripts/cluster-provision.sh | grep '^  export' | sed 's/^  //')"
-python scripts/register_environment.py --name acceptance
-pytest --environment acceptance
+python scripts/register_environment.py --name integration
+pytest --environment integration
 ```
 
 Nothing lands on the host. The kubeconfig is written to `scripts/.k3s/` rather

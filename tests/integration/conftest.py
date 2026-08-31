@@ -1,4 +1,4 @@
-"""Fixtures for the acceptance suite.
+"""Fixtures for the integration suite.
 
 Everything is driven by environment variables so the same tests can be pointed at
 a local dev server, a CI stack, or a staging deployment.
@@ -19,7 +19,7 @@ import pytest
 from oops_client import OopsClient
 
 DEFAULT_ENDPOINT = "http://localhost:8080"
-DEFAULT_NAMESPACE = "acceptance"
+DEFAULT_NAMESPACE = "integration"
 
 
 def pytest_addoption(parser):
@@ -235,8 +235,8 @@ def secondary_user(client) -> dict:
     are allowed to do everything, so every check would pass for the wrong
     reason.
     """
-    username = "acceptance-nonowner"
-    password = "acceptance-nonowner-123"
+    username = "integration-nonowner"
+    password = "integration-nonowner-123"
 
     existing = client.get("/api/users", expect_success=False)
     known = [item.get("username") for item in (existing.data or [])] \

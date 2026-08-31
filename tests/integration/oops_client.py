@@ -142,7 +142,7 @@ class OopsClient:
     # -- resource helpers ---------------------------------------------------
 
     def create_application(self, namespace: str, name: str,
-                           description: str = "acceptance test") -> str:
+                           description: str = "integration test") -> str:
         return self.post(
             f"/api/namespaces/{namespace}/applications",
             {"name": name, "description": description, "namespace": namespace},

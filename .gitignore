@@ -78,12 +78,12 @@ config/application.yml
 # directory it has been asked to show.
 .DS_Store
 
-# Python acceptance suite. Unanchored, so they hold for every directory the
+# Python integration suite. Unanchored, so they hold for every directory the
 # suite grows rather than only the two it has today.
 .venv/
 __pycache__/
 .pytest_cache/
-tests/acceptance/reports/
-tests/acceptance/scripts/.kubeconfig
-tests/acceptance/scripts/.registry-auth/
-tests/acceptance/scripts/.k3s/
+tests/integration/reports/
+tests/integration/scripts/.kubeconfig
+tests/integration/scripts/.registry-auth/
+tests/integration/scripts/.k3s/

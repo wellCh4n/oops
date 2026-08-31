@@ -25,8 +25,8 @@ ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{24}$")
 # leaked one is recognisable on sight, then a NanoId.
 ACCESS_TOKEN_PATTERN = re.compile(r"^sk-oops-[A-Za-z0-9_-]{24}$")
 
-INITIAL_PASSWORD = "acceptance-initial-123"
-REPLACEMENT_PASSWORD = "acceptance-replacement-456"
+INITIAL_PASSWORD = "integration-initial-123"
+REPLACEMENT_PASSWORD = "integration-replacement-456"
 
 
 def directory(client) -> list[dict]:
@@ -257,7 +257,7 @@ def test_a_plain_user_cannot_create_accounts(endpoint, secondary_user):
     result = plain.post("/api/users", {
         "username": f"acc-forbidden-{uuid.uuid4().hex[:8]}",
         "email": "forbidden@example.invalid",
-        "password": "acceptance-forbidden-123",
+        "password": "integration-forbidden-123",
     }, expect_success=False)
     assert result.success is False, (
         "a plain user created an account, so anyone who can log in can mint "

@@ -140,7 +140,7 @@ def scratch(pod_files):
     only when the suite is pointed at a pod that outlives the run — but that is
     also the case where a leaked file would quietly change the next result.
     """
-    directory = f"/tmp/oops-acceptance-{uuid.uuid4().hex[:8]}"
+    directory = f"/tmp/oops-integration-{uuid.uuid4().hex[:8]}"
     pod_files.mkdir(directory)
     yield directory
     pod_files.delete(directory, expect_success=False)

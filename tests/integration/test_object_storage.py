@@ -22,7 +22,7 @@ from oops_client import ApiError, wait_until
 from test_deploy import DEPLOY_TIMEOUT, TERMINAL_STATUSES
 
 DOCKERFILE = b"""FROM alpine:3.20
-RUN echo "acceptance" > /message
+RUN echo "integration" > /message
 CMD ["sh", "-c", "while true; do cat /message; sleep 30; done"]
 """
 
@@ -32,7 +32,7 @@ def make_zip() -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("Dockerfile", DOCKERFILE)
-        archive.writestr("README.md", "acceptance fixture\n")
+        archive.writestr("README.md", "integration fixture\n")
     return buffer.getvalue()
 
 
