@@ -83,6 +83,20 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                                  String applicationName,
                                  ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
         var client = clientPool.get(environment.getKubernetesApiServer());
+
+        // Nothing to apply live until the application has been deployed once, and
+        // the spec is stored either way — the deploy reads it when it builds the
+        // StatefulSet. Without this guard the ordinary first-time flow, where a
+        // user sets resources before the first deploy, scales an object that does
+        // not exist and logs a Kubernetes 404 that looks like a real failure.
+        var statefulSet = client.apps().statefulSets()
+                .inNamespace(namespace)
+                .withName(applicationName)
+                .get();
+        if (statefulSet == null) {
+            return;
+        }
+
         if (runtimeSpec.getReplicas() != null) {
             client.apps().statefulSets()
                     .inNamespace(namespace)
@@ -95,10 +109,10 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         }
         var resources = buildResources(runtimeSpec);
         client.apps().statefulSets().inNamespace(namespace).withName(applicationName)
-                .edit(statefulSet -> {
-                    statefulSet.getSpec().getTemplate().getSpec().getContainers()
+                .edit(existing -> {
+                    existing.getSpec().getTemplate().getSpec().getContainers()
                             .forEach(container -> container.setResources(resources));
-                    return statefulSet;
+                    return existing;
                 });
     }
 
