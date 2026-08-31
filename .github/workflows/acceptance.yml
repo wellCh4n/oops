@@ -1,0 +1,71 @@
+# Runs the acceptance suite against a real stack: MySQL, RustFS, Gitea, two
+# registries, a k3s cluster and the backend, all of it stood up and torn down by
+# tests/acceptance/run.sh.
+#
+# Started by hand only. A full run builds and deploys a container image per
+# scenario and takes tens of minutes, so it is something you ask for — before a
+# release, or against a branch that touches the Kubernetes layer — rather than
+# something that happens to every push.
+name: acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: Which tier to run
+        type: choice
+        options: [contract, full]
+        default: full
+      modules:
+        description: Modules to run, comma-separated (blank for all)
+        type: string
+        default: ""
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # run.sh builds the jar itself when it is missing; this is here for the
+      # dependency cache, which is most of that build's time.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Check the route inventory is current
+        run: |
+          python3 tests/acceptance/scripts/extract_routes.py > /tmp/routes.json
+          # A controller added without regenerating routes.json would let a new
+          # endpoint slip past the coverage check unnoticed.
+          diff <(jq -S '[.[].key]' /tmp/routes.json) \
+               <(jq -S '[.[].key]' tests/acceptance/routes.json) \
+            || { echo "routes.json is stale: regenerate it with scripts/extract_routes.py" >&2; exit 1; }
+
+      # One command: virtualenv, middleware, backend, cluster, suite, report,
+      # teardown. It tears the stack down on its own way out, including on a
+      # failure, so there is no cleanup step after this.
+      - name: Run the suite
+        working-directory: tests/acceptance
+        env:
+          OOPS_TEST_DEPLOY_TIMEOUT: "900"
+        run: |
+          arguments=()
+          if [ "${{ inputs.tier }}" = "contract" ]; then
+            arguments+=(--contract)
+          fi
+          if [ -n "${{ inputs.modules }}" ]; then
+            arguments+=(--module "${{ inputs.modules }}")
+          fi
+          ./run.sh "${arguments[@]}"
+
+      - name: Publish the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-report
+          path: tests/acceptance/reports/

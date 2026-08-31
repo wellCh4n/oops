@@ -1,0 +1,15 @@
+# Told to k3s so containerd will pull over plain HTTP from the two fixture
+# registries. Without this every image the pipeline pushes fails to pull back
+# with an x509 error, because the registries speak HTTP and containerd assumes
+# HTTPS.
+#
+# Only the transport is declared here. Credentials for the authenticated
+# registry reach the kubelet through the imagePullSecret OOPS copies into the
+# application namespace, which is precisely the path the suite is testing.
+mirrors:
+  "registry:5000":
+    endpoint:
+      - "http://registry:5000"
+  "registry-auth:5000":
+    endpoint:
+      - "http://registry-auth:5000"

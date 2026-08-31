@@ -1,0 +1,235 @@
+# Middleware for the acceptance suite.
+#
+# Everything OOPS talks to except Kubernetes itself, which kind provides —
+# see scripts/kind-up.sh. Kept separate from docker/docker-compose*.yml because
+# these are throwaway containers on non-standard ports, deliberately chosen so a
+# run cannot reach a real development database, bucket or registry.
+#
+#   docker compose -f tests/acceptance/docker-compose.yml up -d
+#   docker compose -f tests/acceptance/docker-compose.yml down -v
+
+name: oops-acceptance
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: oops-acceptance-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: acceptance
+      MYSQL_DATABASE: oops
+    ports:
+      - "127.0.0.1:13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-pacceptance", "--silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    tmpfs:
+      # The database is rebuilt from migrations on every run, so there is nothing
+      # worth writing to disk — and nothing left behind when the container goes.
+      - /var/lib/mysql
+
+  # S3-compatible storage for the ZIP source upload and static asset paths.
+  # RustFS rather than MinIO: MinIO's community edition was archived in April
+  # 2026 and gets no further releases or security patches, while RustFS is
+  # Apache 2.0 and maintained. OOPS depends on neither — it speaks S3 through the
+  # AWS SDK — so this is a fixture choice, and swapping it is this block alone.
+  rustfs:
+    image: rustfs/rustfs:1.0.0-rc.4
+    container_name: oops-acceptance-rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: acceptance
+      RUSTFS_SECRET_KEY: acceptance-secret
+      RUSTFS_ADDRESS: "0.0.0.0:9000"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_VOLUMES: /data
+    # Published only for the test process, which is the one party outside Docker.
+    # The backend and the pipeline pods reach this service by name instead.
+    ports:
+      - "127.0.0.1:19000:9000"
+    healthcheck:
+      # Connectivity only. The S3 root answers 403 to an unsigned request, which
+      # is correct, so `curl -f` would report a healthy server as unhealthy.
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://localhost:9000"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    # The server runs as uid 10001 and writes to both paths; the default
+    # root-owned tmpfs makes it exit at startup with a bare "Permission denied".
+    tmpfs:
+      - /data:uid=10001,gid=10001
+      - /logs:uid=10001,gid=10001
+
+  # Creates the bucket the ZIP source upload path writes into, then exits.
+  # The AWS CLI rather than a vendor tool, so this step survives another change
+  # of object store.
+  rustfs-init:
+    image: amazon/aws-cli:2.28.11
+    container_name: oops-acceptance-rustfs-init
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: acceptance
+      AWS_SECRET_ACCESS_KEY: acceptance-secret
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      aws --endpoint-url http://rustfs:9000 s3 mb s3://oops-build-sources
+      || aws --endpoint-url http://rustfs:9000 s3 ls s3://oops-build-sources;
+      echo 'bucket ready'
+      "
+
+  # A real Git server, so the git path can be tested with credentials rather than
+  # only against a public repository on the internet. Gitea rather than GitLab:
+  # one binary and about a hundred megabytes, against several gigabytes and a
+  # multi-minute boot for semantics OOPS does not use.
+  #
+  # Reachable at two addresses, and both are needed. The backend runs on the host
+  # and lists branches in process, so it uses 127.0.0.1:13000. The build pod runs
+  # inside kind and clones from gitea:3000 over the shared Docker network. A
+  # repository URL is stored once, so a test picks whichever address matches the
+  # path it is exercising.
+  gitea:
+    image: gitea/gitea:1.22
+    container_name: oops-acceptance-gitea
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__server__ROOT_URL: http://127.0.0.1:13000/
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__DISABLE_SSH: "false"
+      GITEA__server__SSH_PORT: "2222"
+      GITEA__server__SSH_LISTEN_PORT: "22"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__repository__DEFAULT_BRANCH: main
+    ports:
+      - "127.0.0.1:13000:3000"
+      - "127.0.0.1:12222:22"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/healthz"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    tmpfs:
+      - /data
+
+  # Anonymous registry: exercises the path where an environment has no registry
+  # credentials and OOPS therefore writes no dockerhub secret.
+  registry:
+    image: registry:2
+    container_name: oops-acceptance-registry
+    restart: always
+    ports:
+      - "127.0.0.1:5001:5000"
+
+  # Writes the htpasswd file the authenticated registry mounts. A service rather
+  # than a shell step so the credentials are produced by the same `up` that
+  # consumes them, and nothing has to remember to run a script first.
+  registry-auth-init:
+    image: httpd:2
+    container_name: oops-acceptance-registry-auth-init
+    entrypoint: >
+      /bin/sh -c "htpasswd -Bbn
+      $${OOPS_AUTH_REGISTRY_USER:-oops}
+      $${OOPS_AUTH_REGISTRY_PASSWORD:-oops-secret} > /auth/htpasswd
+      && echo 'registry credentials ready'"
+    volumes:
+      - ./scripts/.registry-auth:/auth
+
+  # htpasswd registry: exercises the credential chain — secret created, mounted
+  # for buildah's push, copied into the application namespace, used to pull.
+  registry-auth:
+    image: registry:2
+    container_name: oops-acceptance-registry-auth
+    restart: always
+    environment:
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    depends_on:
+      registry-auth-init:
+        condition: service_completed_successfully
+    volumes:
+      - ./scripts/.registry-auth:/auth:ro
+    ports:
+      - "127.0.0.1:5002:5000"
+
+  # The Kubernetes cluster, as an ordinary compose service.
+  #
+  # k3s rather than kind because kind's node cannot be expressed here at all: it
+  # runs systemd and is bootstrapped by kubeadm into four static pods, so
+  # something outside compose has to drive it. k3s is a single server process
+  # that writes its own kubeconfig, which means the cluster joins the same file,
+  # the same network and the same teardown as everything else.
+  #
+  # It also ships Traefik, and the CRDs it installs are exactly the ones OOPS
+  # addresses — traefik.io/v1alpha1 IngressRoute and Middleware. Under kind
+  # those CRDs are absent, so the ingress half of every deploy silently skipped.
+  k3s:
+    image: rancher/k3s:v1.32.2-k3s1
+    container_name: oops-acceptance-k3s
+    profiles: [cluster]
+    privileged: true
+    command: server --write-kubeconfig-mode=644 --disable=metrics-server
+    environment:
+      K3S_KUBECONFIG_OUTPUT: /output/kubeconfig.yaml
+      K3S_KUBECONFIG_MODE: "666"
+    volumes:
+      - ./scripts/.k3s:/output
+      - ./registries.yaml:/etc/rancher/k3s/registries.yaml:ro
+    tmpfs:
+      - /run
+      - /var/run
+    ports:
+      # For the suite's own kubectl checks. Everything server-side reaches the
+      # API at k3s:6443 over the compose network instead.
+      - "127.0.0.1:16443:6443"
+    healthcheck:
+      test: ["CMD-SHELL", "kubectl get --raw /readyz >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 15s
+
+  # The service under test, in a container like everything else it talks to.
+  #
+  # On the host it would need one address for the object store and Gitea that
+  # both it and the pipeline pods could reach — a machine's LAN IP, which is
+  # absent offline, changes on a VPN and differs on every CI runner. In here it
+  # simply resolves them by service name.
+  #
+  # Behind a profile because the cluster tier attaches it to kind's network
+  # afterwards, and because `middleware-up.sh` is also useful on its own.
+  backend:
+    image: eclipse-temurin:25-jre
+    container_name: oops-acceptance-backend
+    profiles: [backend]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
+    volumes:
+      - ${OOPS_JAR:-../../target/oops-0.0.1-SNAPSHOT.jar}:/app/oops.jar:ro
+      - ./application.yml:/app/application.yml:ro
+    # An IANA name, not the %Z abbreviation: "CST" is ambiguous, the JVM ignores
+    # it and the container stays on UTC. Timestamps here are a naive local wall
+    # clock, so the wrong zone shifts every stored value.
+    environment:
+      TZ: ${OOPS_TZ:-UTC}
+    command: >
+      java -jar /app/oops.jar
+      --spring.config.location=file:/app/application.yml
+      --server.port=8080
+    ports:
+      - "127.0.0.1:8080:8080"
+    # No healthcheck here on purpose. The temurin image ships no curl, no wget
+    # and no jshell, so any in-container probe can only fail; run.sh polls the
+    # published port from the host instead, where curl always exists.
+
+networks:
+  default:
+    name: oops-acceptance
