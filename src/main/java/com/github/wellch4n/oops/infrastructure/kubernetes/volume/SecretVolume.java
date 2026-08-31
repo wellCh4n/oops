@@ -18,10 +18,17 @@ public class SecretVolume {
     private final List<VolumeMount> volumeMounts = new ArrayList<>();
 
     public SecretVolume() {
+        // Optional, because an environment whose registry needs no credentials never
+        // gets a dockerhub secret: syncImagePullSecret skips it when the username or
+        // password is blank. Every other consumer already tolerates that — the pull
+        // secret processor returns early when it is missing, and a missing
+        // imagePullSecret only warns — so without this the build pod is the one place
+        // that refuses to start, and it fails as an unexplained FailedMount.
         this.volumes.add(new VolumeBuilder()
                 .withName("registry-secret")
                 .withNewSecret()
                 .withSecretName("dockerhub")
+                .withOptional(true)
                 .addNewItem()
                 .withKey(".dockerconfigjson")
                 .withPath("config.json")
