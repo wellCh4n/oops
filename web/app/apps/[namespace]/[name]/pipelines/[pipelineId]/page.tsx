@@ -52,6 +52,9 @@ interface StepLogMessage {
   type: "step"
   data: string
   container: string
+  // When the container wrote the line, as Kubernetes recorded it. Absent for a line the API
+  // server did not stamp, and for logs from a backend older than this field.
+  time?: string
 }
 
 interface ErrorMessage {
@@ -78,6 +81,22 @@ function isStepLogMessage(msg: PipelineMessage): msg is StepLogMessage {
 
 function isErrorMessage(msg: PipelineMessage): msg is ErrorMessage {
   return msg.type === "error"
+}
+
+// Kubernetes stamps each line in UTC; a build is read in the timezone of whoever is watching it.
+// Clock time only — a build log is a sequence of moments inside one run, and the run's date is
+// already on the page. An unparseable or absent stamp leaves the column blank rather than
+// dropping the line's own text.
+function formatLogTime(time?: string): string {
+  if (!time) return ""
+  const parsed = new Date(time)
+  if (Number.isNaN(parsed.getTime())) return ""
+  return parsed.toLocaleTimeString([], {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
 }
 
 const statusLabel: Record<string, string> = {
@@ -109,11 +128,11 @@ interface PageProps {
 export default function PipelineDetailPage({ params }: PageProps) {
   const { namespace, name, pipelineId } = use(params)
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
-  const [logs, setLogs] = useState<{ id: number; text: string }[]>([])
+  const [logs, setLogs] = useState<{ id: number; text: string; time?: string }[]>([])
   const logIdRef = useRef(0)
-  const appendLog = (text: string) => {
+  const appendLog = (text: string, time?: string) => {
     const id = ++logIdRef.current
-    setLogs(prev => [...prev, { id, text }])
+    setLogs(prev => [...prev, { id, text, time }])
   }
   const [steps, setSteps] = useState<string[]>([])
   const [activeStep, setActiveStep] = useState<string>("")
@@ -242,7 +261,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
           if (isStepsMessage(jsonData)) {
             setSteps(jsonData.data)
           } else if (isStepLogMessage(jsonData)) {
-            appendLog(jsonData.data)
+            appendLog(jsonData.data, jsonData.time)
             setActiveStep(jsonData.container)
           } else if (isErrorMessage(jsonData)) {
             appendLog(`[ERROR] ${jsonData.data}`)
@@ -532,7 +551,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
             <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                 {logs.map((log) => (
-                  <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>{log.text}</div>
+                  <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
+                    <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
+                      {formatLogTime(log.time)}
+                    </span>
+                    {log.text}
+                  </div>
                 ))}
                 {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
               </div>
