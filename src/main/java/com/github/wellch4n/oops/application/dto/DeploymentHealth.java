@@ -6,8 +6,9 @@ import java.time.Instant;
 /**
  * Post-deploy rollout snapshot of an application's StatefulSet, used to drive the ROLLING_OUT -> SUCCEEDED/ERROR
  * transition. {@code rolloutComplete} means the new revision is fully ready; {@code failureReason} carries the
- * first fatal pod condition (e.g. ImagePullBackOff), and {@code notReadySince} lets the pipeline fail a rollout
- * that has remained not ready for too long without storing another deadline in the pipeline row.
+ * first fatal pod condition (e.g. ImagePullBackOff) attributable to the update revision — a crash-looping
+ * leftover from a previous release must not fail a fresh rollout — and {@code notReadySince} lets the pipeline
+ * fail a rollout that has remained not ready for too long without storing another deadline in the pipeline row.
  */
 public record DeploymentHealth(
         boolean workloadMissing,

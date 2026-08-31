@@ -8,6 +8,8 @@ import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.OopsTypes;
+import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PodStates;
+import com.github.wellch4n.oops.infrastructure.kubernetes.pod.RolloutUnsticker;
 import com.github.wellch4n.oops.infrastructure.kubernetes.task.processor.StatefulSetProcessor;
 import io.fabric8.kubernetes.api.model.ContainerStatus;
 import io.fabric8.kubernetes.api.model.MicroTime;
@@ -114,6 +116,12 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                             .forEach(container -> container.setResources(resources));
                     return existing;
                 });
+
+        // The resources edit writes a new pod-template revision, and under OrderedReady the
+        // controller never replaces a pod that is not running and ready — so the crash-looping pod
+        // this change is often meant to repair (e.g. raising the memory limit of an OOMKilled app)
+        // would block its own fix forever.
+        RolloutUnsticker.deleteRolloutBlockingPods(client, namespace, applicationPodLabels(applicationName));
     }
 
     private ResourceRequirements buildResources(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {
@@ -430,6 +438,10 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                     annotations.put(RESTARTED_AT_ANNOTATION, restartedAt);
                     return target;
                 });
+        // A not-ready pod would block the OrderedReady rollout the annotation just triggered — and a
+        // scheduled restart has nothing watching for convergence, so a stuck one would go unnoticed.
+        // Deleting it is also the restart the pod itself needs (it resets the CrashLoop backoff).
+        RolloutUnsticker.deleteRolloutBlockingPods(client, namespace, applicationPodLabels(applicationName));
         log.info("Triggered rolling restart for {}/{}", namespace, applicationName);
     }
 
@@ -496,7 +508,13 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                 || (observedGeneration != null && observedGeneration >= generation);
         boolean rolloutComplete = generationObserved && updated == desired && ready == desired;
 
-        String failureReason = findFatalPodWaitingReason(client, namespace, applicationName);
+        String updateRevision = status != null ? status.getUpdateRevision() : null;
+        // Before the controller observes the patched generation, status.updateRevision still names the
+        // previous revision, so a crashing leftover pod would be misattributed to the new rollout —
+        // only report a failure once the revision attribution is trustworthy.
+        String failureReason = generationObserved
+                ? findFatalPodWaitingReason(client, namespace, applicationName, updateRevision)
+                : null;
         Instant notReadySince = rolloutComplete
                 ? null
                 : findRolloutNotReadySince(client, namespace, applicationName, statefulSet);
@@ -564,13 +582,25 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
         }
     }
 
-    private String findFatalPodWaitingReason(KubernetesClient client, String namespace, String applicationName) {
+    private String findFatalPodWaitingReason(KubernetesClient client,
+                                             String namespace,
+                                             String applicationName,
+                                             String updateRevision) {
         var pods = client.pods()
                 .inNamespace(namespace)
                 .withLabel(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name())
                 .withLabel(APPLICATION_NAME_LABEL, applicationName)
                 .list();
         for (Pod pod : pods.getItems()) {
+            if (PodStates.isTerminating(pod)) {
+                continue;
+            }
+            // A pod still on an old revision is what this rollout replaces, not evidence that the new
+            // version failed — a crash-looping leftover from a previous release must not fail the
+            // fresh rollout. Only pods created from the update revision can condemn it.
+            if (StringUtils.isNotBlank(updateRevision) && !PodStates.isAtRevision(pod, updateRevision)) {
+                continue;
+            }
             if (pod.getStatus() == null || pod.getStatus().getContainerStatuses() == null) {
                 continue;
             }
@@ -585,6 +615,11 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
             }
         }
         return null;
+    }
+
+    private Map<String, String> applicationPodLabels(String applicationName) {
+        return Map.of(APPLICATION_TYPE_LABEL, OopsTypes.APPLICATION.name(),
+                APPLICATION_NAME_LABEL, applicationName);
     }
 
     private boolean hasResource(ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec) {

@@ -188,7 +188,7 @@ Deployment triggering logic lives in `DeploymentService` (not `PipelineService`)
 **Deploy processor chain**: `ArtifactDeployTask` orchestrates deployment via a sequence of `DeployProcessor`s sharing a `DeployContext`:
 1. `NamespaceProcessor` — ensures target namespace exists
 2. `ImagePullSecretProcessor` — creates registry pull secret
-3. `StatefulSetProcessor` — applies the StatefulSet (sets `ownerReference` on context)
+3. `StatefulSetProcessor` — applies the StatefulSet (sets `ownerReference` on context), then runs `RolloutUnsticker` to delete the app's not-ready pods (best-effort — a failed delete is logged, never fails the deploy): under the default OrderedReady policy the controller never replaces a pod that isn't running-and-ready, so a crash-looping leftover from a failed release would otherwise block the new rollout forever. `applyRuntimeSpec` and `rolloutRestart` write a new pod-template revision too and run the same unstick. Relatedly, `getDeploymentHealth` only treats a fatal waiting reason (CrashLoopBackOff etc.) as a rollout failure once the controller has observed the current generation and only for pods on the StatefulSet's `updateRevision` — an old pod's crash must not fail a fresh rollout.
 4. `ServiceProcessor` — creates Service with `ownerReference` → StatefulSet
 5. `IngressRouteProcessor` — creates Traefik IngressRoutes with TLS/redirect logic and `ownerReference` → StatefulSet
 
