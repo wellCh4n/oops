@@ -575,6 +575,10 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
   })
 
   useEffect(() => {
+    // Switching environment tabs quickly leaves earlier fetches in flight. Without
+    // this guard a slow reply for the old tab can land after the new one and fill
+    // the editor with another environment's config — which the next save writes back.
+    let cancelled = false
     const fetchConfigMaps = async () => {
       if (!namespace || !applicationName || !activeTab) return
 
@@ -584,6 +588,7 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
       form.reset({ configMaps: [] })
       try {
         const res = await getApplicationConfigMaps(namespace, applicationName, activeTab)
+        if (cancelled) return
         if (res.data) {
           form.reset({ configMaps: toFormConfigMaps(res.data) })
         } else {
@@ -591,14 +596,16 @@ export const ApplicationConfigInfo = forwardRef<ApplicationTabHandle, Applicatio
         }
         captureBaseline()
       } catch (error) {
+        if (cancelled) return
         toast.error(t("apps.config.fetchError"))
         console.error(error)
       } finally {
-        setIsLoadingConfig(false)
+        if (!cancelled) setIsLoadingConfig(false)
       }
     }
 
     fetchConfigMaps()
+    return () => { cancelled = true }
   }, [activeTab, applicationName, captureBaseline, form, namespace, t])
 
   const handleImportConfirm = (result: {

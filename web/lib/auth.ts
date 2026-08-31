@@ -4,28 +4,7 @@ import {
   AUTH_USERNAME_KEY,
   AUTH_ROLE_KEY,
 } from "@/lib/auth-keys"
-
-interface JwtClaims {
-  sub: string
-  userId: string
-  role: string
-  exp?: number
-}
-
-function decodeJwt(token: string): JwtClaims | null {
-  try {
-    const payload = token.split(".")[1]
-    if (!payload) return null
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/")
-    const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4)
-    const json = typeof atob === "function"
-      ? atob(padded)
-      : Buffer.from(padded, "base64").toString("utf-8")
-    return JSON.parse(json) as JwtClaims
-  } catch {
-    return null
-  }
-}
+import { decodeJwt, isAdminToken, type JwtClaims } from "@/lib/jwt"
 
 export function getToken(): string | null {
   if (typeof document === "undefined") return null
@@ -69,5 +48,5 @@ export function getUserId(): string | null {
 }
 
 export function isAdmin(): boolean {
-  return getClaims()?.role === "ADMIN"
+  return isAdminToken(getToken())
 }

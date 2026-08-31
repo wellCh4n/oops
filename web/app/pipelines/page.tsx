@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw, Layers, LayoutGrid, Server } from "lucide-react"
 import { SelectWithSearch } from "@/components/ui/select-with-search"
 import { Pagination } from "@/components/ui/pagination"
+import { LocalTime } from "@/components/ui/local-time"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import {
@@ -110,9 +111,13 @@ function PipelinesContent() {
       setApplications([])
       return
     }
+    let cancelled = false
     const load = async () => {
       try {
         const res = await getApplications(selectedNamespace)
+        // A newer namespace selection already owns this list; dropping the reply
+        // keeps the old namespace's apps from reappearing in the picker.
+        if (cancelled) return
         const apps = res.data?.data ?? []
         setApplications(apps)
         const contextApp = apps.find(app => app.name === selectedApp)
@@ -126,11 +131,13 @@ function PipelinesContent() {
           })
         }
       } catch {
+        if (cancelled) return
         toast.error(t("pipelines.fetchAppsError"))
         setApplications([])
       }
     }
     load()
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace, selectedApp])
 
@@ -140,9 +147,11 @@ function PipelinesContent() {
       setEnvironments([])
       return
     }
+    let cancelled = false
     const load = async () => {
       try {
         const res = await getApplicationEnvironments(activeNamespace, selectedApp)
+        if (cancelled) return
         if (res.data) {
           setEnvironments(res.data.reduce<string[]>((acc, environment) => {
             if (environment.environment) acc.push(environment.environment)
@@ -150,10 +159,12 @@ function PipelinesContent() {
           }, []))
         }
       } catch {
+        if (cancelled) return
         setEnvironments([])
       }
     }
     load()
+    return () => { cancelled = true }
   }, [activeNamespace, selectedApp])
 
   // Fetch pipelines
@@ -190,16 +201,22 @@ function PipelinesContent() {
       setCurrentPipelineId(null)
       return
     }
+    let cancelled = false
     const load = async () => {
       try {
         const res = await getCurrentImage(activeNamespace, selectedApp, effectiveEnv)
+        // Otherwise a late reply for the previous environment marks the wrong row
+        // as the one currently deployed.
+        if (cancelled) return
         const image = res.data
         setCurrentPipelineId(image ? image.split(":").pop() ?? null : null)
       } catch {
+        if (cancelled) return
         setCurrentPipelineId(null)
       }
     }
     load()
+    return () => { cancelled = true }
   }, [activeNamespace, selectedApp, effectiveEnv])
 
   const handleStop = (pipeline: Pipeline) => {
@@ -408,9 +425,10 @@ function PipelinesContent() {
             <dd className="font-medium break-all">{rollbackTarget?.artifact}</dd>
             <dt className="text-muted-foreground">{t("pipelines.rollback.publishedAt")}</dt>
             <dd className="font-medium">
-              {rollbackTarget?.createdTime
-                ? new Date(rollbackTarget.createdTime).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-                : "-"}
+              <LocalTime
+                value={rollbackTarget?.createdTime}
+                options={{ year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }}
+              />
             </dd>
           </dl>
           <AlertDialogFooter>

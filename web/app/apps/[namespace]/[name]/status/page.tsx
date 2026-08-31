@@ -97,9 +97,13 @@ function ApplicationStatusContent() {
 
   // Fetch environments on mount
   useEffect(() => {
+    let cancelled = false
     const loadEnvironments = async () => {
       try {
         const res = await getApplicationEnvironments(namespace, name)
+        // A second run (another app, another env in the URL) has already taken over:
+        // this reply describes the previous one and must not land on top of it.
+        if (cancelled) return
         if (res.data && Array.isArray(res.data) && res.data.length > 0) {
           setEnvironments(res.data)
 
@@ -115,23 +119,28 @@ function ApplicationStatusContent() {
           setSelectedEnv(initialEnv)
           setWorkContext({ env: initialEnv })
 
-          // Sync URL if needed
+          // Spell the resolved environment into the URL. This is the page describing
+          // the state it is already in, not a navigation, so it goes through the
+          // History API — it leaves no extra back-button stop and does not re-run
+          // this effect through the router.
           if (initialEnv !== envParam) {
             const newParams = new URLSearchParams(searchParams.toString())
             newParams.set("environment", initialEnv)
-            router.replace(`${pathname}?${newParams.toString()}`)
+            window.history.replaceState(null, "", `${pathname}?${newParams.toString()}`)
           }
         }
       } catch (error) {
+        if (cancelled) return
         console.error("Failed to fetch environments:", error)
         toast.error(t("apps.status.fetchEnvError"))
       }
     }
     loadEnvironments()
+    return () => { cancelled = true }
   // `contextEnv` is only a seed for the first render — reacting to it would
   // fight the user's own tab switches.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [namespace, name, envParam, pathname, router, searchParams, t])
+  }, [namespace, name, envParam, pathname, searchParams, t])
 
   // Subscribe to pod status via SSE when environment changes
   useEffect(() => {

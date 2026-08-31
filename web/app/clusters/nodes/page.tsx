@@ -55,18 +55,24 @@ export default function NodesPage() {
   )
 
   useEffect(() => {
+    let cancelled = false
     void (async () => {
       try {
         const res = await fetchEnvironments()
+        // A re-run (language change) must not reset the environment the user has
+        // since picked back to the first one in the list.
+        if (cancelled) return
         const envs = res.data ?? []
         setEnvironments(envs)
         if (envs.length > 0) {
           setSelectedEnv(envs[0].name)
         }
       } catch {
+        if (cancelled) return
         toast.error(t("nodes.fetchEnvError"))
       }
     })()
+    return () => { cancelled = true }
   }, [t])
 
   useEffect(() => {

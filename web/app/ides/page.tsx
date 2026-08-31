@@ -105,9 +105,13 @@ function IDEPageContent() {
     }
     // Nothing is auto-selected here: if the context has no app, the user picks
     // one rather than landing on an arbitrary first entry.
+    let cancelled = false
     const loadApps = async () => {
       try {
         const res = await getApplications(selectedNamespace)
+        // Switching namespace again while this was in flight: the newer run owns
+        // the list, and this one would put the old namespace's apps back.
+        if (cancelled) return
         const apps = res.data?.data ?? []
         setApplications(apps)
         const contextApp = apps.find(app => app.name === selectedApp)
@@ -121,10 +125,12 @@ function IDEPageContent() {
           })
         }
       } catch {
+        if (cancelled) return
         toast.error(t("apps.fetchError"))
       }
     }
     loadApps()
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace, selectedApp])
 

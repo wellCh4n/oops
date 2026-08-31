@@ -45,6 +45,7 @@ function AppsContent() {
   const [totalPages, setTotalPages] = useState(0)
   const [total, setTotal] = useState(0)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [reloadToken, setReloadToken] = useState(0)
   const [activeDeployments, setActiveDeployments] = useState<Record<string, ActiveDeployment[]>>({})
   const { t } = useLanguage()
   const columns = useMemo(() => getColumns(t), [t])
@@ -57,12 +58,15 @@ function AppsContent() {
   // URL has priority; fallback to store on first load
   const ownerOnly = ownerOnlyUrl !== null ? ownerOnlyUrl !== "false" : ownerOnlyStore
 
-  // Sync store value to URL on first load when URL param is absent
+  // Stamp the remembered filter into the URL on first load when the param is absent.
+  // This spells out the state the page is already in rather than navigating anywhere,
+  // so it goes through the History API: no route transition, and no extra back-button
+  // stop between the user and wherever they came from.
   useEffect(() => {
     if (ownerOnlyUrl === null && selectedNamespace) {
       const params = new URLSearchParams(searchParams.toString())
       params.set("ownerOnly", ownerOnlyStore ? "true" : "false")
-      router.replace(`/apps?${params.toString()}`)
+      window.history.replaceState(null, "", `/apps?${params.toString()}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerOnlyUrl, selectedNamespace])
@@ -82,11 +86,39 @@ function AppsContent() {
   }, [loadNamespaces])
 
   useEffect(() => {
-    if (selectedNamespace) {
-      fetchData()
+    if (!selectedNamespace) {
+      setApplications([])
+      return
     }
+    // Namespace, page, size and owner filter all re-run this. Whichever request
+    // returns last would otherwise win, so a superseded run drops its own reply
+    // instead of painting the wrong namespace's rows under the current filters.
+    let cancelled = false
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
+        if (cancelled) return
+        if (res.data) {
+          setApplications(res.data.data)
+          setTotalPages(res.data.totalPages)
+          setTotal(res.data.total)
+        }
+      } catch (error) {
+        if (cancelled) return
+        console.error("Failed to fetch applications:", error)
+        toast.error(t("apps.fetchError"))
+        setApplications([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    fetchData()
+    return () => { cancelled = true }
+    // `searchQuery` is deliberately absent: the list reloads when the user presses
+    // Search (which bumps `reloadToken`), not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, page, size, ownerOnly])
+  }, [selectedNamespace, page, size, ownerOnly, reloadToken])
 
   // The deploying marks refresh on their own, independently of the application list: a poll
   // that fails is simply skipped, leaving the marks that are already on screen in place.
@@ -119,32 +151,11 @@ function AppsContent() {
     return () => clearInterval(intervalId)
   }, [selectedNamespace, fetchActiveDeployments])
 
+  // Searching the same term on the same page changes no dependency of the fetch
+  // effect, so the button bumps this to ask for the run explicitly.
   const handleSearch = () => {
     updateParams({ page: "1" })
-    fetchData()
-  }
-
-  const fetchData = async () => {
-    if (!selectedNamespace) {
-      setApplications([])
-      return
-    }
-
-    setLoading(true)
-    try {
-      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
-      if (res.data) {
-        setApplications(res.data.data)
-        setTotalPages(res.data.totalPages)
-        setTotal(res.data.total)
-      }
-    } catch (error) {
-      console.error("Failed to fetch applications:", error)
-      toast.error(t("apps.fetchError"))
-      setApplications([])
-    } finally {
-      setLoading(false)
-    }
+    setReloadToken((token) => token + 1)
   }
 
   return (

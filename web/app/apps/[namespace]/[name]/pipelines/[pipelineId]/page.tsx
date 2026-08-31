@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ConnectionLostBanner } from "@/components/connection-lost-banner"
 import { Copyable } from "@/components/ui/copyable"
+import { LocalTime } from "@/components/ui/local-time"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,16 +88,11 @@ function isErrorMessage(msg: PipelineMessage): msg is ErrorMessage {
 // Clock time only — a build log is a sequence of moments inside one run, and the run's date is
 // already on the page. An unparseable or absent stamp leaves the column blank rather than
 // dropping the line's own text.
-function formatLogTime(time?: string): string {
-  if (!time) return ""
-  const parsed = new Date(time)
-  if (Number.isNaN(parsed.getTime())) return ""
-  return parsed.toLocaleTimeString([], {
-    hour12: false,
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  })
+const LOG_TIME_OPTIONS: Intl.DateTimeFormatOptions = {
+  hour12: false,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
 }
 
 const statusLabel: Record<string, string> = {
@@ -552,9 +548,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
               <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                 {logs.map((log) => (
                   <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
-                    <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
-                      {formatLogTime(log.time)}
-                    </span>
+                    <LocalTime
+                      value={log.time}
+                      fallback=""
+                      options={LOG_TIME_OPTIONS}
+                      className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums"
+                    />
                     {log.text}
                   </div>
                 ))}

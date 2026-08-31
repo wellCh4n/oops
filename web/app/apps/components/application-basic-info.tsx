@@ -55,27 +55,31 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
   const { t } = useLanguage()
 
   useEffect(() => {
+    // Each reply is checked in on its own, so a run superseded by a new
+    // `initialData` cannot finish writing the previous application's lists.
+    let cancelled = false
     const loadData = async () => {
       try {
         const requests: Promise<unknown>[] = [
-          fetchNamespaces().then(res => setNamespaces(res.data.map((ns) => ns.name))),
-          fetchEnvironments().then(res => setEnvironments(res.data)),
-          fetchUsers().then(setUsers),
+          fetchNamespaces().then(res => { if (!cancelled) setNamespaces(res.data.map((ns) => ns.name)) }),
+          fetchEnvironments().then(res => { if (!cancelled) setEnvironments(res.data) }),
+          fetchUsers().then(users => { if (!cancelled) setUsers(users) }),
         ]
         if (initialData) {
           requests.push(
             getApplicationEnvironments(initialData.namespace, initialData.name)
-              .then(res => setSelectedEnvNames(res.data.map(e => e.environment)))
+              .then(res => { if (!cancelled) setSelectedEnvNames(res.data.map(e => e.environment)) })
           )
         }
         await Promise.all(requests)
       } catch {
-        toast.error(t("apps.basic.fetchError"))
+        if (!cancelled) toast.error(t("apps.basic.fetchError"))
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     loadData()
+    return () => { cancelled = true }
   }, [initialData, t])
 
   const form = useForm<ApplicationBasicFormValues>({

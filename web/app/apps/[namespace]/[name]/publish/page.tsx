@@ -73,6 +73,7 @@ export default function PublishPage({ params }: PageProps) {
     : ""
 
   useEffect(() => {
+    let cancelled = false
     const fetchData = async () => {
       try {
         const [appRes, envRes, lastPipelineRes, buildConfigRes, runtimeSpecRes] = await Promise.all([
@@ -82,6 +83,11 @@ export default function PublishPage({ params }: PageProps) {
           getApplicationBuildConfig(namespace, name),
           getApplicationRuntimeSpec(namespace, name)
         ])
+
+        // Another app is being published now; this reply belongs to the previous
+        // one and would repopulate the form — branch, deploy mode and all — with
+        // the wrong application's history.
+        if (cancelled) return
 
         if (appRes.data) {
           setApplication(appRes.data)
@@ -127,10 +133,12 @@ export default function PublishPage({ params }: PageProps) {
           }
         }
       } catch {
+        if (cancelled) return
         toast.error(t("apps.publish.fetchError"))
       }
     }
     fetchData()
+    return () => { cancelled = true }
   }, [namespace, name, t, enterApp])
 
   const handlePublish = async () => {

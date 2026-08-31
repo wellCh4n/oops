@@ -145,8 +145,11 @@ export function CronScheduleBuilder({ value, onChange, locale, t }: CronSchedule
     update({ daysOfWeek })
   }
 
+  // The reference dates are built in UTC, so they have to be read back in UTC too:
+  // formatted in a zone behind UTC they land on the previous day and every label
+  // shifts by one.
   const weekdayLabel = (day: number) =>
-    new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(Date.UTC(2024, 0, 7 + day)))
+    new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 7 + day)))
 
   return (
     <div className="flex flex-col gap-3">

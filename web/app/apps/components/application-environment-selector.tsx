@@ -35,6 +35,10 @@ export function ApplicationEnvironmentSelector({
   const { t } = useLanguage()
 
   useEffect(() => {
+    // The parent callbacks below feed the caller's own state, so a superseded run
+    // has to stay quiet on both sides: an old app's environment list arriving late
+    // would replace the current one here and in the page around it.
+    let cancelled = false
     const loadEnvironments = async () => {
       if (!namespace || !applicationName) {
         setIsLoading(false)
@@ -46,19 +50,24 @@ export function ApplicationEnvironmentSelector({
       onLoadingChange?.(true)
       try {
         const res = await getApplicationEnvironments(namespace, applicationName)
+        if (cancelled) return
         if (res.data) {
           setEnvironments(res.data)
           onEnvironmentsLoaded?.(res.data)
         }
       } catch (error) {
+        if (cancelled) return
         console.error(error)
         toast.error(t("apps.envSelector.fetchError"))
       } finally {
-        setIsLoading(false)
-        onLoadingChange?.(false)
+        if (!cancelled) {
+          setIsLoading(false)
+          onLoadingChange?.(false)
+        }
       }
     }
     loadEnvironments()
+    return () => { cancelled = true }
   }, [namespace, applicationName]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

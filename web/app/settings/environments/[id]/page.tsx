@@ -73,6 +73,7 @@ function EnvironmentEditPageContent() {
   const [missingNamespace, setMissingNamespace] = useState("")
 
   const [environment, setEnvironmentName] = useState("")
+  const [loadFailed, setLoadFailed] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmInput, setDeleteConfirmInput] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
@@ -116,12 +117,17 @@ function EnvironmentEditPageContent() {
   }, [form])
 
   useEffect(() => {
+    let cancelled = false
     const loadEnvironment = async () => {
       try {
         setIsLoading(true)
         const response = await fetchEnvironment(id)
+        // A different environment id is already loading; this reply is for the
+        // one the user navigated away from and must not fill in the form.
+        if (cancelled) return
         if (response.success && response.data) {
           const env = response.data
+          setLoadFailed(false)
           setEnvironmentName(env.name)
           form.reset({
             id: env.id,
@@ -145,21 +151,23 @@ function EnvironmentEditPageContent() {
           })
         } else {
           toast.error(t("env.loadError"))
-          router.push("/settings/environments")
+          setLoadFailed(true)
         }
       } catch (error) {
+        if (cancelled) return
         toast.error(t("env.loadError"))
         console.error(error)
-        router.push("/settings/environments")
+        setLoadFailed(true)
       } finally {
-        setIsLoading(false)
+        if (!cancelled) setIsLoading(false)
       }
     }
 
     if (id) {
       loadEnvironment()
     }
-  }, [id, form, router, t])
+    return () => { cancelled = true }
+  }, [id, form, t])
 
   const handleCreateNamespace = async () => {
     try {
@@ -314,6 +322,22 @@ function EnvironmentEditPageContent() {
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin size-8" /></div>
+  }
+
+  // A failed load is reported where the user is, with a way back they choose to
+  // take — rather than being moved off the URL they asked for.
+  if (loadFailed) {
+    return (
+      <ContentPage title={t("env.title")}>
+        <div className="flex flex-col items-center gap-3 rounded-md border p-8 text-center">
+          <AlertTriangle className="size-6 text-destructive" />
+          <p className="text-sm text-muted-foreground">{t("env.loadError")}</p>
+          <Button type="button" variant="outline" onClick={() => router.push("/settings/environments")}>
+            {t("env.title")}
+          </Button>
+        </div>
+      </ContentPage>
+    )
   }
 
   return (

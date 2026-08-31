@@ -2,7 +2,7 @@
 "use client"
 
 import { Suspense, useState, useEffect } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useParams } from "next/navigation"
 import { ApplicationForm } from "@/app/apps/application-form"
 import {
   getApplication,
@@ -27,7 +27,6 @@ import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import { useWorkContextStore } from "@/store/work-context"
 
 export default function EditAppPage() {
-  const router = useRouter()
   const params = useParams()
   const namespace = params.namespace as string
   const name = params.name as string
@@ -44,6 +43,7 @@ export default function EditAppPage() {
   const enterApp = useWorkContextStore((state) => state.enterApp)
 
   useEffect(() => {
+    let cancelled = false
     const fetchApp = async () => {
       try {
         const [appRes, buildConfigRes, buildEnvRes, runtimeSpecRes, serviceRes, expertRes] = await Promise.all([
@@ -54,6 +54,10 @@ export default function EditAppPage() {
           getApplicationService(namespace, name),
           getApplicationExpertConfig(namespace, name),
         ])
+
+        // Another app was opened while these were in flight; its own run owns the
+        // state now, and this reply would overwrite it with the previous app.
+        if (cancelled) return
 
         if (appRes.data) {
           setApplication(appRes.data)
@@ -87,15 +91,19 @@ export default function EditAppPage() {
         }
 
       } catch (error) {
+        if (cancelled) return
         console.error("Failed to fetch application:", error)
+        // The page reports the failure in place — the not-found panel below covers
+        // the empty state. Bouncing to /apps would take the URL away from under the
+        // user and lose the address they were trying to open.
         toast.error(t("apps.detail.fetchError"))
-        router.push("/apps")
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
     fetchApp()
-  }, [namespace, name, router, enterApp]) // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { cancelled = true }
+  }, [namespace, name, enterApp]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>
