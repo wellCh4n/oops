@@ -51,10 +51,15 @@ public class PublishContainer extends BaseContainer {
         String registriesConf = buildRegistriesConf(registryMirrors);
         String registriesConfEncoded = Base64.getEncoder().encodeToString(
                 registriesConf.getBytes(StandardCharsets.UTF_8));
+        // overlay, not vfs: vfs copies the whole tree for every layer, so a build of any size
+        // spends minutes silently copying after its last log line, and the store grows to the
+        // image size times the layer count. The store is on the emptyDir that
+        // ContainerStorageVolume mounts here — on the container's own writable layer, where it
+        // would otherwise sit, every write additionally pays an overlayfs copy-up.
         String command = """
                 printf '%s' "$3" | base64 -d > /tmp/registries.conf
-                buildah bud --storage-driver=vfs --tls-verify=false --isolation chroot --registries-conf /tmp/registries.conf -t "$1" -f "$2" /workspace
-                buildah push --storage-driver=vfs --tls-verify=false --registries-conf /tmp/registries.conf "$1"
+                buildah bud --storage-driver=overlay --tls-verify=false --isolation chroot --registries-conf /tmp/registries.conf -t "$1" -f "$2" /workspace
+                buildah push --storage-driver=overlay --tls-verify=false --registries-conf /tmp/registries.conf "$1"
                 """;
 
         ContainerBuilder builder = new ContainerBuilder()

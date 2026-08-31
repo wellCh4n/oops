@@ -43,9 +43,30 @@ class PublishContainerTests {
         assertTrue(shellCommand.contains("base64 -d > /tmp/registries.conf"));
         assertTrue(shellCommand.contains("-t \"$1\" -f \"$2\" /workspace"));
         assertTrue(shellCommand.contains("buildah push"));
+        // The printf's own %s must survive into the shell rather than being consumed as a
+        // format specifier, which is why the command is built with replace() and not formatted().
+        assertTrue(shellCommand.contains("printf '%s' \"$3\""));
         assertEquals("publish", container.getCommand().get(4));
         assertEquals("registry.example.com/team;touch /tmp/pwn/demo'app:pipe$(bad)", container.getCommand().get(5));
         assertEquals("Dockerfile with spaces; touch /tmp/pwn's", container.getCommand().get(6));
+    }
+
+    @Test
+    void buildsAndPushesWithTheOverlayStorageDriver() {
+        PublishContainer container = new PublishContainer(
+                application("demo"),
+                null,
+                pipeline("pipe"),
+                "registry.example.com/team",
+                "quay.io/buildah/stable:v1.43.1",
+                null);
+
+        String shellCommand = container.getCommand().get(3);
+
+        // Both calls, not just the build: a push that re-opens the store under vfs would copy
+        // every layer again, which is the stall this replaced.
+        assertFalse(shellCommand.contains("--storage-driver=vfs"));
+        assertEquals(2, shellCommand.split("--storage-driver=overlay", -1).length - 1);
     }
 
     @Test

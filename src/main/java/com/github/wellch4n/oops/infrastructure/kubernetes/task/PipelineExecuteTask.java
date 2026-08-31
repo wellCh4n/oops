@@ -18,6 +18,7 @@ import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
 import com.github.wellch4n.oops.application.port.ObjectStorage;
+import com.github.wellch4n.oops.infrastructure.kubernetes.volume.ContainerStorageVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.SecretVolume;
 import com.github.wellch4n.oops.infrastructure.kubernetes.volume.WorkspaceVolume;
 import io.fabric8.kubernetes.api.model.Container;
@@ -71,6 +72,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
     public PipelineBuildPod call() {
         WorkspaceVolume workspaceVolume = new WorkspaceVolume();
         SecretVolume secretVolume = new SecretVolume();
+        ContainerStorageVolume containerStorageVolume = new ContainerStorageVolume();
 
         List<Container> initContainers = new ArrayList<>();
 
@@ -99,7 +101,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
                 pipelineImageConfig.getPush(),
                 pipelineImageConfig.getRegistryMirrors()
         );
-        push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
+        push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts(),
+                containerStorageVolume.getVolumeMounts());
         initContainers.add(push);
         String artifact = push.getArtifact();
 
@@ -107,7 +110,8 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         done.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
 
         PipelineBuildPod pipelineBuildPod = new PipelineBuildPod(application, pipeline, environment, initContainers, done);
-        pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes());
+        pipelineBuildPod.addVolumes(workspaceVolume.getVolumes(), secretVolume.getVolumes(),
+                containerStorageVolume.getVolumes());
         pipelineBuildPod.setArtifact(artifact);
 
         try (var client = KubernetesClients.from(environment.getKubernetesApiServer())) {
