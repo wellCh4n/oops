@@ -168,7 +168,7 @@ Build pipelines run as Kubernetes Jobs with init containers:
 1. **clone**: Clones source code from git (or downloads ZIP via curl for ZIP source type)
 2. **dockerfile** (optional): Writes an inline `USER` Dockerfile into the workspace
 3. **build** (optional): Runs custom build commands
-4. **push**: Builds and pushes Docker image using Buildah
+4. **push**: Builds and pushes Docker image using Buildah, with the `overlay` storage driver over the `container-storage` emptyDir that `ContainerStorageVolume` mounts at `/var/lib/containers`. Both halves matter: the store defaults into the container's writable layer, where every write pays an overlayfs copy-up, and `vfs` (used until the volume existed) copies the entire tree per layer — together they made a build of any size stall for minutes with no log output after its last line. Buildah's own image declares a `VOLUME` for this path, but Kubernetes ignores image `VOLUME` declarations, so the mount has to be explicit.
 
 Two source types exist: `GIT` (default) and `ZIP`. ZIP uploads use presigned S3 URLs via `BuildSourceObjectStorageService` — the frontend gets a presigned PUT URL from `POST .../deployments/source-upload`, uploads the file, then triggers the pipeline. ZIP builds use `oops.pipeline.image.zip` (defaults to `alpine/curl:8.17.0`) to download the archive.
 
