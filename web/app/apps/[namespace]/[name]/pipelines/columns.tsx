@@ -9,17 +9,27 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Check, X } from "lucide-react"
 import Link from "next/link"
 
+/**
+ * The tag of an image reference, or "" when it carries none. The last colon only starts a tag if it
+ * comes after the last slash — a registry host with a port (`registry:5000/app`) has one too.
+ */
+export function imageTag(image?: string | null): string {
+  if (!image) return ""
+  const colon = image.lastIndexOf(":")
+  return colon > image.lastIndexOf("/") ? image.slice(colon + 1) : ""
+}
+
 interface DeployStatusCellProps {
   images: string[]
   namespace: string
   appName: string
-  pipelineId: string
+  expectedTag: string
 }
 
-const DeployStatusCell = memo(({ images, namespace, appName, pipelineId }: DeployStatusCellProps) => {
+const DeployStatusCell = memo(({ images, namespace, appName, expectedTag }: DeployStatusCellProps) => {
   const firstImage = images.length > 0 ? images[0] : ""
-  const tag = firstImage.includes(":") ? firstImage.split(":").pop()! : ""
-  const versionMached = tag === pipelineId
+  const tag = imageTag(firstImage)
+  const versionMached = !!tag && tag === expectedTag
   const icon = !tag ? null : versionMached ? (
     <Check className="size-4 text-success" />
   ) : (
@@ -53,7 +63,10 @@ export const getPipelineStatusColumns = (
   t: (key: string) => string,
   namespace: string,
   appName: string,
-  pipelineId: string
+  // The tag this pipeline put in the cluster, not its id: an image is tagged with the id of the
+  // pipeline that BUILT it, and a rollback redeploys its source's image untouched. Comparing the
+  // pod against the id would mark every rollback as running the wrong version.
+  expectedTag: string
 ): ColumnDef<ApplicationPodStatus>[] => [
   {
     accessorKey: "name",
@@ -85,7 +98,7 @@ export const getPipelineStatusColumns = (
           images={images}
           namespace={namespace}
           appName={appName}
-          pipelineId={pipelineId}
+          expectedTag={expectedTag}
         />
       )
     },

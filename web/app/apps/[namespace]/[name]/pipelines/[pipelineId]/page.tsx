@@ -22,7 +22,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { DataTable } from "@/components/ui/data-table"
-import { getPipelineStatusColumns } from "../columns"
+import { getPipelineStatusColumns, imageTag } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
 import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2 } from "lucide-react"
@@ -327,7 +327,11 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [logs])
 
-  const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, pipelineId), [t, namespace, name, pipelineId])
+  // A rollback's artifact is its source's image, so its tag is the source's id — the pod running it
+  // is the right version, and comparing against this pipeline's own id would call it the wrong one.
+  // Before a build produces an artifact the pipeline's own id is the tag it is going to get.
+  const expectedTag = imageTag(pipeline?.artifact) || pipelineId
+  const statusColumns = useMemo(() => getPipelineStatusColumns(t, namespace, name, expectedTag), [t, namespace, name, expectedTag])
 
   const crashLoopPods = useMemo(
     () =>
