@@ -25,7 +25,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2 } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -145,6 +145,9 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
 
+  // A rollback reuses a historic artifact and runs no build job, so it has neither steps nor build logs.
+  const isRollback = pipeline?.triggerType === "ROLLBACK"
+  const buildLogAvailable = pipeline !== null && !isRollback
 
   const fetchPipeline = useCallback(async () => {
     try {
@@ -214,6 +217,8 @@ export default function PipelineDetailPage({ params }: PageProps) {
   }, [namespace, name, pipeline?.environment])
 
   useEffect(() => {
+    if (!buildLogAvailable) return
+
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const baseUrl = API_BASE_URL.startsWith('http')
       ? API_BASE_URL.replace(/^http/, 'ws')
@@ -314,7 +319,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
       if (heartbeatInterval) clearInterval(heartbeatInterval)
       if (ws) ws.close()
     }
-  }, [namespace, name, pipelineId])
+  }, [namespace, name, pipelineId, buildLogAvailable])
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -461,14 +466,42 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
         {/* Header */}
         <div className="flex items-center justify-between border-b pb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              {pipeline && <>{t("apps.pipeline.id")} <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></>}
-              {pipeline && <>{t("apps.pipeline.envLabel")} <Badge variant="outline">{pipeline.environment}</Badge></>}
-              {pipeline && <>{t("apps.pipeline.statusLabel")} <Badge variant={getStatusVariant(pipeline.status)}>{t(statusLabel[pipeline.status] ?? pipeline.status)}</Badge></>}
-              {pipeline && <>{t("apps.pipeline.createdAt")} <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></>}
-              {deployModeLabel && <>{t("apps.pipeline.deployMode")} <Badge variant="outline">{deployModeLabel}</Badge></>}
-              {pipeline?.operatorName && <>{t("apps.pipeline.operator")} <Badge variant="outline">{pipeline.operatorName}</Badge></>}
+          <div className="flex min-w-0 items-center gap-4">
+            {/* Each label sticks to its own badge; the row wraps between pairs rather than
+                breaking a label across two lines when the badges outgrow the width. */}
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {pipeline && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.id")} <Badge variant="outline"><Copyable value={pipelineId} maxLength={Infinity} /></Badge></span>}
+              {pipeline && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.envLabel")} <Badge variant="outline">{pipeline.environment}</Badge></span>}
+              {pipeline && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.statusLabel")} <Badge variant={getStatusVariant(pipeline.status)}>{t(statusLabel[pipeline.status] ?? pipeline.status)}</Badge></span>}
+              {/* With the build log gone, this badge is the only thing on the page saying why. The
+                  header is already a dense row of labelled badges, so the source id stays in the
+                  tooltip and the badge itself links to it. */}
+              {isRollback && (
+                pipeline?.rollbackFromPipelineId ? (
+                  <Tooltip>
+                    <TooltipTrigger render={
+                      <Link href={`/apps/${namespace}/${name}/pipelines/${pipeline.rollbackFromPipelineId}`} className="cursor-pointer" />
+                    }>
+                      <Badge variant="outline" className="gap-1 whitespace-nowrap">
+                        <Undo2 className="size-3" />
+                        {t("pipelines.col.rollbackTag")}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {t("pipelines.col.rollbackFrom")}
+                      <span className="font-mono">{pipeline.rollbackFromPipelineId}</span>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Badge variant="outline" className="gap-1 whitespace-nowrap">
+                    <Undo2 className="size-3" />
+                    {t("pipelines.col.rollbackTag")}
+                  </Badge>
+                )
+              )}
+              {pipeline && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.createdAt")} <Badge variant="outline">{dayjs(pipeline.createdTime).format('YYYY-MM-DD HH:mm:ss')}</Badge></span>}
+              {deployModeLabel && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.deployMode")} <Badge variant="outline">{deployModeLabel}</Badge></span>}
+              {pipeline?.operatorName && <span className="flex items-center gap-2 whitespace-nowrap">{t("apps.pipeline.operator")} <Badge variant="outline">{pipeline.operatorName}</Badge></span>}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -515,106 +548,112 @@ export default function PipelineDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Content: logs left, status right */}
-        <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
-          {/* Left column: steps + logs */}
-          <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
-            {/* Steps Progress Bar */}
-            {steps.length > 0 && (
-              <div className="flex items-start px-1 pt-1 pb-5">
-                {steps.map((step, index) => {
-                  const isCompleted = index < activeIndex
-                  const isActive = index === activeIndex
-                  return (
-                    <div key={step} className="flex items-center flex-1 last:flex-none">
-                      <div className="flex flex-col items-center relative w-6">
-                        <div className={`size-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
-                              ${isCompleted ? 'bg-primary text-primary-foreground' : ''}
-                              ${isActive ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : ''}
-                              ${!isCompleted && !isActive ? 'bg-muted text-muted-foreground' : ''}
-                            `}>
-                          {isCompleted ? <Check className="size-3" /> : index + 1}
+        {/* Content: logs left, status right. Held back until the pipeline is loaded: whether
+            there is a build log to show depends on its trigger type, and rendering the log
+            panel on the guess and pulling it away a moment later reads as a glitch. */}
+        {pipeline && (
+          <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
+            {/* Left column: steps + logs — a rollback runs no build job, so it has no log stream */}
+            {!isRollback && (
+              <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
+                {/* Steps Progress Bar */}
+                {steps.length > 0 && (
+                  <div className="flex items-start px-1 pt-1 pb-5">
+                    {steps.map((step, index) => {
+                      const isCompleted = index < activeIndex
+                      const isActive = index === activeIndex
+                      return (
+                        <div key={step} className="flex items-center flex-1 last:flex-none">
+                          <div className="flex flex-col items-center relative w-6">
+                            <div className={`size-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
+                                  ${isCompleted ? 'bg-primary text-primary-foreground' : ''}
+                                  ${isActive ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : ''}
+                                  ${!isCompleted && !isActive ? 'bg-muted text-muted-foreground' : ''}
+                                `}>
+                              {isCompleted ? <Check className="size-3" /> : index + 1}
+                            </div>
+                            <span className={`absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs truncate max-w-24 text-center whitespace-nowrap ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                              {step}
+                            </span>
+                          </div>
+                          {index < steps.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-1 ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
+                          )}
                         </div>
-                        <span className={`absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs truncate max-w-24 text-center whitespace-nowrap ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                          {step}
+                      )
+                    })}
+                  </div>
+                )}
+                {/* Logs Area */}
+                <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                  <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
+                    {logs.map((log) => (
+                      <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
+                        <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
+                          {formatLogTime(log.time)}
                         </span>
+                        {log.text}
                       </div>
-                      {index < steps.length - 1 && (
-                        <div className={`flex-1 h-0.5 mx-1 ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
-                      )}
-                    </div>
-                  )
-                })}
+                    ))}
+                    {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
+                  </div>
+                </div>
               </div>
             )}
-            {/* Logs Area */}
-            <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
-              <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
-                {logs.map((log) => (
-                  <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
-                    <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
-                      {formatLogTime(log.time)}
-                    </span>
-                    {log.text}
-                  </div>
-                ))}
-                {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
-              </div>
-            </div>
-          </div>
 
-          {/* Application Status (right) */}
-          <div className="flex-1 border rounded-md p-4 flex flex-col gap-3 overflow-y-auto">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">{t("apps.pipeline.runningStatus")}</h3>
+            {/* Application Status (right) */}
+            <div className="flex-1 border rounded-md p-4 flex flex-col gap-3 overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">{t("apps.pipeline.runningStatus")}</h3>
+                {pipeline?.environment && (
+                  <Link
+                    href={`/apps/${namespace}/${name}/status?environment=${pipeline.environment}`}
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {t("apps.pipeline.viewDetails")}
+                    <ArrowUpRight className="size-3.5" />
+                  </Link>
+                )}
+              </div>
+              {(clusterDomain?.internalDomain || (clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0)) && (
+                <div className="flex flex-col gap-1 text-sm">
+                  {clusterDomain?.internalDomain && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{t("apps.pipeline.internalDomain")}</span>
+                      <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
+                    </div>
+                  )}
+                  {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
+                    <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-1 items-center w-fit">
+                      {clusterDomain.externalDomains.map((domain, index) => (
+                        <Fragment key={domain}>
+                          <span className="font-medium whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
+                          <span className="flex items-center gap-1.5">
+                            <Copyable value={domain} maxLength={Infinity} />
+                            <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+                              <ExternalLink className="size-4" />
+                            </a>
+                          </span>
+                        </Fragment>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <DataTable columns={statusColumns} data={podStatuses} loading={statusLoading} getRowId={(row) => row.name} renderExpandedRow={renderExpandedRow} />
               {pipeline?.environment && (
-                <Link
-                  href={`/apps/${namespace}/${name}/status?environment=${pipeline.environment}`}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t("apps.pipeline.viewDetails")}
-                  <ArrowUpRight className="size-3.5" />
-                </Link>
+                <ApplicationEventsPanel
+                  namespace={namespace}
+                  applicationName={name}
+                  environment={pipeline.environment}
+                  since={applicationEventSince}
+                  limit={100}
+                  compact
+                />
               )}
             </div>
-            {(clusterDomain?.internalDomain || (clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0)) && (
-              <div className="flex flex-col gap-1 text-sm">
-                {clusterDomain?.internalDomain && (
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{t("apps.pipeline.internalDomain")}</span>
-                    <Copyable value={clusterDomain.internalDomain} maxLength={Infinity} />
-                  </div>
-                )}
-                {clusterDomain?.externalDomains && clusterDomain.externalDomains.length > 0 && (
-                  <div className="grid grid-cols-[auto_auto] gap-x-2 gap-y-1 items-center w-fit">
-                    {clusterDomain.externalDomains.map((domain, index) => (
-                      <Fragment key={domain}>
-                        <span className="font-medium whitespace-nowrap">{index === 0 ? t("apps.pipeline.externalDomain") : ""}</span>
-                        <span className="flex items-center gap-1.5">
-                          <Copyable value={domain} maxLength={Infinity} />
-                          <a href={domain} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-                            <ExternalLink className="size-4" />
-                          </a>
-                        </span>
-                      </Fragment>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <DataTable columns={statusColumns} data={podStatuses} loading={statusLoading} getRowId={(row) => row.name} renderExpandedRow={renderExpandedRow} />
-            {pipeline?.environment && (
-              <ApplicationEventsPanel
-                namespace={namespace}
-                applicationName={name}
-                environment={pipeline.environment}
-                since={applicationEventSince}
-                limit={100}
-                compact
-              />
-            )}
           </div>
-        </div>
+        )}
       </div>
     </ContentPage>
   )

@@ -14,7 +14,10 @@ export const getPipelineColumns = (
   onStop: (pipeline: Pipeline) => void,
   onDeploy: (pipeline: Pipeline) => void,
   onRollback: (pipeline: Pipeline) => void,
-  currentPipelineId?: string | null
+  currentPipelineId?: string | null,
+  // False under the "all environments" scope: the list then mixes environments, the live image of
+  // each is unknown, and rolling back without knowing which row is the running one is a trap.
+  rollbackEnabled: boolean = true
 ): ColumnDef<Pipeline>[] => [
   {
     accessorKey: "id",
@@ -144,7 +147,8 @@ export const getPipelineColumns = (
               {t("pipelines.col.stop")}
             </Button>
           )}
-          {row.original.status === "SUCCEEDED"
+          {rollbackEnabled
+            && row.original.status === "SUCCEEDED"
             && !!row.original.artifact
             && !(currentPipelineId && row.original.id === currentPipelineId) && (
             <Button variant="outline" size="sm" className="h-8 px-2 gap-1" onClick={() => onRollback(row.original)}>
