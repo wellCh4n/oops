@@ -85,8 +85,8 @@ function isErrorMessage(msg: PipelineMessage): msg is ErrorMessage {
 
 // Kubernetes stamps each line in UTC; a build is read in the timezone of whoever is watching it.
 // Clock time only — a build log is a sequence of moments inside one run, and the run's date is
-// already on the page. An unparseable or absent stamp leaves the column blank rather than
-// dropping the line's own text.
+// already on the page. An unparseable or absent stamp yields an empty string, which the caller
+// reads as "this line has no time" — the line's own text is never dropped.
 function formatLogTime(time?: string): string {
   if (!time) return ""
   const parsed = new Date(time)
@@ -587,14 +587,22 @@ export default function PipelineDetailPage({ params }: PageProps) {
                 {/* Logs Area */}
                 <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
                   <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
-                    {logs.map((log) => (
-                      <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
-                        <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
-                          {formatLogTime(log.time)}
-                        </span>
-                        {log.text}
-                      </div>
-                    ))}
+                    {logs.map((log) => {
+                      // Only a stamped line gets the time gutter. The unstamped ones are OOPS's own
+                      // notices, not container output, so an empty gutter would just indent them away
+                      // from the left edge for a column that says nothing.
+                      const time = formatLogTime(log.time)
+                      return (
+                        <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
+                          {time && (
+                            <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
+                              {time}
+                            </span>
+                          )}
+                          {log.text}
+                        </div>
+                      )
+                    })}
                     {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
                   </div>
                 </div>

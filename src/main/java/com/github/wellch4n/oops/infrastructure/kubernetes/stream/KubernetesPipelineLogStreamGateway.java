@@ -133,6 +133,8 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
 
         int linesSent = 0;
         int retries = 0;
+        // Survives a reconnect so a resumed stream does not start out unstamped.
+        String lastTime = null;
 
         while (handle.isOpen(sink) && retries <= 10) {
             LogWatch logWatch = null;
@@ -149,13 +151,21 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
                     while (handle.isOpen(sink) && (line = reader.readLine()) != null) {
                         if (lineCount >= linesSent) {
                             TimestampedLogLine logLine = TimestampedLogLine.parse(line);
+                            // Git and buildah redraw progress with a bare carriage return, which
+                            // BufferedReader ends a line on exactly like a newline — but only the
+                            // first fragment of that one physical line carries the API server's
+                            // stamp. Carrying the last stamp forward keeps a progress block in the
+                            // time column instead of leaving every redraw after the first blank.
+                            if (logLine.time() != null) {
+                                lastTime = logLine.time();
+                            }
                             Map<String, String> message = new LinkedHashMap<>();
                             message.put("type", "step");
                             message.put("data", "[" + containerName + "] " + logLine.text());
                             message.put("container", containerName);
-                            // Map.of rejects a null value, and an unstamped line has no time.
-                            if (logLine.time() != null) {
-                                message.put("time", logLine.time());
+                            // Map.of rejects a null value, and a line before the first stamp has no time.
+                            if (lastTime != null) {
+                                message.put("time", lastTime);
                             }
                             sink.sendText(objectMapper.writeValueAsString(message));
                             linesSent++;
