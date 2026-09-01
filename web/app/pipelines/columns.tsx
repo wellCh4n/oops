@@ -147,7 +147,12 @@ export const getPipelineColumns = (
               {t("pipelines.col.stop")}
             </Button>
           )}
+          {/* A rollback copies its source's artifact, so its own row would offer the very same image
+              the source row already offers — and while it is the live version the id comparison
+              below cannot recognise it (the tag carries the source's id), so the button would sit
+              there redeploying what is already running. */}
           {rollbackEnabled
+            && row.original.triggerType !== "ROLLBACK"
             && row.original.status === "SUCCEEDED"
             && !!row.original.artifact
             && !(currentPipelineId && row.original.id === currentPipelineId) && (
