@@ -341,7 +341,7 @@ function PipelinesContent() {
           ) : (
           <>
             <div className="overflow-x-auto">
-              <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId)} data={pipelines} loading={initialLoad} />
+              <DataTable columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId, effectiveEnv !== "all")} data={pipelines} loading={initialLoad} />
             </div>
             {selectedApp && (
               <Pagination
