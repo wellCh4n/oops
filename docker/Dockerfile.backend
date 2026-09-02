@@ -1,26 +1,28 @@
 # syntax=docker/dockerfile:1
 
 # --- Stage 1: backend build ---
-FROM maven:3.9-eclipse-temurin-25 AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /build
+ENV CGO_ENABLED=0 GOFLAGS=-trimpath
 
-COPY pom.xml ./
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn dependency:go-offline -B
+COPY server/go.mod server/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-COPY src ./src
-RUN --mount=type=cache,target=/root/.m2 \
-    mvn -DskipTests package
+COPY server/ ./
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    go build -ldflags="-s -w" -o /out/oops ./cmd/oops
 
 # --- Stage 2: runtime ---
-FROM eclipse-temurin:25-jre-alpine AS runtime
-ENV TZ=Asia/Shanghai \
-    JAVA_TOOL_OPTIONS="-XX:+ExitOnOutOfMemoryError -XX:+UseCompactObjectHeaders -XX:+UseShenandoahGC"
+FROM alpine:3.20 AS runtime
+# tzdata so TZ names resolve: timestamps are a naive local wall clock, so the
+# process zone must match the data. ca-certificates for object storage / Feishu.
+RUN apk add --no-cache tzdata ca-certificates
+ENV TZ=Asia/Shanghai
 
 WORKDIR /app
 RUN mkdir -p /app/config
-
-COPY --from=builder /build/target/oops-0.0.1-SNAPSHOT.jar /app/oops.jar
+COPY --from=builder /out/oops /app/oops
 
 EXPOSE 8080
-CMD ["java", "-jar", "/app/oops.jar"]
+# Configuration is read from /app/config/oops.yaml (mount it there).
+CMD ["/app/oops", "--config", "/app/config/oops.yaml"]

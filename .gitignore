@@ -87,3 +87,7 @@ tests/integration/reports/
 tests/integration/scripts/.kubeconfig
 tests/integration/scripts/.registry-auth/
 tests/integration/scripts/.k3s/
+
+# Go backend runtime configuration (copy from *.example)
+config/oops.yaml
+docker/oops.yaml

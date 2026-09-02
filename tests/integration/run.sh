@@ -262,17 +262,17 @@ step_done
 
 # -- backend ------------------------------------------------------------------
 
-JAR="${REPO}/target/oops-0.0.1-SNAPSHOT.jar"
-build_jar() { cd "$REPO" && ./mvnw -DskipTests -Dpmd.skip=true package; }
+# The backend image is built from the Go sources every run: a stale binary is
+# the one thing this suite must never test. BuildKit's layer cache makes an
+# unchanged tree a few seconds.
+build_backend_image() {
+  "${COMPOSE[@]}" --profile backend build backend
+}
 
-step_begin "backend jar"
-if [ -f "$JAR" ]; then
-  step_cached
-else
-  step_run "${LOGS}/build.log" build_jar || {
-    step_failed "the backend did not build; see ${LOGS}/build.log"; exit 1; }
-  step_done
-fi
+step_begin "backend image"
+step_run "${LOGS}/build.log" build_backend_image || {
+  step_failed "the backend image did not build; see ${LOGS}/build.log"; exit 1; }
+step_done
 
 # An IANA name, not the %Z abbreviation: "CST" is ambiguous and the JVM ignores
 # it, leaving the container on UTC. Timestamps are a naive local wall clock in
@@ -281,8 +281,8 @@ HOST_TIMEZONE="$(readlink /etc/localtime 2>/dev/null | sed 's|.*/zoneinfo/||')"
 HOST_TIMEZONE="${HOST_TIMEZONE:-${TZ:-UTC}}"
 
 await_backend() {
-  # Polled from here rather than by a container healthcheck: the temurin image
-  # has no curl, wget or jshell, so nothing inside it can make the request.
+  # Polled from here rather than by a container healthcheck, so the same code
+  # path also covers a backend running somewhere else entirely.
   local attempt
   for attempt in $(seq 1 90); do
     if [ "$(curl -s -o /dev/null -w '%{http_code}' \
@@ -294,8 +294,8 @@ await_backend() {
     fi
     docker ps -q -f "name=^${BACKEND_CONTAINER}$" | grep -q . || {
       echo "the container is gone — see the log below"; return 1; }
-    # Spring takes a while, and migrations take longer on a fresh database.
-    # Saying so beats two silent minutes.
+    # Migrations take a moment on a fresh database. Saying so beats a
+    # silent minute.
     [ $((attempt % 10)) -eq 0 ] && echo "still starting ($((attempt * 2))s)"
     sleep 2
   done
@@ -307,7 +307,7 @@ step_begin "backend"
 # Defined in docker-compose.yml behind a profile, so the image, mounts and
 # dependency on a healthy MySQL all live in one declarative place.
 step_run "${LOGS}/backend-start.log" \
-  env OOPS_JAR="$JAR" OOPS_TZ="$HOST_TIMEZONE" \
+  env OOPS_TZ="$HOST_TIMEZONE" \
   "${COMPOSE[@]}" --profile backend up -d backend || {
     step_failed "the backend container did not start"; exit 1; }
 step_run "${LOGS}/backend-start.log" await_backend || {

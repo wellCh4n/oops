@@ -27,7 +27,7 @@ services:
       mysql:
         condition: service_healthy
     volumes:
-      - ./application.yml:/app/config/application.yml:ro
+      - ./oops.yaml:/app/config/oops.yaml:ro
     restart: unless-stopped
 
   frontend:

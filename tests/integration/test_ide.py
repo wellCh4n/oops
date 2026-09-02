@@ -109,16 +109,16 @@ def test_each_ide_endpoint_declines_inside_the_envelope(client, namespace,
         f"{method} {path} answered HTTP {result.status}; the frontend's "
         f"apiFetch hard-redirects to /login on a 401 and surfaces other "
         f"non-200s as transport errors, so a disabled feature must not use one")
-    # Documented, not endorsed: an absent route is reported as
-    # "Internal server error" — the global handler's catch-all for
-    # NoResourceFoundException — rather than as a "feature disabled" or
-    # "not found" message. It is a legible envelope, but it tells an operator
-    # nothing about the flag they need to flip.
-    assert result.message == "Internal server error", (
-        f"{method} {path} refused with {result.message!r}, not the "
-        f"'Internal server error' this suite recorded. If the message improved "
-        f"— naming the disabled feature — update this assertion; if it "
-        f"regressed to no message at all, the client has nothing to show")
+    # The refusal names the flag an operator has to flip. This used to be the
+    # generic "Internal server error" — the old backend had no route at all when
+    # the feature was off, so its global handler answered the catch-all — which
+    # was a legible envelope that told nobody anything. The assertion moved with
+    # the improvement, as the note it replaced asked it to.
+    assert result.message == "IDE is not enabled", (
+        f"{method} {path} refused with {result.message!r} rather than naming the "
+        f"disabled feature; a bare 'Internal server error' leaves an operator "
+        f"with nothing to act on, and no message at all leaves the client with "
+        f"nothing to show")
     assert result.data is None, (
         f"{method} {path} carried data {result.data!r} in a failed envelope")
 

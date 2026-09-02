@@ -295,15 +295,18 @@ def test_duplicate_usernames_are_accepted_and_then_break_login(client, endpoint,
 
 def test_an_admin_update_clears_the_role_it_does_not_mention(client, endpoint,
                                                              user_factory):
-    """Pins an asymmetry that quietly bricks accounts.
+    """Pins an asymmetry in how an update treats the fields it omits.
 
     `password` and `enabled` are patched — omitting them keeps the stored value
     — while `role` and `email` are overwritten with whatever the body carries,
-    null included. An administrator who submits a partial body therefore strips
-    the role, and an account with no role cannot log in at all.
+    null included. An administrator who submits a partial body therefore still
+    strips the role.
 
-    Documented rather than endorsed. Making every field patch-like, or rejecting
-    a null role, would be an improvement; this test should change with it.
+    It no longer bricks the account, which is the half that has changed: a
+    role-less user used to be unable to log in at all, because the login path
+    dereferenced the role to put it in the token. It now reads as USER, so the
+    partial update costs the account its privileges rather than its access.
+    Making every field patch-like would still be an improvement.
     """
     account = user_factory()
 
@@ -314,13 +317,14 @@ def test_an_admin_update_clears_the_role_it_does_not_mention(client, endpoint,
         "the role survived an update that omitted it — partial updates are now "
         "safe, which is an improvement; invert this test")
 
-    locked_out = OopsClient(endpoint).post(
+    still_usable = OopsClient(endpoint).post(
         "/api/auth/login",
         {"username": account["username"], "password": account["password"]},
         authenticated=False, expect_success=False)
-    assert locked_out.success is False, (
-        "an account with no role can log in again, so the consequence this test "
-        "documents is gone; invert it")
+    assert still_usable.success is True, (
+        "an account whose role was stripped can no longer log in, so a partial "
+        "update bricks it again — the login path must treat a missing role as "
+        "USER rather than dereferencing it")
 
 
 def test_editing_or_deleting_an_unknown_account_reports_success(client):

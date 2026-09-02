@@ -1,0 +1,98 @@
+# Backend configuration for integration runs (Go backend).
+#
+# Points at the throwaway middleware in docker-compose.yml by service name: the
+# backend runs inside the compose network next to everything it talks to.
+server:
+  port: 8080
+
+database:
+  host: mysql
+  port: 3306
+  name: oops
+  user: root
+  password: integration
+
+admin:
+  password: admin123
+
+jwt:
+  secret: integration-jwt-secret-key-not-for-production-at-least-32-chars-long
+  expiration: 168h
+
+crypto:
+  secret_key: integration-crypto-secret-key-not-for-production
+
+pipeline:
+  images:
+    clone: alpine/git:v2.49.0
+    zip: alpine/curl:8.17.0
+    push: quay.io/buildah/stable:v1.43.1
+  registry_mirrors:
+    docker.io: docker.m.daocloud.io
+  unzip_excludes:
+    - ".git/*"
+    - "*/.git/*"
+    - "__MACOSX"
+    - "__MACOSX/*"
+    - ".DS_Store"
+
+ingress:
+  cert_resolver: letsencrypt-prod
+
+metrics:
+  history:
+    interval_seconds: 30
+    max_range_hours: 24
+    backend:
+      # Blank namespace hides the usage charts; k3s runs no Prometheus.
+      namespace: ""
+      service_name: prometheus-operated
+      port: 9090
+  alert:
+    enabled: false
+    cpu:
+      threshold_percent: 95
+      sustained_minutes: 10
+    memory:
+      threshold_percent: 90
+      sustained_minutes: 5
+    repeat_interval_minutes: 30
+
+pod_filesystem:
+  max_download_size_bytes: 52428800
+  max_upload_size_bytes: 52428800
+  max_edit_size_bytes: 1048576
+
+feishu:
+  enabled: false
+  app_id: cli_integration
+  app_secret: integration
+  redirect_uri: http://localhost:3000/auth/feishu/callback
+  sync_user_deactivation: false
+
+ide:
+  enabled: false
+  https: false
+  domain: ide.integration.invalid
+  image: codercom/code-server:4.112.0-39
+
+object_storage:
+  enabled: true
+  # A container name: the backend and the pipeline pods both resolve it. The
+  # test process rewrites the address while keeping the Host header.
+  endpoint: http://rustfs:9000
+  region: us-east-1
+  bucket: oops-build-sources
+  access_key: integration
+  secret_key: integration-secret
+  path_style_access: true
+  key_prefix: build-sources
+  asset_key_prefix: oops-assets
+  upload_url_expiration_seconds: 900
+  download_url_expiration_seconds: 1800
+  max_file_size_bytes: 524288000
+
+sandbox:
+  images:
+    - python:3.12-slim
+    - alpine:3.20

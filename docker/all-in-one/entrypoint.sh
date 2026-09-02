@@ -1,17 +1,14 @@
 #!/bin/sh
 set -e
 
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -XX:+ExitOnOutOfMemoryError -XX:+UseCompactObjectHeaders -XX:+UseShenandoahGC"
-
-
-CONFIG_ARGS=""
-if [ -n "${SPRING_CONFIG_LOCATION:-}" ]; then
-  CONFIG_ARGS="--spring.config.location=${SPRING_CONFIG_LOCATION}"
-elif [ -f "/app/config/application.properties" ] || [ -f "/app/application.properties" ]; then
-  CONFIG_ARGS="--spring.config.additional-location=file:/app/config/,file:/app/"
+# Configuration: OOPS_CONFIG overrides the default mount point.
+CONFIG_PATH="${OOPS_CONFIG:-/app/config/oops.yaml}"
+if [ ! -f "$CONFIG_PATH" ]; then
+  echo "no configuration at ${CONFIG_PATH}; mount oops.yaml there or set OOPS_CONFIG" >&2
+  exit 1
 fi
 
-java -jar /app/oops.jar ${CONFIG_ARGS} --server.port=${BACKEND_PORT:-8080} &
+/app/oops --config "$CONFIG_PATH" --port "${BACKEND_PORT:-8080}" &
 BACK_PID=$!
 
 cd /app/web

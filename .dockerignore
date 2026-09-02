@@ -20,4 +20,15 @@ web/next-env.d.ts
 
 config/application.yml
 docker/application.yml
+docker/oops.yaml
+config/oops.yaml
 docker/.env
+
+tests/integration/reports
+tests/integration/.venv
+tests/integration/scripts/.k3s
+tests/integration/scripts/.registry-auth
+src
+pom.xml
+mvnw
+mvnw.cmd

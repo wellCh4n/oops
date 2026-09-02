@@ -7,7 +7,7 @@ services:
       dockerfile: docker/Dockerfile.backend
     container_name: backend
     volumes:
-      - ./application.yml:/app/config/application.yml:ro
+      - ./oops.yaml:/app/config/oops.yaml:ro
     restart: unless-stopped
 
   frontend:

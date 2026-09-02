@@ -1,0 +1,115 @@
+# OOPS server configuration (Go backend).
+#
+#   cp config/oops.yaml.example config/oops.yaml
+#   ./oops --config config/oops.yaml        (default path when --config is omitted)
+#
+# The file is strict: an unknown key or a missing required key is a startup
+# error. Durations use Go syntax (168h, 30m). There is no compatibility with the
+# old Spring application.yml.
+
+server:
+  port: 8080
+
+database:
+  host: localhost
+  port: 3306
+  name: oops
+  user: oops
+  password: oops
+
+admin:
+  # Password of the default "admin" account created on first start.
+  password: admin123
+
+jwt:
+  # At least 32 characters.
+  secret: oops-jwt-secret-key-please-change-in-production-must-be-at-least-32-chars
+  expiration: 168h
+
+crypto:
+  # Encrypts environment tokens, registry passwords and uploaded certificates at rest.
+  secret_key: oops-crypto-secret-key-please-change-in-production
+
+pipeline:
+  images:
+    clone: alpine/git:v2.49.0
+    zip: alpine/curl:8.17.0
+    push: quay.io/buildah/stable:v1.43.1
+  registry_mirrors:
+    docker.io: docker.m.daocloud.io
+  unzip_excludes:
+    - ".git/*"
+    - "*/.git/*"
+    - "node_modules/*"
+    - "*/node_modules/*"
+    - "__MACOSX"
+    - "__MACOSX/*"
+    - "*/__MACOSX"
+    - "*/__MACOSX/*"
+    - ".DS_Store"
+    - "*/.DS_Store"
+
+ingress:
+  # Traefik certificate resolver used for AUTO-mode HTTPS hosts.
+  cert_resolver: letsencrypt-prod
+
+metrics:
+  history:
+    interval_seconds: 30
+    max_range_hours: 24
+    backend:
+      # Prometheus-compatible Service reached through the API server proxy.
+      # Blank the namespace to hide the usage charts.
+      namespace: monitoring
+      service_name: prometheus-operated
+      port: 9090
+  alert:
+    enabled: false
+    cpu:
+      threshold_percent: 95
+      sustained_minutes: 10
+    memory:
+      threshold_percent: 90
+      sustained_minutes: 5
+    repeat_interval_minutes: 30
+
+pod_filesystem:
+  max_download_size_bytes: 52428800
+  max_upload_size_bytes: 52428800
+  max_edit_size_bytes: 1048576
+
+feishu:
+  enabled: false
+  app_id: cli_xxx
+  app_secret: xxx
+  redirect_uri: http://localhost:3000/auth/feishu/callback
+  sync_user_deactivation: false
+
+ide:
+  enabled: false
+  https: false
+  domain: ide.k8s.orb.local
+  image: codercom/code-server:4.112.0-39
+  middlewares:
+    - code-server-csp-fix
+    - code-server-oss-redirect
+
+object_storage:
+  enabled: false
+  endpoint: https://s3.oss-cn-hangzhou.aliyuncs.com
+  region: cn-hangzhou
+  bucket: oops-build-sources
+  access_key: ""
+  secret_key: ""
+  path_style_access: false
+  key_prefix: build-sources
+  asset_key_prefix: oops-assets
+  asset_base_url: ""
+  upload_url_expiration_seconds: 900
+  download_url_expiration_seconds: 1800
+  max_file_size_bytes: 524288000
+
+sandbox:
+  images:
+    - python:3.12-slim
+    - node:20-slim

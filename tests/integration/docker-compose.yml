@@ -204,7 +204,10 @@ services:
   # Behind a profile so the middleware can be brought up without it — the suite
   # can also be pointed at a backend running somewhere else entirely.
   backend:
-    image: eclipse-temurin:25-jre
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.backend
+    image: oops-integration-backend:local
     container_name: oops-integration-backend
     profiles: [backend]
     depends_on:
@@ -213,22 +216,14 @@ services:
       rustfs:
         condition: service_healthy
     volumes:
-      - ${OOPS_JAR:-../../target/oops-0.0.1-SNAPSHOT.jar}:/app/oops.jar:ro
-      - ./application.yml:/app/application.yml:ro
-    # An IANA name, not the %Z abbreviation: "CST" is ambiguous, the JVM ignores
-    # it and the container stays on UTC. Timestamps here are a naive local wall
-    # clock, so the wrong zone shifts every stored value.
+      - ./oops.yaml:/app/config/oops.yaml:ro
+    # An IANA name, not the %Z abbreviation. Timestamps here are a naive local
+    # wall clock, so the wrong zone shifts every stored value.
     environment:
       TZ: ${OOPS_TZ:-UTC}
-    command: >
-      java -jar /app/oops.jar
-      --spring.config.location=file:/app/application.yml
-      --server.port=8080
     ports:
       - "127.0.0.1:8080:8080"
-    # No healthcheck here on purpose. The temurin image ships no curl, no wget
-    # and no jshell, so any in-container probe can only fail; run.sh polls the
-    # published port from the host instead, where curl always exists.
+    # No healthcheck: run.sh polls the published port from the host instead.
 
 networks:
   default:

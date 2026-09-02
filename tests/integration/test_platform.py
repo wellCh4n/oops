@@ -716,14 +716,15 @@ def test_a_work_namespace_can_be_created_and_then_validates(
         f"{validated['status']!r}; the operator is stuck in a loop of creating "
         f"a namespace that already exists")
 
-    # Documented rather than endorsed: a second create surfaces the API server's
-    # 409 as a failed envelope rather than treating the namespace as already
-    # satisfactory. Making it idempotent would be an improvement; invert this
-    # assertion in the same commit.
+    # Creating twice is idempotent: the API server's 409 is treated as the
+    # namespace already being satisfactory rather than surfaced as a failure.
+    # It used to be the latter, which left a double click looking like an error
+    # for a state that was exactly what the operator asked for.
     again = client.post("/api/kubernetes/namespaces", {
         "kubernetesApiServer": api_server,
         "workNamespace": name,
     }, expect_success=False)
-    assert again.success is False, (
-        "creating the same work namespace twice now succeeds, which is an "
-        "improvement; invert this test")
+    assert again.success is True, (
+        "creating the same work namespace twice failed; a double click on the "
+        "button the validation offers must not report an error for a namespace "
+        "that already exists")
