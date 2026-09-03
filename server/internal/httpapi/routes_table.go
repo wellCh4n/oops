@@ -28,6 +28,10 @@ func (s *Server) Routes() []Route {
 		{get, "/health", s.health, "HealthController", false, false, false, true},
 		{get, "/features", s.features, "FeaturesController", false, false, false, true},
 		{get, "/auth/external/providers", s.externalProviders, "ExternalAccountController", false, false, false, true},
+		// Both halves of the OAuth flow are public: the caller has no session
+		// yet — acquiring one is the point.
+		{get, "/auth/external/{provider}/redirect", s.externalLoginURL, "ExternalAccountController", false, false, false, true},
+		{post, "/auth/external/{provider}/callback", s.externalCallback, "ExternalAccountController", false, false, false, true},
 
 		// -- users ---------------------------------------------------------
 		{get, "/users", s.listUsers, "UserController", false, false, false, false},

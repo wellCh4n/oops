@@ -65,6 +65,7 @@ type Services struct {
 	PodFS        *PodFSService
 	IDEs         *IDEService
 	ConfigMaps   *ConfigMapService
+	ExternalAuth *ExternalAuthService
 }
 
 // New wires the services. notifier may be nil, which turns notifications into
@@ -115,6 +116,7 @@ func New(cfg *config.Config, db *store.Store, pool *k8s.Pool, storage *objectsto
 	s.PodFS = &PodFSService{services: s}
 	s.IDEs = &IDEService{services: s}
 	s.ConfigMaps = &ConfigMapService{services: s}
+	s.ExternalAuth = &ExternalAuthService{services: s, providers: map[string]ExternalAuthProvider{}}
 	return s
 }
 

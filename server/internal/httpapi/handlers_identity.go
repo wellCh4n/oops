@@ -29,11 +29,33 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) { OK(w, "ok") }
 // externalProviders lists the OAuth providers that are actually configured, so
 // the login page only offers buttons that lead somewhere.
 func (s *Server) externalProviders(w http.ResponseWriter, r *http.Request) {
-	providers := []string{}
-	if s.services.Config.Feishu.Enabled {
-		providers = append(providers, string(domain.ProviderFeishu))
+	OK(w, EmptyIfNil(s.services.ExternalAuth.EnabledProviders()))
+}
+
+// externalLoginURL starts the flow. It answers with the provider's authorize
+// URL inside the ordinary envelope rather than issuing an HTTP redirect: the
+// caller is the login page's fetch, not the browser's address bar, and a 302 on
+// an XHR would be followed silently and land as an opaque CORS failure.
+func (s *Server) externalLoginURL(w http.ResponseWriter, r *http.Request) {
+	url, err := s.services.ExternalAuth.LoginURL(Param(r, "provider"))
+	Respond(w, r, url, err)
+}
+
+// externalCallback completes the flow, exchanging the provider's one-time code
+// for an OOPS session token.
+func (s *Server) externalCallback(w http.ResponseWriter, r *http.Request) {
+	code := Query(r, "code")
+	if code == "" {
+		// Also accept it in the body, which is what a POST from the callback
+		// page naturally sends.
+		var request struct {
+			Code string `json:"code"`
+		}
+		_ = DecodeJSON(r, &request)
+		code = request.Code
 	}
-	OK(w, providers)
+	token, err := s.services.ExternalAuth.Authenticate(r.Context(), Param(r, "provider"), code, s.tokens.Generate)
+	Respond(w, r, token, err)
 }
 
 // ---------------------------------------------------------------------------

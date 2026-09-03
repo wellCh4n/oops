@@ -45,3 +45,30 @@ func TestRouteTableMatchesTheIntegrationContract(t *testing.T) {
 	}
 	t.Logf("contract %d routes, table %d routes", len(want), len(got))
 }
+
+// The two OAuth endpoints are excluded from the coverage report because the
+// suite cannot drive a browser through a real provider. That means "untested",
+// not "unnecessary" — and reading it as the latter once already shipped a login
+// page whose button hit a route that did not exist, answering 401 because the
+// request fell through to the authenticated group.
+//
+// So the exclusion list is checked from the other side here: everything on it
+// must still be mounted, and must still be public.
+func TestExcludedEndpointsAreStillMountedAndPublic(t *testing.T) {
+	mounted := map[string]Route{}
+	server := &Server{}
+	for _, route := range server.Routes() {
+		mounted["/api"+pathVariable.ReplaceAllString(route.Pattern, "{}")] = route
+	}
+	for excluded := range excludedFromCoverage {
+		key := pathVariable.ReplaceAllString(excluded, "{}")
+		route, found := mounted[key]
+		if !found {
+			t.Errorf("%s is excluded from coverage but is not mounted at all", excluded)
+			continue
+		}
+		if !route.Public {
+			t.Errorf("%s must be public: the caller has no session yet", excluded)
+		}
+	}
+}

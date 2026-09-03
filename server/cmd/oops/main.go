@@ -78,11 +78,18 @@ func run() error {
 	}
 
 	pool := k8s.NewPool()
+	// One Feishu client serves both jobs it is used for — the login flow and the
+	// notifications — so the app-level tokens are fetched and cached once.
+	var feishuClient *feishu.Client
 	var notifier service.Notifier
 	if cfg.Feishu.Enabled {
-		notifier = feishu.New(cfg.Feishu.AppID, cfg.Feishu.AppSecret, repositories)
+		feishuClient = feishu.NewClient(cfg.Feishu.AppID, cfg.Feishu.AppSecret)
+		notifier = feishu.NewNotifier(feishuClient, repositories)
 	}
 	services := service.New(cfg, repositories, pool, storage, notifier)
+	if feishuClient != nil {
+		services.RegisterExternalProvider(feishu.NewAuthProvider(feishuClient, cfg.Feishu.RedirectURI))
+	}
 
 	startupCtx, cancelStartup := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancelStartup()

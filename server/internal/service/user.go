@@ -205,3 +205,8 @@ func (s *UserService) EnsureDefaultAdmin(ctx context.Context, password string) e
 	slog.Info("created the default admin account", "username", "admin")
 	return nil
 }
+
+// FindByEmail loads a user by exact email; nil when absent.
+func (s *UserService) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	return s.store.Users().FindByEmail(ctx, email)
+}
