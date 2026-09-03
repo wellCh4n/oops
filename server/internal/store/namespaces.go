@@ -16,8 +16,8 @@ func namespaceFromRow(row namespaceRow) domain.Namespace {
 	return domain.Namespace{
 		ID:          row.ID,
 		CreatedTime: row.CreatedTime,
-		Name:        orNil(row.Name),
-		Description: orNil(row.Description),
+		Name:        ptrOf(row.Name),
+		Description: ptrOf(row.Description),
 	}
 }
 
@@ -56,7 +56,7 @@ func (r *NamespaceRepository) Save(ctx context.Context, record *domain.Namespace
 	if found {
 		_, err = execRows(ctx, r.store.db,
 			`UPDATE namespace SET created_time = ?, description = ?, name = ? WHERE id = ?`,
-			record.CreatedTime, domain.Deref(record.Description), domain.Deref(record.Name), record.ID)
+			record.CreatedTime, nullString(record.Description), nullString(record.Name), record.ID)
 	} else {
 		record.ID = ensureID(record.ID)
 		if record.CreatedTime.IsZero() {
@@ -64,7 +64,7 @@ func (r *NamespaceRepository) Save(ctx context.Context, record *domain.Namespace
 		}
 		err = exec(ctx, r.store.db,
 			`INSERT INTO namespace (id, created_time, description, name) VALUES (?, ?, ?, ?)`,
-			record.ID, record.CreatedTime, domain.Deref(record.Description), domain.Deref(record.Name))
+			record.ID, record.CreatedTime, nullString(record.Description), nullString(record.Name))
 	}
 	if err != nil {
 		return nil, err

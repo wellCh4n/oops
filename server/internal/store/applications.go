@@ -24,11 +24,11 @@ func applicationFromRow(row applicationRow) domain.Application {
 	return domain.Application{
 		ID:          row.ID,
 		CreatedTime: row.CreatedTime,
-		Name:        row.Name,
-		Description: orNil(row.Description),
-		Icon:        orNil(row.Icon),
-		Namespace:   row.Namespace,
-		Owner:       orNil(row.Owner),
+		Name:        stringOf(row.Name),
+		Description: ptrOf(row.Description),
+		Icon:        ptrOf(row.Icon),
+		Namespace:   stringOf(row.Namespace),
+		Owner:       ptrOf(row.Owner),
 	}
 }
 
@@ -56,12 +56,12 @@ func buildConfigFromRow(row buildConfigRow) (*domain.ApplicationBuildConfig, err
 	return &domain.ApplicationBuildConfig{
 		ID:                 row.ID,
 		CreatedTime:        row.CreatedTime,
-		Namespace:          row.Namespace,
-		ApplicationName:    row.ApplicationName,
-		SourceType:         enumOrNil[domain.ApplicationSourceType](row.SourceType),
+		Namespace:          stringOf(row.Namespace),
+		ApplicationName:    stringOf(row.ApplicationName),
+		SourceType:         enumPtrOf[domain.ApplicationSourceType](row.SourceType),
 		SourceConfig:       sourceConfig,
 		DockerFileConfig:   dockerFileConfig,
-		BuildImage:         orNil(row.BuildImage),
+		BuildImage:         ptrOf(row.BuildImage),
 		EnvironmentConfigs: environmentConfigs,
 	}, nil
 }
@@ -78,8 +78,8 @@ func runtimeSpecFromRow(row runtimeSpecRow) (*domain.ApplicationRuntimeSpec, err
 	return &domain.ApplicationRuntimeSpec{
 		ID:                 row.ID,
 		CreatedTime:        row.CreatedTime,
-		Namespace:          row.Namespace,
-		ApplicationName:    row.ApplicationName,
+		Namespace:          stringOf(row.Namespace),
+		ApplicationName:    stringOf(row.ApplicationName),
 		EnvironmentConfigs: environmentConfigs,
 		HealthCheck:        healthCheck,
 	}, nil
@@ -97,8 +97,8 @@ func serviceConfigFromRow(row serviceConfigRow) (*domain.ApplicationServiceConfi
 	return &domain.ApplicationServiceConfig{
 		ID:                 row.ID,
 		CreatedTime:        row.CreatedTime,
-		Namespace:          row.Namespace,
-		ApplicationName:    row.ApplicationName,
+		Namespace:          stringOf(row.Namespace),
+		ApplicationName:    stringOf(row.ApplicationName),
 		Port:               intPtrOf(row.Port),
 		InternalPorts:      internalPorts,
 		EnvironmentConfigs: environmentConfigs,
@@ -113,8 +113,8 @@ func expertConfigFromRow(row expertConfigRow) (*domain.ApplicationExpertConfig, 
 	return &domain.ApplicationExpertConfig{
 		ID:                 row.ID,
 		CreatedTime:        row.CreatedTime,
-		Namespace:          row.Namespace,
-		ApplicationName:    row.ApplicationName,
+		Namespace:          stringOf(row.Namespace),
+		ApplicationName:    stringOf(row.ApplicationName),
 		EnvironmentConfigs: environmentConfigs,
 	}, nil
 }
@@ -201,8 +201,8 @@ func findAggregate(ctx context.Context, q queryer, namespace, name string) (*dom
 	application.Environments = make([]domain.ApplicationEnvironment, 0, len(environmentRows))
 	for _, row := range environmentRows {
 		application.Environments = append(application.Environments, domain.ApplicationEnvironment{
-			ID: row.ID, CreatedTime: row.CreatedTime, Namespace: row.Namespace,
-			ApplicationName: row.ApplicationName, Environment: row.Environment,
+			ID: row.ID, CreatedTime: row.CreatedTime, Namespace: stringOf(row.Namespace),
+			ApplicationName: stringOf(row.ApplicationName), Environment: stringOf(row.Environment),
 		})
 	}
 
@@ -214,8 +214,8 @@ func findAggregate(ctx context.Context, q queryer, namespace, name string) (*dom
 	application.Collaborators = make([]domain.ApplicationCollaborator, 0, len(collaboratorRows))
 	for _, row := range collaboratorRows {
 		application.Collaborators = append(application.Collaborators, domain.ApplicationCollaborator{
-			ID: row.ID, CreatedTime: row.CreatedTime, Namespace: row.Namespace,
-			ApplicationName: row.ApplicationName, UserID: row.UserID,
+			ID: row.ID, CreatedTime: row.CreatedTime, Namespace: stringOf(row.Namespace),
+			ApplicationName: stringOf(row.ApplicationName), UserID: stringOf(row.UserID),
 		})
 	}
 	return &application, nil
@@ -424,8 +424,8 @@ func saveApplicationRow(ctx context.Context, q queryer, application *domain.Appl
 		_, err := execRows(ctx, q,
 			`UPDATE application SET created_time = ?, description = ?, name = ?, namespace = ?, owner = ?, icon = ?
 WHERE id = ?`,
-			application.CreatedTime, domain.Deref(application.Description), application.Name,
-			application.Namespace, domain.Deref(application.Owner), domain.Deref(application.Icon), application.ID)
+			application.CreatedTime, nullString(application.Description), application.Name,
+			application.Namespace, nullString(application.Owner), nullString(application.Icon), application.ID)
 		return err
 	}
 	application.ID = ensureID(application.ID)
@@ -433,8 +433,8 @@ WHERE id = ?`,
 	return exec(ctx, q,
 		`INSERT INTO application (id, created_time, description, name, namespace, owner, icon)
 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		application.ID, application.CreatedTime, domain.Deref(application.Description), application.Name,
-		application.Namespace, domain.Deref(application.Owner), domain.Deref(application.Icon))
+		application.ID, application.CreatedTime, nullString(application.Description), application.Name,
+		application.Namespace, nullString(application.Owner), nullString(application.Icon))
 }
 
 // SaveAggregate writes the root and every non-nil child in one transaction:
@@ -547,8 +547,8 @@ func saveBuildConfig(ctx context.Context, q queryer, config *domain.ApplicationB
 SET created_time = ?, application_name = ?, build_image = ?, environment_configs = ?,
     namespace = ?, source_type = ?, docker_file_config = ?, source_config = ?
 WHERE id = ?`,
-			config.CreatedTime, config.ApplicationName, domain.Deref(config.BuildImage), environmentConfigs,
-			config.Namespace, enumName(config.SourceType), dockerFileConfig, sourceConfig, config.ID)
+			config.CreatedTime, config.ApplicationName, nullString(config.BuildImage), environmentConfigs,
+			config.Namespace, enumString(config.SourceType), dockerFileConfig, sourceConfig, config.ID)
 		return err
 	}
 	config.ID = ensureID(config.ID)
@@ -557,8 +557,8 @@ WHERE id = ?`,
 		`INSERT INTO application_build_config
 (id, created_time, application_name, build_image, environment_configs, namespace, source_type, docker_file_config, source_config)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		config.ID, config.CreatedTime, config.ApplicationName, domain.Deref(config.BuildImage), environmentConfigs,
-		config.Namespace, enumName(config.SourceType), dockerFileConfig, sourceConfig)
+		config.ID, config.CreatedTime, config.ApplicationName, nullString(config.BuildImage), environmentConfigs,
+		config.Namespace, enumString(config.SourceType), dockerFileConfig, sourceConfig)
 }
 
 func saveRuntimeSpec(ctx context.Context, q queryer, spec *domain.ApplicationRuntimeSpec) error {

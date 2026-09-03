@@ -15,15 +15,15 @@ func domainFromRow(row domainRow) domain.Domain {
 	return domain.Domain{
 		ID:           row.ID,
 		CreatedTime:  row.CreatedTime,
-		Host:         orNil(row.Host),
-		Description:  orNil(row.Description),
-		HTTPS:        domain.Ptr(row.HTTPS),
-		CertMode:     enumOrNil[domain.DomainCertMode](row.CertMode),
-		CertPem:      orNil(row.CertPem),
-		KeyPem:       orNil(row.KeyPem),
-		CertSubject:  orNil(row.CertSubject),
+		Host:         ptrOf(row.Host),
+		Description:  ptrOf(row.Description),
+		HTTPS:        boolPtrOf(row.HTTPS),
+		CertMode:     enumPtrOf[domain.DomainCertMode](row.CertMode),
+		CertPem:      ptrOf(row.CertPem),
+		KeyPem:       ptrOf(row.KeyPem),
+		CertSubject:  ptrOf(row.CertSubject),
 		CertNotAfter: row.CertNotAfter,
-		Environment:  orNil(row.Environment),
+		Environment:  ptrOf(row.Environment),
 	}
 }
 
@@ -69,16 +69,15 @@ func (r *DomainRepository) Save(ctx context.Context, record *domain.Domain) (*do
 			return nil, err
 		}
 	}
-	https := record.HTTPS != nil && *record.HTTPS
 	if found {
 		_, err = execRows(ctx, r.store.db,
 			`UPDATE domain
 SET created_time = ?, cert_mode = ?, cert_not_after = ?, cert_pem = ?, cert_subject = ?,
     description = ?, host = ?, https = ?, key_pem = ?, environment = ?
 WHERE id = ?`,
-			record.CreatedTime, enumName(record.CertMode), record.CertNotAfter, domain.Deref(record.CertPem),
-			domain.Deref(record.CertSubject), domain.Deref(record.Description), domain.Deref(record.Host),
-			https, domain.Deref(record.KeyPem), domain.Deref(record.Environment), record.ID)
+			record.CreatedTime, enumString(record.CertMode), record.CertNotAfter, nullString(record.CertPem),
+			nullString(record.CertSubject), nullString(record.Description), nullString(record.Host),
+			nullBool(record.HTTPS), nullString(record.KeyPem), nullString(record.Environment), record.ID)
 	} else {
 		record.ID = ensureID(record.ID)
 		if record.CreatedTime.IsZero() {
@@ -88,9 +87,9 @@ WHERE id = ?`,
 			`INSERT INTO domain
 (id, created_time, cert_mode, cert_not_after, cert_pem, cert_subject, description, host, https, key_pem, environment)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			record.ID, record.CreatedTime, enumName(record.CertMode), record.CertNotAfter,
-			domain.Deref(record.CertPem), domain.Deref(record.CertSubject), domain.Deref(record.Description),
-			domain.Deref(record.Host), https, domain.Deref(record.KeyPem), domain.Deref(record.Environment))
+			record.ID, record.CreatedTime, enumString(record.CertMode), record.CertNotAfter,
+			nullString(record.CertPem), nullString(record.CertSubject), nullString(record.Description),
+			nullString(record.Host), nullBool(record.HTTPS), nullString(record.KeyPem), nullString(record.Environment))
 	}
 	if err != nil {
 		return nil, err

@@ -241,29 +241,26 @@ func isNoRows(err error) bool { return errors.Is(err, sql.ErrNoRows) }
 // ---------------------------------------------------------------------------
 // column helpers
 //
-// Optional string columns are NOT NULL DEFAULT '' (see the migration), so the only
-// conversion left is between "" and a nil pointer, for the few fields whose
-// JSON really does distinguish absent from empty. The sql.Null* helpers survive
-// for the three columns that genuinely stay nullable.
+// The schema is the Java backend's, so nearly every column is nullable and the
+// row structs carry sql.Null* to match. These turn that into the domain's own
+// vocabulary — a nil pointer for an unset value — so nothing above this package
+// deals in sql.Null*.
 
-// orNil turns the empty string an unset column stores into a nil pointer.
-func orNil(value string) *string { return domain.StringOrNil(value) }
-
-// enumOrNil is orNil for an enum column.
-func enumOrNil[T ~string](value string) *T {
-	if value == "" {
+func ptrOf(value sql.NullString) *string {
+	if !value.Valid {
 		return nil
 	}
-	result := T(value)
-	return &result
+	text := value.String
+	return &text
 }
 
-// enumName renders an optional enum as the string its column stores.
-func enumName[T ~string](value *T) string {
-	if value == nil {
+// stringOf reads a nullable column into a domain field that is a plain string,
+// where NULL and "" mean the same thing to the caller.
+func stringOf(value sql.NullString) string {
+	if !value.Valid {
 		return ""
 	}
-	return string(*value)
+	return value.String
 }
 
 func nullString(value *string) sql.NullString {
@@ -273,8 +270,9 @@ func nullString(value *string) sql.NullString {
 	return sql.NullString{String: *value, Valid: true}
 }
 
-// nullIfEmpty stores "" as NULL — for access_token, whose unique key admits
-// many NULLs but only one empty string.
+// nullIfEmpty stores "" as NULL. Used for the columns the Java backend left
+// NULL rather than blank, so a row written here is indistinguishable from one
+// written by 2.x.
 func nullIfEmpty(value string) sql.NullString {
 	if value == "" {
 		return sql.NullString{}
@@ -282,12 +280,36 @@ func nullIfEmpty(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: true}
 }
 
-func ptrOf(value sql.NullString) *string {
+// enumPtrOf reads a nullable enum column.
+func enumPtrOf[T ~string](value sql.NullString) *T {
 	if !value.Valid {
 		return nil
 	}
-	text := value.String
-	return &text
+	result := T(value.String)
+	return &result
+}
+
+// enumString writes an optional enum, storing NULL when it is unset.
+func enumString[T ~string](value *T) sql.NullString {
+	if value == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(*value), Valid: true}
+}
+
+func nullBool(value *bool) sql.NullBool {
+	if value == nil {
+		return sql.NullBool{}
+	}
+	return sql.NullBool{Bool: *value, Valid: true}
+}
+
+func boolPtrOf(value sql.NullBool) *bool {
+	if !value.Valid {
+		return nil
+	}
+	result := value.Bool
+	return &result
 }
 
 func nullInt(value *int) sql.NullInt32 {

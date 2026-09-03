@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 
@@ -33,42 +34,46 @@ func (r *EnvironmentRepository) environmentFromRow(row environmentRow) (*domain.
 	}
 	return &domain.Environment{
 		ID:                  row.ID,
-		Name:                row.Name,
-		KubernetesApiServer: &domain.KubernetesApiServer{URL: orNil(row.APIServerURL), Token: token},
-		WorkNamespace:       orNil(row.WorkNamespace),
-		BuildStorageClass:   orNil(row.BuildStorageClass),
+		Name:                stringOf(row.Name),
+		KubernetesApiServer: &domain.KubernetesApiServer{URL: ptrOf(row.APIServerURL), Token: token},
+		WorkNamespace:       ptrOf(row.WorkNamespace),
+		BuildStorageClass:   ptrOf(row.BuildStorageClass),
 		ImageRepository: &domain.ImageRepository{
-			URL:      orNil(row.ImageRepositoryURL),
-			Username: orNil(row.ImageRepositoryUsername),
+			URL:      ptrOf(row.ImageRepositoryURL),
+			Username: ptrOf(row.ImageRepositoryUsername),
 			Password: password,
 		},
 		GitCredential: gitCredential,
 	}, nil
 }
 
-func (r *EnvironmentRepository) decryptColumn(column, name, id string) (*string, error) {
-	if column == "" {
+func (r *EnvironmentRepository) decryptColumn(column sql.NullString, name, id string) (*string, error) {
+	if !column.Valid || column.String == "" {
 		return nil, nil
 	}
-	plain, err := r.store.codec.Decrypt(column)
+	plain, err := r.store.codec.Decrypt(column.String)
 	if err != nil {
 		return nil, fmt.Errorf("environment %s %s: %w", id, name, err)
 	}
 	return &plain, nil
 }
 
-func (r *EnvironmentRepository) encryptColumn(value *string) (string, error) {
+func (r *EnvironmentRepository) encryptColumn(value *string) (sql.NullString, error) {
 	if value == nil {
-		return "", nil
+		return sql.NullString{}, nil
 	}
-	return r.store.codec.Encrypt(*value)
+	cipher, err := r.store.codec.Encrypt(*value)
+	if err != nil {
+		return sql.NullString{}, err
+	}
+	return sql.NullString{String: cipher, Valid: true}, nil
 }
 
-func (r *EnvironmentRepository) decodeGitCredential(column, id string) (*domain.GitCredential, error) {
+func (r *EnvironmentRepository) decodeGitCredential(column sql.NullString, id string) (*domain.GitCredential, error) {
 	if isBlankColumn(column) {
 		return nil, nil
 	}
-	plain, err := r.store.codec.Decrypt(column)
+	plain, err := r.store.codec.Decrypt(column.String)
 	if err != nil {
 		return nil, fmt.Errorf("environment %s git_credential: %w", id, err)
 	}
@@ -79,15 +84,19 @@ func (r *EnvironmentRepository) decodeGitCredential(column, id string) (*domain.
 	return &credential, nil
 }
 
-func (r *EnvironmentRepository) encodeGitCredential(credential *domain.GitCredential) (string, error) {
+func (r *EnvironmentRepository) encodeGitCredential(credential *domain.GitCredential) (sql.NullString, error) {
 	if credential == nil {
-		return "", nil
+		return sql.NullString{}, nil
 	}
 	plain, err := json.Marshal(credential)
 	if err != nil {
-		return "", err
+		return sql.NullString{}, err
 	}
-	return r.store.codec.Encrypt(string(plain))
+	cipher, err := r.store.codec.Encrypt(string(plain))
+	if err != nil {
+		return sql.NullString{}, err
+	}
+	return sql.NullString{String: cipher, Valid: true}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -169,9 +178,9 @@ SET build_storage_class = ?, image_repository_password = ?, image_repository_url
     image_repository_username = ?, api_server_token = ?, api_server_url = ?, name = ?,
     work_namespace = ?, git_credential = ?
 WHERE id = ?`,
-			domain.Deref(environment.BuildStorageClass), password, domain.Deref(imageRepository.URL),
-			domain.Deref(imageRepository.Username), token, domain.Deref(apiServer.URL), environment.Name,
-			domain.Deref(environment.WorkNamespace), gitCredential, environment.ID)
+			nullString(environment.BuildStorageClass), password, nullString(imageRepository.URL),
+			nullString(imageRepository.Username), token, nullString(apiServer.URL), environment.Name,
+			nullString(environment.WorkNamespace), gitCredential, environment.ID)
 	} else {
 		environment.ID = ensureID(environment.ID)
 		err = exec(ctx, r.store.db,
@@ -179,9 +188,9 @@ WHERE id = ?`,
 (id, build_storage_class, image_repository_password, image_repository_url, image_repository_username,
  api_server_token, api_server_url, name, work_namespace, git_credential)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			environment.ID, domain.Deref(environment.BuildStorageClass), password, domain.Deref(imageRepository.URL),
-			domain.Deref(imageRepository.Username), token, domain.Deref(apiServer.URL), environment.Name,
-			domain.Deref(environment.WorkNamespace), gitCredential)
+			environment.ID, nullString(environment.BuildStorageClass), password, nullString(imageRepository.URL),
+			nullString(imageRepository.Username), token, nullString(apiServer.URL), environment.Name,
+			nullString(environment.WorkNamespace), gitCredential)
 	}
 	if err != nil {
 		return nil, err

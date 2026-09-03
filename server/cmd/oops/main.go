@@ -66,6 +66,15 @@ func run() error {
 		return err
 	}
 
+	// The migration only creates tables it does not find, so a database that
+	// already has them is left exactly as it was — including one built by an
+	// older version with a different shape. Checking here turns that into a
+	// startup error naming the offending columns, instead of a scan failure on
+	// whichever request happens to read one of them first.
+	if err := store.New(db, nil).VerifySchema(migrateCtx); err != nil {
+		return err
+	}
+
 	codec := crypto.NewCodec(cfg.Crypto.SecretKey)
 	if !codec.Enabled() {
 		slog.Warn("crypto.secret_key is blank: environment tokens and registry passwords are stored in plaintext")

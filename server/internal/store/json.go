@@ -1,6 +1,7 @@
 package store
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,47 +11,47 @@ import (
 
 // The JSON blob converters mirror the Jackson AttributeConverters:
 //
-//   - nil attribute  -> "" (an unset blob column); empty slice -> literal "[]"
-//   - blank column -> nil attribute
+//   - nil attribute  -> SQL NULL; empty slice -> literal "[]"
+//   - NULL / blank column -> nil attribute
 //   - unknown keys are ignored on read (legacy "environmentName",
 //     plaintext "basicAuthPassword", ...)
 //   - null fields are written as null unless the domain type says omitempty
 
-// encodeSlice writes a JSON array; nil -> "", empty -> "[]".
-func encodeSlice[T any](items []T) (string, error) {
+// encodeSlice writes a JSON array; nil -> NULL, empty -> "[]".
+func encodeSlice[T any](items []T) (sql.NullString, error) {
 	if items == nil {
-		return "", nil
+		return sql.NullString{}, nil
 	}
 	encoded, err := json.Marshal(items)
 	if err != nil {
-		return "", err
+		return sql.NullString{}, err
 	}
-	return string(encoded), nil
+	return sql.NullString{String: string(encoded), Valid: true}, nil
 }
 
-// encodeObject writes a JSON object; nil -> "".
-func encodeObject[T any](value *T) (string, error) {
+// encodeObject writes a JSON object; nil -> NULL.
+func encodeObject[T any](value *T) (sql.NullString, error) {
 	if value == nil {
-		return "", nil
+		return sql.NullString{}, nil
 	}
 	encoded, err := json.Marshal(value)
 	if err != nil {
-		return "", err
+		return sql.NullString{}, err
 	}
-	return string(encoded), nil
+	return sql.NullString{String: string(encoded), Valid: true}, nil
 }
 
-func isBlankColumn(column string) bool {
-	return strings.TrimSpace(column) == ""
+func isBlankColumn(column sql.NullString) bool {
+	return !column.Valid || strings.TrimSpace(column.String) == ""
 }
 
-// decodeSlice reads a JSON array; blank -> nil, "[]" -> empty slice.
-func decodeSlice[T any](column string) ([]T, error) {
+// decodeSlice reads a JSON array; NULL/blank -> nil, "[]" -> empty slice.
+func decodeSlice[T any](column sql.NullString) ([]T, error) {
 	if isBlankColumn(column) {
 		return nil, nil
 	}
 	items := []T{}
-	if err := json.Unmarshal([]byte(column), &items); err != nil {
+	if err := json.Unmarshal([]byte(column.String), &items); err != nil {
 		return nil, fmt.Errorf("malformed JSON array: %w", err)
 	}
 	if items == nil {
@@ -59,16 +60,16 @@ func decodeSlice[T any](column string) ([]T, error) {
 	return items, nil
 }
 
-// decodeObject reads a JSON object; blank -> nil.
-func decodeObject[T any](column string) (*T, error) {
+// decodeObject reads a JSON object; NULL/blank -> nil.
+func decodeObject[T any](column sql.NullString) (*T, error) {
 	if isBlankColumn(column) {
 		return nil, nil
 	}
-	if strings.TrimSpace(column) == "null" {
+	if strings.TrimSpace(column.String) == "null" {
 		return nil, nil
 	}
 	var value T
-	if err := json.Unmarshal([]byte(column), &value); err != nil {
+	if err := json.Unmarshal([]byte(column.String), &value); err != nil {
 		return nil, fmt.Errorf("malformed JSON object: %w", err)
 	}
 	return &value, nil
@@ -81,12 +82,12 @@ func decodeObject[T any](column string) (*T, error) {
 
 // decodeHealthCheck: a missing liveness/readiness key yields the default
 // probe; inside a probe a missing field keeps the Java default.
-func decodeHealthCheck(column string) (*domain.HealthCheck, error) {
-	if isBlankColumn(column) || strings.TrimSpace(column) == "null" {
+func decodeHealthCheck(column sql.NullString) (*domain.HealthCheck, error) {
+	if isBlankColumn(column) || strings.TrimSpace(column.String) == "null" {
 		return nil, nil
 	}
 	var raw map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(column), &raw); err != nil {
+	if err := json.Unmarshal([]byte(column.String), &raw); err != nil {
 		return nil, fmt.Errorf("malformed health_check: %w", err)
 	}
 	liveness, err := decodeProbe(raw, "liveness")
@@ -117,12 +118,12 @@ func decodeProbe(raw map[string]json.RawMessage, key string) (*domain.Probe, err
 
 // decodeServiceEnvironmentConfigs: `https` defaults to true when the key is
 // missing (Java initialiser), stays null when written as null.
-func decodeServiceEnvironmentConfigs(column string) ([]domain.ServiceEnvironmentConfig, error) {
+func decodeServiceEnvironmentConfigs(column sql.NullString) ([]domain.ServiceEnvironmentConfig, error) {
 	if isBlankColumn(column) {
 		return nil, nil
 	}
 	var rawItems []json.RawMessage
-	if err := json.Unmarshal([]byte(column), &rawItems); err != nil {
+	if err := json.Unmarshal([]byte(column.String), &rawItems); err != nil {
 		return nil, fmt.Errorf("malformed service environment_configs: %w", err)
 	}
 	items := make([]domain.ServiceEnvironmentConfig, 0, len(rawItems))

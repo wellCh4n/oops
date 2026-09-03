@@ -1,23 +1,26 @@
 package store
 
 import (
+	"database/sql"
 	"testing"
 
 	"github.com/wellch4n/oops/server/internal/domain"
 )
 
+func column(text string) sql.NullString { return sql.NullString{String: text, Valid: true} }
+
 func TestEncodeSlice(t *testing.T) {
 	tests := []struct {
 		name  string
 		items []domain.BuildEnvironmentConfig
-		want  string
+		want  sql.NullString
 	}{
-		{name: "nil slice is unset", items: nil, want: ""},
-		{name: "empty slice is []", items: []domain.BuildEnvironmentConfig{}, want: "[]"},
+		{name: "nil slice is unset", items: nil, want: sql.NullString{}},
+		{name: "empty slice is []", items: []domain.BuildEnvironmentConfig{}, want: column("[]")},
 		{
 			name:  "nulls are included",
 			items: []domain.BuildEnvironmentConfig{{Environment: domain.Ptr("prod")}},
-			want:  `[{"environment":"prod","buildCommand":null}]`,
+			want:  column(`[{"environment":"prod","buildCommand":null}]`),
 		},
 	}
 	for _, test := range tests {
@@ -36,14 +39,14 @@ func TestEncodeSlice(t *testing.T) {
 func TestDecodeSlice(t *testing.T) {
 	tests := []struct {
 		name      string
-		column    string
+		column    sql.NullString
 		wantNil   bool
 		wantCount int
 	}{
-		{name: "unset column is nil", column: "", wantNil: true},
-		{name: "blank column is nil", column: "   ", wantNil: true},
-		{name: "[] is an empty slice", column: "[]", wantNil: false, wantCount: 0},
-		{name: "legacy environmentName key is ignored", column: `[{"environmentName":"prod","buildCommand":"x"}]`, wantCount: 1},
+		{name: "unset column is nil", column: sql.NullString{}, wantNil: true},
+		{name: "blank column is nil", column: column("   "), wantNil: true},
+		{name: "[] is an empty slice", column: column("[]"), wantNil: false, wantCount: 0},
+		{name: "legacy environmentName key is ignored", column: column(`[{"environmentName":"prod","buildCommand":"x"}]`), wantCount: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -65,7 +68,7 @@ func TestDecodeSlice(t *testing.T) {
 			}
 		})
 	}
-	if _, err := decodeSlice[domain.BuildEnvironmentConfig]("{not json"); err == nil {
+	if _, err := decodeSlice[domain.BuildEnvironmentConfig](column("{not json")); err == nil {
 		t.Fatal("malformed JSON must fail the read")
 	}
 }
@@ -78,8 +81,8 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if encoded != `[{"environment":"prod","host":"app.example.com","https":true}]` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `[{"environment":"prod","host":"app.example.com","https":true}]` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 	t.Run("basic auth fields written when set", func(t *testing.T) {
@@ -91,8 +94,8 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := `[{"environment":"prod","host":"app.example.com","https":true,"basicAuthEnabled":true,"basicAuthUsername":"visitor","basicAuthPasswordHash":"$2a$10$x"}]`
-		if encoded != want {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != want {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 	t.Run("https null is kept", func(t *testing.T) {
@@ -100,12 +103,12 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if encoded != `[{"environment":"prod","host":null,"https":null}]` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `[{"environment":"prod","host":null,"https":null}]` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 	t.Run("legacy keys ignored and https defaults to true when missing", func(t *testing.T) {
-		decoded, err := decodeServiceEnvironmentConfigs(`[{"environmentName":"prod","host":"a.example.com","basicAuthPassword":"plain"}]`)
+		decoded, err := decodeServiceEnvironmentConfigs(column(`[{"environmentName":"prod","host":"a.example.com","basicAuthPassword":"plain"}]`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -124,7 +127,7 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 		}
 	})
 	t.Run("explicit https null stays null", func(t *testing.T) {
-		decoded, err := decodeServiceEnvironmentConfigs(`[{"environment":"prod","https":null}]`)
+		decoded, err := decodeServiceEnvironmentConfigs(column(`[{"environment":"prod","https":null}]`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,7 +136,7 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 		}
 	})
 	t.Run("unset column is nil", func(t *testing.T) {
-		decoded, err := decodeServiceEnvironmentConfigs("")
+		decoded, err := decodeServiceEnvironmentConfigs(column(""))
 		if err != nil || decoded != nil {
 			t.Fatalf("got %#v, %v", decoded, err)
 		}
@@ -142,13 +145,13 @@ func TestServiceEnvironmentConfigs(t *testing.T) {
 
 func TestHealthCheck(t *testing.T) {
 	t.Run("unset column is nil", func(t *testing.T) {
-		decoded, err := decodeHealthCheck("")
+		decoded, err := decodeHealthCheck(column(""))
 		if err != nil || decoded != nil {
 			t.Fatalf("got %#v, %v", decoded, err)
 		}
 	})
 	t.Run("missing readiness yields default probe", func(t *testing.T) {
-		decoded, err := decodeHealthCheck(`{"liveness":{"enabled":true,"path":"/healthz","initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3,"failureThreshold":3}}`)
+		decoded, err := decodeHealthCheck(column(`{"liveness":{"enabled":true,"path":"/healthz","initialDelaySeconds":5,"periodSeconds":10,"timeoutSeconds":3,"failureThreshold":3}}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -161,7 +164,7 @@ func TestHealthCheck(t *testing.T) {
 		}
 	})
 	t.Run("missing probe field keeps java default, explicit null stays null", func(t *testing.T) {
-		decoded, err := decodeHealthCheck(`{"liveness":{"enabled":true,"path":null},"readiness":null}`)
+		decoded, err := decodeHealthCheck(column(`{"liveness":{"enabled":true,"path":null},"readiness":null}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -181,8 +184,8 @@ func TestHealthCheck(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := `{"liveness":{"enabled":false,"path":"/","initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":3,"failureThreshold":3},"readiness":{"enabled":false,"path":"/","initialDelaySeconds":30,"periodSeconds":10,"timeoutSeconds":3,"failureThreshold":3}}`
-		if encoded != want {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != want {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 }
@@ -198,7 +201,7 @@ func TestPolymorphicBlobs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			decoded, err := decodeObject[domain.SourceConfig](test.in)
+			decoded, err := decodeObject[domain.SourceConfig](column(test.in))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -206,13 +209,13 @@ func TestPolymorphicBlobs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if encoded != test.want {
-				t.Fatalf("got %s want %s", encoded, test.want)
+			if encoded.String != test.want {
+				t.Fatalf("got %s want %s", encoded.String, test.want)
 			}
 		})
 	}
 	t.Run("publish config legacy shapes", func(t *testing.T) {
-		decoded, err := decodeObject[domain.PublishConfig](`{"type":"ZIP","url":"https://host/a.zip"}`)
+		decoded, err := decodeObject[domain.PublishConfig](column(`{"type":"ZIP","url":"https://host/a.zip"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -223,12 +226,12 @@ func TestPolymorphicBlobs(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if encoded != `{"type":"ZIP","objectKey":null,"url":"https://host/a.zip"}` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `{"type":"ZIP","objectKey":null,"url":"https://host/a.zip"}` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 	t.Run("docker file config without content key", func(t *testing.T) {
-		decoded, err := decodeObject[domain.DockerFileConfig](`{"type":"BUILTIN","path":"Dockerfile"}`)
+		decoded, err := decodeObject[domain.DockerFileConfig](column(`{"type":"BUILTIN","path":"Dockerfile"}`))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -236,24 +239,24 @@ func TestPolymorphicBlobs(t *testing.T) {
 			t.Fatalf("mis-read %#v", decoded)
 		}
 		encoded, _ := encodeObject(decoded)
-		if encoded != `{"type":"BUILTIN","path":"Dockerfile","content":null}` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `{"type":"BUILTIN","path":"Dockerfile","content":null}` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 	t.Run("internal ports", func(t *testing.T) {
 		encoded, _ := encodeSlice([]int{9090, 50051})
-		if encoded != `[9090,50051]` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `[9090,50051]` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
-		decoded, err := decodeSlice[int]("")
+		decoded, err := decodeSlice[int](sql.NullString{})
 		if err != nil || decoded != nil {
 			t.Fatalf("NULL must decode to nil: %#v %v", decoded, err)
 		}
 	})
 	t.Run("expert config shape", func(t *testing.T) {
 		encoded, _ := encodeSlice([]domain.ExpertEnvironmentConfig{{Environment: domain.Ptr("prod")}})
-		if encoded != `[{"environment":"prod","serviceAccountName":null,"priority":null,"scheduledRestartEnabled":false,"scheduledRestartCron":null,"nodeNames":null}]` {
-			t.Fatalf("unexpected JSON %s", encoded)
+		if encoded.String != `[{"environment":"prod","serviceAccountName":null,"priority":null,"scheduledRestartEnabled":false,"scheduledRestartCron":null,"nodeNames":null}]` {
+			t.Fatalf("unexpected JSON %s", encoded.String)
 		}
 	})
 }

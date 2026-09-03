@@ -17,10 +17,10 @@ func userFromRow(row userRow) domain.User {
 	return domain.User{
 		ID:          row.ID,
 		CreatedTime: row.CreatedTime,
-		Username:    orNil(row.Username),
-		Email:       orNil(row.Email),
-		Password:    orNil(row.Password),
-		Role:        enumOrNil[domain.UserRole](row.Role),
+		Username:    ptrOf(row.Username),
+		Email:       domain.StringOrNil(row.Email),
+		Password:    ptrOf(row.Password),
+		Role:        enumPtrOf[domain.UserRole](row.Role),
 		AccessToken: ptrOf(row.AccessToken),
 		Enabled:     domain.Ptr(row.Enabled),
 	}
@@ -169,8 +169,8 @@ func (r *UserRepository) Save(ctx context.Context, user *domain.User) (*domain.U
 			`UPDATE user
 SET created_time = ?, email = ?, password = ?, role = ?, username = ?, access_token = ?, enabled = ?
 WHERE id = ?`,
-			user.CreatedTime, domain.Deref(user.Email), domain.Deref(user.Password), enumName(user.Role),
-			domain.Deref(user.Username), nullString(user.AccessToken), enabled, user.ID); err != nil {
+			user.CreatedTime, domain.Deref(user.Email), nullString(user.Password), enumString(user.Role),
+			nullString(user.Username), nullString(user.AccessToken), enabled, user.ID); err != nil {
 			return nil, err
 		}
 		return user, nil
@@ -182,8 +182,8 @@ WHERE id = ?`,
 	if err := exec(ctx, r.store.db,
 		`INSERT INTO user (id, created_time, email, password, role, username, access_token, enabled)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		user.ID, user.CreatedTime, domain.Deref(user.Email), domain.Deref(user.Password), enumName(user.Role),
-		domain.Deref(user.Username), nullString(user.AccessToken), enabled); err != nil {
+		user.ID, user.CreatedTime, domain.Deref(user.Email), nullString(user.Password), enumString(user.Role),
+		nullString(user.Username), nullString(user.AccessToken), enabled); err != nil {
 		return nil, err
 	}
 	return user, nil

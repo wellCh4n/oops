@@ -16,10 +16,10 @@ func externalAccountFromRow(row externalAccountRow) domain.ExternalAccount {
 	return domain.ExternalAccount{
 		ID:             row.ID,
 		CreatedTime:    row.CreatedTime,
-		Email:          orNil(row.Email),
-		Provider:       domain.ExternalAccountProvider(row.Provider),
-		ProviderUserID: orNil(row.ProviderUserID),
-		UserID:         orNil(row.UserID),
+		Email:          ptrOf(row.Email),
+		Provider:       domain.ExternalAccountProvider(stringOf(row.Provider)),
+		ProviderUserID: ptrOf(row.ProviderUserID),
+		UserID:         ptrOf(row.UserID),
 	}
 }
 
@@ -61,8 +61,8 @@ func (r *ExternalAccountRepo) Save(ctx context.Context, account *domain.External
 			`UPDATE external_account
 SET created_time = ?, email = ?, provider = ?, provider_user_id = ?, user_id = ?
 WHERE id = ?`,
-			account.CreatedTime, domain.Deref(account.Email), string(account.Provider),
-			domain.Deref(account.ProviderUserID), domain.Deref(account.UserID), account.ID)
+			account.CreatedTime, nullString(account.Email), string(account.Provider),
+			nullString(account.ProviderUserID), nullString(account.UserID), account.ID)
 	} else {
 		account.ID = ensureID(account.ID)
 		if account.CreatedTime.IsZero() {
@@ -71,8 +71,8 @@ WHERE id = ?`,
 		err = exec(ctx, r.store.db,
 			`INSERT INTO external_account (id, created_time, email, provider, provider_user_id, user_id)
 VALUES (?, ?, ?, ?, ?, ?)`,
-			account.ID, account.CreatedTime, domain.Deref(account.Email), string(account.Provider),
-			domain.Deref(account.ProviderUserID), domain.Deref(account.UserID))
+			account.ID, account.CreatedTime, nullString(account.Email), string(account.Provider),
+			nullString(account.ProviderUserID), nullString(account.UserID))
 	}
 	if err != nil {
 		return nil, err

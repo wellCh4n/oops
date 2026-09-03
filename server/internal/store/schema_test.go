@@ -13,26 +13,6 @@ var (
 	columnPattern      = regexp.MustCompile("(?m)^\\s+`(\\w+)` ")
 )
 
-// rowStructs maps each row struct to the table it is scanned from. Reads use
-// `SELECT *`, so a struct that has drifted from its table breaks every query
-// against it — which is what this test is for.
-var rowStructs = map[string]any{
-	"application":                applicationRow{},
-	"application_build_config":   buildConfigRow{},
-	"application_environment":    applicationEnvironmentRow{},
-	"application_runtime_spec":   runtimeSpecRow{},
-	"application_service_config": serviceConfigRow{},
-	"application_expert_config":  expertConfigRow{},
-	"application_collaborator":   collaboratorRow{},
-	"application_alert_state":    alertStateRow{},
-	"domain":                     domainRow{},
-	"environment":                environmentRow{},
-	"external_account":           externalAccountRow{},
-	"namespace":                  namespaceRow{},
-	"pipeline":                   pipelineRow{},
-	"user":                       userRow{},
-}
-
 // The migration is the only description of the schema there is, so it is what
 // the structs are checked against — reading the same file the database is built
 // from, rather than a second copy that could itself drift.
