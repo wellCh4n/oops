@@ -17,10 +17,13 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
+import com.github.wellch4n.oops.shared.exception.EnvironmentUnreachableException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
@@ -71,99 +74,128 @@ public class PipelineInstanceScanJob {
             return;
         }
         try {
-            List<Pipeline> runningPipelines = pipelineRepository.findAllByStatus(PipelineStatus.RUNNING);
-            for (Pipeline pipeline : runningPipelines) {
+            Map<String, List<Pipeline>> pipelinesByEnvironment = pipelineRepository
+                    .findAllByStatus(PipelineStatus.RUNNING).stream()
+                    .filter(pipeline -> !pipelineStateMachine.isTerminal(pipeline.getStatus()))
+                    .collect(Collectors.groupingBy(Pipeline::getEnvironment));
+
+            for (Map.Entry<String, List<Pipeline>> entry : pipelinesByEnvironment.entrySet()) {
+                String environmentName = entry.getKey();
+                List<Pipeline> pipelines = entry.getValue();
+
+                Environment environment = environmentService.getEnvironment(environmentName);
+                if (environment == null) {
+                    IllegalStateException failure = new IllegalStateException("Environment not found: " + environmentName);
+                    pipelines.forEach(pipeline -> failPipeline(pipeline, failure));
+                    continue;
+                }
+
+                Map<String, PipelineJobStatus> jobStatuses;
                 try {
+                    jobStatuses = pipelineJobGateway.getStatuses(environment, pipelines.stream()
+                            .map(Pipeline::getId)
+                            .toList());
+                } catch (EnvironmentUnreachableException exception) {
+                    // The poll never reached the cluster, so it says nothing about these builds — their Jobs are
+                    // almost always still running. Retry on the next tick instead of failing the pipelines.
+                    log.warn("Cannot read build status in environment {}, retrying next scan: {}",
+                            environmentName, exception.getMessage());
+                    continue;
+                } catch (Exception exception) {
+                    pipelines.forEach(pipeline -> failPipeline(pipeline, exception));
+                    continue;
+                }
 
-                    if (pipelineStateMachine.isTerminal(pipeline.getStatus())) {
-                        continue;
-                    }
+                for (Pipeline pipeline : pipelines) {
+                    try {
+                        PipelineJobStatus jobStatus = jobStatuses.getOrDefault(pipeline.getId(), PipelineJobStatus.UNKNOWN);
+                        if (jobStatus == PipelineJobStatus.SUCCEEDED) {
+                            if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
+                                pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED);
+                                int updated = pipelineRepository.updateStatusIfMatch(
+                                        pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
+                                );
+                                if (updated > 0) {
+                                    pipeline.markBuildSucceeded();
+                                    eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                            pipeline, PipelineNotificationType.BUILD_SUCCEEDED, "镜像构建完成，等待手动发布。"
+                                    ));
+                                }
+                                continue;
+                            }
 
-                    String environmentName = pipeline.getEnvironment();
-                    Environment environment = environmentService.getEnvironment(environmentName);
-                    if (environment == null) {
-                        throw new IllegalStateException("Environment not found: " + environmentName);
-                    }
+                            pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING);
+                            int claimed = pipelineRepository.updateStatusIfMatch(
+                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.DEPLOYING
+                            );
+                            if (claimed == 0) {
+                                continue;
+                            }
+                            pipeline.markDeploying();
+                            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                                    pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
+                            ));
 
-                    PipelineJobStatus jobStatus = pipelineJobGateway.getStatus(environment, pipeline.getName());
-                    if (jobStatus == PipelineJobStatus.SUCCEEDED) {
-                        if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
-                            pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED);
-                            int updated = pipelineRepository.updateStatusIfMatch(
-                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED
+                            Application application = applicationRepository.findAggregate(pipeline.getNamespace(), pipeline.getApplicationName());
+                            if (application == null) {
+                                throw new IllegalStateException("Application not found: "
+                                        + pipeline.getNamespace() + "/" + pipeline.getApplicationName());
+                            }
+                            ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
+                                    application, pipeline.getEnvironment());
+                            ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
+                            var applicationServiceConfig = application.serviceConfigOrDefault();
+                            var applicationExpertConfig = application.expertEnvironmentConfigOrDefault(pipeline.getEnvironment());
+
+                            artifactDeploymentExecutor.deploy(
+                                    pipeline, application, environment,
+                                    applicationRuntimeSpecEnvironmentConfig, healthCheck, applicationServiceConfig,
+                                    applicationExpertConfig
+                            );
+
+                            completeDeployPhase(pipeline);
+                        } else if (jobStatus == PipelineJobStatus.FAILED) {
+                            log.warn("Pipeline build failed: {}", pipeline.getId());
+                            pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
+                            String message = "镜像构建失败，请查看流水线日志。";
+                            int updated = pipelineRepository.updateStatusAndMessageIfMatch(
+                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
                             );
                             if (updated > 0) {
-                                pipeline.markBuildSucceeded();
+                                pipeline.markFailed(message);
                                 eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                        pipeline, PipelineNotificationType.BUILD_SUCCEEDED, "镜像构建完成，等待手动发布。"
+                                        pipeline, PipelineNotificationType.FAILED, message
                                 ));
                             }
-                            continue;
                         }
-
-                        pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.DEPLOYING);
-                        int claimed = pipelineRepository.updateStatusIfMatch(
-                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.DEPLOYING
-                        );
-                        if (claimed == 0) {
-                            continue;
-                        }
-                        pipeline.markDeploying();
-                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
-                        ));
-
-                        Application application = applicationRepository.findAggregate(pipeline.getNamespace(), pipeline.getApplicationName());
-                        if (application == null) {
-                            throw new IllegalStateException("Application not found: "
-                                    + pipeline.getNamespace() + "/" + pipeline.getApplicationName());
-                        }
-                        ApplicationRuntimeSpec.EnvironmentConfig applicationRuntimeSpecEnvironmentConfig = resolveEnvironmentConfig(
-                                application, pipeline.getEnvironment());
-                        ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
-                        var applicationServiceConfig = application.serviceConfigOrDefault();
-                        var applicationExpertConfig = application.expertEnvironmentConfigOrDefault(pipeline.getEnvironment());
-
-                        artifactDeploymentExecutor.deploy(
-                                pipeline, application, environment,
-                                applicationRuntimeSpecEnvironmentConfig, healthCheck, applicationServiceConfig,
-                                applicationExpertConfig
-                        );
-
-                        completeDeployPhase(pipeline);
-                    } else if (jobStatus == PipelineJobStatus.FAILED) {
-                        log.warn("Pipeline build failed: {}", pipeline.getId());
-                        pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
-                        String message = "镜像构建失败，请查看流水线日志。";
-                        int updated = pipelineRepository.updateStatusAndMessageIfMatch(
-                                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
-                        );
-                        if (updated > 0) {
-                            pipeline.markFailed(message);
-                            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                    pipeline, PipelineNotificationType.FAILED, message
-                            ));
-                        }
-                    }
-                } catch (Exception exception) {
-                    log.error("Error scanning pipeline instance {}: {}", pipeline.getId(), exception.getMessage(), exception);
-                    String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
-                    int deployingUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
-                            pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message
-                    );
-                    int runningUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
-                            pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
-                    );
-                    if (deployingUpdated > 0 || runningUpdated > 0) {
-                        pipeline.markFailed(message);
-                        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                pipeline, PipelineNotificationType.FAILED, message
-                        ));
+                    } catch (Exception exception) {
+                        failPipeline(pipeline, exception);
                     }
                 }
             }
         } finally {
             pipelineJobScanInProgress.set(false);
+        }
+    }
+
+    /**
+     * Records a pipeline that could not be carried forward as failed, notifying the operator. Reached both for a
+     * single pipeline's own error and for every pipeline of an environment whose status query failed outright.
+     */
+    private void failPipeline(Pipeline pipeline, Exception exception) {
+        log.error("Error scanning pipeline instance {}: {}", pipeline.getId(), exception.getMessage(), exception);
+        String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
+        int deployingUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
+                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message
+        );
+        int runningUpdated = pipelineRepository.updateStatusAndMessageIfMatch(
+                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
+        );
+        if (deployingUpdated > 0 || runningUpdated > 0) {
+            pipeline.markFailed(message);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.FAILED, message
+            ));
         }
     }
 

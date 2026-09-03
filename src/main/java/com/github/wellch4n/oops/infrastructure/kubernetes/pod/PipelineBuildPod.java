@@ -19,6 +19,8 @@ import lombok.Setter;
  */
 public class PipelineBuildPod extends Job {
 
+    public static final String PIPELINE_ID_LABEL = "oops.pipeline.id";
+
     private static final long ACTIVE_DEADLINE_SECONDS = 2 * 60 * 60L;
 
     @Getter
@@ -39,7 +41,7 @@ public class PipelineBuildPod extends Job {
                 .withNamespace(environment.getWorkNamespace())
                 .withLabels(Map.of(
                         "oops.type", OopsTypes.PIPELINE.name(),
-                        "oops.pipeline.id", this.pipelineId,
+                        PIPELINE_ID_LABEL, this.pipelineId,
                         "oops.pipeline.name", pipeline.getName(),
                         "oops.pipeline.application.name", application.getName()
                 ))
