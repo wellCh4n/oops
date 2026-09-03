@@ -2,9 +2,6 @@ package store
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
-	"fmt"
 
 	"github.com/wellch4n/oops/server/internal/domain"
 )
@@ -19,84 +16,20 @@ type EnvironmentRepository struct {
 	store *Store
 }
 
-func (r *EnvironmentRepository) environmentFromRow(row environmentRow) (*domain.Environment, error) {
-	token, err := r.decryptColumn(row.APIServerToken, "api_server_token", row.ID)
-	if err != nil {
-		return nil, err
-	}
-	password, err := r.decryptColumn(row.ImageRepositoryPassword, "image_repository_password", row.ID)
-	if err != nil {
-		return nil, err
-	}
-	gitCredential, err := r.decodeGitCredential(row.GitCredential, row.ID)
-	if err != nil {
-		return nil, err
-	}
+func environmentFromRow(row environmentRow) *domain.Environment {
 	return &domain.Environment{
 		ID:                  row.ID,
 		Name:                stringOf(row.Name),
-		KubernetesApiServer: &domain.KubernetesApiServer{URL: ptrOf(row.APIServerURL), Token: token},
+		KubernetesApiServer: &domain.KubernetesApiServer{URL: ptrOf(row.APIServerURL), Token: row.APIServerToken.Ptr()},
 		WorkNamespace:       ptrOf(row.WorkNamespace),
 		BuildStorageClass:   ptrOf(row.BuildStorageClass),
 		ImageRepository: &domain.ImageRepository{
 			URL:      ptrOf(row.ImageRepositoryURL),
 			Username: ptrOf(row.ImageRepositoryUsername),
-			Password: password,
+			Password: row.ImageRepositoryPassword.Ptr(),
 		},
-		GitCredential: gitCredential,
-	}, nil
-}
-
-func (r *EnvironmentRepository) decryptColumn(column sql.NullString, name, id string) (*string, error) {
-	if !column.Valid || column.String == "" {
-		return nil, nil
+		GitCredential: row.GitCredential.Payload,
 	}
-	plain, err := r.store.codec.Decrypt(column.String)
-	if err != nil {
-		return nil, fmt.Errorf("environment %s %s: %w", id, name, err)
-	}
-	return &plain, nil
-}
-
-func (r *EnvironmentRepository) encryptColumn(value *string) (sql.NullString, error) {
-	if value == nil {
-		return sql.NullString{}, nil
-	}
-	cipher, err := r.store.codec.Encrypt(*value)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	return sql.NullString{String: cipher, Valid: true}, nil
-}
-
-func (r *EnvironmentRepository) decodeGitCredential(column sql.NullString, id string) (*domain.GitCredential, error) {
-	if isBlankColumn(column) {
-		return nil, nil
-	}
-	plain, err := r.store.codec.Decrypt(column.String)
-	if err != nil {
-		return nil, fmt.Errorf("environment %s git_credential: %w", id, err)
-	}
-	var credential domain.GitCredential
-	if err := json.Unmarshal([]byte(plain), &credential); err != nil {
-		return nil, fmt.Errorf("environment %s git_credential: %w", id, err)
-	}
-	return &credential, nil
-}
-
-func (r *EnvironmentRepository) encodeGitCredential(credential *domain.GitCredential) (sql.NullString, error) {
-	if credential == nil {
-		return sql.NullString{}, nil
-	}
-	plain, err := json.Marshal(credential)
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	cipher, err := r.store.codec.Encrypt(string(plain))
-	if err != nil {
-		return sql.NullString{}, err
-	}
-	return sql.NullString{String: cipher, Valid: true}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -110,11 +43,7 @@ func (r *EnvironmentRepository) FindAll(ctx context.Context) ([]domain.Environme
 	}
 	result := make([]domain.Environment, 0, len(rows))
 	for _, row := range rows {
-		environment, err := r.environmentFromRow(row)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, *environment)
+		result = append(result, *environmentFromRow(row))
 	}
 	return result, nil
 }
@@ -126,7 +55,7 @@ func (r *EnvironmentRepository) FindByName(ctx context.Context, name string) (*d
 	if err != nil || row == nil {
 		return nil, err
 	}
-	return r.environmentFromRow(*row)
+	return environmentFromRow(*row), nil
 }
 
 // FindByID loads an environment by primary key; nil when absent.
@@ -135,7 +64,7 @@ func (r *EnvironmentRepository) FindByID(ctx context.Context, id string) (*domai
 	if err != nil || row == nil {
 		return nil, err
 	}
-	return r.environmentFromRow(*row)
+	return environmentFromRow(*row), nil
 }
 
 // ---------------------------------------------------------------------------
@@ -152,20 +81,12 @@ func (r *EnvironmentRepository) Save(ctx context.Context, environment *domain.En
 	if imageRepository == nil {
 		imageRepository = &domain.ImageRepository{}
 	}
-	token, err := r.encryptColumn(apiServer.Token)
-	if err != nil {
-		return nil, err
-	}
-	password, err := r.encryptColumn(imageRepository.Password)
-	if err != nil {
-		return nil, err
-	}
-	gitCredential, err := r.encodeGitCredential(environment.GitCredential)
-	if err != nil {
-		return nil, err
-	}
+	token := EncryptedOf(apiServer.Token)
+	password := EncryptedOf(imageRepository.Password)
+	gitCredential := EncryptedJSON[domain.GitCredential]{Payload: environment.GitCredential}
 
 	found := false
+	var err error
 	if environment.ID != "" {
 		if found, err = exists(ctx, r.store.db, `SELECT 1 FROM environment WHERE id = ? LIMIT 1`, environment.ID); err != nil {
 			return nil, err

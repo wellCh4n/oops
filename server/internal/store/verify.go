@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"sort"
@@ -72,14 +73,16 @@ func expectedColumns(row any) []expectedColumn {
 	return columns
 }
 
-// toleratesNull reports whether a field can scan a NULL. The sql.Null* types
-// can; so can the domain's LocalDateTime, which carries its own Valid flag.
+// scanner is what a column type implements to be handed a NULL and decide for
+// itself what that means.
+var scanner = reflect.TypeOf((*sql.Scanner)(nil)).Elem()
+
+// toleratesNull reports whether a field can scan a NULL. Implementing
+// sql.Scanner is exactly that claim — the driver hands a Scanner nil for a NULL
+// column — so sql.Null*, LocalDateTime and the Encrypted types all qualify,
+// while a plain string or bool does not and its column must be NOT NULL.
 func toleratesNull(fieldType reflect.Type) bool {
-	if fieldType.Kind() != reflect.Struct {
-		return false
-	}
-	_, hasValid := fieldType.FieldByName("Valid")
-	return hasValid
+	return reflect.PointerTo(fieldType).Implements(scanner)
 }
 
 // liveColumns reads one table's columns as name -> nullable.

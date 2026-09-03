@@ -27,13 +27,6 @@ var ErrDuplicate = errors.New("duplicate key")
 
 const mysqlDuplicateEntry = 1062
 
-// Codec encrypts the secret columns (environment tokens and passwords, git
-// credentials, domain certificates). Implemented outside this package.
-type Codec interface {
-	Encrypt(plain string) (string, error)
-	Decrypt(cipher string) (string, error)
-}
-
 // queryer is the half of sqlx's API the repositories use. Every helper takes
 // one so a statement can run either on the pool or inside a transaction
 // without being written twice.
@@ -46,8 +39,7 @@ type queryer interface {
 // Store is the root of the persistence API. Obtain repositories through the
 // grouped accessors (Applications(), Pipelines(), ...).
 type Store struct {
-	db    *sqlx.DB
-	codec Codec
+	db *sqlx.DB
 }
 
 // Open connects to MySQL with the given DSN, sets the pool size and pings.
@@ -69,13 +61,10 @@ func Open(dsn string, maxOpen int) (*sqlx.DB, error) {
 	return db, nil
 }
 
-// New wraps an open database. codec may be nil, in which case the secret
-// columns are stored in plaintext (mirrors an unset crypto.secret_key).
-func New(db *sqlx.DB, codec Codec) *Store {
-	if codec == nil {
-		codec = plaintextCodec{}
-	}
-	return &Store{db: db, codec: codec}
+// New wraps an open database. The secret columns encrypt themselves through
+// the codec installed with crypto.SetDefault, so nothing is passed in here.
+func New(db *sqlx.DB) *Store {
+	return &Store{db: db}
 }
 
 // DB exposes the underlying pool (for health checks and migrations).
@@ -334,10 +323,3 @@ func ensureID(id string) string {
 	}
 	return id
 }
-
-// plaintextCodec is the no-secret behaviour of the crypto codec: values pass
-// through unchanged.
-type plaintextCodec struct{}
-
-func (plaintextCodec) Encrypt(plain string) (string, error)  { return plain, nil }
-func (plaintextCodec) Decrypt(cipher string) (string, error) { return cipher, nil }

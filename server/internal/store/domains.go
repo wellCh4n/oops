@@ -19,8 +19,8 @@ func domainFromRow(row domainRow) domain.Domain {
 		Description:  ptrOf(row.Description),
 		HTTPS:        boolPtrOf(row.HTTPS),
 		CertMode:     enumPtrOf[domain.DomainCertMode](row.CertMode),
-		CertPem:      ptrOf(row.CertPem),
-		KeyPem:       ptrOf(row.KeyPem),
+		CertPem:      row.CertPem.Ptr(),
+		KeyPem:       row.KeyPem.Ptr(),
 		CertSubject:  ptrOf(row.CertSubject),
 		CertNotAfter: row.CertNotAfter,
 		Environment:  ptrOf(row.Environment),
@@ -75,9 +75,9 @@ func (r *DomainRepository) Save(ctx context.Context, record *domain.Domain) (*do
 SET created_time = ?, cert_mode = ?, cert_not_after = ?, cert_pem = ?, cert_subject = ?,
     description = ?, host = ?, https = ?, key_pem = ?, environment = ?
 WHERE id = ?`,
-			record.CreatedTime, enumString(record.CertMode), record.CertNotAfter, nullString(record.CertPem),
+			record.CreatedTime, enumString(record.CertMode), record.CertNotAfter, EncryptedOf(record.CertPem),
 			nullString(record.CertSubject), nullString(record.Description), nullString(record.Host),
-			nullBool(record.HTTPS), nullString(record.KeyPem), nullString(record.Environment), record.ID)
+			nullBool(record.HTTPS), EncryptedOf(record.KeyPem), nullString(record.Environment), record.ID)
 	} else {
 		record.ID = ensureID(record.ID)
 		if record.CreatedTime.IsZero() {
@@ -88,8 +88,8 @@ WHERE id = ?`,
 (id, created_time, cert_mode, cert_not_after, cert_pem, cert_subject, description, host, https, key_pem, environment)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			record.ID, record.CreatedTime, enumString(record.CertMode), record.CertNotAfter,
-			nullString(record.CertPem), nullString(record.CertSubject), nullString(record.Description),
-			nullString(record.Host), nullBool(record.HTTPS), nullString(record.KeyPem), nullString(record.Environment))
+			EncryptedOf(record.CertPem), nullString(record.CertSubject), nullString(record.Description),
+			nullString(record.Host), nullBool(record.HTTPS), EncryptedOf(record.KeyPem), nullString(record.Environment))
 	}
 	if err != nil {
 		return nil, err

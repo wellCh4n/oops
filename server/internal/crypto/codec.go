@@ -11,7 +11,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
+	"sync/atomic"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -112,4 +114,45 @@ func CheckPassword(raw, hash string) bool {
 		return false
 	}
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(raw)) == nil
+}
+
+// ---------------------------------------------------------------------------
+// the process-wide codec
+//
+// The secret columns are encrypted by a type that the database driver calls on
+// its own (see store.Encrypted), and a driver.Valuer is handed no dependencies
+// — so the key has to be reachable without being passed in. It lives here,
+// installed once at startup, exactly as the Java backend's EncryptionUtils held
+// it in a static field.
+
+var processCodec atomic.Pointer[Codec]
+
+// SetDefault installs the codec the secret columns use. Called once, before the
+// first query.
+func SetDefault(codec *Codec) { processCodec.Store(codec) }
+
+// defaultCodec returns the installed codec, or a pass-through when none was
+// installed — which is also what a blank key produces, so an installation
+// without a key behaves the same either way.
+func defaultCodec() *Codec {
+	if codec := processCodec.Load(); codec != nil {
+		return codec
+	}
+	return &Codec{}
+}
+
+// EncryptValue encrypts with the process codec.
+func EncryptValue(plain string) (string, error) { return defaultCodec().Encrypt(plain) }
+
+// DecryptValue decrypts with the process codec. A value that does not decrypt
+// is returned unchanged: a column written before a key was configured is still
+// readable after one is, which is what makes turning encryption on safe. The
+// Java converter did the same, and logged the same warning.
+func DecryptValue(stored string) string {
+	plain, err := defaultCodec().Decrypt(stored)
+	if err != nil {
+		slog.Warn("decryption failed, reading the column as plaintext")
+		return stored
+	}
+	return plain
 }

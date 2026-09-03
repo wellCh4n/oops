@@ -122,26 +122,26 @@ type domainRow struct {
 	CreatedTime  domain.LocalDateTime `db:"created_time"`
 	CertMode     sql.NullString       `db:"cert_mode"`
 	CertNotAfter domain.LocalDateTime `db:"cert_not_after"`
-	CertPem      sql.NullString       `db:"cert_pem"`
+	CertPem      Encrypted            `db:"cert_pem"`
 	CertSubject  sql.NullString       `db:"cert_subject"`
 	Description  sql.NullString       `db:"description"`
 	Host         sql.NullString       `db:"host"`
 	HTTPS        sql.NullBool         `db:"https"`
-	KeyPem       sql.NullString       `db:"key_pem"`
+	KeyPem       Encrypted            `db:"key_pem"`
 	Environment  sql.NullString       `db:"environment"`
 }
 
 type environmentRow struct {
-	ID                      string         `db:"id"`
-	BuildStorageClass       sql.NullString `db:"build_storage_class"`
-	ImageRepositoryPassword sql.NullString `db:"image_repository_password"`
-	ImageRepositoryURL      sql.NullString `db:"image_repository_url"`
-	ImageRepositoryUsername sql.NullString `db:"image_repository_username"`
-	APIServerToken          sql.NullString `db:"api_server_token"`
-	APIServerURL            sql.NullString `db:"api_server_url"`
-	Name                    sql.NullString `db:"name"`
-	WorkNamespace           sql.NullString `db:"work_namespace"`
-	GitCredential           sql.NullString `db:"git_credential"`
+	ID                      string                              `db:"id"`
+	BuildStorageClass       sql.NullString                      `db:"build_storage_class"`
+	ImageRepositoryPassword Encrypted                           `db:"image_repository_password"`
+	ImageRepositoryURL      sql.NullString                      `db:"image_repository_url"`
+	ImageRepositoryUsername sql.NullString                      `db:"image_repository_username"`
+	APIServerToken          Encrypted                           `db:"api_server_token"`
+	APIServerURL            sql.NullString                      `db:"api_server_url"`
+	Name                    sql.NullString                      `db:"name"`
+	WorkNamespace           sql.NullString                      `db:"work_namespace"`
+	GitCredential           EncryptedJSON[domain.GitCredential] `db:"git_credential"`
 }
 
 type externalAccountRow struct {

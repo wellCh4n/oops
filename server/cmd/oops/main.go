@@ -71,15 +71,19 @@ func run() error {
 	// older version with a different shape. Checking here turns that into a
 	// startup error naming the offending columns, instead of a scan failure on
 	// whichever request happens to read one of them first.
-	if err := store.New(db, nil).VerifySchema(migrateCtx); err != nil {
+	if err := store.New(db).VerifySchema(migrateCtx); err != nil {
 		return err
 	}
 
+	// Installed before the first query: the secret columns encrypt themselves
+	// through this, the way the Java backend's EncryptionUtils held the key in
+	// a static field for its converters.
 	codec := crypto.NewCodec(cfg.Crypto.SecretKey)
 	if !codec.Enabled() {
-		slog.Warn("crypto.secret_key is blank: environment tokens and registry passwords are stored in plaintext")
+		slog.Warn("crypto.secret_key is blank: environment tokens, registry passwords, git credentials and TLS private keys are stored in plaintext")
 	}
-	repositories := store.New(db, codec)
+	crypto.SetDefault(codec)
+	repositories := store.New(db)
 
 	storage, err := objectstorage.New(objectStorageOptions(cfg))
 	if err != nil {
