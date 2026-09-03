@@ -1,7 +1,18 @@
--- The whole schema, created in one step. OOPS 4.0 is a new install:
--- there is no earlier database to migrate from, so there is no history to
--- replay — this file and internal/store/schema.sql are the same schema, one
--- for the database and one for sqlc.
+-- The whole schema, created in one step, and the only description of it there
+-- is. OOPS 4.0 is a new install: there is no earlier database to migrate from,
+-- so there is no history to replay.
+--
+-- Optional string columns are `NOT NULL DEFAULT ''` rather than nullable: for a
+-- name, a description or an image tag, "absent" and "empty" are the same state,
+-- and making the database say so is what keeps `sql.NullString` out of every
+-- struct field and every mapping function. Three kinds of column keep their
+-- NULL, because for them the two states really do differ:
+--
+--   * datetime — there is no empty instant, so an unset one has to be NULL;
+--   * user.access_token — a unique key permits many NULLs but only one '',
+--     so '' would let just one account exist without a token;
+--   * application_service_config.port — port 0 is not a port, but neither is it
+--     "unset", and the deploy path branches on which of the two it is.
 
 -- +goose Up
 CREATE TABLE IF NOT EXISTS `application` (

@@ -8,13 +8,13 @@ import (
 )
 
 // The row structs are the shape a SELECT scans into, one per table, mirroring
-// schema.sql exactly. They are separate from the domain types because the two
-// differ where it matters: a row holds a JSON blob as a string and an enum as a
+// the migration exactly — a test checks that column for column. They are kept
+// separate from the domain types because the two differ where it matters: a row holds a JSON blob as a string and an enum as a
 // string, and the mapping functions in each repository turn those into the
 // decoded, typed values the rest of the product works in.
 //
-// Almost every column is NOT NULL (see schema.sql), so the fields are plain Go
-// types. The three exceptions carry sql.Null* and are called out where they
+// Almost every column is NOT NULL (see the migration), so the fields are plain
+// Go types. The three exceptions carry sql.Null* and are called out where they
 // appear.
 
 type applicationRow struct {

@@ -241,7 +241,7 @@ func isNoRows(err error) bool { return errors.Is(err, sql.ErrNoRows) }
 // ---------------------------------------------------------------------------
 // column helpers
 //
-// Optional string columns are NOT NULL DEFAULT '' (see schema.sql), so the only
+// Optional string columns are NOT NULL DEFAULT '' (see the migration), so the only
 // conversion left is between "" and a nil pointer, for the few fields whose
 // JSON really does distinguish absent from empty. The sql.Null* helpers survive
 // for the three columns that genuinely stay nullable.

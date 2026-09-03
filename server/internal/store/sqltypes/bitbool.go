@@ -1,5 +1,5 @@
-// Package sqltypes holds scanner/valuer helpers that the sqlc-generated code
-// needs for column types database/sql cannot map on its own.
+// Package sqltypes holds the scanner/valuer helpers the row structs need for
+// column types database/sql cannot map on its own.
 package sqltypes
 
 import (
