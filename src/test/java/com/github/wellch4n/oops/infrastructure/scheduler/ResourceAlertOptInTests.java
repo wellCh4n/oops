@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import com.github.wellch4n.oops.application.port.ResourceAlertProbe;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.infrastructure.config.ResourceAlertProperties;
+import com.github.wellch4n.oops.infrastructure.lock.NamedLockRegistry;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationAlertStateRepository;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationRuntimeSpecRepository;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ class ResourceAlertOptInTests {
             .withBean(ApplicationRuntimeSpecRepository.class, () -> mock(ApplicationRuntimeSpecRepository.class))
             .withBean(ApplicationAlertStateRepository.class, () -> mock(ApplicationAlertStateRepository.class))
             .withBean(EnvironmentService.class, () -> mock(EnvironmentService.class))
-            .withBean(ResourceAlertProbe.class, () -> mock(ResourceAlertProbe.class));
+            .withBean(ResourceAlertProbe.class, () -> mock(ResourceAlertProbe.class))
+            .withBean(NamedLockRegistry.class, () -> mock(NamedLockRegistry.class));
 
     @Test
     void scanJobIsAbsentWhenNothingIsConfigured() {

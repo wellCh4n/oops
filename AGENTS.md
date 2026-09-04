@@ -24,6 +24,7 @@ The backend follows a **DDD layered architecture** under `com.github.wellch4n.oo
   - `infrastructure/external/feishu/` — Feishu (Lark) OAuth + messaging
   - `infrastructure/objectstorage/` — S3-compatible storage for ZIP source uploads and static assets
   - `infrastructure/scheduler/` — `@Scheduled` jobs (e.g. `PipelineInstanceScanJob`)
+  - `infrastructure/lock/` — `NamedLockRegistry` and its MySQL `GET_LOCK` implementation, which lets several backend servers share the scheduled jobs (see **Multi-server coordination**)
   - `infrastructure/config/` — Spring config beans, `@ConfigurationProperties` classes, `SpringContext` static accessor, security filters (`JwtAuthFilter`, `OpenApiAuthFilter`), and startup initializers (`UserInitializer` seeds the default admin)
 - **`shared/`**: Cross-cutting utilities and exceptions (`BizException`).
 
@@ -173,6 +174,13 @@ Build pipelines run as Kubernetes Jobs with init containers:
 Two source types exist: `GIT` (default) and `ZIP`. ZIP uploads use presigned S3 URLs via `BuildSourceObjectStorageService` — the frontend gets a presigned PUT URL from `POST .../deployments/source-upload`, uploads the file, then triggers the pipeline. ZIP builds use `oops.pipeline.image.zip` (defaults to `alpine/curl:8.17.0`) to download the archive.
 
 Pipeline build logs are served over SSE, one container at a time (see **Pipeline log streaming** below). A `@Scheduled(fixedRate=5000)` job (`PipelineInstanceScanJob`) polls K8s for build completion and rollout convergence. Pipeline state transitions use optimistic locking: `PipelineRepository.updateStatusIfMatch()` does a conditional UPDATE and returns row count (0 = lost the race).
+
+**Multi-server coordination**: Several backend servers can run at once, and all of them run every `@Scheduled` job; what stops them from doing the same work twice is `NamedLockRegistry` (`infrastructure/lock/`), implemented over MySQL user-level locks (`GET_LOCK` / `RELEASE_LOCK`) on **one dedicated connection per server that is opened outside the Hikari pool and kept for the life of the process**. A lock lives exactly as long as the session that took it, so a dead server's locks are freed the moment its TCP connection drops — no lease to renew, no clock involved. Two granularities:
+
+- **Per pipeline** — `PipelineInstanceScanJob` only touches a pipeline whose `oops:pipeline:{id}` lock it holds, takes it the first time it sees the pipeline (build scan or rollout scan) and keeps it until the pipeline finishes, so one server drives a pipeline from build through rollout while other servers drive other pipelines. A lock whose pipeline was finished elsewhere (a user stopping it from any server) is swept by the rollout scan: it snapshots the held locks *before* querying the active pipelines and releases any snapshot lock that is no longer active — the snapshot ordering is what keeps a lock the build scan takes concurrently from being swept.
+- **Per job, sticky** — `ScheduledRestartJob` and `ResourceAlertScanJob` take `oops:job:scheduled-restart` / `oops:job:resource-alert` on their first tick and never release, so one server leads each scan until it goes away; a scan that released its lock after each tick would let a second server's tick in the same minute fire the same restart or notification again.
+
+The lock is **not a fence**: a server whose lock connection MySQL cut keeps believing it holds its locks until it next talks to the registry. That is why every pipeline transition still goes through `updateStatusIfMatch()` — the lock makes collisions rare, the CAS makes them harmless. The registry is fail-closed: with its connection down every `tryAcquire` answers false and that server simply drives nothing until it reconnects (it retries on the next call and validates the idle session every 30s).
 
 **Duplicate deploy guard**: Before starting any pipeline, manual deploy, or rollback, `DeploymentConcurrencyPolicy.activePipelineStatuses()` checks for in-flight pipelines (status `RUNNING`, `DEPLOYING`, or `ROLLING_OUT`) through `PipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn()`. If one exists, a `BizException("Application is being deployed")` is thrown. This is separate from optimistic locking — it's a pre-check to prevent duplicate concurrent deployments.
 

@@ -4,6 +4,7 @@ import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationExpertConfig;
+import com.github.wellch4n.oops.infrastructure.lock.NamedLockRegistry;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationExpertConfigRepository;
 import com.github.wellch4n.oops.shared.util.CronSchedule;
 import java.time.ZonedDateTime;
@@ -29,8 +30,10 @@ import org.springframework.stereotype.Component;
  * one-minute tick and cause occurrences to be skipped).
  *
  * <p>No last-run state is persisted: the minute-aligned tick matches each cron occurrence exactly once, and a
- * restart missed while the server is down is intentionally not backfilled. Single-instance assumption matches
- * {@link PipelineInstanceScanJob}.
+ * restart missed while every server is down is intentionally not backfilled. With several servers only the one
+ * holding the {@value #LOCK_NAME} lock scans: it takes the lock on its first tick and keeps it, so the same server
+ * leads until it goes away and another server's tick finds the lock free. Without that every server would fire
+ * the same restart in the same minute.
  */
 @Slf4j
 @Component
@@ -39,17 +42,22 @@ public class ScheduledRestartJob {
     private record DueRestart(String namespace, String applicationName, Environment environment) {
     }
 
+    static final String LOCK_NAME = "oops:job:scheduled-restart";
+
     private final AtomicBoolean scanInProgress = new AtomicBoolean(false);
     private final ApplicationExpertConfigRepository expertConfigRepository;
     private final EnvironmentService environmentService;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
+    private final NamedLockRegistry lockRegistry;
 
     public ScheduledRestartJob(ApplicationExpertConfigRepository expertConfigRepository,
                                EnvironmentService environmentService,
-                               ApplicationRuntimeGateway applicationRuntimeGateway) {
+                               ApplicationRuntimeGateway applicationRuntimeGateway,
+                               NamedLockRegistry lockRegistry) {
         this.expertConfigRepository = expertConfigRepository;
         this.environmentService = environmentService;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.lockRegistry = lockRegistry;
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -58,6 +66,9 @@ public class ScheduledRestartJob {
             return;
         }
         try {
+            if (!lockRegistry.tryAcquire(LOCK_NAME)) {
+                return;
+            }
             ZonedDateTime now = ZonedDateTime.now();
             List<DueRestart> dueRestarts = collectDueRestarts(now);
             if (dueRestarts.isEmpty()) {
