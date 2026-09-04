@@ -340,17 +340,29 @@ def read_until_closed(connection: websocket.WebSocket,
 
     Log sockets answer a text "ping" with "pong"; terminal sockets must not be
     pinged, because their stdin is live.
+
+    Frames are read one at a time with control frames included. The server
+    pings every socket every ten seconds as a keepalive, and the library's
+    plain recv() answers those internally and keeps waiting — each ping is
+    traffic that restarts the socket timeout — so on a pod that never writes
+    another line it would block for as long as the server stays up. Reading
+    frame by frame lets the deadline be checked after every ping.
     """
     deadline = time.time() + timeout
     while time.time() < deadline:
+        connection.settimeout(max(0.1, deadline - time.time()))
         try:
-            frame = connection.recv()
+            opcode, data = connection.recv_data(control_frame=True)
         except websocket.WebSocketTimeoutException:
             return
         except websocket.WebSocketConnectionClosedException:
             return
-        if frame is None or frame == "":
+        if opcode == websocket.ABNF.OPCODE_CLOSE:
             return
-        if isinstance(frame, bytes):
-            frame = frame.decode("utf-8", errors="replace")
-        yield frame
+        if opcode not in (websocket.ABNF.OPCODE_TEXT, websocket.ABNF.OPCODE_BINARY):
+            continue  # ping or pong: the library has already answered a ping
+        if isinstance(data, bytes):
+            data = data.decode("utf-8", errors="replace")
+        if data == "":
+            return
+        yield data
