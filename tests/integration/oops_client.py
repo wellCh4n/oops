@@ -1,4 +1,4 @@
-"""HTTP and WebSocket client for the OOPS API.
+"""HTTP, WebSocket and server-sent event client for the OOPS API.
 
 Deliberately knows nothing about the backend implementation — it speaks only the
 wire protocol, so the same suite validates the current Java service, a Go or Rust
@@ -246,6 +246,73 @@ class OopsClient:
         connection = websocket.create_connection(url, timeout=timeout)
         return connection
 
+    # -- server-sent events -------------------------------------------------
+
+    def sse(self, path: str, timeout: int = 60,
+            headers: Optional[dict] = None) -> Iterator[SseEvent]:
+        """Open an event stream and yield its events until the server ends the
+        response or `timeout` seconds pass with nothing arriving.
+
+        A GET like any other, so it is recorded as one for coverage. `headers`
+        is for what a browser's EventSource sends on its own — `Last-Event-ID`
+        on a reconnect — since that is the only input these streams take beyond
+        the URL.
+        """
+        record("GET", path)
+        request_headers = {"Accept": "text/event-stream"}
+        if self.token:
+            request_headers["Authorization"] = f"Bearer {self.token}"
+        if headers:
+            request_headers.update(headers)
+        response = self.session.get(self.endpoint + path, headers=request_headers,
+                                    stream=True, timeout=timeout)
+        try:
+            if response.status_code != 200:
+                raise ApiError(
+                    f"GET {path} returned {response.status_code} instead of an "
+                    f"event stream: {response.text[:400]!r}")
+            content_type = response.headers.get("Content-Type", "")
+            if not content_type.startswith("text/event-stream"):
+                raise ApiError(
+                    f"GET {path} answered with {content_type!r}, not text/event-stream")
+            yield from parse_sse(response.iter_lines())
+        finally:
+            response.close()
+
+
+@dataclass
+class SseEvent:
+    """One server-sent event: the `event:` name, the `id:` if the server set one,
+    and the `data:` lines joined back together."""
+
+    event: str
+    id: Optional[str]
+    data: str
+
+
+def parse_sse(lines: Iterator[bytes]) -> Iterator[SseEvent]:
+    """Decode the wire format: `field:value` lines, a blank line ends an event,
+    a leading `:` is a comment. Yields events in arrival order."""
+    event, event_id, data = "message", None, []
+    for raw in lines:
+        line = raw.decode("utf-8", errors="replace")
+        if line == "":
+            if data or event != "message":
+                yield SseEvent(event, event_id, "\n".join(data))
+            event, event_id, data = "message", None, []
+            continue
+        if line.startswith(":"):
+            continue
+        field, _, value = line.partition(":")
+        if value.startswith(" "):
+            value = value[1:]
+        if field == "event":
+            event = value
+        elif field == "id":
+            event_id = value
+        elif field == "data":
+            data.append(value)
+
 
 def wait_until(predicate: Callable[[], Any], timeout: int = 300, interval: float = 3.0,
                description: str = "condition") -> Any:
@@ -279,17 +346,36 @@ def read_until_closed(connection: websocket.WebSocket,
 
     Log sockets answer a text "ping" with "pong"; terminal sockets must not be
     pinged, because their stdin is live.
+
+    Frames are read one at a time rather than through `recv()`, which swallows
+    control frames and waits on for a data frame with a fresh timeout each time
+    — and every handler sends a protocol-level ping every few seconds, so an
+    idle socket would never time out. The pings are answered here instead, and
+    the deadline is the wall clock.
     """
     deadline = time.time() + timeout
-    while time.time() < deadline:
+    while True:
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            return
+        connection.settimeout(remaining)
         try:
-            frame = connection.recv()
+            frame = connection.recv_frame()
         except websocket.WebSocketTimeoutException:
             return
         except websocket.WebSocketConnectionClosedException:
             return
-        if frame is None or frame == "":
+        if frame is None or frame.opcode == websocket.ABNF.OPCODE_CLOSE:
             return
-        if isinstance(frame, bytes):
-            frame = frame.decode("utf-8", errors="replace")
-        yield frame
+        if frame.opcode == websocket.ABNF.OPCODE_PING:
+            connection.pong(frame.data)
+            continue
+        if frame.opcode not in (websocket.ABNF.OPCODE_TEXT,
+                                websocket.ABNF.OPCODE_BINARY):
+            continue
+        data = frame.data
+        if isinstance(data, bytes):
+            data = data.decode("utf-8", errors="replace")
+        if data == "":
+            continue
+        yield data
