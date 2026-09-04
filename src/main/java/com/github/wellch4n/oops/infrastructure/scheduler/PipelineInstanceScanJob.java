@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PipelineInstanceScanJob {
     private static final Duration ROLLOUT_TIMEOUT = Duration.ofMinutes(5);
+    private static final Duration DEPLOY_TIMEOUT = Duration.ofMinutes(10);
     /** Lock name prefix of a pipeline; whichever server holds {@code prefix + id} drives that pipeline. */
     static final String PIPELINE_LOCK_PREFIX = "oops:pipeline:";
     private static final List<PipelineStatus> ACTIVE_STATUSES = List.of(
@@ -58,6 +60,8 @@ public class PipelineInstanceScanJob {
 
     private final AtomicBoolean pipelineJobScanInProgress = new AtomicBoolean(false);
     private final AtomicBoolean rolloutScanInProgress = new AtomicBoolean(false);
+    /** When this server first saw each pipeline in DEPLOYING; the clock behind {@link #failStuckDeploy}. */
+    final Map<String, Instant> deployingSince = new ConcurrentHashMap<>();
     private final ApplicationRepository applicationRepository;
     private final PipelineRepository pipelineRepository;
     private final EnvironmentService environmentService;
@@ -128,7 +132,11 @@ public class PipelineInstanceScanJob {
 
                 for (Pipeline pipeline : pipelines) {
                     try {
-                        PipelineJobStatus jobStatus = jobStatuses.getOrDefault(pipeline.getId(), PipelineJobStatus.UNKNOWN);
+                        if (!jobStatuses.containsKey(pipeline.getId())) {
+                            failMissingBuildJob(pipeline);
+                            continue;
+                        }
+                        PipelineJobStatus jobStatus = jobStatuses.get(pipeline.getId());
                         if (jobStatus == PipelineJobStatus.SUCCEEDED) {
                             if (DeployMode.MANUAL.equals(pipeline.getDeployMode())) {
                                 pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.BUILD_SUCCEEDED);
@@ -176,17 +184,7 @@ public class PipelineInstanceScanJob {
                             completeDeployPhase(pipeline);
                         } else if (jobStatus == PipelineJobStatus.FAILED) {
                             log.warn("Pipeline build failed: {}", pipeline.getId());
-                            pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
-                            String message = "镜像构建失败，请查看流水线日志。";
-                            int updated = pipelineRepository.updateStatusAndMessageIfMatch(
-                                    pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
-                            );
-                            if (updated > 0) {
-                                pipeline.markFailed(message);
-                                eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                                        pipeline, PipelineNotificationType.FAILED, message
-                                ));
-                            }
+                            failBuild(pipeline, "镜像构建失败，请查看流水线日志。");
                         }
                     } catch (Exception exception) {
                         failPipeline(pipeline, exception);
@@ -223,6 +221,30 @@ public class PipelineInstanceScanJob {
     }
 
     /**
+     * The cluster has no Job for this pipeline any more — deleted by hand, its work namespace cleaned up, or reaped
+     * by the Job's own TTL — and it is not coming back. Left alone the pipeline would stay RUNNING for good, and
+     * with it the application could never be deployed again. A Job that exists but has no status yet is a different
+     * case and is left for the next tick.
+     */
+    private void failMissingBuildJob(Pipeline pipeline) {
+        log.warn("Build job of pipeline {} no longer exists in the cluster", pipeline.getId());
+        failBuild(pipeline, "构建任务已不存在，无法继续。");
+    }
+
+    private void failBuild(Pipeline pipeline, String message) {
+        pipelineStateMachine.ensureCanTransition(PipelineStatus.RUNNING, PipelineStatus.ERROR);
+        int updated = pipelineRepository.updateStatusAndMessageIfMatch(
+                pipeline.getId(), PipelineStatus.RUNNING, PipelineStatus.ERROR, message
+        );
+        if (updated > 0) {
+            pipeline.markFailed(message);
+            eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                    pipeline, PipelineNotificationType.FAILED, message
+            ));
+        }
+    }
+
+    /**
      * Polls pipelines awaiting Kubernetes rollout. Each ROLLING_OUT pipeline is checked against the
      * live StatefulSet rollout: a converged rollout marks it SUCCEEDED, a missing workload, fatal pod state, or
      * prolonged not-ready state marks it ERROR, and anything in between leaves it ROLLING_OUT for the next tick.
@@ -238,6 +260,10 @@ public class PipelineInstanceScanJob {
             Set<String> locksHeldBeforeScan = lockRegistry.heldLocks();
             List<Pipeline> activePipelines = pipelineRepository.findByStatusIn(ACTIVE_STATUSES);
             for (Pipeline pipeline : activePipelines) {
+                if (pipeline.getStatus() == PipelineStatus.DEPLOYING) {
+                    failStuckDeploy(pipeline);
+                    continue;
+                }
                 if (pipeline.getStatus() != PipelineStatus.ROLLING_OUT || !claim(pipeline)) {
                     continue;
                 }
@@ -267,9 +293,48 @@ public class PipelineInstanceScanJob {
                 }
             }
             releaseLocksOfInactivePipelines(locksHeldBeforeScan, activePipelines);
+            forgetDeploysNoLongerActive(activePipelines);
         } finally {
             rolloutScanInProgress.set(false);
         }
+    }
+
+    /**
+     * A deploy runs to completion in seconds on the thread that claimed it, so a pipeline that has stayed in
+     * DEPLOYING for {@link #DEPLOY_TIMEOUT} was abandoned: the server driving it died, or its request thread was
+     * killed, between claiming the pipeline and entering the rollout. Nothing else looks at DEPLOYING, so without
+     * this the pipeline would sit there for good and block the application. No column records when a status
+     * changed — the conditional updates bypass entity timestamps — so each server simply remembers when it first saw
+     * the pipeline deploying; a restart only starts that clock again.
+     */
+    private void failStuckDeploy(Pipeline pipeline) {
+        Instant firstSeen = deployingSince.computeIfAbsent(pipeline.getId(), pipelineId -> Instant.now());
+        if (Duration.between(firstSeen, Instant.now()).compareTo(DEPLOY_TIMEOUT) < 0 || !claim(pipeline)) {
+            return;
+        }
+        try {
+            String message = "部署过程中断，未能进入发布阶段。";
+            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
+            int updated = pipelineRepository.updateStatusAndMessageIfMatch(
+                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
+            if (updated > 0) {
+                log.warn("Pipeline {} has been deploying for over {}; marking it failed", pipeline.getId(), DEPLOY_TIMEOUT);
+                pipeline.markFailed(message);
+                eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                        pipeline, PipelineNotificationType.FAILED, message
+                ));
+            }
+        } finally {
+            releaseWhenFinished(pipeline);
+        }
+    }
+
+    private void forgetDeploysNoLongerActive(List<Pipeline> activePipelines) {
+        Set<String> deploying = activePipelines.stream()
+                .filter(pipeline -> pipeline.getStatus() == PipelineStatus.DEPLOYING)
+                .map(Pipeline::getId)
+                .collect(Collectors.toSet());
+        deployingSince.keySet().retainAll(deploying);
     }
 
     private boolean claim(Pipeline pipeline) {
@@ -332,8 +397,14 @@ public class PipelineInstanceScanJob {
      */
     private void completeDeployPhase(Pipeline pipeline) {
         pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
-        pipelineRepository.updateStatusIfMatch(
+        int updated = pipelineRepository.updateStatusIfMatch(
                 pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        if (updated == 0) {
+            // Stopped from some server while the artifact was being applied: the rollout is no longer this
+            // pipeline's to report on, though the workload is updated regardless.
+            log.info("Pipeline {} left DEPLOYING while its artifact was applied; not entering rollout", pipeline.getId());
+            return;
+        }
         pipeline.markRollingOut();
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.ROLLING_OUT, "正在等待新版本发布生效…"
