@@ -143,7 +143,7 @@ const doc = {
   // ── パイプライン ──────────────────────────────────────────────────────
   "doc.pipelines.title": "パイプライン",
   "doc.pipelines.overview.title": "概要",
-  "doc.pipelines.overview.p1": "デプロイをトリガーするたびにデータベースに Pipeline レコードが 1 件作られ、Kubernetes 上の 1 つの Job に対応します。まずソースをクローンし、必要ならビルドコマンドを実行し、Buildah でイメージをビルドしてプッシュします。ビルド完了後は `deployMode` に従って即座にデプロイするかを決めます。パイプラインのログは `WebSocket` でプッシュされ、OpenAPI にログ API は公開されていません。",
+  "doc.pipelines.overview.p1": "デプロイをトリガーするたびにデータベースに Pipeline レコードが 1 件作られ、Kubernetes 上の 1 つの Job に対応します。まずソースをクローンし、必要ならビルドコマンドを実行し、Buildah でイメージをビルドしてプッシュします。ビルド完了後は `deployMode` に従って即座にデプロイするかを決めます。パイプラインのログはビルドステップごとに `SSE` でプッシュされ、OpenAPI にログ API は公開されていません。",
   "doc.pipelines.overview.p2": "以下の API はすべてパスプレフィックス `/openapi/namespaces/{namespace}/applications/{name}/pipelines` の下にあり、各パイプラインは NanoId 形式の `id` で指定します。",
   "doc.pipelines.list.title": "パイプラインの一覧",
   "doc.pipelines.list.summary": "アプリケーションのパイプラインをページング検索します。環境で絞り込めます。",

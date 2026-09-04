@@ -2,7 +2,8 @@ package com.github.wellch4n.oops.application.service;
 
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
-import com.github.wellch4n.oops.application.port.PipelineLogGateway;
+import com.github.wellch4n.oops.application.port.EventStreamSink;
+import com.github.wellch4n.oops.application.port.PipelineLogStreamGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
@@ -28,7 +29,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @author wellCh4n
@@ -45,7 +45,7 @@ public class PipelineService {
     private final ApplicationEventPublisher eventPublisher;
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
     private final PipelineJobGateway pipelineJobGateway;
-    private final PipelineLogGateway pipelineLogGateway;
+    private final PipelineLogStreamGateway pipelineLogStreamGateway;
     private final PipelineStateMachine pipelineStateMachine;
     private final DeploymentConcurrencyPolicy deploymentConcurrencyPolicy;
     private final ApplicationAccessPolicy applicationAccessPolicy;
@@ -56,7 +56,7 @@ public class PipelineService {
                            ApplicationEventPublisher eventPublisher,
                            ArtifactDeploymentExecutor artifactDeploymentExecutor,
                            PipelineJobGateway pipelineJobGateway,
-                           PipelineLogGateway pipelineLogGateway,
+                           PipelineLogStreamGateway pipelineLogStreamGateway,
                            PipelineStateMachine pipelineStateMachine,
                            DeploymentConcurrencyPolicy deploymentConcurrencyPolicy,
                            ApplicationAccessPolicy applicationAccessPolicy) {
@@ -67,7 +67,7 @@ public class PipelineService {
         this.eventPublisher = eventPublisher;
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
         this.pipelineJobGateway = pipelineJobGateway;
-        this.pipelineLogGateway = pipelineLogGateway;
+        this.pipelineLogStreamGateway = pipelineLogStreamGateway;
         this.pipelineStateMachine = pipelineStateMachine;
         this.deploymentConcurrencyPolicy = deploymentConcurrencyPolicy;
         this.applicationAccessPolicy = applicationAccessPolicy;
@@ -148,13 +148,31 @@ public class PipelineService {
         );
     }
 
-    public SseEmitter watchPipeline(String namespace, String applicationName, String id) {
+    public AutoCloseable watchPipelineSteps(String namespace, String applicationName, String id, EventStreamSink sink) {
+        Pipeline pipeline = requirePipeline(namespace, applicationName, id);
+        Environment environment = requireEnvironment(pipeline.getEnvironment());
+        return pipelineLogStreamGateway.watchSteps(pipeline, environment, sink);
+    }
+
+    public AutoCloseable streamPipelineStepLog(
+            String namespace,
+            String applicationName,
+            String id,
+            String container,
+            String lastEventId,
+            EventStreamSink sink
+    ) {
+        Pipeline pipeline = requirePipeline(namespace, applicationName, id);
+        Environment environment = requireEnvironment(pipeline.getEnvironment());
+        return pipelineLogStreamGateway.streamContainerLog(pipeline, environment, container, lastEventId, sink);
+    }
+
+    private Pipeline requirePipeline(String namespace, String applicationName, String id) {
         Pipeline pipeline = pipelineRepository.findByNamespaceAndApplicationNameAndId(namespace, applicationName, id);
         if (pipeline == null) {
             throw new BizException("Pipeline not found");
         }
-        Environment environment = requireEnvironment(pipeline.getEnvironment());
-        return pipelineLogGateway.watch(pipeline, environment);
+        return pipeline;
     }
 
     public Boolean deployPipeline(String namespace, String applicationName, String id, String operatorUserId) {

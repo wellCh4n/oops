@@ -403,6 +403,11 @@ const apps = {
   "apps.pipeline.operator": "Operator:",
   "apps.pipeline.message": "Error Message",
   "apps.pipeline.viewLogs": "App Logs",
+  "apps.pipeline.followLatest": "Follow latest",
+  "apps.pipeline.waitingForBuild": "Waiting for the build to start…",
+  "apps.pipeline.waitingForLogs": "Waiting for logs…",
+  "apps.pipeline.stepNotRun": "Not run",
+  "apps.pipeline.stepLogTitle": "Step log",
   "apps.pipeline.modeImmediate": "Immediate",
   "apps.pipeline.modeManual": "Manual",
 }

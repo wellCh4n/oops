@@ -123,20 +123,29 @@ function ApplicationPodLogsContent() {
           />
         )}
 
-        <div className="flex-1 min-h-0 bg-zinc-950 p-4 overflow-hidden font-mono text-xs text-white">
+        {/* The padding lives inside the scroll viewport so it scrolls away with the content;
+            outside it, it would be a fixed blank band above and below the lines. */}
+        <div className="flex-1 min-h-0 bg-background text-foreground overflow-hidden font-mono text-xs">
           <ScrollArea className="h-full w-full">
-            {logs.map((log) => (
-              <div key={log.id} className="whitespace-pre-wrap break-all">
-                {log.text}
-              </div>
-            ))}
+            <div className="p-4">
+              {logs.map((log) => (
+                <div key={log.id} className="whitespace-pre-wrap break-all">
+                  {log.text}
+                </div>
+              ))}
+              {/* Blinks only while the stream is connected: a cursor promises another line. */}
+              {isConnected && (
+                <div aria-hidden>
+                  <span className="inline-block h-[1.1em] w-2 translate-y-[0.15em] bg-foreground/70 animate-caret-blink motion-reduce:animate-none" />
+                </div>
+              )}
+              {error && logs.length === 0 && (
+                <div className="text-destructive italic">{error}</div>
+              )}
+            </div>
+            {/* Last thing in the viewport, after the padding, so following the log lands on the
+                true bottom rather than one padding short of it. */}
             <div ref={bottomRef} />
-            {logs.length === 0 && !error && (
-              <div className="text-zinc-500 italic">Waiting for logs…</div>
-            )}
-            {error && logs.length === 0 && (
-              <div className="text-zinc-500 italic">{error}</div>
-            )}
           </ScrollArea>
         </div>
       </div>

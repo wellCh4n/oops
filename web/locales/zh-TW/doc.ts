@@ -143,7 +143,7 @@ const doc = {
   // ── 流水線 ────────────────────────────────────────────────────────────
   "doc.pipelines.title": "流水線",
   "doc.pipelines.overview.title": "說明",
-  "doc.pipelines.overview.p1": "每次觸發部署都會在資料庫中建立一筆 Pipeline 記錄，對應 Kubernetes 上的一個 Job：先複製原始碼，可選擇執行建置命令，再用 Buildah 打包鏡像並推送。建置完成後依 `deployMode` 決定是否立即部署。流水線日誌透過 `WebSocket` 推送，OpenAPI 不開放日誌 API。",
+  "doc.pipelines.overview.p1": "每次觸發部署都會在資料庫中建立一筆 Pipeline 記錄，對應 Kubernetes 上的一個 Job：先複製原始碼，可選擇執行建置命令，再用 Buildah 打包鏡像並推送。建置完成後依 `deployMode` 決定是否立即部署。流水線日誌依建置步驟透過 `SSE` 推送，OpenAPI 不開放日誌 API。",
   "doc.pipelines.overview.p2": "以下 API 都在路徑前綴 `/openapi/namespaces/{namespace}/applications/{name}/pipelines` 下，每筆流水線透過 NanoId 形式的 `id` 定址。",
   "doc.pipelines.list.title": "列出流水線",
   "doc.pipelines.list.summary": "分頁查詢應用程式的流水線，可依環境篩選。",

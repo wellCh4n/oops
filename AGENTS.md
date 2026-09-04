@@ -33,7 +33,7 @@ Key technologies:
 - Fabric8 Kubernetes client for K8s operations
 - MySQL for persistence (external)
 - JWT-based authentication with Feishu (Lark) external auth support
-- WebSocket for real-time logs (pipelines, pod logs, terminals)
+- WebSocket for pod logs and terminals; server-sent events (SSE) for pipeline build logs and pod status
 - Spring Data JPA with Hibernate
 
 ### Frontend (Next.js)
@@ -172,7 +172,7 @@ Build pipelines run as Kubernetes Jobs with init containers:
 
 Two source types exist: `GIT` (default) and `ZIP`. ZIP uploads use presigned S3 URLs via `BuildSourceObjectStorageService` — the frontend gets a presigned PUT URL from `POST .../deployments/source-upload`, uploads the file, then triggers the pipeline. ZIP builds use `oops.pipeline.image.zip` (defaults to `alpine/curl:8.17.0`) to download the archive.
 
-Pipeline logs are streamed via WebSocket (`PipelineLogWebSocketHandler`). A `@Scheduled(fixedRate=5000)` job (`PipelineInstanceScanJob`) polls K8s for build completion and rollout convergence. Pipeline state transitions use optimistic locking: `PipelineRepository.updateStatusIfMatch()` does a conditional UPDATE and returns row count (0 = lost the race).
+Pipeline build logs are served over SSE, one container at a time (see **Pipeline log streaming** below). A `@Scheduled(fixedRate=5000)` job (`PipelineInstanceScanJob`) polls K8s for build completion and rollout convergence. Pipeline state transitions use optimistic locking: `PipelineRepository.updateStatusIfMatch()` does a conditional UPDATE and returns row count (0 = lost the race).
 
 **Duplicate deploy guard**: Before starting any pipeline, manual deploy, or rollback, `DeploymentConcurrencyPolicy.activePipelineStatuses()` checks for in-flight pipelines (status `RUNNING`, `DEPLOYING`, or `ROLLING_OUT`) through `PipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn()`. If one exists, a `BizException("Application is being deployed")` is thrown. This is separate from optimistic locking — it's a pre-check to prevent duplicate concurrent deployments.
 
@@ -333,23 +333,30 @@ The `domain` layer holds no Fabric8 dependency — `Environment.KubernetesApiSer
 
 ## WebSocket Protocols
 
-Four handlers registered in `WebSocketConfiguration` (all allow `setAllowedOrigins("*")`):
+Three handlers registered in `WebSocketConfiguration` (all allow `setAllowedOrigins("*")`):
 
 | Path | Purpose |
 |---|---|
 | `.../pods/{pod}/terminal` | Binary+text stdin, Fabric8 `exec` with TTY (`xterm-256color`) |
 | `.../pods/{pod}/log` | Text lines, tail last 2000 lines |
-| `.../pipelines/{pipelineId}/log` | JSON messages (see below) |
 | `/api/sandbox/instances/{sandboxId}/terminal` | Binary+text stdin for a long-lived sandbox instance terminal (also mapped at `/openapi/sandbox/instances/{sandboxId}/terminal`, authenticated by `OpenApiAuthFilter` via `Authorization` header on the upgrade request — CLI/machine clients only, no `?token=` fallback) |
 
-**Pipeline log message format:**
-```json
-{ "type": "steps", "data": ["clone","dockerfile","build","push","done"] }   // on connect; dockerfile/build may be absent
-{ "type": "step", "data": "[containerName] line", "container": "containerName" }
-{ "type": "error", "data": "..." }
-```
+The pod log handler responds to text `"ping"` with `"pong"` and also starts a native WebSocket ping-control-frame heartbeat. Terminal handlers write text/binary payloads to the remote TTY, so do not use text `"ping"` as a terminal heartbeat. JWT is accepted as `?token=` query param for WebSocket connections (browsers cannot set custom headers on upgrade).
 
-Log handlers respond to text `"ping"` with `"pong"` and also start a native WebSocket ping-control-frame heartbeat. Terminal handlers write text/binary payloads to the remote TTY, so do not use text `"ping"` as a terminal heartbeat. JWT is accepted as `?token=` query param for WebSocket connections (browsers cannot set custom headers on upgrade).
+## Pipeline log streaming (SSE)
+
+Pipeline build logs are **not** a WebSocket. The build steps are init containers, which Kubernetes runs strictly one after another, so at any moment at most one of them has a log worth following — streaming every container in sequence on one connection replayed the whole build for every viewer. Instead `PipelineController` exposes two server-sent event streams, both authenticated like any `/api` request (`JwtAuthFilter` falls back to the `auth_token` cookie because `EventSource` cannot set headers):
+
+| Path | Events |
+|---|---|
+| `GET .../pipelines/{id}/steps/watch` | `steps` (container names in execution order, once), `status` (a `PipelineStepsSnapshot`: pod `phase` + per-step `{name, state, exitCode, reason, startedAt, finishedAt}`, on every change of the build pod), `error`, `end` |
+| `GET .../pipelines/{id}/log?container=X` | `log` (`{"lines":[{"time","text"},…]}`, batched, event `id` = last stamped time), `error`, `end` |
+
+Both are `PipelineLogStreamGateway` → `KubernetesPipelineLogStreamGateway`, pushing into the transport-neutral `EventStreamSink` port; `interfaces/sse/SseEventStream` is the `SseEmitter` adapter that owns the 25s `heartbeat` and closes the gateway's handle when the receiver disconnects. Rules that matter when touching this:
+
+- **Every stream ends with `end`.** An `EventSource` reconnects on its own after the server closes a response, so the frontend (`web/lib/api/pipelines.ts`) closes the source on `end` — without it a finished step's log would be refetched every few seconds forever. `error` is a message saying why there is nothing more (`Logs expired: the build job has been cleaned up` once the Job's 3-day TTL has passed), always followed by `end`.
+- **The log stream is per container.** A finished container replays and ends at once; a running one is followed until it terminates; one that has not started is waited for. Lines are batched (≤500 lines / 64KB, flushed whenever the reader has nothing more buffered) because git and buildah redraw progress with bare `\r`, which the reader ends a line on, so per-line framing outweighs the log itself. The browser's `Last-Event-ID` comes back as `sinceTime` plus an exact-time filter (kubelet's `sinceTime` is second-grained), so a reconnect does not replay the step.
+- **The status stream drives the step bar**, not the log. The frontend (`apps/[namespace]/[name]/pipelines/[pipelineId]/page.tsx`) shows one step's log at a time: by default the running step (following it to the next when it finishes), else the failed one, else the last that ran; clicking a step pins it, and a "follow latest" button unpins. The trailing `done` container (`echo done!`) is a step like any other: a finished build lands on it. A `PENDING` step under a finished `phase` never ran.
 
 ## Frontend Patterns
 

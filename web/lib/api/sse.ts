@@ -50,6 +50,12 @@ export function watchSse<TEventMap extends Record<string, unknown>>(
   }
 
   eventSource.onerror = (event) => {
+    // A non-200 or non-event-stream response — a JSON error body, say — makes the browser give
+    // up for good rather than retry, so there is nothing to count down: it is over now.
+    if (eventSource.readyState === EventSource.CLOSED) {
+      options.onTerminate?.()
+      return
+    }
     failureCount += 1
     if (failureCount >= maxFailures) {
       eventSource.close()

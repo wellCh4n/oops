@@ -5,9 +5,11 @@ import com.github.wellch4n.oops.application.dto.PipelineDto;
 import com.github.wellch4n.oops.interfaces.dto.AuthUserPrincipal;
 import com.github.wellch4n.oops.interfaces.dto.Result;
 import com.github.wellch4n.oops.application.service.PipelineService;
+import com.github.wellch4n.oops.interfaces.sse.SseEventStream;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * @author wellCh4n
@@ -41,6 +43,36 @@ public class PipelineController {
                                                 @PathVariable String name,
                                                 @PathVariable String id) {
         return Result.success(pipelineService.getPipelineDetail(namespace, name, id));
+    }
+
+    /**
+     * Server-sent {@code steps} / {@code status} events for the build until its pod finishes. Cheap
+     * enough to hold open for the whole build: it carries one snapshot per container transition, not
+     * a single line of log.
+     */
+    @GetMapping("/{id}/steps/watch")
+    public SseEmitter watchPipelineSteps(@PathVariable String namespace,
+                                         @PathVariable String name,
+                                         @PathVariable String id) {
+        SseEventStream stream = new SseEventStream();
+        stream.attach(pipelineService.watchPipelineSteps(namespace, name, id, stream));
+        return stream.emitter();
+    }
+
+    /**
+     * Server-sent {@code log} batches for one build step. A finished step replays and ends at once;
+     * a running one is followed until it terminates. The browser's own reconnect sends the last
+     * event id back as {@code Last-Event-ID}, and the stream resumes after that line.
+     */
+    @GetMapping("/{id}/log")
+    public SseEmitter streamPipelineStepLog(@PathVariable String namespace,
+                                            @PathVariable String name,
+                                            @PathVariable String id,
+                                            @RequestParam String container,
+                                            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        SseEventStream stream = new SseEventStream();
+        stream.attach(pipelineService.streamPipelineStepLog(namespace, name, id, container, lastEventId, stream));
+        return stream.emitter();
     }
 
     @PutMapping("/{id}/stop")

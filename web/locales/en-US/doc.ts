@@ -143,7 +143,7 @@ const doc = {
   // ── Pipelines ─────────────────────────────────────────────────────────
   "doc.pipelines.title": "Pipelines",
   "doc.pipelines.overview.title": "Overview",
-  "doc.pipelines.overview.p1": "Every deployment creates a Pipeline row in the database backed by one Kubernetes Job: it clones the source, optionally runs a build command, then packages and pushes an image with Buildah. Once the build finishes, `deployMode` decides whether to deploy right away. Pipeline logs are pushed over `WebSocket`; OpenAPI exposes no log endpoint.",
+  "doc.pipelines.overview.p1": "Every deployment creates a Pipeline row in the database backed by one Kubernetes Job: it clones the source, optionally runs a build command, then packages and pushes an image with Buildah. Once the build finishes, `deployMode` decides whether to deploy right away. Pipeline logs are pushed per build step over `SSE`; OpenAPI exposes no log endpoint.",
   "doc.pipelines.overview.p2": "Every endpoint below sits under the path prefix `/openapi/namespaces/{namespace}/applications/{name}/pipelines`, and each pipeline is addressed by its NanoId `id`.",
   "doc.pipelines.list.title": "List pipelines",
   "doc.pipelines.list.summary": "Paged query over an application's pipelines, optionally filtered by environment.",
