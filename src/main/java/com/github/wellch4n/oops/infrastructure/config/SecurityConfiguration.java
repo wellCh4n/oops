@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -43,6 +44,14 @@ public class SecurityConfiguration {
                                 response.sendError(HttpServletResponse.SC_FORBIDDEN))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // The SSE endpoints (pipeline steps and logs, pod statuses) complete on an ASYNC
+                        // dispatch. The JWT filter, a OncePerRequestFilter, does not run again on that
+                        // dispatch and nothing carries the authentication over, so without this rule the
+                        // authorization filter denies the dispatch after the whole stream has been sent:
+                        // an error in the log for every stream, and a chunked response cut short of its
+                        // terminator, which any client but a browser's EventSource reports as an error.
+                        // The original request was authorized when it came in; the dispatch is the same one.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/feishu/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
