@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.config;
 
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -43,6 +44,14 @@ public class SecurityConfiguration {
                                 response.sendError(HttpServletResponse.SC_FORBIDDEN))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // An SSE response (pipeline logs, application events) completes on an
+                        // ASYNC dispatch that walks this chain again. JwtAuthFilter, like any
+                        // OncePerRequestFilter, sits that dispatch out, so nothing is
+                        // authenticated by then and "/api/**" would deny a request it already
+                        // let through — with the response committed, the only effect is the
+                        // connection being cut before the final chunk. The ASYNC dispatch is
+                        // only ever reached through an authorized REQUEST dispatch.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/auth/feishu/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
