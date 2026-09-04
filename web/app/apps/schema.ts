@@ -109,14 +109,17 @@ export const applicationConfigSchema = z.object({
   })),
 })
 
+// A config saved before one of these fields existed carries no entry for it in the stored JSON blob,
+// and the API returns those as null rather than omitting them — accept null as well as undefined, or
+// every such config fails validation and the tab can never be saved again.
 export const applicationExpertConfigSchema = z.object({
   environmentConfigs: z.array(z.object({
     environment: z.string(),
-    serviceAccountName: z.string().optional(),
-    priority: z.string().optional(),
-    scheduledRestartEnabled: z.boolean().optional(),
-    scheduledRestartCron: z.string().optional(),
-    nodeNames: z.array(z.string()).optional(),
+    serviceAccountName: z.string().nullish(),
+    priority: z.string().nullish(),
+    scheduledRestartEnabled: z.boolean().nullish(),
+    scheduledRestartCron: z.string().nullish(),
+    nodeNames: z.array(z.string()).nullish(),
   })),
 })
 

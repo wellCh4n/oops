@@ -184,11 +184,13 @@ export interface ApplicationExpertConfig {
 
 export interface ApplicationExpertConfigEnvironmentConfig {
   environment: string
-  serviceAccountName?: string
-  priority?: string
-  scheduledRestartEnabled?: boolean
-  scheduledRestartCron?: string
-  nodeNames?: string[]
+  // Every field but the environment is null for a config saved before that field existed: the stored
+  // JSON blob has no entry for it and the API serializes the missing value as null.
+  serviceAccountName?: string | null
+  priority?: string | null
+  scheduledRestartEnabled?: boolean | null
+  scheduledRestartCron?: string | null
+  nodeNames?: string[] | null
 }
 
 export interface ApplicationResource {
