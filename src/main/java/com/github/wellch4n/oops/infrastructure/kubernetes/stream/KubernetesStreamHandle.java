@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.stream;
 
+import com.github.wellch4n.oops.application.port.EventStreamSink;
 import com.github.wellch4n.oops.application.port.StreamSink;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,6 +28,10 @@ final class KubernetesStreamHandle implements AutoCloseable {
     }
 
     boolean isOpen(StreamSink sink) {
+        return !closed.get() && sink.isOpen();
+    }
+
+    boolean isOpen(EventStreamSink sink) {
         return !closed.get() && sink.isOpen();
     }
 

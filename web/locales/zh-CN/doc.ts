@@ -143,7 +143,7 @@ const doc = {
   // ── 流水线 ────────────────────────────────────────────────────────────
   "doc.pipelines.title": "流水线",
   "doc.pipelines.overview.title": "说明",
-  "doc.pipelines.overview.p1": "每次触发部署都会在数据库中创建一条 Pipeline 记录，对应 Kubernetes 上的一个 Job：先克隆源码，可选执行构建命令，再用 Buildah 打包镜像并推送。构建完成后根据 `deployMode` 决定是否立即部署。流水线日志通过 `WebSocket` 推送，OpenAPI 不开放日志接口。",
+  "doc.pipelines.overview.p1": "每次触发部署都会在数据库中创建一条 Pipeline 记录，对应 Kubernetes 上的一个 Job：先克隆源码，可选执行构建命令，再用 Buildah 打包镜像并推送。构建完成后根据 `deployMode` 决定是否立即部署。流水线日志按构建步骤通过 `SSE` 推送，OpenAPI 不开放日志接口。",
   "doc.pipelines.overview.p2": "以下接口都在路径前缀 `/openapi/namespaces/{namespace}/applications/{name}/pipelines` 下，每条流水线通过 NanoId 形式的 `id` 寻址。",
   "doc.pipelines.list.title": "列出流水线",
   "doc.pipelines.list.summary": "分页查询应用的流水线，可按环境过滤。",

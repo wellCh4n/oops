@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
-import com.github.wellch4n.oops.application.port.PipelineLogGateway;
+import com.github.wellch4n.oops.application.port.PipelineLogStreamGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
@@ -58,7 +58,7 @@ class PipelineRollbackTests {
         eventPublisher = org.mockito.Mockito.mock(ApplicationEventPublisher.class);
         artifactDeploymentExecutor = org.mockito.Mockito.mock(ArtifactDeploymentExecutor.class);
         PipelineJobGateway pipelineJobGateway = org.mockito.Mockito.mock(PipelineJobGateway.class);
-        PipelineLogGateway pipelineLogGateway = org.mockito.Mockito.mock(PipelineLogGateway.class);
+        PipelineLogStreamGateway pipelineLogStreamGateway = org.mockito.Mockito.mock(PipelineLogStreamGateway.class);
 
         pipelineService = new PipelineService(
                 pipelineRepository,
@@ -68,7 +68,7 @@ class PipelineRollbackTests {
                 eventPublisher,
                 artifactDeploymentExecutor,
                 pipelineJobGateway,
-                pipelineLogGateway,
+                pipelineLogStreamGateway,
                 PipelineStateMachine.getInstance(),
                 new DeploymentConcurrencyPolicy(),
                 new ApplicationAccessPolicy()

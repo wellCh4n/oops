@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
-import com.github.wellch4n.oops.application.port.PipelineLogGateway;
+import com.github.wellch4n.oops.application.port.PipelineLogStreamGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
@@ -55,7 +55,7 @@ class PipelineHealthVerificationTests {
         ApplicationEventPublisher eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
         artifactDeploymentExecutor = Mockito.mock(ArtifactDeploymentExecutor.class);
         PipelineJobGateway pipelineJobGateway = Mockito.mock(PipelineJobGateway.class);
-        PipelineLogGateway pipelineLogGateway = Mockito.mock(PipelineLogGateway.class);
+        PipelineLogStreamGateway pipelineLogStreamGateway = Mockito.mock(PipelineLogStreamGateway.class);
 
         pipelineService = new PipelineService(
                 pipelineRepository,
@@ -65,7 +65,7 @@ class PipelineHealthVerificationTests {
                 eventPublisher,
                 artifactDeploymentExecutor,
                 pipelineJobGateway,
-                pipelineLogGateway,
+                pipelineLogStreamGateway,
                 PipelineStateMachine.getInstance(),
                 new DeploymentConcurrencyPolicy(),
                 new ApplicationAccessPolicy()

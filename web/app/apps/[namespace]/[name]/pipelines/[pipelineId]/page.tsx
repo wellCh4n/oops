@@ -1,11 +1,9 @@
 "use client"
 
 import { use, useState, useEffect, useRef, useMemo, useCallback, Fragment } from "react"
-import { getPipeline, deployPipeline, stopPipeline } from "@/lib/api/pipelines"
+import { getPipeline, deployPipeline, stopPipeline, watchPipelineSteps, streamPipelineStepLog } from "@/lib/api/pipelines"
 import { getApplicationStatus, getClusterDomain } from "@/lib/api/applications"
-import { Pipeline, ApplicationPodStatus, ClusterDomainInfo } from "@/lib/api/types"
-import { API_BASE_URL } from "@/lib/api/config"
-import { getToken } from "@/lib/auth"
+import { Pipeline, ApplicationPodStatus, ClusterDomainInfo, PipelineStepStatus } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ConnectionLostBanner } from "@/components/connection-lost-banner"
@@ -25,7 +23,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns, imageTag } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2 } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2, Loader2, X, Radio } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -42,45 +40,38 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { shortImageName } from "@/lib/utils"
 import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
 
-// WebSocket message types
-interface StepsMessage {
-  type: "steps"
-  data: string[]
+interface LogRow {
+  id: number
+  text: string
+  time?: string | null
 }
 
-interface StepLogMessage {
-  type: "step"
-  data: string
-  container: string
-  // When the container wrote the line, as Kubernetes recorded it. Absent for a line the API
-  // server did not stamp, and for logs from a backend older than this field.
-  time?: string
+// One step's log as received so far. `streamId` ties the rows to the subscription that produced
+// them, so a batch from a stream the viewer already left can never land on the step they switched to.
+interface StepLog {
+  streamId: number
+  step: string
+  rows: LogRow[]
+  error: string | null
 }
 
-interface ErrorMessage {
-  type: "error"
-  data: unknown
+const NO_ROWS: LogRow[] = []
+
+// Which step the page shows when the viewer has not picked one: the step the build is on, else the
+// one that failed, else the last one that ran. Nothing yet means the pod has not started a step.
+function followedStepOf(steps: PipelineStepStatus[]): string | null {
+  const running = steps.find((step) => step.state === "RUNNING")
+  if (running) return running.name
+  const failed = steps.find((step) => step.state === "FAILED")
+  if (failed) return failed.name
+  const lastSucceeded = [...steps].reverse().find((step) => step.state === "SUCCEEDED")
+  return lastSucceeded?.name ?? null
 }
 
-interface UnknownMessage {
-  type: string
-  data?: unknown
-  container?: string
-}
-
-type PipelineMessage = StepsMessage | StepLogMessage | ErrorMessage | UnknownMessage
-
-// Type guard functions
-function isStepsMessage(msg: PipelineMessage): msg is StepsMessage {
-  return msg.type === "steps" && Array.isArray(msg.data)
-}
-
-function isStepLogMessage(msg: PipelineMessage): msg is StepLogMessage {
-  return msg.type === "step" && typeof msg.data === "string" && typeof msg.container === "string"
-}
-
-function isErrorMessage(msg: PipelineMessage): msg is ErrorMessage {
-  return msg.type === "error"
+function stepDuration(step: PipelineStepStatus): string {
+  if (!step.startedAt || !step.finishedAt) return ""
+  const seconds = Math.round((new Date(step.finishedAt).getTime() - new Date(step.startedAt).getTime()) / 1000)
+  return Number.isNaN(seconds) || seconds < 0 ? "" : `${seconds}s`
 }
 
 // Kubernetes stamps each line in UTC; a build is read in the timezone of whoever is watching it.
@@ -128,17 +119,17 @@ interface PageProps {
 export default function PipelineDetailPage({ params }: PageProps) {
   const { namespace, name, pipelineId } = use(params)
   const [pipeline, setPipeline] = useState<Pipeline | null>(null)
-  const [logs, setLogs] = useState<{ id: number; text: string; time?: string }[]>([])
+  const [stepStatuses, setStepStatuses] = useState<PipelineStepStatus[]>([])
+  const [buildPhase, setBuildPhase] = useState("Pending")
+  const [stepsError, setStepsError] = useState<string | null>(null)
+  // The step the viewer clicked, or null to follow whichever step the build is on.
+  const [pinnedStep, setPinnedStep] = useState<string | null>(null)
+  const [stepLog, setStepLog] = useState<StepLog | null>(null)
   const logIdRef = useRef(0)
-  const appendLog = (text: string, time?: string) => {
-    const id = ++logIdRef.current
-    setLogs(prev => [...prev, { id, text, time }])
-  }
-  const [steps, setSteps] = useState<string[]>([])
-  const [activeStep, setActiveStep] = useState<string>("")
+  const streamIdRef = useRef(0)
   const logContainerRef = useRef<HTMLDivElement>(null)
 
-  const [wsDisconnected, setWsDisconnected] = useState(false)
+  const [streamLost, setStreamLost] = useState(false)
   const [podStatuses, setPodStatuses] = useState<ApplicationPodStatus[]>([])
   const [statusLoading, setStatusLoading] = useState(false)
   const [errorLogsMenuOpen, setErrorLogsMenuOpen] = useState(false)
@@ -216,116 +207,54 @@ export default function PipelineDetailPage({ params }: PageProps) {
     }
   }, [namespace, name, pipeline?.environment])
 
+  const visibleSteps = stepStatuses
+  const buildFinished = buildPhase === "Succeeded" || buildPhase === "Failed"
+  const followedStep = useMemo(() => followedStepOf(stepStatuses), [stepStatuses])
+  const viewedStep = pinnedStep ?? followedStep
+  const logRows = stepLog?.step === viewedStep ? stepLog.rows : NO_ROWS
+  const logError = stepLog?.step === viewedStep ? stepLog.error : null
+
+  // Follow the build's steps for as long as the build runs. This stream carries one status
+  // snapshot per container transition and no log lines, so it is cheap to hold open.
   useEffect(() => {
     if (!buildLogAvailable) return
-
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const baseUrl = API_BASE_URL.startsWith('http')
-      ? API_BASE_URL.replace(/^http/, 'ws')
-      : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
-    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pipelines/${pipelineId}/log?token=${getToken()}`
-
-    let ws: WebSocket | null = null
-    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null
-    let retryCount = 0
-    const maxRetries = 5
-    let unmounted = false
-    // Set to true when server sends {"type":"done"} — no reconnect needed
-    let streamDone = false
-
-    const connect = () => {
-      if (unmounted) return
-      ws = new WebSocket(wsUrl)
-
-      ws.onopen = () => {
-        retryCount = 0
-        heartbeatInterval = setInterval(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send("ping")
-          }
-        }, 10000)
-      }
-
-      ws.onmessage = (event) => {
-        const message = event.data as string
-        if (message === "pong") return
-        if (message === "ping") {
-          if (ws && ws.readyState === WebSocket.OPEN) ws.send("pong")
-          return
-        }
-
-        try {
-          const jsonData = JSON.parse(message) as PipelineMessage & { type: string }
-
-          if (jsonData.type === "done") {
-            streamDone = true
-            return
-          }
-
-          if (isStepsMessage(jsonData)) {
-            setSteps(jsonData.data)
-          } else if (isStepLogMessage(jsonData)) {
-            appendLog(jsonData.data, jsonData.time)
-            setActiveStep(jsonData.container)
-          } else if (isErrorMessage(jsonData)) {
-            appendLog(`[ERROR] ${jsonData.data}`)
-          }
-        } catch {
-          // Fallback for non-JSON messages (backward compatibility)
-          if (message.startsWith("STEPS:")) {
-            try {
-              const stepNames = JSON.parse(message.substring(6)) as string[]
-              setSteps(stepNames)
-            } catch (parseError) {
-              console.error("Failed to parse legacy steps format", parseError)
-            }
-          } else if (message.startsWith("ERROR:")) {
-            appendLog(`[ERROR] ${message.substring(6)}`)
-          } else if (message.includes(":")) {
-            const [stepName, ...logParts] = message.split(":")
-            appendLog(logParts.join(":"))
-            setActiveStep(stepName ?? "")
-          } else {
-            appendLog(message)
-          }
-        }
-      }
-
-      ws.onerror = () => {
-        ws?.close()
-      }
-
-      ws.onclose = () => {
-        if (heartbeatInterval) clearInterval(heartbeatInterval)
-        if (unmounted || streamDone) return
-        if (retryCount < maxRetries) {
-          retryCount++
-          const delay = Math.min(1000 * retryCount, 10000)
-          reconnectTimeout = setTimeout(connect, delay)
-        } else {
-          setWsDisconnected(true)
-        }
-      }
-    }
-
-    // Small timeout to prevent double connection in React Strict Mode
-    const initialTimeout = setTimeout(connect, 100)
-
-    return () => {
-      unmounted = true
-      clearTimeout(initialTimeout)
-      if (reconnectTimeout) clearTimeout(reconnectTimeout)
-      if (heartbeatInterval) clearInterval(heartbeatInterval)
-      if (ws) ws.close()
-    }
+    return watchPipelineSteps(namespace, name, pipelineId, {
+      onSteps: (names) =>
+        setStepStatuses((prev) => (prev.length > 0 ? prev : names.map((stepName) => ({ name: stepName, state: "PENDING" as const })))),
+      onStatus: (snapshot) => {
+        setStepStatuses(snapshot.steps)
+        setBuildPhase(snapshot.phase)
+      },
+      onError: setStepsError,
+      onTerminate: () => setStreamLost(true),
+    })
   }, [namespace, name, pipelineId, buildLogAvailable])
+
+  // One log stream at a time, for the step being viewed. Switching steps closes the old stream
+  // and opens a new one; the server replays a finished step at once and follows a running one.
+  useEffect(() => {
+    if (!buildLogAvailable || !viewedStep) return
+    const step = viewedStep
+    const streamId = ++streamIdRef.current
+    return streamPipelineStepLog(namespace, name, pipelineId, step, {
+      onLog: (batch) =>
+        setStepLog((prev) => {
+          const rows = batch.lines.map((line) => ({ id: ++logIdRef.current, text: line.text, time: line.time }))
+          return prev?.streamId === streamId
+            ? { ...prev, rows: prev.rows.concat(rows) }
+            : { streamId, step, rows, error: null }
+        }),
+      onError: (message) =>
+        setStepLog((prev) => (prev?.streamId === streamId ? { ...prev, error: message } : { streamId, step, rows: [], error: message })),
+      onTerminate: () => setStreamLost(true),
+    })
+  }, [namespace, name, pipelineId, buildLogAvailable, viewedStep])
 
   useEffect(() => {
     if (logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight
     }
-  }, [logs])
+  }, [logRows])
 
   // A rollback's artifact is its source's image, so its tag is the source's id — the pod running it
   // is the right version, and comparing against this pipeline's own id would call it the wrong one.
@@ -398,15 +327,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
 
   const deployModeLabel = pipeline?.deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : pipeline?.deployMode === "MANUAL" ? t("apps.pipeline.modeManual") : null
 
-  const activeIndex = (pipeline?.status === "SUCCEEDED" || pipeline?.status === "BUILD_SUCCEEDED")
-    ? steps.length
-    : steps.indexOf(activeStep)
   const applicationEventSince = pipeline?.createdTime ? dayjs(pipeline.createdTime).toISOString() : undefined
 
   return (
     <ContentPage title={t("apps.pipeline.title")} fullHeight>
       <div className="flex flex-1 min-h-0 flex-col gap-4">
-        {wsDisconnected && (
+        {streamLost && (
           <ConnectionLostBanner
             className="rounded-md"
             message={t("common.disconnected")}
@@ -560,28 +486,52 @@ export default function PipelineDetailPage({ params }: PageProps) {
             {/* Left column: steps + logs — a rollback runs no build job, so it has no log stream */}
             {!isRollback && (
               <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
-                {/* Steps Progress Bar */}
-                {steps.length > 0 && (
+                {/* Steps Progress Bar — driven by the build pod's container statuses, not by which
+                    log happens to be arriving, so every step reads right even when its log is not loaded. */}
+                {visibleSteps.length > 0 && (
                   <div className="flex items-start px-1 pt-1 pb-5">
-                    {steps.map((step, index) => {
-                      const isCompleted = index < activeIndex
-                      const isActive = index === activeIndex
+                    {visibleSteps.map((step, index) => {
+                      const isViewed = step.name === viewedStep
+                      // Labels hang below a 24px circle and are wider than it. The circles sit on
+                      // the panel's edges, so an end label is anchored to its circle's outer edge
+                      // instead of centred, or it would run past the panel and be clipped.
+                      const labelAlignment =
+                        index === 0 ? "left-0 text-left"
+                        : index === visibleSteps.length - 1 ? "right-0 text-right"
+                        : "left-1/2 -translate-x-1/2 text-center"
+                      // A pending step has no log yet; once the build has finished it never will.
+                      const notRun = step.state === "PENDING" && buildFinished
+                      const clickable = step.state !== "PENDING"
+                      const circle =
+                        step.state === "FAILED" ? "bg-destructive text-white"
+                        : step.state === "PENDING" ? "bg-muted text-muted-foreground"
+                        : "bg-primary text-primary-foreground"
+                      const detail =
+                        step.state === "FAILED" ? [`exit ${step.exitCode ?? "?"}`, step.reason].filter(Boolean).join(" · ")
+                        : notRun ? t("apps.pipeline.stepNotRun")
+                        : step.state === "PENDING" ? (step.reason ?? "")
+                        : stepDuration(step)
                       return (
-                        <div key={step} className="flex items-center flex-1 last:flex-none">
-                          <div className="flex flex-col items-center relative w-6">
-                            <div className={`size-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0
-                                  ${isCompleted ? 'bg-primary text-primary-foreground' : ''}
-                                  ${isActive ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : ''}
-                                  ${!isCompleted && !isActive ? 'bg-muted text-muted-foreground' : ''}
-                                `}>
-                              {isCompleted ? <Check className="size-3" /> : index + 1}
+                        <div key={step.name} className="flex items-center flex-1 last:flex-none">
+                          <button
+                            type="button"
+                            disabled={!clickable}
+                            onClick={() => setPinnedStep(step.name)}
+                            title={detail || undefined}
+                            className="flex flex-col items-center relative w-6 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <div className={`size-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${circle} ${isViewed ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
+                              {step.state === "SUCCEEDED" && <Check className="size-3" />}
+                              {step.state === "FAILED" && <X className="size-3" />}
+                              {step.state === "RUNNING" && <Loader2 className="size-3 animate-spin" />}
+                              {step.state === "PENDING" && (notRun ? "–" : index + 1)}
                             </div>
-                            <span className={`absolute top-full mt-1 left-1/2 -translate-x-1/2 text-xs truncate max-w-24 text-center whitespace-nowrap ${isActive ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                              {step}
+                            <span className={`absolute top-full mt-1 text-xs truncate max-w-24 whitespace-nowrap ${labelAlignment} ${isViewed ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                              {step.name}
                             </span>
-                          </div>
-                          {index < steps.length - 1 && (
-                            <div className={`flex-1 h-0.5 mx-1 ${isCompleted ? 'bg-primary' : 'bg-muted'}`} />
+                          </button>
+                          {index < visibleSteps.length - 1 && (
+                            <div className={`flex-1 h-0.5 mx-1 ${step.state === "SUCCEEDED" ? "bg-primary" : "bg-muted"}`} />
                           )}
                         </div>
                       )
@@ -589,30 +539,50 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   </div>
                 )}
                 {/* Logs Area */}
-                <div className="flex-1 bg-zinc-950 text-white rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 bg-console text-console-foreground border border-console-border rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                  {viewedStep && (
+                    <div className="flex min-h-6 items-center justify-between gap-2 pb-2 mb-2 border-b border-console-border font-sans text-xs">
+                      <span className="text-console-muted">
+                        {t("apps.pipeline.stepLogTitle")} <span className="font-mono text-console-foreground">{viewedStep}</span>
+                      </span>
+                      {/* Pinning a step must not yank the viewer along when the build moves on; this is
+                          the way back to following it. */}
+                      {pinnedStep !== null && pinnedStep !== followedStep && (
+                        <Button variant="ghost" size="xs" className="h-6 cursor-pointer text-console-muted hover:text-console-foreground" onClick={() => setPinnedStep(null)}>
+                          <Radio className="size-3" />
+                          {t("apps.pipeline.followLatest")}
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
-                    {logs.map((log) => {
+                    {logRows.map((row) => {
                       // Only a stamped line gets the time gutter. The unstamped ones are OOPS's own
                       // notices, not container output, so an empty gutter would just indent them away
                       // from the left edge for a column that says nothing.
-                      const time = formatLogTime(log.time)
+                      const time = formatLogTime(row.time ?? undefined)
                       return (
-                        <div key={log.id} className={log.text.startsWith("[ERROR]") ? "text-red-400" : undefined}>
+                        <div key={row.id}>
                           {time && (
-                            <span className="inline-block w-[4.5rem] shrink-0 select-none text-zinc-500 tabular-nums">
+                            <span className="inline-block w-[4.5rem] shrink-0 select-none text-console-muted tabular-nums">
                               {time}
                             </span>
                           )}
-                          {log.text}
+                          {row.text}
                         </div>
                       )
                     })}
-                    {logs.length === 0 && <div className="text-zinc-500">Waiting for logs…</div>}
+                    {logError && <div className="text-destructive">[ERROR] {logError}</div>}
+                    {stepsError && <div className="text-destructive">[ERROR] {stepsError}</div>}
+                    {logRows.length === 0 && !logError && !stepsError && (
+                      <div className="text-console-muted">
+                        {viewedStep ? t("apps.pipeline.waitingForLogs") : t("apps.pipeline.waitingForBuild")}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             )}
-
             {/* Application Status (right) */}
             <div className="flex-1 border rounded-md p-4 flex flex-col gap-3 overflow-y-auto">
               <div className="flex items-center justify-between">

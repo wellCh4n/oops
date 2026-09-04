@@ -403,6 +403,11 @@ const apps = {
   "apps.pipeline.operator": "実行者:",
   "apps.pipeline.message": "エラーメッセージ",
   "apps.pipeline.viewLogs": "アプリログ",
+  "apps.pipeline.followLatest": "最新に追従",
+  "apps.pipeline.waitingForBuild": "ビルドの開始を待っています…",
+  "apps.pipeline.waitingForLogs": "ログを待っています…",
+  "apps.pipeline.stepNotRun": "未実行",
+  "apps.pipeline.stepLogTitle": "ステップログ",
   "apps.pipeline.modeImmediate": "即時公開",
   "apps.pipeline.modeManual": "手動公開",
 }

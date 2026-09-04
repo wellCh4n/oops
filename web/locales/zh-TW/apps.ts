@@ -403,6 +403,11 @@ const apps = {
   "apps.pipeline.operator": "操作人:",
   "apps.pipeline.message": "錯誤訊息",
   "apps.pipeline.viewLogs": "應用日誌",
+  "apps.pipeline.followLatest": "跟隨最新",
+  "apps.pipeline.waitingForBuild": "等待建置開始…",
+  "apps.pipeline.waitingForLogs": "等待日誌…",
+  "apps.pipeline.stepNotRun": "未執行",
+  "apps.pipeline.stepLogTitle": "步驟日誌",
   "apps.pipeline.modeImmediate": "立即發布",
   "apps.pipeline.modeManual": "手動發布",
 }

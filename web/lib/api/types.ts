@@ -296,6 +296,35 @@ export interface Pipeline {
   rollbackFromPipelineId?: string | null
 }
 
+// One build step as its container reports it. Times are the RFC3339 strings Kubernetes recorded.
+export type PipelineStepState = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED"
+
+export interface PipelineStepStatus {
+  name: string
+  state: PipelineStepState
+  exitCode?: number | null
+  // The container's waiting or terminated reason (ImagePullBackOff, Error, OOMKilled…).
+  reason?: string | null
+  startedAt?: string | null
+  finishedAt?: string | null
+}
+
+// Every step at one instant. A PENDING step under a finished phase never ran.
+export interface PipelineStepsSnapshot {
+  phase: string
+  steps: PipelineStepStatus[]
+}
+
+export interface PipelineLogLine {
+  // When the container wrote the line, as Kubernetes recorded it; null for an unstamped line.
+  time?: string | null
+  text: string
+}
+
+export interface PipelineLogBatch {
+  lines: PipelineLogLine[]
+}
+
 export interface ConfigMap {
   key: string
   value: string
