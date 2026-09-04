@@ -1,10 +1,13 @@
-"""WebSocket streams: pipeline logs, pod logs, and the pod terminal.
+"""Streams: pipeline build logs over SSE, pod logs and the pod terminal over WebSocket.
 
-These sockets carry the log tailing and exec multiplexing that the Kubernetes
-gateways implement, and they have their own contract that is easy to get subtly
-wrong on a reimplementation — in particular the ping asymmetry: log sockets
-answer a text "ping" with "pong", terminal sockets must not, because their stdin
-is live and a stray "pong" would be typed into the user's shell.
+These carry the log tailing and exec multiplexing that the Kubernetes gateways
+implement, and they have their own contracts that are easy to get subtly wrong
+on a reimplementation. The pipeline streams are server-sent events that must
+end explicitly — a browser EventSource reconnects on its own otherwise — and
+must not replay a step on reconnect. The sockets have the ping asymmetry: the
+pod log socket answers a text "ping" with "pong", the terminal socket must not,
+because its stdin is live and a stray "pong" would be typed into the user's
+shell.
 """
 
 from __future__ import annotations
@@ -25,9 +28,9 @@ pytestmark = pytest.mark.cluster
 def deployed_application(client, namespace, environment):
     """One application, deployed once, shared by every test in this file.
 
-    All four tests need the same thing — a running workload with a finished
+    Every test here needs the same thing — a running workload with a finished
     pipeline behind it — and a build takes about ninety seconds, so deploying per
-    test would spend six minutes proving the same precondition four times. None
+    test would spend minutes proving the same precondition over and over. None
     of these tests mutate the application, so sharing is safe.
     """
     application = f"stream-{uuid.uuid4().hex[:8]}"
@@ -74,47 +77,74 @@ def first_running_pod(client, namespace, application, environment):
     return None
 
 
-def test_pipeline_log_frames_are_tagged_json(client, namespace, environment,
-                                             deployed_application):
+def pipeline_path(namespace, application, pipeline_id):
+    return (f"/api/namespaces/{namespace}/applications/{application}"
+            f"/pipelines/{pipeline_id}")
+
+
+def test_step_watch_reports_every_step_of_a_finished_build(
+        client, namespace, environment, deployed_application):
+    """The watch opens with the step list, follows the build pod with status
+    snapshots, and ends by itself once the build is over — a finished build gets
+    the whole story in one go rather than a stream that never closes."""
     application, pipeline_id = deployed_application
-    socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/pipelines/{pipeline_id}/log")
-    try:
-        frames = []
-        for frame in read_until_closed(socket, timeout=30):
-            frames.append(frame)
-            if len(frames) >= 5:
-                break
-    finally:
-        socket.close()
+    events = list(client.sse(
+        f"{pipeline_path(namespace, application, pipeline_id)}/steps/watch",
+        timeout=60))
+    names = [event for event, _, _ in events]
 
-    assert frames, "the pipeline log socket delivered nothing"
-    for frame in frames:
-        payload = json.loads(frame)
-        assert "type" in payload, f"frame without a type field: {frame[:200]}"
-        assert payload["type"] in ("steps", "step", "error"), (
-            f"unexpected frame type {payload['type']!r}")
+    assert names and names[0] == "steps", (
+        f"the watch did not open with the step list: {names}")
+    assert names[-1] == "end", f"the watch of a finished build did not end: {names}"
+    assert "error" not in names, [data for event, _, data in events if event == "error"]
+
+    steps = json.loads(events[0][2])
+    assert steps and steps[-1] == "done", (
+        f"steps are the build containers in order, ending with `done`: {steps}")
+
+    snapshots = [json.loads(data) for event, _, data in events if event == "status"]
+    assert snapshots, "no status snapshot was sent"
+    final = snapshots[-1]
+    assert final["phase"] == "Succeeded", final
+    assert [step["name"] for step in final["steps"]] == steps
+    assert all(step["state"] == "SUCCEEDED" for step in final["steps"]), final["steps"]
 
 
-def test_log_socket_answers_ping_with_pong(client, namespace, environment,
-                                           deployed_application):
+def test_step_log_replays_a_finished_step_and_does_not_replay_it_on_reconnect(
+        client, namespace, environment, deployed_application):
+    """A finished step's log is replayed in stamped batches and the stream ends;
+    a reconnect carrying the last event id, as a browser sends on its own, gets
+    nothing it has already seen."""
     application, pipeline_id = deployed_application
-    socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/pipelines/{pipeline_id}/log")
-    try:
-        socket.send("ping")
-        deadline_frames = []
-        for frame in read_until_closed(socket, timeout=15):
-            deadline_frames.append(frame)
-            if frame == "pong":
-                break
-        assert "pong" in deadline_frames, (
-            "the log socket did not answer a text ping with pong; the browser "
-            f"keepalive depends on it. Frames seen: {deadline_frames[:5]}")
-    finally:
-        socket.close()
+    base = pipeline_path(namespace, application, pipeline_id)
+    steps = json.loads(list(client.sse(f"{base}/steps/watch", timeout=60))[0][2])
+    first_step = steps[0]
+
+    events = list(client.sse(f"{base}/log?container={first_step}", timeout=60))
+    names = [event for event, _, _ in events]
+    assert names and names[-1] == "end", f"the log of a finished step did not end: {names}"
+    assert "error" not in names, [data for event, _, data in events if event == "error"]
+
+    batches = [(event_id, json.loads(data)) for event, event_id, data in events
+               if event == "log"]
+    assert batches, f"the `{first_step}` step replayed no log at all"
+    lines = [line for _, batch in batches for line in batch["lines"]]
+    assert lines, "a log batch carried no lines"
+    for line in lines:
+        assert line.get("time"), f"a line without a timestamp: {line!r}"
+        assert "text" in line, f"a line without text: {line!r}"
+    last_id = batches[-1][0]
+    assert last_id, "log batches carry the last stamped time as their event id"
+
+    resumed = list(client.sse(f"{base}/log?container={first_step}", timeout=60,
+                              last_event_id=last_id))
+    assert [event for event, _, _ in resumed][-1] == "end"
+    replayed = [line["time"] for event, _, data in resumed if event == "log"
+                for line in json.loads(data)["lines"]]
+    already_seen = {line["time"] for line in lines}
+    assert not already_seen.intersection(replayed), (
+        "a reconnect with Last-Event-ID replayed lines the client had already "
+        f"received: {sorted(already_seen.intersection(replayed))[:5]}")
 
 
 def test_pod_log_socket_streams_text_lines(client, namespace, environment,
@@ -138,6 +168,30 @@ def test_pod_log_socket_streams_text_lines(client, namespace, environment,
         assert "\n" not in frame.rstrip("\n"), (
             f"a log frame carried an embedded newline, lines are not being split: "
             f"{frame[:200]!r}")
+
+
+def test_pod_log_socket_answers_ping_with_pong(client, namespace, environment,
+                                               deployed_application):
+    """The browser keepalive depends on the log socket answering a text ping."""
+    application, _ = deployed_application
+    pod = wait_until(
+        lambda: first_running_pod(client, namespace, application, environment),
+        timeout=180, interval=5, description="a running pod to appear")
+
+    socket = client.websocket(
+        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log")
+    try:
+        socket.send("ping")
+        frames = []
+        for frame in read_until_closed(socket, timeout=15):
+            frames.append(frame)
+            if frame == "pong":
+                break
+        assert "pong" in frames, (
+            "the pod log socket did not answer a text ping with pong; the browser "
+            f"keepalive depends on it. Frames seen: {frames[:5]}")
+    finally:
+        socket.close()
 
 
 def test_terminal_socket_does_not_answer_ping(client, namespace, environment,

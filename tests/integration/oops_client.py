@@ -235,6 +235,29 @@ class OopsClient:
 
     # -- websocket ----------------------------------------------------------
 
+    def sse(self, path: str, timeout: int = 60,
+            last_event_id: Optional[str] = None) -> Iterator[tuple[str, Optional[str], str]]:
+        """Open a server-sent event stream and yield its (event, id, data) triples.
+
+        The browser reaches these streams with EventSource, which cannot set
+        headers, so the server also accepts the JWT as a cookie; a plain client
+        can still send the bearer header, and does. `last_event_id` plays the
+        Last-Event-ID a browser sends on its own reconnect.
+        """
+        record("GET", path)
+        headers = self._headers(True)
+        headers["Accept"] = "text/event-stream"
+        headers.pop("Content-Type", None)
+        if last_event_id is not None:
+            headers["Last-Event-ID"] = last_event_id
+        response = self.session.get(self.endpoint + path, headers=headers,
+                                    stream=True, timeout=(10, timeout))
+        if response.status_code != 200:
+            body = response.text[:400]
+            response.close()
+            raise ApiError(f"GET {path} answered {response.status_code}: {body!r}")
+        return iter_sse(response, timeout)
+
     def websocket(self, path: str, timeout: int = 60) -> websocket.WebSocket:
         """Open a socket. WebSocket auth travels as ?token= — headers are not
         available to the browser client, so the server accepts the query form."""
@@ -271,6 +294,44 @@ def wait_until(predicate: Callable[[], Any], timeout: int = 300, interval: float
         time.sleep(interval)
     raise AssertionError(
         f"timed out after {timeout}s waiting for {description}; last value: {last!r}")
+
+
+def iter_sse(response: requests.Response, timeout: int = 60) -> Iterator[tuple[str, Optional[str], str]]:
+    """Yield (event, id, data) from a server-sent event response until the server
+    ends the stream or the timeout expires.
+
+    Heartbeats are yielded like any other event; a test that does not care can
+    filter them. Both pipeline streams close with an `end` event, so a reader that
+    stops there never waits on the browser-side reconnect the server is written
+    for.
+    """
+    deadline = time.time() + timeout
+    event, event_id, data = "message", None, []
+    try:
+        for line in response.iter_lines(decode_unicode=True):
+            if time.time() > deadline:
+                return
+            if line is None:
+                continue
+            if line == "":
+                if data or event != "message":
+                    yield event, event_id, "\n".join(data)
+                event, event_id, data = "message", None, []
+                continue
+            if line.startswith(":"):
+                continue
+            field, _, value = line.partition(":")
+            value = value[1:] if value.startswith(" ") else value
+            if field == "event":
+                event = value
+            elif field == "id":
+                event_id = value
+            elif field == "data":
+                data.append(value)
+    except requests.exceptions.ConnectionError:
+        return
+    finally:
+        response.close()
 
 
 def read_until_closed(connection: websocket.WebSocket,
