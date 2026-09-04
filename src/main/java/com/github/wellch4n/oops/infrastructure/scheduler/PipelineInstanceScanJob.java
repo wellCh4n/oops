@@ -16,12 +16,14 @@ import com.github.wellch4n.oops.application.event.PipelineNotificationEvent;
 import com.github.wellch4n.oops.application.event.PipelineNotificationType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
+import com.github.wellch4n.oops.infrastructure.lock.NamedLockRegistry;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.shared.exception.EnvironmentUnreachableException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,16 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
+ * Carries every in-flight pipeline forward by polling Kubernetes: the build scan turns a finished build Job into a
+ * deploy, and the rollout scan turns a converged StatefulSet into a finished pipeline.
+ *
+ * <p>With several OOPS servers each pipeline is driven by exactly one of them, and different pipelines by different
+ * servers: a scan only touches a pipeline whose {@value #PIPELINE_LOCK_PREFIX} lock it holds, takes the lock the
+ * first time it sees the pipeline and keeps it until the pipeline finishes. The lock spares the servers from
+ * re-reading each other's Jobs; it is not what keeps the state machine correct — every transition still goes
+ * through {@code updateStatusIfMatch}, which is also what protects a pipeline against a stop issued from another
+ * server while it is being driven here.
+ *
  * @author wellCh4n
  * @date 2025/7/8
  */
@@ -39,6 +51,10 @@ import org.springframework.stereotype.Component;
 @Component
 public class PipelineInstanceScanJob {
     private static final Duration ROLLOUT_TIMEOUT = Duration.ofMinutes(5);
+    /** Lock name prefix of a pipeline; whichever server holds {@code prefix + id} drives that pipeline. */
+    static final String PIPELINE_LOCK_PREFIX = "oops:pipeline:";
+    private static final List<PipelineStatus> ACTIVE_STATUSES = List.of(
+            PipelineStatus.RUNNING, PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
 
     private final AtomicBoolean pipelineJobScanInProgress = new AtomicBoolean(false);
     private final AtomicBoolean rolloutScanInProgress = new AtomicBoolean(false);
@@ -50,6 +66,7 @@ public class PipelineInstanceScanJob {
     private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
     private final PipelineStateMachine pipelineStateMachine;
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
+    private final NamedLockRegistry lockRegistry;
 
     public PipelineInstanceScanJob(ApplicationRepository applicationRepository,
                                    PipelineRepository pipelineRepository, EnvironmentService environmentService,
@@ -57,7 +74,8 @@ public class PipelineInstanceScanJob {
                                    PipelineJobGateway pipelineJobGateway,
                                    ArtifactDeploymentExecutor artifactDeploymentExecutor,
                                    PipelineStateMachine pipelineStateMachine,
-                                   ApplicationRuntimeGateway applicationRuntimeGateway) {
+                                   ApplicationRuntimeGateway applicationRuntimeGateway,
+                                   NamedLockRegistry lockRegistry) {
         this.applicationRepository = applicationRepository;
         this.pipelineRepository = pipelineRepository;
         this.environmentService = environmentService;
@@ -66,6 +84,7 @@ public class PipelineInstanceScanJob {
         this.artifactDeploymentExecutor = artifactDeploymentExecutor;
         this.pipelineStateMachine = pipelineStateMachine;
         this.applicationRuntimeGateway = applicationRuntimeGateway;
+        this.lockRegistry = lockRegistry;
     }
 
     @Scheduled(fixedDelay = 5000)
@@ -77,6 +96,7 @@ public class PipelineInstanceScanJob {
             Map<String, List<Pipeline>> pipelinesByEnvironment = pipelineRepository
                     .findAllByStatus(PipelineStatus.RUNNING).stream()
                     .filter(pipeline -> !pipelineStateMachine.isTerminal(pipeline.getStatus()))
+                    .filter(this::claim)
                     .collect(Collectors.groupingBy(Pipeline::getEnvironment));
 
             for (Map.Entry<String, List<Pipeline>> entry : pipelinesByEnvironment.entrySet()) {
@@ -170,6 +190,8 @@ public class PipelineInstanceScanJob {
                         }
                     } catch (Exception exception) {
                         failPipeline(pipeline, exception);
+                    } finally {
+                        releaseWhenFinished(pipeline);
                     }
                 }
             }
@@ -197,6 +219,7 @@ public class PipelineInstanceScanJob {
                     pipeline, PipelineNotificationType.FAILED, message
             ));
         }
+        releaseWhenFinished(pipeline);
     }
 
     /**
@@ -210,8 +233,14 @@ public class PipelineInstanceScanJob {
             return;
         }
         try {
-            List<Pipeline> rollingOutPipelines = pipelineRepository.findAllByStatus(PipelineStatus.ROLLING_OUT);
-            for (Pipeline pipeline : rollingOutPipelines) {
+            // Snapshot before the query: a lock the build scan takes after this point belongs to a pipeline that
+            // may be newer than the list below, and must not be swept as no longer active.
+            Set<String> locksHeldBeforeScan = lockRegistry.heldLocks();
+            List<Pipeline> activePipelines = pipelineRepository.findByStatusIn(ACTIVE_STATUSES);
+            for (Pipeline pipeline : activePipelines) {
+                if (pipeline.getStatus() != PipelineStatus.ROLLING_OUT || !claim(pipeline)) {
+                    continue;
+                }
                 try {
                     Environment environment = environmentService.getEnvironment(pipeline.getEnvironment());
                     if (environment == null) {
@@ -233,11 +262,44 @@ public class PipelineInstanceScanJob {
                     // otherwise: still rolling out, leave ROLLING_OUT for the next tick
                 } catch (Exception exception) {
                     log.error("Error rolling out pipeline instance {}: {}", pipeline.getId(), exception.getMessage(), exception);
+                } finally {
+                    releaseWhenFinished(pipeline);
                 }
             }
+            releaseLocksOfInactivePipelines(locksHeldBeforeScan, activePipelines);
         } finally {
             rolloutScanInProgress.set(false);
         }
+    }
+
+    private boolean claim(Pipeline pipeline) {
+        return lockRegistry.tryAcquire(lockName(pipeline));
+    }
+
+    private void releaseWhenFinished(Pipeline pipeline) {
+        if (pipeline.finished()) {
+            lockRegistry.release(lockName(pipeline));
+        }
+    }
+
+    /**
+     * A pipeline this server drives can still be finished by someone else — a user stopping it from any server —
+     * and then it never comes back through either scan to release its lock. Any lock held before the scan whose
+     * pipeline is no longer active belongs to such a pipeline.
+     */
+    private void releaseLocksOfInactivePipelines(Set<String> locksHeldBeforeScan, List<Pipeline> activePipelines) {
+        Set<String> activeLocks = activePipelines.stream()
+                .map(PipelineInstanceScanJob::lockName)
+                .collect(Collectors.toSet());
+        for (String lock : locksHeldBeforeScan) {
+            if (lock.startsWith(PIPELINE_LOCK_PREFIX) && !activeLocks.contains(lock)) {
+                lockRegistry.release(lock);
+            }
+        }
+    }
+
+    private static String lockName(Pipeline pipeline) {
+        return PIPELINE_LOCK_PREFIX + pipeline.getId();
     }
 
     private void succeedRollout(Pipeline pipeline) {
