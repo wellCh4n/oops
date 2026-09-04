@@ -105,13 +105,18 @@ def test_every_endpoint_is_exercised_by_a_scenario(request):
             f"them in UNREACHABLE with the reason they cannot be driven.")
 
 
-def test_coverage_report(request, record_property):
-    """Always-passing companion that puts the number in the report."""
+def test_coverage_report(record_testsuite_property):
+    """Always-passing companion that puts the number in the report.
+
+    Recorded on the suite rather than the test case: the xunit2 schema the
+    JUnit file follows has no room for per-case properties, and the figure
+    describes the whole run anyway.
+    """
     routes = load_routes()
     reached = called_keys()
     covered = len([r for r in routes if r["key"] in reached])
     percentage = 100.0 * covered / len(routes) if routes else 0.0
-    record_property("endpoints_total", len(routes))
-    record_property("endpoints_covered", covered)
-    record_property("endpoint_coverage_percent", round(percentage, 1))
+    record_testsuite_property("endpoints_total", len(routes))
+    record_testsuite_property("endpoints_covered", covered)
+    record_testsuite_property("endpoint_coverage_percent", round(percentage, 1))
     print(f"\nendpoint coverage: {covered}/{len(routes)} ({percentage:.1f}%)")

@@ -229,6 +229,18 @@
   },
   {
     "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}/log",
+    "key": "GET /api/namespaces/{}/applications/{}/pipelines/{}/log",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pipelines/{id}/steps/watch",
+    "key": "GET /api/namespaces/{}/applications/{}/pipelines/{}/steps/watch",
+    "controller": "PipelineController"
+  },
+  {
+    "method": "GET",
     "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files",
     "key": "GET /api/namespaces/{}/applications/{}/pods/{}/files",
     "controller": "PodFileSystemController"

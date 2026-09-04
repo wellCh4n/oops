@@ -1,6 +1,6 @@
 # Integration suite
 
-Black-box tests against the OOPS HTTP and WebSocket API. They import nothing from
+Black-box tests against the OOPS HTTP, SSE and WebSocket API. They import nothing from
 the backend and know nothing about its language, so the same suite is the
 acceptance criteria for the current Java service, a Go or Rust rewrite, or a
 GraalVM native build.
@@ -15,7 +15,7 @@ observable behaviour while a correct implementation still exists to check agains
 | Tier | Needs | Covers |
 |---|---|---|
 | contract | the compose middleware | the wire contract, users and authorisation, domains, application configuration round trips, environment management, object storage presigning, git branch listing |
-| `cluster` | the above plus k3s | build and deploy pipelines, pipeline operations, both registry credential paths, git clone with and without credentials, ingress routes and basic auth, deletion in the cluster, sandboxes, pod filesystem, log and terminal sockets |
+| `cluster` | the above plus k3s | build and deploy pipelines, pipeline operations, both registry credential paths, git clone with and without credentials, ingress routes and basic auth, deletion in the cluster, sandboxes, pod filesystem, pipeline step and log event streams, pod log and terminal sockets |
 
 Organised by scenario rather than by endpoint: what a rewrite has to preserve is
 behaviour, and every defect this suite found needed a full journey to surface.

@@ -60,36 +60,23 @@ def test_pipelines_can_be_searched_for_an_application(client, namespace,
 
 @pytest.mark.cluster
 def test_the_status_stream_opens_and_sends_something(client, namespace,
-                                                     environment, endpoint,
-                                                     application):
+                                                     environment, application):
     """`/status/watch` is Server-Sent Events, not JSON.
 
-    The only endpoint in the API that answers with a stream rather than the
-    result envelope, which is exactly the sort of thing a reimplementation turns
-    back into a plain GET without noticing.
+    An endpoint that answers with a stream rather than the result envelope is
+    exactly the sort of thing a reimplementation turns back into a plain GET
+    without noticing. The client refuses anything but `text/event-stream`, so
+    reaching an event at all is the proof; one is enough, since the status
+    stream follows the workload for as long as the viewer stays.
     """
-    import requests
-
-    url = (f"{endpoint}/api/namespaces/{namespace}/applications/{application}"
-           f"/status/watch?environment={environment}")
-    with requests.get(url, headers={"Authorization": f"Bearer {client.token}"},
-                      stream=True, timeout=30) as response:
-        assert response.status_code == 200, (
-            f"the status stream answered HTTP {response.status_code}")
-        content_type = response.headers.get("Content-Type", "")
-        assert "text/event-stream" in content_type, (
-            f"the status stream is served as {content_type!r} rather than "
-            f"text/event-stream, so a browser EventSource would refuse it")
-
-        # One frame is enough: it proves the emitter is wired to something.
-        for line in response.iter_lines(decode_unicode=True):
-            if line:
-                break
-    # Recorded so the coverage check sees the route, which the raw request above
-    # bypasses.
-    from oops_client import record
-    record("GET", f"/api/namespaces/{namespace}/applications/{application}"
-                  f"/status/watch")
+    stream = client.sse(
+        f"/api/namespaces/{namespace}/applications/{application}"
+        f"/status/watch?environment={environment}", timeout=30)
+    try:
+        first = next(stream, None)
+    finally:
+        stream.close()
+    assert first is not None, "the status stream sent nothing"
 
 
 @pytest.mark.cluster
