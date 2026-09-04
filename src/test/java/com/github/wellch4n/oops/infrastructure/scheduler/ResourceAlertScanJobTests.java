@@ -17,6 +17,7 @@ import com.github.wellch4n.oops.application.port.ResourceAlertProbe;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.config.ResourceAlertProperties;
+import com.github.wellch4n.oops.infrastructure.lock.NamedLockRegistry;
 import com.github.wellch4n.oops.infrastructure.metrics.MonitoringErrors;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationAlertState;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationAlertStateRepository;
@@ -67,6 +68,7 @@ class ResourceAlertScanJobTests {
     private ApplicationAlertStateRepository alertStateRepository;
     private ResourceAlertProperties properties;
     private StubProbe probe;
+    private NamedLockRegistry lockRegistry;
     private List<ApplicationAlertEvent> published;
     private ResourceAlertScanJob job;
 
@@ -80,6 +82,8 @@ class ResourceAlertScanJobTests {
         properties = new ResourceAlertProperties();
         probe = new StubProbe();
         published = new ArrayList<>();
+        lockRegistry = mock(NamedLockRegistry.class);
+        when(lockRegistry.tryAcquire(ResourceAlertScanJob.LOCK_NAME)).thenReturn(true);
 
         Environment environment = new Environment();
         environment.setName("prod");
@@ -88,7 +92,7 @@ class ResourceAlertScanJobTests {
         when(runtimeSpecRepository.findAll()).thenReturn(List.of());
 
         job = new ResourceAlertScanJob(runtimeSpecRepository, alertStateRepository, environmentService,
-                probe, properties, event -> {
+                probe, properties, lockRegistry, event -> {
             if (event instanceof ApplicationAlertEvent alertEvent) {
                 published.add(alertEvent);
             }
@@ -241,4 +245,18 @@ class ResourceAlertScanJobTests {
         assertEquals(3, published.getFirst().pods().size());
     }
 
+
+    /** Another server leads the scan: this one neither reads targets nor writes state, so nothing is notified twice. */
+    @Test
+    void serverWithoutTheScanLockDoesNothing() {
+        when(lockRegistry.tryAcquire(ResourceAlertScanJob.LOCK_NAME)).thenReturn(false);
+        givenLimits(null, "2Gi");
+        probe.firingPods.put(ResourceMetric.MEMORY, List.of("my-app-0"));
+
+        job.scanResourceAlerts();
+
+        verify(runtimeSpecRepository, never()).findAll();
+        verify(alertStateRepository, never()).saveAll(any());
+        assertTrue(published.isEmpty());
+    }
 }

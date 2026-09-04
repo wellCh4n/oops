@@ -73,10 +73,14 @@ public class KubernetesPipelineJobGateway implements PipelineJobGateway {
     @Override
     public void stop(Environment environment, String jobName) {
         var client = clientPool.get(environment.getKubernetesApiServer());
-        client.batch().v1().jobs()
+        var jobResource = client.batch().v1().jobs()
                 .inNamespace(environment.getWorkNamespace())
-                .withName(jobName)
-                .edit(job -> new JobBuilder(job)
+                .withName(jobName);
+        if (jobResource.get() == null) {
+            // Already gone — reaped by its TTL or deleted by hand — so there is nothing left to stop.
+            return;
+        }
+        jobResource.edit(job -> new JobBuilder(job)
                         .editSpec()
                         .withSuspend(true)
                         .endSpec()

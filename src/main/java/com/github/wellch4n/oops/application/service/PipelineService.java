@@ -26,6 +26,7 @@ import com.github.wellch4n.oops.application.dto.Page;
 import com.github.wellch4n.oops.application.dto.PipelineDto;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ import org.springframework.stereotype.Service;
  * @date 2025/7/28
  */
 
+@Slf4j
 @Service
 public class PipelineService {
 
@@ -211,12 +213,14 @@ public class PipelineService {
         } catch (Exception exception) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
-            pipelineRepository.updateStatusAndMessageIfMatch(
+            int failed = pipelineRepository.updateStatusAndMessageIfMatch(
                     pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
-            pipeline.markFailed(message);
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.FAILED, message
-            ));
+            if (failed > 0) {
+                pipeline.markFailed(message);
+                eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                        pipeline, PipelineNotificationType.FAILED, message
+                ));
+            }
             throw new BizException("Deploy failed: " + exception.getMessage(), exception);
         }
         return true;
@@ -269,12 +273,14 @@ public class PipelineService {
         } catch (Exception exception) {
             pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
             String message = StringUtils.defaultIfBlank(exception.getMessage(), "回滚任务执行失败，请查看日志。");
-            pipelineRepository.updateStatusAndMessageIfMatch(
+            int failed = pipelineRepository.updateStatusAndMessageIfMatch(
                     rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
-            rollbackPipeline.markFailed(message);
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    rollbackPipeline, PipelineNotificationType.FAILED, message
-            ));
+            if (failed > 0) {
+                rollbackPipeline.markFailed(message);
+                eventPublisher.publishEvent(PipelineNotificationEvent.of(
+                        rollbackPipeline, PipelineNotificationType.FAILED, message
+                ));
+            }
             throw new BizException("Rollback failed: " + exception.getMessage(), exception);
         }
         return rollbackPipeline.getId();
@@ -286,23 +292,23 @@ public class PipelineService {
             throw new BizException("Pipeline not found");
         }
         requireOperableApplication(namespace, applicationName, operatorUserId);
-        pipelineStateMachine.ensureCanTransition(pipeline.getStatus(), PipelineStatus.STOPPED);
+        PipelineStatus current = pipeline.getStatus();
+        pipelineStateMachine.ensureCanTransition(current, PipelineStatus.STOPPED);
 
-        if (pipeline.getStatus() == PipelineStatus.BUILD_SUCCEEDED) {
-            pipeline.stop();
-            pipelineRepository.save(pipeline);
-            eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                    pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
-            ));
-            return true;
+        // A built pipeline has no Job left to stop; every other stoppable status may still be building.
+        if (current != PipelineStatus.BUILD_SUCCEEDED) {
+            Environment environment = requireEnvironment(pipeline.getEnvironment());
+            pipelineJobGateway.stop(environment, pipeline.getName());
         }
 
-        String environmentName = pipeline.getEnvironment();
-        Environment environment = requireEnvironment(environmentName);
-
-        pipelineJobGateway.stop(environment, pipeline.getName());
+        // The status read above can already be stale: the scan job may have carried a RUNNING pipeline into
+        // DEPLOYING on any server since. Only a transition from the status the caller saw may stop it — an
+        // unconditional save would overwrite the deploy in progress with STOPPED and leave it running anyway.
+        int stopped = pipelineRepository.updateStatusIfMatch(pipeline.getId(), current, PipelineStatus.STOPPED);
+        if (stopped == 0) {
+            throw new BizException("Pipeline state changed concurrently, please refresh");
+        }
         pipeline.stop();
-        pipelineRepository.save(pipeline);
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
         ));
@@ -315,8 +321,15 @@ public class PipelineService {
      */
     private void completeDeployPhase(Pipeline pipeline, String rollingOutDetail) {
         pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
-        pipelineRepository.updateStatusIfMatch(
+        int updated = pipelineRepository.updateStatusIfMatch(
                 pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
+        if (updated == 0) {
+            // The pipeline was moved while its artifact was being applied — a stop is the only legal way — so the
+            // rollout is no longer this pipeline's to report on. The workload is updated regardless: a stop cannot
+            // take back an artifact that has already been applied.
+            log.info("Pipeline {} left DEPLOYING while its artifact was applied; not entering rollout", pipeline.getId());
+            return;
+        }
         pipeline.markRollingOut();
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.ROLLING_OUT, rollingOutDetail

@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.application.port.ResourceAlertProbe;
 import com.github.wellch4n.oops.application.service.EnvironmentService;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.config.ResourceAlertProperties;
+import com.github.wellch4n.oops.infrastructure.lock.NamedLockRegistry;
 import com.github.wellch4n.oops.infrastructure.metrics.MonitoringErrors;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationAlertState;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.ApplicationAlertStateRepository;
@@ -47,8 +48,9 @@ import org.springframework.stereotype.Component;
  * are fanned out across virtual threads. Doing the state lookups inside the fan-out would issue one query per
  * concurrent thread and exhaust the connection pool as soon as an installation had a few hundred applications.
  *
- * <p>Single-instance assumption matches {@link PipelineInstanceScanJob} and {@link ScheduledRestartJob}: two servers
- * running this would each evaluate every application and could both notify on the same edge.
+ * <p>With several servers only the one holding the {@value #LOCK_NAME} lock scans, taken on its first tick and kept
+ * for as long as it lives, as in {@link ScheduledRestartJob}. Two servers evaluating the same edge would each write
+ * it back and both notify; the state rows carry no version to make the second writer lose.
  *
  * <p>Conditional rather than a flag checked on each tick, following how the IDE beans opt in: an installation that
  * has not asked for alerting does not get a scheduled task at all, instead of one that wakes up every minute to
@@ -76,12 +78,15 @@ public class ResourceAlertScanJob {
                                 boolean monitoringMissing) {
     }
 
+    static final String LOCK_NAME = "oops:job:resource-alert";
+
     private final AtomicBoolean scanInProgress = new AtomicBoolean(false);
     private final ApplicationRuntimeSpecRepository runtimeSpecRepository;
     private final ApplicationAlertStateRepository alertStateRepository;
     private final EnvironmentService environmentService;
     private final ResourceAlertProbe resourceAlertProbe;
     private final ResourceAlertProperties properties;
+    private final NamedLockRegistry lockRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
     public ResourceAlertScanJob(ApplicationRuntimeSpecRepository runtimeSpecRepository,
@@ -89,12 +94,14 @@ public class ResourceAlertScanJob {
                                 EnvironmentService environmentService,
                                 ResourceAlertProbe resourceAlertProbe,
                                 ResourceAlertProperties properties,
+                                NamedLockRegistry lockRegistry,
                                 ApplicationEventPublisher eventPublisher) {
         this.runtimeSpecRepository = runtimeSpecRepository;
         this.alertStateRepository = alertStateRepository;
         this.environmentService = environmentService;
         this.resourceAlertProbe = resourceAlertProbe;
         this.properties = properties;
+        this.lockRegistry = lockRegistry;
         this.eventPublisher = eventPublisher;
     }
 
@@ -104,6 +111,9 @@ public class ResourceAlertScanJob {
             return;
         }
         try {
+            if (!lockRegistry.tryAcquire(LOCK_NAME)) {
+                return;
+            }
             List<AlertTarget> targets = collectTargets();
             if (targets.isEmpty()) {
                 return;
