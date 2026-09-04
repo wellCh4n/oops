@@ -155,7 +155,8 @@ def test_pod_log_socket_streams_text_lines(client, namespace, environment,
         timeout=180, interval=5, description="a running pod to appear")
 
     socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log")
+        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log"
+        f"?environment={environment}")
     try:
         frames = [frame for _, frame in zip(range(3), read_until_closed(socket, 20))]
     finally:
@@ -163,6 +164,7 @@ def test_pod_log_socket_streams_text_lines(client, namespace, environment,
 
     # Content depends on the image, so assert the transport rather than the text:
     # lines arrive as text frames and are split, never glued together by a redraw.
+    assert frames, "the pod log socket delivered nothing before closing"
     for frame in frames:
         assert isinstance(frame, str)
         assert "\n" not in frame.rstrip("\n"), (
@@ -179,7 +181,8 @@ def test_pod_log_socket_answers_ping_with_pong(client, namespace, environment,
         timeout=180, interval=5, description="a running pod to appear")
 
     socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log")
+        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log"
+        f"?environment={environment}")
     try:
         socket.send("ping")
         frames = []
@@ -204,7 +207,8 @@ def test_terminal_socket_does_not_answer_ping(client, namespace, environment,
         timeout=180, interval=5, description="a running pod to appear")
 
     socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/terminal")
+        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/terminal"
+        f"?environment={environment}")
     try:
         socket.send("ping")
         answered = [frame for frame in read_until_closed(socket, timeout=8)
