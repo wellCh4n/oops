@@ -1,5 +1,6 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +50,8 @@ public interface ApplicationRepository extends JpaRepository<Application, String
             Pageable pageable);
 
     List<Application> findByNameContainingIgnoreCase(String keyword);
+
+    List<Application> findByNamespaceInAndNameIn(Collection<String> namespaces, Collection<String> names);
 
     void deleteByNamespaceAndName(String namespace, String name);
 

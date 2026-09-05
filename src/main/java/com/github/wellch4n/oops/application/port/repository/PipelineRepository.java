@@ -15,7 +15,12 @@ public interface PipelineRepository {
 
     List<Pipeline> findAllByNamespace(String namespace);
 
-    PageResult<Pipeline> findPage(String namespace, String applicationName, String environment, int page, int size);
+    /**
+     * One page of pipelines, newest first. {@code namespace} is a name or {@code all}; a blank or
+     * {@code all} {@code applicationName} / {@code environment} / {@code operatorId} leaves that
+     * dimension unfiltered.
+     */
+    PageResult<Pipeline> findPage(String namespace, String applicationName, String environment, String operatorId, int page, int size);
 
     Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(
             String namespace,

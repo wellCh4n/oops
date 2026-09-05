@@ -75,6 +75,16 @@ public class ApplicationPersistenceAdapter implements com.github.wellch4n.oops.a
     }
 
     @Override
+    public List<com.github.wellch4n.oops.domain.application.Application> findByNamespaceInAndNameIn(
+            Collection<String> namespaces, Collection<String> names) {
+        if (namespaces.isEmpty() || names.isEmpty()) {
+            return List.of();
+        }
+        return PersistenceMapper.convertList(
+                applicationRepository.findByNamespaceInAndNameIn(namespaces, names), PersistenceMapper::toDomain);
+    }
+
+    @Override
     public List<com.github.wellch4n.oops.domain.application.Application> query(String namespace, String name) {
         return PersistenceMapper.convertList(applicationRepository.findAll((root, query, criteriaBuilder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();

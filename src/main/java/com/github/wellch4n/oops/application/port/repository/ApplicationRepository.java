@@ -19,6 +19,13 @@ public interface ApplicationRepository {
 
     List<Application> findByNameContainingIgnoreCase(String keyword);
 
+    /**
+     * The applications whose namespace is in {@code namespaces} and whose name is in {@code names}
+     * — a superset of the requested pairs, cheap enough for the few distinct applications a page of
+     * pipelines spans. Callers key the result by namespace and name.
+     */
+    List<Application> findByNamespaceInAndNameIn(Collection<String> namespaces, Collection<String> names);
+
     List<Application> query(String namespace, String name);
 
     Application saveAndFlush(Application application);

@@ -29,13 +29,22 @@ public class PipelineController {
         this.pipelineService = pipelineService;
     }
 
+    /**
+     * Both {@code namespace} and {@code name} accept {@code all} as a wildcard, so the pipeline
+     * list page reads the whole scope through this same endpoint. {@code mine} keeps only the
+     * pipelines the caller triggered, the counterpart of {@code ownerOnly} on the application list.
+     */
     @GetMapping
     public Result<Page<PipelineDto>> getPipelines(@PathVariable String namespace,
                                                        @PathVariable String name,
                                                        @RequestParam(required = false) String environment,
+                                                       @RequestParam(defaultValue = "false") boolean mine,
                                                        @RequestParam(defaultValue = "1") int page,
-                                                       @RequestParam(defaultValue = "10") int size) {
-        return Result.success(pipelineService.getPipelines(namespace, name, environment, page, size));
+                                                       @RequestParam(defaultValue = "10") int size,
+                                                       Authentication authentication) {
+        AuthUserPrincipal principal = (AuthUserPrincipal) authentication.getPrincipal();
+        String operatorId = mine ? principal.userId() : null;
+        return Result.success(pipelineService.getPipelines(namespace, name, environment, operatorId, page, size));
     }
 
     @GetMapping("/{id}")

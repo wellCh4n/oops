@@ -75,10 +75,15 @@ public class PipelineService {
         this.applicationAccessPolicy = applicationAccessPolicy;
     }
 
-    public Page<PipelineDto> getPipelines(String namespace, String applicationName, String environment, Integer page, Integer size) {
+    /**
+     * {@code namespace} and {@code applicationName} take {@code all} as a wildcard; {@code operatorId}
+     * narrows the page to pipelines that user triggered, null meaning everyone's.
+     */
+    public Page<PipelineDto> getPipelines(String namespace, String applicationName, String environment, String operatorId,
+                                          Integer page, Integer size) {
         int p = page == null ? 1 : page;
         int s = size == null ? 20 : size;
-        var pipelinePage = pipelineRepository.findPage(namespace, applicationName, environment, p, s);
+        var pipelinePage = pipelineRepository.findPage(namespace, applicationName, environment, operatorId, p, s);
         return new Page<>(
                 pipelinePage.totalElements(),
                 toPipelineResponses(pipelinePage.content()),
@@ -118,9 +123,11 @@ public class PipelineService {
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toSet());
         Map<String, String> operatorNameMap = userService.getUsernameMapByIds(operatorIds);
+        Map<String, String> applicationIconMap = applicationIconsOf(pipelines);
         return pipelines.stream()
                 .map(pipeline -> PipelineDto.from(pipeline,
-                        StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null))
+                        StringUtils.isNotBlank(pipeline.getOperatorId()) ? operatorNameMap.get(pipeline.getOperatorId()) : null,
+                        applicationIconMap.get(applicationKey(pipeline.getNamespace(), pipeline.getApplicationName()))))
                 .toList();
     }
 
@@ -134,7 +141,26 @@ public class PipelineService {
                     .map(User::getUsername)
                     .orElse(null);
         }
-        return PipelineDto.from(pipeline, operatorName);
+        String applicationIcon = applicationIconsOf(List.of(pipeline))
+                .get(applicationKey(pipeline.getNamespace(), pipeline.getApplicationName()));
+        return PipelineDto.from(pipeline, operatorName, applicationIcon);
+    }
+
+    /** The emoji of each application these pipelines belong to, keyed by namespace and name, in one lookup. */
+    private Map<String, String> applicationIconsOf(List<Pipeline> pipelines) {
+        Set<String> namespaces = pipelines.stream().map(Pipeline::getNamespace).collect(Collectors.toSet());
+        Set<String> names = pipelines.stream().map(Pipeline::getApplicationName).collect(Collectors.toSet());
+        Map<String, String> icons = new HashMap<>();
+        for (Application application : applicationRepository.findByNamespaceInAndNameIn(namespaces, names)) {
+            if (StringUtils.isNotBlank(application.getIcon())) {
+                icons.put(applicationKey(application.getNamespace(), application.getName()), application.getIcon());
+            }
+        }
+        return icons;
+    }
+
+    private static String applicationKey(String namespace, String name) {
+        return namespace + "/" + name;
     }
 
     public LastSuccessfulPipelineDto getLastSuccessfulPipeline(String namespace, String applicationName) {

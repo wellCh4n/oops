@@ -45,26 +45,24 @@ public class PipelinePersistenceAdapter implements com.github.wellch4n.oops.appl
     }
 
     @Override
-    public PageResult<com.github.wellch4n.oops.domain.delivery.Pipeline> findPage(String namespace, String applicationName, String environment, int page, int size) {
+    public PageResult<com.github.wellch4n.oops.domain.delivery.Pipeline> findPage(
+            String namespace, String applicationName, String environment, String operatorId, int page, int size) {
         PageRequest pageable = PageRequest.of(Math.max(page - 1, 0), size, Sort.by(Sort.Direction.DESC, "createdTime"));
-        boolean allNamespace = "all".equalsIgnoreCase(namespace);
-        boolean allEnvironment = environment == null || environment.isEmpty() || "all".equalsIgnoreCase(environment);
-        org.springframework.data.domain.Page<Pipeline> result;
-        if (allNamespace && allEnvironment) {
-            result = pipelineRepository.findByNamespaceAndApplicationNameWithAllNamespace(namespace, applicationName, pageable);
-        } else if (allNamespace) {
-            result = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironmentWithAllNamespace(namespace, applicationName, environment, pageable);
-        } else if (allEnvironment) {
-            result = pipelineRepository.findByNamespaceAndApplicationName(namespace, applicationName, pageable);
-        } else {
-            result = pipelineRepository.findByNamespaceAndApplicationNameAndEnvironment(namespace, applicationName, environment, pageable);
-        }
+        // "all" is the namespace scope's own wildcard; the other dimensions are simply absent.
+        String scopeNamespace = "all".equalsIgnoreCase(namespace) ? "all" : namespace;
+        org.springframework.data.domain.Page<Pipeline> result = pipelineRepository.findPageInScope(
+                scopeNamespace, filterValue(applicationName), filterValue(environment), filterValue(operatorId), pageable);
         return new PageResult<>(
                 result.getTotalElements(),
                 PersistenceMapper.convertList(result.getContent(), PersistenceMapper::toDomain),
                 result.getSize(),
                 result.getTotalPages()
         );
+    }
+
+    /** A blank or {@code all} filter means "no filter", which the query spells as null. */
+    private static String filterValue(String value) {
+        return value == null || value.isBlank() || "all".equalsIgnoreCase(value) ? null : value;
     }
 
     @Override

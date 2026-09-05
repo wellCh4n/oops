@@ -24,9 +24,11 @@ public record PipelineDto(
         String operatorName,
         String message,
         PipelineTriggerType triggerType,
-        String rollbackFromPipelineId
+        String rollbackFromPipelineId,
+        /** The application's emoji, so a list spanning applications can draw the same mark as the application list. */
+        String applicationIcon
 ) {
-    public static PipelineDto from(Pipeline pipeline, String operatorName) {
+    public static PipelineDto from(Pipeline pipeline, String operatorName, String applicationIcon) {
         return new PipelineDto(
                 pipeline.getId(),
                 pipeline.getCreatedTime(),
@@ -43,7 +45,8 @@ public record PipelineDto(
                 operatorName,
                 pipeline.getMessage(),
                 pipeline.getTriggerType(),
-                pipeline.getRollbackFromPipelineId()
+                pipeline.getRollbackFromPipelineId(),
+                applicationIcon
         );
     }
 }

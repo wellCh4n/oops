@@ -30,15 +30,20 @@ public interface PipelineRepository extends JpaRepository<Pipeline, String>, Jpa
 
     List<Pipeline> findAllByNamespace(String namespace);
 
-    Page<Pipeline> findByNamespaceAndApplicationName(String namespace, String applicationName, Pageable pageable);
-
-    Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironment(String namespace, String applicationName, String environment, Pageable pageable);
-
-    @Query("SELECT p FROM Pipeline p WHERE (:namespace = 'all' OR p.namespace = :namespace) AND p.applicationName = :applicationName")
-    Page<Pipeline> findByNamespaceAndApplicationNameWithAllNamespace(@Param("namespace") String namespace, @Param("applicationName") String applicationName, Pageable pageable);
-
-    @Query("SELECT p FROM Pipeline p WHERE (:namespace = 'all' OR p.namespace = :namespace) AND p.applicationName = :applicationName AND p.environment = :environment")
-    Page<Pipeline> findByNamespaceAndApplicationNameAndEnvironmentWithAllNamespace(@Param("namespace") String namespace, @Param("applicationName") String applicationName, @Param("environment") String environment, Pageable pageable);
+    /**
+     * One page of pipelines under a scope. {@code namespace} is a name or {@code all}; a null
+     * {@code applicationName}, {@code environment} or {@code operatorId} leaves that dimension
+     * unfiltered, so the same query backs both the per-application history and the list page.
+     */
+    @Query("SELECT p FROM Pipeline p WHERE (:namespace = 'all' OR p.namespace = :namespace) "
+            + "AND (:applicationName IS NULL OR p.applicationName = :applicationName) "
+            + "AND (:environment IS NULL OR p.environment = :environment) "
+            + "AND (:operatorId IS NULL OR p.operatorId = :operatorId)")
+    Page<Pipeline> findPageInScope(@Param("namespace") String namespace,
+                                   @Param("applicationName") String applicationName,
+                                   @Param("environment") String environment,
+                                   @Param("operatorId") String operatorId,
+                                   Pageable pageable);
 
     Pipeline findFirstByNamespaceAndApplicationNameAndStatusOrderByCreatedTimeDesc(String namespace, String applicationName, PipelineStatus status);
 
