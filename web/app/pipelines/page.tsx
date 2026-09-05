@@ -288,9 +288,12 @@ function PipelinesContent() {
                     icon: app.icon,
                     colorBackground: appIdentityBackground(app),
                   }))]}
+                  // The dropdown re-runs this with an empty query as soon as it opens and shows
+                  // the result in place of `options`, so the "all" entry has to be in it too or
+                  // it vanishes a moment after opening.
                   onSearch={async (query) => {
                     const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
-                    return (res.data?.data ?? []).map(app => ({
+                    const found = (res.data?.data ?? []).map(app => ({
                       value: app.id,
                       label: selectedNamespace === ALL_NAMESPACES ? `${app.name} (${app.namespace})` : app.name,
                       namespace: app.namespace,
@@ -298,6 +301,7 @@ function PipelinesContent() {
                       icon: app.icon,
                       colorBackground: appIdentityBackground(app),
                     }))
+                    return query ? found : [{ value: ALL_APPS, label: t("pipelines.allApps") }, ...found]
                   }}
                   placeholder={t("pipelines.allApps")}
                   searchPlaceholder={t("common.search")}
@@ -350,7 +354,9 @@ function PipelinesContent() {
           <>
             <div className="overflow-x-auto">
               <DataTable
-                columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId, effectiveEnv !== "all", !selectedApp)}
+                // Rollback needs the live version to compare against, which is only looked up
+                // once an application and a concrete environment are selected.
+                columns={getPipelineColumns(t, handleStop, handleDeploy, handleRollback, currentPipelineId, !!selectedApp && effectiveEnv !== "all", !selectedApp)}
                 data={pipelines}
                 loading={loading}
               />

@@ -16,8 +16,9 @@ export const getPipelineColumns = (
   onDeploy: (pipeline: Pipeline) => void,
   onRollback: (pipeline: Pipeline) => void,
   currentPipelineId?: string | null,
-  // False under the "all environments" scope: the list then mixes environments, the live image of
-  // each is unknown, and rolling back without knowing which row is the running one is a trap.
+  // False until an application and a concrete environment are selected: before that the list
+  // mixes applications or environments, the live image of each is unknown, and rolling back
+  // without knowing which row is the running one is a trap.
   rollbackEnabled: boolean = true,
   // True when the list spans applications, so each row has to say which one it belongs to.
   showApplication: boolean = false
