@@ -2,7 +2,7 @@ const sandbox = {
   "sandbox.title": "Sandboxes",
   "sandbox.empty": "No sandboxes yet",
   "sandbox.fetchError": "Failed to fetch sandboxes",
-  "sandbox.create": "Create sandbox",
+  "sandbox.create": "Create",
   "sandbox.creating": "Creating...",
   "sandbox.createSuccess": "Sandbox created",
   "sandbox.createError": "Failed to create sandbox",

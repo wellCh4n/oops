@@ -366,11 +366,11 @@ function SandboxesContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={fetchSandboxes} disabled={loading}>
+              <Button variant="outline" onClick={fetchSandboxes} disabled={loading}>
                 <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
                 {t("sandbox.refresh")}
               </Button>
-              <Button size="sm" onClick={openCreateDialog}>
+              <Button onClick={openCreateDialog}>
                 <Plus className="size-4" />
                 {t("sandbox.create")}
               </Button>
