@@ -326,6 +326,7 @@ const apps = {
   "apps.status.col.ready": "Ready",
   "apps.status.col.restarts": "Restarts",
   "apps.events.title": "Event",
+  "apps.events.refresh": "Refresh",
   "apps.events.since": "Since",
   "apps.events.empty": "No event",
   "apps.events.time": "Time",

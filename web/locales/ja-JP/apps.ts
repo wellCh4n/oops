@@ -326,6 +326,7 @@ const apps = {
   "apps.status.col.ready": "準備完了",
   "apps.status.col.restarts": "再起動回数",
   "apps.events.title": "イベント",
+  "apps.events.refresh": "更新",
   "apps.events.since": "開始",
   "apps.events.empty": "イベントはありません",
   "apps.events.time": "時刻",

@@ -8,12 +8,11 @@ import { DataTable } from "@/components/ui/data-table"
 import { Copyable } from "@/components/ui/copyable"
 import { getStatusColumns } from "./columns"
 import { toast } from "sonner"
-import { ChevronRight, ExternalLink, LineChart } from "lucide-react"
+import { Bell, Boxes, ExternalLink, LineChart } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ApplicationResourceViewer } from "@/app/apps/components/application-resource-viewer"
-import { ApplicationEventsPanel } from "@/app/apps/components/application-events-panel"
+import { ApplicationResourceDrawer } from "@/app/apps/components/application-resource-drawer"
+import { ApplicationEventsDrawer } from "@/app/apps/components/application-events-drawer"
 import { ApplicationMetricsDrawer } from "@/app/apps/components/application-metrics-drawer"
 import {
   AlertDialog,
@@ -82,10 +81,11 @@ function ApplicationStatusContent() {
   const [isRestartDialogOpen, setIsRestartDialogOpen] = useState(false)
   const [podToRestart, setPodToRestart] = useState<string | null>(null)
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
-  const [resourcesOpen, setResourcesOpen] = useState(false)
   const [metricsByPod, setMetricsByPod] = useState<Record<string, PodMetric>>({})
   const [metricsLoading, setMetricsLoading] = useState(false)
   const [metricsDrawerOpen, setMetricsDrawerOpen] = useState(false)
+  const [resourceDrawerOpen, setResourceDrawerOpen] = useState(false)
+  const [eventsDrawerOpen, setEventsDrawerOpen] = useState(false)
   const { t } = useLanguage()
   const enterApp = useWorkContextStore((state) => state.enterApp)
   const setWorkContext = useWorkContextStore((state) => state.setContext)
@@ -305,15 +305,35 @@ function ApplicationStatusContent() {
                     ))}
                   </TabsList>
                 </Tabs>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setMetricsDrawerOpen(true)}
-                  disabled={!selectedEnv}
-                >
-                  <LineChart />
-                  {t("apps.metrics.open")}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setResourceDrawerOpen(true)}
+                    disabled={!selectedEnv}
+                  >
+                    <Boxes />
+                    {t("apps.status.resources")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEventsDrawerOpen(true)}
+                    disabled={!selectedEnv}
+                  >
+                    <Bell />
+                    {t("apps.events.title")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMetricsDrawerOpen(true)}
+                    disabled={!selectedEnv}
+                  >
+                    <LineChart />
+                    {t("apps.metrics.open")}
+                  </Button>
+                </div>
               </div>
             )}
             {clusterDomain?.internalDomain && (
@@ -351,32 +371,30 @@ function ApplicationStatusContent() {
         }
       />
 
-      <Collapsible open={resourcesOpen} onOpenChange={setResourcesOpen} className="mt-4 min-w-0 rounded-md border">
-        <CollapsibleTrigger className="flex min-h-12 w-full cursor-pointer items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-muted/50">
-          <ChevronRight className={`size-4 shrink-0 transition-transform ${resourcesOpen ? "rotate-90" : ""}`} />
-          <span className="font-semibold">{t("apps.status.resources")}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="border-t p-3">
-            <ApplicationResourceViewer namespace={namespace} applicationName={name} environment={selectedEnv} />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-
       {selectedEnv && (
-        <div className="mt-4">
-          <ApplicationEventsPanel namespace={namespace} applicationName={name} environment={selectedEnv} />
-        </div>
-      )}
-
-      {selectedEnv && (
-        <ApplicationMetricsDrawer
-          open={metricsDrawerOpen}
-          onOpenChange={setMetricsDrawerOpen}
-          namespace={namespace}
-          applicationName={name}
-          environment={selectedEnv}
-        />
+        <>
+          <ApplicationResourceDrawer
+            open={resourceDrawerOpen}
+            onOpenChange={setResourceDrawerOpen}
+            namespace={namespace}
+            applicationName={name}
+            environment={selectedEnv}
+          />
+          <ApplicationEventsDrawer
+            open={eventsDrawerOpen}
+            onOpenChange={setEventsDrawerOpen}
+            namespace={namespace}
+            applicationName={name}
+            environment={selectedEnv}
+          />
+          <ApplicationMetricsDrawer
+            open={metricsDrawerOpen}
+            onOpenChange={setMetricsDrawerOpen}
+            namespace={namespace}
+            applicationName={name}
+            environment={selectedEnv}
+          />
+        </>
       )}
 
       <AlertDialog open={isRestartDialogOpen} onOpenChange={setIsRestartDialogOpen}>

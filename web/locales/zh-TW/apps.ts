@@ -326,6 +326,7 @@ const apps = {
   "apps.status.col.ready": "就緒",
   "apps.status.col.restarts": "重啟",
   "apps.events.title": "事件",
+  "apps.events.refresh": "重新整理",
   "apps.events.since": "自",
   "apps.events.empty": "暫無事件",
   "apps.events.time": "時間",

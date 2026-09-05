@@ -381,7 +381,7 @@ export function ApplicationMetricsDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="right">
-      <DrawerContent className="sm:[--drawer-content-width:min(56rem,92vw)]">
+      <DrawerContent className="data-[swipe-axis=x]:sm:[--drawer-content-width:min(56rem,92vw)]">
         <DrawerHeader className="border-b pb-4 md:text-left">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
