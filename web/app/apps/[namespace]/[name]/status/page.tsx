@@ -38,7 +38,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { useLanguage } from "@/contexts/language-context"
-import { useWorkContextStore } from "@/store/work-context"
+import { useRecentAppStore } from "@/store/recent-app"
 import { shortImageName } from "@/lib/utils"
 
 function formatUptime(startedAt: string | null | undefined): string {
@@ -87,13 +87,11 @@ function ApplicationStatusContent() {
   const [resourceDrawerOpen, setResourceDrawerOpen] = useState(false)
   const [eventsDrawerOpen, setEventsDrawerOpen] = useState(false)
   const { t } = useLanguage()
-  const enterApp = useWorkContextStore((state) => state.enterApp)
-  const setWorkContext = useWorkContextStore((state) => state.setContext)
-  const contextEnv = useWorkContextStore((state) => state.env)
+  const rememberApp = useRecentAppStore((state) => state.remember)
 
   useEffect(() => {
-    enterApp({ namespace, name })
-  }, [namespace, name, enterApp])
+    rememberApp({ namespace, name })
+  }, [namespace, name, rememberApp])
 
   // Fetch environments on mount
   useEffect(() => {
@@ -103,17 +101,13 @@ function ApplicationStatusContent() {
         if (res.data && Array.isArray(res.data) && res.data.length > 0) {
           setEnvironments(res.data)
 
-          // Determine initial environment: the URL first, then the environment
-          // carried in the work context, and only then the first one.
+          // The environment the URL names if this app has it, else the first one.
           let initialEnv = res.data[0].environment
           if (envParam && res.data.some(environment => environment.environment === envParam)) {
             initialEnv = envParam
-          } else if (!envParam && contextEnv && res.data.some(environment => environment.environment === contextEnv)) {
-            initialEnv = contextEnv
           }
 
           setSelectedEnv(initialEnv)
-          setWorkContext({ env: initialEnv })
 
           // Sync URL if needed
           if (initialEnv !== envParam) {
@@ -128,9 +122,6 @@ function ApplicationStatusContent() {
       }
     }
     loadEnvironments()
-  // `contextEnv` is only a seed for the first render — reacting to it would
-  // fight the user's own tab switches.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [namespace, name, envParam, pathname, router, searchParams, t])
 
   // Subscribe to pod status via SSE when environment changes
@@ -194,7 +185,6 @@ function ApplicationStatusContent() {
 
   const handleTabChange = (value: string) => {
     setSelectedEnv(value)
-    setWorkContext({ env: value })
     const newParams = new URLSearchParams(searchParams.toString())
     newParams.set("environment", value)
     router.push(`${pathname}?${newParams.toString()}`)

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
   Plus, Power, ExternalLink, RefreshCw, ChevronDown, Layers, LayoutGrid,
@@ -25,9 +25,8 @@ import {
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
-import { useWorkContext } from "@/contexts/work-context"
 import { getApplicationBuildConfig, getApplications } from "@/lib/api/applications"
-import { ALL_NAMESPACES } from "@/store/work-context"
+import { ALL_NAMESPACES, useNamespaces } from "@/hooks/use-namespaces"
 import { ApplicationEnvironmentSelector } from "@/app/apps/components/application-environment-selector"
 import { listIDEs, createIDE, deleteIDE, getDefaultIDEConfig, IDEInstance } from "@/lib/api/ide"
 import { Application, ApplicationEnvironment, ApplicationSourceType } from "@/lib/api/types"
@@ -43,20 +42,28 @@ export default function IDEPage() {
 
 function IDEPageContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const { t } = useLanguage()
+  const { namespaces } = useNamespaces()
 
-  const {
-    namespaces,
-    loadNamespaces,
-    namespace: selectedNamespace,
-    appName: selectedApp,
-    appNamespace,
-    env: selectedEnv,
-    selectNamespace,
-    selectApp,
-    selectEnv,
-    resolveApp,
-  } = useWorkContext()
+  // Every filter lives in the URL and nowhere else. `?app=` is a bare name under a
+  // concrete namespace and `namespace/name` under the "all" scope.
+  const selectedNamespace = searchParams.get("namespace") || ALL_NAMESPACES
+  const appParam = searchParams.get("app") ?? ""
+  const appSeparator = appParam.indexOf("/")
+  const selectedApp = appSeparator >= 0 ? appParam.slice(appSeparator + 1) : appParam
+  const appNamespace = appSeparator >= 0 ? appParam.slice(0, appSeparator) : ""
+  const urlEnv = searchParams.get("environment") ?? ""
+
+  const updateParams = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value)
+      else params.delete(key)
+    })
+    const query = params.toString()
+    router.replace(query ? `/ides?${query}` : "/ides")
+  }, [router, searchParams])
 
   const [applications, setApplications] = useState<Application[]>([])
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
@@ -64,11 +71,19 @@ function IDEPageContent() {
   const [loading, setLoading] = useState(false)
   const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
 
-  const selectedApplication = applications.find(app => app.name === selectedApp)
+  const selectedApplication = applications.find(app => app.name === selectedApp
+    && (!appNamespace || app.namespace === appNamespace))
   const selectedAppValue = selectedApplication?.id ?? selectedApp
-  // Under the "all" scope the app carries its own namespace — the context knows
-  // it, and the loaded list refines it. The scope itself is never rewritten.
-  const activeNamespace = selectedApplication?.namespace || appNamespace
+  // The concrete namespace of the selected application: the scope itself unless
+  // that is "all", in which case the URL carries it alongside the app name.
+  const activeNamespace = selectedNamespace === ALL_NAMESPACES
+    ? (appNamespace || selectedApplication?.namespace || "")
+    : selectedNamespace
+  // An environment the URL names is used if this app has it; otherwise the first
+  // one, without rewriting the URL — only the user's own choice is written back.
+  const activeEnv = environments.some((environment) => environment.environment === urlEnv)
+    ? urlEnv
+    : (environments[0]?.environment ?? "")
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -94,50 +109,20 @@ function IDEPageContent() {
     }
   }
 
+  // The application dropdown's options. Nothing is auto-selected: with no app in
+  // the URL the user picks one.
   useEffect(() => {
-    loadNamespaces()
-  }, [loadNamespaces])
-
-  useEffect(() => {
-    if (!selectedNamespace) {
-      setApplications([])
-      return
-    }
-    // Nothing is auto-selected here: if the context has no app, the user picks
-    // one rather than landing on an arbitrary first entry.
     const loadApps = async () => {
       try {
         const res = await getApplications(selectedNamespace)
-        const apps = res.data?.data ?? []
-        setApplications(apps)
-        const contextApp = apps.find(app => app.name === selectedApp)
-        if (contextApp) {
-          resolveApp({
-            namespace: contextApp.namespace,
-            name: contextApp.name,
-            description: contextApp.description,
-            ownerName: contextApp.ownerName,
-            icon: contextApp.icon,
-          })
-        }
+        setApplications(res.data?.data ?? [])
       } catch {
         toast.error(t("apps.fetchError"))
       }
     }
     loadApps()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, selectedApp])
-
-  // Pick an environment for the chosen app. The context environment carries
-  // across pages, so one that this app does not define is replaced rather than
-  // left to render an empty list.
-  useEffect(() => {
-    if (!selectedApp || environments.length === 0) return
-    const known = environments.some((environment) => environment.environment === selectedEnv)
-    if (!selectedEnv || !known) {
-      selectEnv(environments[0].environment ?? "")
-    }
-  }, [selectedApp, selectedEnv, environments, selectEnv])
+  }, [selectedNamespace])
 
   useEffect(() => {
     if (!activeNamespace || !selectedApp) {
@@ -154,30 +139,30 @@ function IDEPageContent() {
   }, [activeNamespace, selectedApp])
 
   const fetchIDEs = useCallback(async () => {
-    if (!activeNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !activeEnv) return
     setLoading(true)
     try {
-      const res = await listIDEs(activeNamespace, selectedApp, selectedEnv)
+      const res = await listIDEs(activeNamespace, selectedApp, activeEnv)
       setIdes(res.data ?? [])
     } catch {
       toast.error(t("ide.fetchError"))
     } finally {
       setLoading(false)
     }
-  }, [activeNamespace, selectedApp, selectedEnv, t])
+  }, [activeNamespace, selectedApp, activeEnv, t])
 
   useEffect(() => {
-    if (selectedEnv) {
+    if (activeEnv) {
       fetchIDEs()
     } else {
       setIdes([])
     }
-  }, [selectedEnv, fetchIDEs])
+  }, [activeEnv, fetchIDEs])
 
   useEffect(() => {
     stopPolling()
     const hasPending = ides.some((ide) => !ide.ready)
-    if (!hasPending || !selectedApp || !selectedEnv) {
+    if (!hasPending || !selectedApp || !activeEnv) {
       return
     }
     const intervalId = setInterval(fetchIDEs, 5000)
@@ -186,7 +171,7 @@ function IDEPageContent() {
   }, [ides]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreateDialog = async () => {
-    if (!activeNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !activeEnv) return
     if (sourceType === "ZIP") {
       toast.error(t("ide.zipUnsupported"))
       return
@@ -194,7 +179,7 @@ function IDEPageContent() {
     setCreateOpen(true)
     setConfigLoading(true)
     try {
-      const res = await getDefaultIDEConfig(activeNamespace, selectedApp, selectedEnv)
+      const res = await getDefaultIDEConfig(activeNamespace, selectedApp, activeEnv)
       const raw = res.data?.settings ?? ""
       try { setSettings(JSON.stringify(JSON.parse(raw), null, 2)) } catch { setSettings(raw) }
       setEnvVars(res.data?.env ?? "")
@@ -207,14 +192,14 @@ function IDEPageContent() {
   }
 
   const handleCreate = async () => {
-    if (!activeNamespace || !selectedApp || !selectedEnv) return
+    if (!activeNamespace || !selectedApp || !activeEnv) return
     if (sourceType === "ZIP") {
       toast.error(t("ide.zipUnsupported"))
       return
     }
     setCreating(true)
     try {
-      await createIDE(activeNamespace, selectedApp, selectedEnv, {
+      await createIDE(activeNamespace, selectedApp, activeEnv, {
         name: name.trim() || undefined,
         branch: branch.trim() || undefined,
         settings,
@@ -234,10 +219,10 @@ function IDEPageContent() {
   }
 
   const handleDelete = async () => {
-    if (!activeNamespace || !selectedApp || !selectedEnv || !deleteTarget) return
+    if (!activeNamespace || !selectedApp || !activeEnv || !deleteTarget) return
     setDeleting(true)
     try {
-      await deleteIDE(activeNamespace, selectedApp, deleteTarget.id, selectedEnv)
+      await deleteIDE(activeNamespace, selectedApp, deleteTarget.id, activeEnv)
       toast.success(t("ide.deleteSuccess"))
       setDeleteTarget(null)
       setDeleteConfirmText("")
@@ -260,7 +245,8 @@ function IDEPageContent() {
               </span>
               <SelectWithSearch
                 value={selectedNamespace}
-                onValueChange={(namespace: string) => selectNamespace(namespace)}
+                // Changing the scope drops the app and env filters: they belonged to the old one.
+                onValueChange={(namespace: string) => updateParams({ namespace: namespace === ALL_NAMESPACES ? "" : namespace, app: "", environment: "" })}
                 options={[{ value: ALL_NAMESPACES, label: t("common.allNamespaces") }, ...namespaces.map((ns) => ({ value: ns.id, label: ns.name }))]}
                 placeholder={t("common.selectNamespace")}
                 searchPlaceholder={t("common.search")}
@@ -276,10 +262,9 @@ function IDEPageContent() {
                 value={selectedAppValue}
                 onOptionSelect={(option) => {
                   if (!option.namespace || !option.name) return
-                  const app = applications.find(a => a.id === option.value)
-                  selectApp(app
-                    ? { namespace: app.namespace, name: app.name, description: app.description, ownerName: app.ownerName, icon: app.icon }
-                    : { namespace: option.namespace, name: option.name })
+                  const appValue = selectedNamespace === ALL_NAMESPACES ? `${option.namespace}/${option.name}` : option.name
+                  // The environment belongs to the app, so changing app resets it.
+                  updateParams({ app: appValue, environment: "" })
                 }}
                 options={applications.map((app) => ({
                   value: app.id,
@@ -289,7 +274,7 @@ function IDEPageContent() {
                   icon: app.icon,
                   colorBackground: appIdentityBackground(app),
                 }))}
-                onSearch={selectedNamespace ? async (query) => {
+                onSearch={async (query) => {
                   const res = await getApplications(selectedNamespace, query || undefined, 1, 20)
                   return (res.data?.data ?? []).map(app => ({
                     value: app.id,
@@ -299,22 +284,17 @@ function IDEPageContent() {
                     icon: app.icon,
                     colorBackground: appIdentityBackground(app),
                   }))
-                } : undefined}
+                }}
                 placeholder={t("ide.page.selectApp")}
                 searchPlaceholder={t("common.search")}
                 emptyText={t("common.noResults")}
                 className="w-[200px]"
-                disabled={!selectedNamespace}
               />
             </div>
           </div>
         }
         table={
-          !selectedNamespace ? (
-            <div className="py-16 text-center text-muted-foreground text-sm border rounded-md border-dashed">
-              {t("ide.page.selectNsHint")}
-            </div>
-          ) : !selectedApp ? (
+          !selectedApp ? (
             <div className="py-16 text-center text-muted-foreground text-sm border rounded-md border-dashed">
               {t("ide.page.selectAppHint")}
             </div>
@@ -325,8 +305,8 @@ function IDEPageContent() {
                   <ApplicationEnvironmentSelector
                     namespace={activeNamespace}
                     applicationName={selectedApp}
-                    value={selectedEnv}
-                    onValueChange={(env) => selectEnv(env)}
+                    value={activeEnv}
+                    onValueChange={(env) => updateParams({ environment: env })}
                     onEnvironmentsLoaded={setEnvironments}
                   />
                 </div>
@@ -335,7 +315,7 @@ function IDEPageContent() {
                     variant="outline"
                     size="sm"
                     onClick={fetchIDEs}
-                    disabled={loading || !activeNamespace || !selectedApp || !selectedEnv}
+                    disabled={loading || !activeNamespace || !selectedApp || !activeEnv}
                   >
                     <RefreshCw className={`size-4 ${loading ? "animate-spin" : ""}`} />
                     {t("pipelines.refresh")}
@@ -343,7 +323,7 @@ function IDEPageContent() {
                   <Button
                     size="sm"
                     onClick={openCreateDialog}
-                    disabled={!activeNamespace || !selectedApp || !selectedEnv || sourceType === "ZIP"}
+                    disabled={!activeNamespace || !selectedApp || !activeEnv || sourceType === "ZIP"}
                   >
                     <Plus className="size-4" />
                     {t("ide.create")}
@@ -357,7 +337,7 @@ function IDEPageContent() {
                 </div>
               )}
 
-              {!selectedEnv ? (
+              {!activeEnv ? (
                 environments.length === 0 ? null : (
                   <div className="py-8 text-center text-muted-foreground text-sm border rounded-md border-dashed">
                     {t("apps.envSelector.noEnv")}
@@ -415,7 +395,9 @@ function IDEPageContent() {
                         <div className="flex flex-col gap-0.5 min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
                             <Link
-                              href={ide.ready ? `/ides/${ide.id}${searchParams.toString() ? `?${searchParams.toString()}` : ""}` : "#"}
+                              // The detail page wants the concrete namespace and bare app name, not this
+                              // page's scope filter, which under "all" spells the app as `namespace/name`.
+                              href={ide.ready ? `/ides/${ide.id}?namespace=${encodeURIComponent(activeNamespace)}&app=${encodeURIComponent(selectedApp)}&environment=${encodeURIComponent(activeEnv)}` : "#"}
                               className={`font-mono text-sm truncate ${ide.ready ? "text-primary hover:underline cursor-pointer" : "text-muted-foreground cursor-not-allowed pointer-events-none"}`}
                             >
                               {ide.name}

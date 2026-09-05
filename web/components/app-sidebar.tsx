@@ -42,9 +42,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { navConfig } from "@/lib/nav-config"
 import { useFeaturesStore } from "@/store/features"
-import { useWorkContextStore } from "@/store/work-context"
-import { workContextHref } from "@/lib/work-context-url"
-import { usePathname, useSearchParams } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { clearAuth, isAdmin } from "@/lib/auth"
 import { getCurrentUser, CurrentUser } from "@/lib/api/auth"
@@ -63,7 +61,6 @@ export function AppSidebar({ onOpenCommandPalette }: { onOpenCommandPalette: () 
 
 function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () => void }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const router = useRouter()
   const { open: sidebarOpen, toggleSidebar } = useSidebar()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
@@ -73,9 +70,6 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
   const { locale, setLocale, t } = useLanguage()
   const ideEnabled = useFeaturesStore((s) => s.features.ide)
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
-  const contextNamespace = useWorkContextStore((s) => s.namespace)
-  const contextApp = useWorkContextStore((s) => s.app)
-  const contextEnv = useWorkContextStore((s) => s.env)
   const expandedGroups = useSidebarNavStore((s) => s.expandedGroups)
   const setGroupExpanded = useSidebarNavStore((s) => s.setGroupExpanded)
 
@@ -152,16 +146,11 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
           const groupItems = (
             <SidebarGroupContent>
               <SidebarMenu>
-                {filteredGroups.map((item) => {
-                  // Every cross-page link carries the whole work context, so the
-                  // destination never has to guess which app/env you meant.
-                  const href = pathname === item.url
-                    ? (searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname)
-                    : workContextHref(item.url, { namespace: contextNamespace, app: contextApp, env: contextEnv })
-
-                  return (
+                {filteredGroups.map((item) => (
+                  // Bare URLs on purpose: a sidebar click always lands on the page's
+                  // default view, so nothing invisible decides what you see there.
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton render={<Link href={href} />}
+                    <SidebarMenuButton render={<Link href={item.url} />}
                       isActive={item.match ? item.match(pathname) : pathname === item.url || pathname.startsWith(item.url + "/")}
                       tooltip={t(item.title)}
                     >
@@ -169,8 +158,7 @@ function AppSidebarContent({ onOpenCommandPalette }: { onOpenCommandPalette: () 
                       <span>{t(item.title)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  )
-                })}
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           )

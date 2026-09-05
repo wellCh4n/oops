@@ -22,8 +22,7 @@ import { AppIdentityMark } from "@/components/app-identity-mark"
 import { searchAllApplications } from "@/lib/api/applications"
 import { Activity, Rocket, Loader2, Terminal, GitBranch, LayoutGrid } from "lucide-react"
 import { useLanguage } from "@/contexts/language-context"
-import { useWorkContextStore } from "@/store/work-context"
-import { workContextHref } from "@/lib/work-context-url"
+import { useRecentAppStore } from "@/store/recent-app"
 import { toast } from "sonner"
 
 type CommandType = "status" | "deploy" | "ide" | "pipeline" | "app" | null
@@ -50,8 +49,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const router = useRouter()
   const { t } = useLanguage()
   const inputRef = useRef<HTMLInputElement>(null)
-  const recentApp = useWorkContextStore((state) => state.app)
-  const enterApp = useWorkContextStore((state) => state.enterApp)
+  const recentApp = useRecentAppStore((state) => state.app)
+  const rememberApp = useRecentAppStore((state) => state.remember)
 
   const commands: CommandOption[] = [
     {
@@ -189,40 +188,39 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const handleAppSelect = (app: Application) => {
     if (!selectedCommand) return
 
-    const appRef = {
+    rememberApp({
       namespace: app.namespace,
       name: app.name,
       description: app.description,
       ownerName: app.ownerName,
       icon: app.icon,
-    }
-    enterApp(appRef)
+    })
 
     onOpenChange(false)
 
-    // Cross-page destinations go through the shared href builder so they arrive
-    // with the full context, exactly like the sidebar links.
-    const context = { namespace: app.namespace, app: appRef, env: useWorkContextStore.getState().env }
+    // Every destination is fully spelled out in its URL; the list pages take the
+    // application as a plain filter scoped to its own namespace.
+    const listQuery = `?namespace=${encodeURIComponent(app.namespace)}&app=${encodeURIComponent(app.name)}`
 
     switch (selectedCommand) {
       case "status":
-        router.push(workContextHref(`/apps/${app.namespace}/${app.name}/status`, context))
+        router.push(`/apps/${app.namespace}/${app.name}/status`)
         break
       case "deploy":
-        router.push(workContextHref(`/apps/${app.namespace}/${app.name}/publish`, context))
+        router.push(`/apps/${app.namespace}/${app.name}/publish`)
         break
       case "ide":
         if (app.sourceType === "ZIP") {
           toast.error(t("ide.zipUnsupported"))
           return
         }
-        router.push(workContextHref("/ides", context))
+        router.push(`/ides${listQuery}`)
         break
       case "pipeline":
-        router.push(workContextHref("/pipelines", context))
+        router.push(`/pipelines${listQuery}`)
         break
       case "app":
-        router.push(workContextHref(`/apps/${app.namespace}/${app.name}`, context))
+        router.push(`/apps/${app.namespace}/${app.name}`)
         break
     }
   }

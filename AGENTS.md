@@ -381,8 +381,12 @@ JWT stored in cookie `auth_token` (SameSite=Lax, 7 days). The Next.js middleware
 
 Frontend also stores `userId`, `username`, and `role` in `localStorage` (keys `auth_user_id`, `auth_username`, `auth_role`). `isAdmin()` reads `auth_role` from localStorage. Login accepts username **or** email.
 
-### Namespace State
-`useNamespaceStore` (Zustand, persisted to `localStorage` key `oops-namespace`) stores the selected namespace. `NamespaceParamProvider` syncs this store bidirectionally with a `?namespace=` URL query parameter — URL takes priority, making namespace bookmarkable.
+### Where you are is the URL
+Nothing remembers a namespace, application or environment across pages — a remembered scope that is not visible anywhere is exactly what made "why am I looking at this namespace?" a recurring question. The rules:
+
+- **List pages** (`/apps`, `/pipelines`, `/ides`) take every filter from their own query string and default to every namespace: `?namespace=` (absent = `all`), `?app=` (a bare name under a concrete namespace, `namespace/name` under `all` so a shared link still says which app it meant), `?environment=`. Changing the namespace drops the app and env filters; changing the app drops env. Sidebar links are bare URLs, so a sidebar click always lands on the page's default view. The namespace dropdown's options come from `hooks/use-namespaces.ts`, fetched per mount, never persisted. `/pipelines` lists the whole scope through the per-application endpoint, `GET .../applications/{name}/pipelines?environment=&mine=`, where `{name}` takes `all` as a wildcard exactly like `{namespace}` does; `mine` keeps the caller's own pipelines, the counterpart of `ownerOnly` on the application list, defaulting to on via `store/operator-filter.ts` the same way.
+- **An application is a route**, `/apps/{namespace}/{name}/...`. The environment is `?environment=` on those pages and `app-detail-nav.tsx` carries it between Edit / Publish / Status; without it the app's first environment is shown, and only the user's own choice is written back to the URL.
+- **The one thing remembered** is the last application opened, in `store/recent-app.ts` (`localStorage` key `oops:recent-app`). It is shown as a labelled shortcut at the top of the command palette and read nowhere else.
 
 ### Feature Flags
 `useFeaturesStore` (not persisted) loads feature flags once on mount and exposes `{ feishu, ide, objectStorage, ideHost, ideHttps }`. Check this store before rendering IDE, Feishu-dependent, or ZIP-upload UI.
@@ -394,7 +398,7 @@ Four locales: `zh-CN` (default), `en-US`, `zh-TW`, `ja-JP`. Stored in cookie `lo
 The `/help/docs` pages hold no prose — every title, endpoint summary, field description and paragraph is a key in `locales/*/doc.ts` (`doc.<topic>.<section>.<slot>`), passed down as `titleKey` / `summaryKey` / `descriptionKey` / `textKey` so the pages stay server components. Paragraph strings carry an inline markup dialect rendered by `components/doc/doc-markup.tsx`: `` `text` `` → `InlineCode`, `**text**` → bold, and bold may wrap code. Code spans are opaque, so a glob like `` `/openapi/**` `` is never read as a bold marker. Section anchors are derived from the key by `doc-anchor.ts`, never from the rendered title, which keeps `#configmaps-write` pointing at the same heading in every locale — pass an explicit `id` only to keep an existing anchor alive.
 
 ### Command Palette
-Triggered by pressing `/` (outside input/textarea). Two-stage: select command (Status, Deploy, IDEs, Pipeline, App), then search for an application via `/api/search/applications` with 150ms debounce. Most-recently-used app stored in Zustand persisted to `localStorage` key `oops:recent-app`. Backspace with empty input returns to command selection.
+Triggered by pressing `/` (outside input/textarea). Two-stage: select command (Status, Deploy, IDEs, Pipeline, App), then search for an application via `/api/search/applications` with 150ms debounce. The last application opened (see **Where you are is the URL**) heads the list as a shortcut. Backspace with empty input returns to command selection.
 
 ### Other Frontend State
 - Sidebar open/closed persisted in cookie `sidebar_state` (`"true"`/`"false"`), read server-side in root layout.

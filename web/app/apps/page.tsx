@@ -16,8 +16,7 @@ import { ApplicationCreateDialog } from "./components/application-create-dialog"
 import { ContentPage } from "@/components/content-page"
 import { TableForm } from "@/components/ui/table-form"
 import { useLanguage } from "@/contexts/language-context"
-import { useWorkContext } from "@/contexts/work-context"
-import { ALL_NAMESPACES } from "@/store/work-context"
+import { ALL_NAMESPACES, useNamespaces } from "@/hooks/use-namespaces"
 import { useOwnerFilterStore } from "@/store/owner-filter"
 import { usePageSize } from "@/store/page-size"
 
@@ -37,7 +36,9 @@ function AppsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const { namespaces, loadNamespaces, namespace: selectedNamespace, selectNamespace } = useWorkContext()
+  const { namespaces } = useNamespaces()
+  // The namespace filter lives in the URL and nowhere else: absent means every namespace.
+  const selectedNamespace = searchParams.get("namespace") || ALL_NAMESPACES
 
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(false)
@@ -59,13 +60,13 @@ function AppsContent() {
 
   // Sync store value to URL on first load when URL param is absent
   useEffect(() => {
-    if (ownerOnlyUrl === null && selectedNamespace) {
+    if (ownerOnlyUrl === null) {
       const params = new URLSearchParams(searchParams.toString())
       params.set("ownerOnly", ownerOnlyStore ? "true" : "false")
       router.replace(`/apps?${params.toString()}`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownerOnlyUrl, selectedNamespace])
+  }, [ownerOnlyUrl])
 
   const updateParams = useCallback((updates: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -76,25 +77,14 @@ function AppsContent() {
     router.replace(`/apps?${params.toString()}`)
   }, [router, searchParams])
 
-  // Load namespaces once
   useEffect(() => {
-    loadNamespaces()
-  }, [loadNamespaces])
-
-  useEffect(() => {
-    if (selectedNamespace) {
-      fetchData()
-    }
+    fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNamespace, page, size, ownerOnly])
 
   // The deploying marks refresh on their own, independently of the application list: a poll
   // that fails is simply skipped, leaving the marks that are already on screen in place.
   const fetchActiveDeployments = useCallback(async () => {
-    if (!selectedNamespace) {
-      setActiveDeployments({})
-      return
-    }
     try {
       const res = await getActiveDeployments(selectedNamespace)
       const grouped: Record<string, ActiveDeployment[]> = {}
@@ -109,7 +99,6 @@ function AppsContent() {
   }, [selectedNamespace])
 
   useEffect(() => {
-    if (!selectedNamespace) return
     fetchActiveDeployments()
     const intervalId = setInterval(() => {
       if (document.visibilityState === "visible") {
@@ -117,7 +106,7 @@ function AppsContent() {
       }
     }, DEPLOYING_POLL_INTERVAL_MS)
     return () => clearInterval(intervalId)
-  }, [selectedNamespace, fetchActiveDeployments])
+  }, [fetchActiveDeployments])
 
   const handleSearch = () => {
     updateParams({ page: "1" })
@@ -125,11 +114,6 @@ function AppsContent() {
   }
 
   const fetchData = async () => {
-    if (!selectedNamespace) {
-      setApplications([])
-      return
-    }
-
     setLoading(true)
     try {
       const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
@@ -157,7 +141,7 @@ function AppsContent() {
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><Layers className="size-4" />{t("apps.namespaceFilter")}</span>
                 <SelectWithSearch
                   value={selectedNamespace}
-                  onValueChange={(namespace: string) => selectNamespace(namespace, { page: "1" })}
+                  onValueChange={(namespace: string) => updateParams({ namespace: namespace === ALL_NAMESPACES ? "" : namespace, page: "1" })}
                   options={[{ value: ALL_NAMESPACES, label: t("common.allNamespaces") }, ...namespaces.map(ns => ({ value: ns.id, label: ns.name }))]}
                   placeholder={t("common.selectNamespace")}
                   searchPlaceholder={t("common.search")}
@@ -254,7 +238,7 @@ function AppsContent() {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         namespaces={namespaces}
-        defaultNamespace={selectedNamespace === ALL_NAMESPACES ? (namespaces[0]?.name ?? "") : selectedNamespace}
+        defaultNamespace={selectedNamespace === ALL_NAMESPACES ? "" : selectedNamespace}
       />
     </ContentPage>
   )

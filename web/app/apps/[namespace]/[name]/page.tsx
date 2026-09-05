@@ -24,7 +24,7 @@ import { toast } from "sonner"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
-import { useWorkContextStore } from "@/store/work-context"
+import { useRecentAppStore } from "@/store/recent-app"
 
 export default function EditAppPage() {
   const router = useRouter()
@@ -41,7 +41,7 @@ export default function EditAppPage() {
   
   const [loading, setLoading] = useState(true)
   const { t } = useLanguage()
-  const enterApp = useWorkContextStore((state) => state.enterApp)
+  const rememberApp = useRecentAppStore((state) => state.remember)
 
   useEffect(() => {
     const fetchApp = async () => {
@@ -57,7 +57,7 @@ export default function EditAppPage() {
 
         if (appRes.data) {
           setApplication(appRes.data)
-          enterApp({
+          rememberApp({
             namespace: appRes.data.namespace,
             name: appRes.data.name,
             description: appRes.data.description,
@@ -95,7 +95,7 @@ export default function EditAppPage() {
       }
     }
     fetchApp()
-  }, [namespace, name, router, enterApp]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [namespace, name, router, rememberApp]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!loading && !application) {
     return <ContentPage title={name}>{t("apps.detail.notFound")}</ContentPage>

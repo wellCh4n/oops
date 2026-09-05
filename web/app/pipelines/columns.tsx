@@ -6,8 +6,9 @@ import { Pipeline } from "@/lib/api/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
+import { AppIdentityMark } from "@/components/app-identity-mark"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Eye, Ban, Rocket, Undo2, CircleDot, Info } from "lucide-react"
+import { Eye, Ban, Rocket, Undo2, CircleDot, LayoutGrid } from "lucide-react"
 
 export const getPipelineColumns = (
   t: (key: string) => string,
@@ -17,12 +18,14 @@ export const getPipelineColumns = (
   currentPipelineId?: string | null,
   // False under the "all environments" scope: the list then mixes environments, the live image of
   // each is unknown, and rolling back without knowing which row is the running one is a trap.
-  rollbackEnabled: boolean = true
+  rollbackEnabled: boolean = true,
+  // True when the list spans applications, so each row has to say which one it belongs to.
+  showApplication: boolean = false
 ): ColumnDef<Pipeline>[] => [
   {
     accessorKey: "id",
     header: "ID",
-    size: 300,
+    size: 240,
     cell: ({ row }) => {
       const isCurrent = !!currentPipelineId && row.original.id === currentPipelineId
       return (
@@ -38,43 +41,47 @@ export const getPipelineColumns = (
       )
     },
   },
+  ...(showApplication ? [{
+    id: "application",
+    header: t("pipelines.col.application"),
+    // Copyable like the id, with the namespace on hover; the link to the app is in the actions.
+    cell: ({ row }) => (
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex items-center gap-2" />}>
+          <AppIdentityMark seed={{ namespace: row.original.namespace, name: row.original.applicationName, icon: row.original.applicationIcon }} />
+          <Copyable value={row.original.applicationName} maxLength={Infinity} className="font-sans" />
+        </TooltipTrigger>
+        <TooltipContent>{t("common.namespace")}: {row.original.namespace}</TooltipContent>
+      </Tooltip>
+    ),
+  } satisfies ColumnDef<Pipeline>] : []),
   {
     accessorKey: "environment",
     header: t("pipelines.col.environment"),
-    size: 80,
+    size: 110,
   },
   {
     accessorKey: "deployMode",
     header: t("pipelines.col.deployMode"),
     size: 100,
+    // The trigger type rides along as a mark: a rollback row keeps its deploy mode and
+    // gets a rollback icon whose tooltip names the pipeline it was rolled back from.
     cell: ({ row }) => {
       const deployMode = row.original.deployMode
-      if (!deployMode) return <span className="text-muted-foreground">-</span>
-      return deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
-    }
-  },
-  {
-    accessorKey: "triggerType",
-    header: t("pipelines.col.triggerType"),
-    size: 90,
-    cell: ({ row }) => {
+      const modeLabel = !deployMode
+        ? <span className="text-muted-foreground">-</span>
+        : deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
       const isRollback = row.original.triggerType === "ROLLBACK"
-      if (!isRollback) {
-        return (
-          <span className="whitespace-nowrap">
-            {t("pipelines.col.releaseTag")}
-          </span>
-        )
-      }
       const fromId = row.original.rollbackFromPipelineId
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap">
-          {t("pipelines.col.rollbackTag")}
-          {fromId && (
+          {modeLabel}
+          {isRollback && (
             <Tooltip>
-              <TooltipTrigger render={<Info className="size-3.5 text-muted-foreground cursor-help" />}></TooltipTrigger>
+              <TooltipTrigger render={<Undo2 className="size-3.5 text-muted-foreground cursor-help" />}></TooltipTrigger>
               <TooltipContent>
-                {t("pipelines.col.rollbackFrom")}{fromId}
+                {t("pipelines.col.rollbackTag")}
+                {fromId && <> · {t("pipelines.col.rollbackFrom")}{fromId}</>}
               </TooltipContent>
             </Tooltip>
           )}
@@ -85,7 +92,7 @@ export const getPipelineColumns = (
   {
     accessorKey: "status",
     header: t("pipelines.col.status"),
-    size: 90,
+    size: 80,
     cell: ({ row }) => {
       const status = row.original.status
       let variant: "default" | "secondary" | "destructive" | "outline" = "outline"
@@ -118,7 +125,7 @@ export const getPipelineColumns = (
   {
     accessorKey: "createdTime",
     header: t("pipelines.col.createdTime"),
-    size: 150,
+    size: 140,
     cell: ({ row }) => {
         if (!row.original.createdTime) return "-"
         const d = new Date(row.original.createdTime)
@@ -127,13 +134,18 @@ export const getPipelineColumns = (
   },
   {
     id: "actions",
-    size: 220,
+    // No fixed width: the button set varies per row, and a width narrower than the
+    // widest set clipped it. The cell is nowrap, so it takes exactly what it needs.
     cell: ({ row }) => {
       return (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
           <Button render={<Link href={`/apps/${row.original.namespace}/${row.original.applicationName}/pipelines/${row.original.id}`} />} variant="outline" size="sm" className="h-8 px-2 gap-1">
             <Eye className="size-4" />
             {t("pipelines.col.view")}
+          </Button>
+          <Button render={<Link href={`/apps/${row.original.namespace}/${row.original.applicationName}`} />} variant="outline" size="sm" className="h-8 px-2 gap-1">
+            <LayoutGrid className="size-4" />
+            {t("pipelines.col.application")}
           </Button>
           {row.original.status === "BUILD_SUCCEEDED" && (
             <Button variant="default" size="sm" className="h-8 px-2 gap-1" onClick={() => onDeploy(row.original)}>

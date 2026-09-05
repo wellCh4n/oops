@@ -25,7 +25,7 @@ import { BranchPicker, BranchCommitLine } from "@/components/branch-picker"
 import type { GitBranch } from "@/lib/api/applications"
 import { AppDetailNav } from "@/app/apps/components/app-detail-nav"
 import Link from "next/link"
-import { useWorkContextStore } from "@/store/work-context"
+import { useRecentAppStore } from "@/store/recent-app"
 import { useFeaturesStore } from "@/store/features"
 import { cn } from "@/lib/utils"
 
@@ -44,10 +44,11 @@ export default function PublishPage({ params }: PageProps) {
   const [application, setApplication] = useState<Application | null>(null)
   const [environments, setEnvironments] = useState<ApplicationEnvironment[]>([])
   const [selectedEnv, setSelectedEnvState] = useState<string>("")
-  // Keep the shared work context in step so the chosen env carries to other pages.
+  // The user's choice goes into the URL, so the detail nav carries it to the
+  // other pages of this application and a shared link reproduces it.
   const setSelectedEnv = (env: string) => {
     setSelectedEnvState(env)
-    useWorkContextStore.getState().setContext({ env })
+    router.replace(`/apps/${namespace}/${name}/publish?environment=${encodeURIComponent(env)}`)
   }
   const [sourceType, setSourceType] = useState<ApplicationSourceType>("GIT")
   const [branch, setBranch] = useState<string>("main")
@@ -63,7 +64,7 @@ export default function PublishPage({ params }: PageProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const envInitialized = useRef(false)
   const { t } = useLanguage()
-  const enterApp = useWorkContextStore((state) => state.enterApp)
+  const rememberApp = useRecentAppStore((state) => state.remember)
   const objectStorageEnabled = useFeaturesStore((s) => s.features.objectStorage)
 
   const normalizeText = (value: string | null | undefined) => value ?? ""
@@ -85,7 +86,7 @@ export default function PublishPage({ params }: PageProps) {
 
         if (appRes.data) {
           setApplication(appRes.data)
-          enterApp({
+          rememberApp({
             namespace: appRes.data.namespace,
             name: appRes.data.name,
             description: appRes.data.description,
@@ -96,14 +97,15 @@ export default function PublishPage({ params }: PageProps) {
         if (envRes.data) {
           setEnvironments(envRes.data)
           if (!envInitialized.current && envRes.data.length > 0) {
-            // Prefer the environment carried in the work context so publishing
-            // lands on the same env the user was just looking at.
-            const carried = useWorkContextStore.getState().env
-            const initialEnv = envRes.data.some((env) => env.environment === carried)
-              ? carried
+            // The environment the URL names if this app has it, else the first one.
+            // Read once here rather than via useSearchParams, which would need its
+            // own Suspense boundary for a value that only seeds the first render.
+            const requested = new URLSearchParams(window.location.search).get("environment")
+            const initialEnv = envRes.data.some((env) => env.environment === requested)
+              ? requested
               : envRes.data[0].environment
             if (initialEnv) {
-              setSelectedEnv(initialEnv)
+              setSelectedEnvState(initialEnv)
               envInitialized.current = true
             }
           }
@@ -131,7 +133,7 @@ export default function PublishPage({ params }: PageProps) {
       }
     }
     fetchData()
-  }, [namespace, name, t, enterApp])
+  }, [namespace, name, t, rememberApp])
 
   const handlePublish = async () => {
     if (!selectedEnv) {

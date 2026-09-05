@@ -124,7 +124,8 @@ export function Pagination({
               key={item}
               variant={item === page ? "default" : "outline"}
               size="sm"
-              className="size-8 p-0 tabular-nums"
+              // Minimum width rather than fixed: a three-digit page number needs room.
+              className="h-8 min-w-8 px-2 tabular-nums"
               aria-current={item === page ? "page" : undefined}
               disabled={loading}
               onClick={() => onPageChange(item)}

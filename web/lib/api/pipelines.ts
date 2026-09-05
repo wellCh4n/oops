@@ -23,6 +23,31 @@ export const getPipelines = async (
   return response.json() as Promise<ApiResponse<Page<Pipeline>>>
 }
 
+/**
+ * The pipeline list page. Both the namespace and the application take "all" as a wildcard, so
+ * an empty `app` lists the whole scope through the same per-application endpoint.
+ */
+export const getPipelinesInScope = async (
+  namespace: string,
+  filters: { app?: string; environment?: string; mine?: boolean },
+  page?: number,
+  size?: number
+): Promise<ApiResponse<Page<Pipeline>>> => {
+  const params = new URLSearchParams()
+  if (filters.environment && filters.environment !== "all") params.set("environment", filters.environment)
+  if (filters.mine) params.set("mine", "true")
+  if (page !== undefined) params.set("page", String(page))
+  if (size !== undefined) params.set("size", String(size))
+
+  const qs = params.toString()
+  const application = filters.app || "all"
+  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${application}/pipelines${qs ? `?${qs}` : ""}`)
+  if (!response.ok) {
+    throw new Error("Failed to fetch pipelines")
+  }
+  return response.json() as Promise<ApiResponse<Page<Pipeline>>>
+}
+
 export const getPipeline = async (namespace: string, name: string, id: string): Promise<ApiResponse<Pipeline>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pipelines/${id}`)
   if (!response.ok) {

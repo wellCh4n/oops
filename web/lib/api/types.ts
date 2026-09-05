@@ -294,6 +294,7 @@ export interface Pipeline {
   message?: string | null
   triggerType?: PipelineTriggerType
   rollbackFromPipelineId?: string | null
+  applicationIcon?: string | null
 }
 
 // One build step as its container reports it. Times are the RFC3339 strings Kubernetes recorded.
