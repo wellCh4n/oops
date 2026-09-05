@@ -539,10 +539,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   </div>
                 )}
                 {/* Logs Area */}
-                <div className="flex-1 bg-console text-console-foreground border border-console-border rounded-md p-4 font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 bg-console text-console-foreground border border-console-border rounded-md font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                  {/* Fixed height with the content centred in it: the follow button comes and
+                      goes, and the header must neither change height nor shift its text with it. */}
                   {viewedStep && (
-                    <div className="flex min-h-6 items-center justify-between gap-2 pb-2 mb-2 border-b border-console-border font-sans text-xs">
-                      <span className="text-console-muted">
+                    <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-4 border-b border-console-border font-sans text-xs">
+                      <span className="text-console-muted leading-none">
                         {t("apps.pipeline.stepLogTitle")} <span className="font-mono text-console-foreground">{viewedStep}</span>
                       </span>
                       {/* Pinning a step must not yank the viewer along when the build moves on; this is
@@ -555,7 +557,11 @@ export default function PipelineDetailPage({ params }: PageProps) {
                       )}
                     </div>
                   )}
+                  {/* The padding lives inside the scroll viewport so it scrolls away with the lines,
+                      as on the pod log page; outside it, it is a fixed blank band that half-scrolled
+                      lines get clipped against. */}
                   <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
+                    <div className="p-4">
                     {logRows.map((row) => {
                       // Only a stamped line gets the time gutter. The unstamped ones are OOPS's own
                       // notices, not container output, so an empty gutter would just indent them away
@@ -579,6 +585,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                         {viewedStep ? t("apps.pipeline.waitingForLogs") : t("apps.pipeline.waitingForBuild")}
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
