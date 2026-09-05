@@ -3,6 +3,8 @@ package com.github.wellch4n.oops.application.service;
 import com.github.wellch4n.oops.application.port.ApplicationExpertConfigGateway;
 import com.github.wellch4n.oops.application.port.ApplicationMetricsGateway;
 import com.github.wellch4n.oops.application.port.ApplicationRuntimeGateway;
+import com.github.wellch4n.oops.application.port.EventStreamSink;
+import com.github.wellch4n.oops.application.port.PodLogStreamGateway;
 import com.github.wellch4n.oops.application.port.repository.ApplicationRepository;
 import com.github.wellch4n.oops.application.port.repository.DomainRepository;
 import com.github.wellch4n.oops.application.port.repository.EnvironmentRepository;
@@ -66,6 +68,7 @@ public class ApplicationService {
     private final ApplicationRuntimeGateway applicationRuntimeGateway;
     private final ApplicationExpertConfigGateway applicationExpertConfigGateway;
     private final ApplicationMetricsGateway applicationMetricsGateway;
+    private final PodLogStreamGateway podLogStreamGateway;
     private final ApplicationBuildConfigPolicy buildConfigPolicy;
     private final HealthCheckPolicy healthCheckPolicy;
     private final DomainPolicy domainPolicy;
@@ -78,6 +81,7 @@ public class ApplicationService {
                               ApplicationRuntimeGateway applicationRuntimeGateway,
                               ApplicationExpertConfigGateway applicationExpertConfigGateway,
                               ApplicationMetricsGateway applicationMetricsGateway,
+                              PodLogStreamGateway podLogStreamGateway,
                               ApplicationBuildConfigPolicy buildConfigPolicy,
                               HealthCheckPolicy healthCheckPolicy,
                               DomainPolicy domainPolicy,
@@ -89,6 +93,7 @@ public class ApplicationService {
         this.applicationRuntimeGateway = applicationRuntimeGateway;
         this.applicationExpertConfigGateway = applicationExpertConfigGateway;
         this.applicationMetricsGateway = applicationMetricsGateway;
+        this.podLogStreamGateway = podLogStreamGateway;
         this.buildConfigPolicy = buildConfigPolicy;
         this.healthCheckPolicy = healthCheckPolicy;
         this.domainPolicy = domainPolicy;
@@ -678,6 +683,18 @@ public class ApplicationService {
             throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return applicationRuntimeGateway.watchPodStatuses(environment, namespace, name);
+    }
+
+    /**
+     * Follows one pod's log into the sink; the returned handle stops it. {@code lastEventId} is the
+     * id of the last {@code log} event the receiver saw, so a reconnect resumes rather than replays.
+     */
+    public AutoCloseable streamPodLog(String namespace, String podName, String environmentName, String lastEventId, EventStreamSink sink) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return podLogStreamGateway.stream(environment, namespace, podName, lastEventId, sink);
     }
 
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {

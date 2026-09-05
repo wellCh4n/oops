@@ -10,8 +10,14 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * An {@link EventStreamSink} over a Spring {@link SseEmitter}, owning everything the transport needs
- * that the gateway pushing into it should not know about: the heartbeat that keeps idle proxies
+ * that the gateway pushing into it should not know about: the keepalive that keeps idle proxies
  * from cutting the connection, and tearing down the upstream work when the receiver goes away.
+ *
+ * <p>The keepalive is the comment line the SSE specification sets aside for exactly this
+ * ({@code :keepalive}): the browser discards it without raising an event, so no receiver has to
+ * know it exists. It doubles as the way a departed receiver is noticed — the servlet container only
+ * sees a closed connection when it writes to it — so a viewer who left is found within one interval
+ * and the upstream work released, rather than left following a log nobody reads.
  *
  * <p>Sends before the emitter has been handed to Spring are buffered by the emitter itself, so a
  * gateway may push — or even finish — synchronously from the controller.
@@ -19,8 +25,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Slf4j
 public final class SseEventStream implements EventStreamSink {
 
-    private static final long HEARTBEAT_INTERVAL_MILLIS = 25_000L;
-    private static final String HEARTBEAT_EVENT = "heartbeat";
+    private static final long KEEPALIVE_INTERVAL_MILLIS = 25_000L;
+    private static final String KEEPALIVE_COMMENT = "keepalive";
 
     private final SseEmitter emitter = new SseEmitter(0L);
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -48,7 +54,7 @@ public final class SseEventStream implements EventStreamSink {
         }
         // Started here rather than in the constructor so a lookup that throws before anything is
         // attached — the emitter then never reaches Spring — leaves no thread pushing into it.
-        Thread.startVirtualThread(this::heartbeat);
+        Thread.startVirtualThread(this::keepAlive);
     }
 
     @Override
@@ -57,15 +63,19 @@ public final class SseEventStream implements EventStreamSink {
     }
 
     @Override
-    public synchronized void send(String event, String id, String data) throws IOException {
-        if (closed.get()) {
-            return;
-        }
+    public void send(String event, String id, String data) throws IOException {
         SseEmitter.SseEventBuilder builder = SseEmitter.event().name(event);
         if (id != null) {
             builder.id(id);
         }
         builder.data(data, MediaType.TEXT_PLAIN);
+        write(builder);
+    }
+
+    private synchronized void write(SseEmitter.SseEventBuilder builder) throws IOException {
+        if (closed.get()) {
+            return;
+        }
         try {
             emitter.send(builder);
         } catch (Exception exception) {
@@ -106,11 +116,11 @@ public final class SseEventStream implements EventStreamSink {
         }
     }
 
-    private void heartbeat() {
+    private void keepAlive() {
         while (!closed.get()) {
             try {
-                Thread.sleep(HEARTBEAT_INTERVAL_MILLIS);
-                send(HEARTBEAT_EVENT, null, "");
+                Thread.sleep(KEEPALIVE_INTERVAL_MILLIS);
+                write(SseEmitter.event().comment(KEEPALIVE_COMMENT));
             } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
                 return;

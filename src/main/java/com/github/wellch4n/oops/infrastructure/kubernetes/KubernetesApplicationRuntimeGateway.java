@@ -205,8 +205,9 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
             cleanup.run();
         });
 
-        // Heartbeat: keeps the connection warm through idle proxies and lets us
-        // detect dead clients within ~25s (a failed send triggers cleanup).
+        // Keepalive: the SSE comment line, which the browser discards without raising an event.
+        // Keeps the connection warm through idle proxies and lets us detect dead clients within
+        // ~25s (a failed send triggers cleanup).
         Thread.startVirtualThread(() -> {
             while (!closed.get()) {
                 try {
@@ -214,7 +215,7 @@ public class KubernetesApplicationRuntimeGateway implements ApplicationRuntimeGa
                     if (closed.get()) {
                         return;
                     }
-                    emitter.send(SseEmitter.event().name("heartbeat").data(""));
+                    emitter.send(SseEmitter.event().comment("keepalive"));
                 } catch (InterruptedException _) {
                     Thread.currentThread().interrupt();
                     return;

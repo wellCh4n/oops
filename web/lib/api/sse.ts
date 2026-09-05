@@ -11,6 +11,8 @@ export interface SseWatchOptions<TEventMap extends Record<string, unknown>> {
   url: string
   // One handler per named SSE event. Event payloads are JSON-parsed.
   events: SseEventHandlers<TEventMap>
+  // Fired whenever the connection is (re)established, before any event arrives.
+  onOpen?: () => void
   // Per-failure callback, fired on every onerror except the one that
   // triggers onTerminate. Browser will auto-reconnect in this case.
   onError?: (event: Event) => void
@@ -35,6 +37,7 @@ export function watchSse<TEventMap extends Record<string, unknown>>(
 
   eventSource.onopen = () => {
     failureCount = 0
+    options.onOpen?.()
   }
 
   for (const [eventName, handler] of Object.entries(options.events)) {
@@ -66,4 +69,37 @@ export function watchSse<TEventMap extends Record<string, unknown>>(
   }
 
   return () => eventSource.close()
+}
+
+export interface SseEndingStreamHandlers {
+  // The stream ran to its natural end; the source is already closed.
+  onEnd?: () => void
+  // The connection could not be kept up; the source is already closed.
+  onTerminate?: () => void
+  // The connection is up — again, after a drop the browser recovered from.
+  onOpen?: () => void
+}
+
+// For a stream that ends with an "end" event. A browser EventSource reconnects on its own after
+// the server closes a response — that is what makes it resilient — so an ended stream has to be
+// closed from here, or a finished log would be fetched again every few seconds forever.
+export function watchSseUntilEnd<TEventMap extends Record<string, unknown>>(
+  url: string,
+  events: Omit<SseEventHandlers<TEventMap>, "end">,
+  handlers: SseEndingStreamHandlers
+): () => void {
+  let close = () => {}
+  close = watchSse<TEventMap & { end: unknown }>({
+    url,
+    events: {
+      ...events,
+      end: () => {
+        close()
+        handlers.onEnd?.()
+      },
+    } as SseEventHandlers<TEventMap & { end: unknown }>,
+    onOpen: handlers.onOpen,
+    onTerminate: handlers.onTerminate,
+  })
+  return close
 }

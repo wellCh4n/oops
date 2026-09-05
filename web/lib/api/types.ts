@@ -316,14 +316,15 @@ export interface PipelineStepsSnapshot {
   steps: PipelineStepStatus[]
 }
 
-export interface PipelineLogLine {
+// One line of a container log as the pipeline step and pod log streams carry it.
+export interface LogLine {
   // When the container wrote the line, as Kubernetes recorded it; null for an unstamped line.
   time?: string | null
   text: string
 }
 
-export interface PipelineLogBatch {
-  lines: PipelineLogLine[]
+export interface LogBatch {
+  lines: LogLine[]
 }
 
 export interface ConfigMap {

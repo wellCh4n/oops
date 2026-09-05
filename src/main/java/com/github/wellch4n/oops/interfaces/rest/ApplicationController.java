@@ -22,6 +22,7 @@ import com.github.wellch4n.oops.application.service.GitBranchService;
 import com.github.wellch4n.oops.application.service.NamespaceMigrationService;
 import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.application.service.PodMetricHistoryService;
+import com.github.wellch4n.oops.interfaces.sse.SseEventStream;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
 import java.time.Instant;
 import java.util.List;
@@ -309,6 +310,22 @@ public class ApplicationController {
                                               @PathVariable String name,
                                               @RequestParam String environment) {
         return applicationService.watchApplicationStatus(namespace, name, environment);
+    }
+
+    /**
+     * Server-sent {@code log} batches for one pod, tailed and then followed until the container's
+     * output ends. The browser's own reconnect sends the last event id back as {@code Last-Event-ID},
+     * and the stream resumes after that line.
+     */
+    @GetMapping("/{name}/pods/{pod}/log")
+    public SseEmitter streamPodLog(@PathVariable String namespace,
+                                   @PathVariable String name,
+                                   @PathVariable String pod,
+                                   @RequestParam String environment,
+                                   @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId) {
+        SseEventStream stream = new SseEventStream();
+        stream.attach(applicationService.streamPodLog(namespace, pod, environment, lastEventId, stream));
+        return stream.emitter();
     }
 
     @PutMapping("/{name}/pods/{pod}/restart")

@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
-import { watchSse, SseEventHandlers } from "./sse"
-import { ApiResponse, Pipeline, PipelineLogBatch, PipelineStepsSnapshot, Page } from "./types"
+import { watchSseUntilEnd, SseEndingStreamHandlers } from "./sse"
+import { ApiResponse, Pipeline, LogBatch, PipelineStepsSnapshot, Page } from "./types"
 
 export const getPipelines = async (
   namespace: string,
@@ -97,13 +97,9 @@ export const getCurrentImage = async (namespace: string, name: string, environme
   return response.json() as Promise<ApiResponse<string>>
 }
 
-interface PipelineStreamHandlers {
+interface PipelineStreamHandlers extends SseEndingStreamHandlers {
   // A message from the server saying why there is nothing more to show (the job was cleaned up…).
   onError: (message: string) => void
-  // The stream ran to its natural end; the source is already closed.
-  onEnd?: () => void
-  // The connection could not be kept up; the source is already closed.
-  onTerminate?: () => void
 }
 
 export interface PipelineStepsHandlers extends PipelineStreamHandlers {
@@ -112,30 +108,7 @@ export interface PipelineStepsHandlers extends PipelineStreamHandlers {
 }
 
 export interface PipelineStepLogHandlers extends PipelineStreamHandlers {
-  onLog: (batch: PipelineLogBatch) => void
-}
-
-// Both streams end with an "end" event. A browser EventSource reconnects on its own after the
-// server closes a response — that is what makes it resilient — so an ended stream has to be closed
-// from here, or a finished step's log would be fetched again every few seconds forever.
-function watchUntilEnd<TEventMap extends Record<string, unknown>>(
-  url: string,
-  events: Omit<SseEventHandlers<TEventMap>, "end">,
-  handlers: PipelineStreamHandlers
-): () => void {
-  let close = () => {}
-  close = watchSse<TEventMap & { end: unknown }>({
-    url,
-    events: {
-      ...events,
-      end: () => {
-        close()
-        handlers.onEnd?.()
-      },
-    } as SseEventHandlers<TEventMap & { end: unknown }>,
-    onTerminate: handlers.onTerminate,
-  })
-  return close
+  onLog: (batch: LogBatch) => void
 }
 
 // Follows the build's steps: which containers there are, and where each one stands, until the pod
@@ -146,7 +119,7 @@ export function watchPipelineSteps(
   id: string,
   handlers: PipelineStepsHandlers
 ): () => void {
-  return watchUntilEnd<{ steps: string[]; status: PipelineStepsSnapshot; error: string }>(
+  return watchSseUntilEnd<{ steps: string[]; status: PipelineStepsSnapshot; error: string }>(
     `/api/namespaces/${namespace}/applications/${name}/pipelines/${id}/steps/watch`,
     {
       steps: handlers.onSteps,
@@ -166,7 +139,7 @@ export function streamPipelineStepLog(
   container: string,
   handlers: PipelineStepLogHandlers
 ): () => void {
-  return watchUntilEnd<{ log: PipelineLogBatch; error: string }>(
+  return watchSseUntilEnd<{ log: LogBatch; error: string }>(
     `/api/namespaces/${namespace}/applications/${name}/pipelines/${id}/log?container=${encodeURIComponent(container)}`,
     {
       log: handlers.onLog,

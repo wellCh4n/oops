@@ -9,8 +9,6 @@ import org.springframework.web.util.UriUtils;
 
 final class WebSocketSessionSupport {
 
-    private static final long HEARTBEAT_INTERVAL_MILLIS = 10_000L;
-
     private WebSocketSessionSupport() {
     }
 
@@ -30,31 +28,6 @@ final class WebSocketSessionSupport {
     static void close(WebSocketSession session, String reason) throws IOException {
         if (session.isOpen()) {
             session.close(new CloseStatus(1008, reason));
-        }
-    }
-
-    static void startHeartbeat(WebSocketSession session, WebSocketStreamSink sink, Logger log) {
-        Thread heartbeatThread = Thread.ofVirtual().start(() -> {
-            while (session.isOpen()) {
-                try {
-                    Thread.sleep(HEARTBEAT_INTERVAL_MILLIS);
-                    sink.sendPing();
-                } catch (InterruptedException _) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (IOException ioException) {
-                    log.debug("WebSocket heartbeat failed for session {}", session.getId(), ioException);
-                    break;
-                }
-            }
-        });
-        session.getAttributes().put("heartbeatThread", heartbeatThread);
-    }
-
-    static void stopHeartbeat(WebSocketSession session) {
-        Thread heartbeatThread = (Thread) session.getAttributes().get("heartbeatThread");
-        if (heartbeatThread != null) {
-            heartbeatThread.interrupt();
         }
     }
 

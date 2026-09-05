@@ -5,15 +5,18 @@ import { useParams, useSearchParams } from "next/navigation"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { ConnectionLostBanner } from "@/components/connection-lost-banner"
-import { API_BASE_URL } from "@/lib/api/config"
-import { getToken } from "@/lib/auth"
+import { streamPodLog } from "@/lib/api/applications"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
 
-interface LogLine {
+interface LogRow {
   id: number
   text: string
 }
+
+// "ended" is the container's output being over — the server said so; "lost" is the connection
+// giving out with the browser's own reconnects exhausted.
+type StreamStatus = "connecting" | "connected" | "ended" | "lost"
 
 function ApplicationPodLogsContent() {
   const params = useParams()
@@ -23,11 +26,9 @@ function ApplicationPodLogsContent() {
   const pod = params.pod as string
   const env = searchParams.get("environment")
 
-  const [logs, setLogs] = useState<LogLine[]>([])
+  const [logs, setLogs] = useState<LogRow[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connecting" | "connected" | "disconnected"
-  >("connecting")
+  const [status, setStatus] = useState<StreamStatus>("connecting")
   const bottomRef = useRef<HTMLDivElement>(null)
   const logIdRef = useRef(0)
   const { t } = useLanguage()
@@ -35,70 +36,31 @@ function ApplicationPodLogsContent() {
   useEffect(() => {
     if (!env || !namespace || !name || !pod) return
 
-    // Use WebSocket instead of SSE
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const baseUrl = API_BASE_URL.startsWith('http')
-      ? API_BASE_URL.replace(/^http/, 'ws')
-      : `${wsProtocol}//${window.location.host}${API_BASE_URL}`
-
-    const wsUrl = `${baseUrl}/api/namespaces/${namespace}/applications/${name}/pods/${pod}/log?environment=${env}&token=${getToken()}`
-    let ws: WebSocket | null = null
-
-    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-
-    // Use a small timeout to prevent double connection in React Strict Mode
-    const connectTimeout = setTimeout(() => {
-      ws = new WebSocket(wsUrl)
-
-      ws.onopen = () => {
-        setConnectionStatus("connected")
-        setError(null)
-        heartbeatInterval = setInterval(() => {
-          if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send("ping")
-          }
-        }, 10000)
-      }
-
-      ws.onmessage = (event: MessageEvent<string>) => {
-        if (event.data === "pong") return
-        const text = event.data
-        const id = ++logIdRef.current
-        setLogs((prev) => [...prev, { id, text }])
-      }
-
-      ws.onerror = (err) => {
-        console.error("WebSocket error:", err)
-        setConnectionStatus("disconnected")
-        setError("WebSocket connection error")
-      }
-
-      ws.onclose = () => {
-        setConnectionStatus("disconnected")
-        if (heartbeatInterval) clearInterval(heartbeatInterval)
-      }
-    }, 100)
-
-    return () => {
-      clearTimeout(connectTimeout)
-      if (heartbeatInterval) clearInterval(heartbeatInterval)
-      if (ws) {
-        ws.close()
-      }
-    }
+    // A dropped connection is the browser's own reconnect, resuming from the last event id, so
+    // the rows already shown are never replayed and simply keep growing.
+    return streamPodLog(namespace, name, pod, env, {
+      onOpen: () => setStatus("connected"),
+      onLog: (batch) => {
+        const rows = batch.lines.map((line) => ({ id: ++logIdRef.current, text: line.text }))
+        setLogs((prev) => prev.concat(rows))
+      },
+      onError: setError,
+      onEnd: () => setStatus("ended"),
+      onTerminate: () => setStatus("lost"),
+    })
   }, [namespace, name, pod, env])
 
   useEffect(() => {
     requestAnimationFrame(() => {
       bottomRef.current?.scrollIntoView({ block: "end" })
     })
-  }, [logs])
+  }, [logs, status, error])
 
   if (!env) {
     return <div className="p-4">{t("pods.missingEnv")}</div>
   }
 
-  const isConnected = connectionStatus === "connected"
+  const isConnected = status === "connected"
 
   return (
     <ContentPage
@@ -116,7 +78,7 @@ function ApplicationPodLogsContent() {
       }
     >
       <div className="flex h-full min-h-0 flex-col">
-        {connectionStatus === "disconnected" && (
+        {status === "lost" && (
           <ConnectionLostBanner
             message={t("common.disconnected")}
             retryLabel={t("common.refresh")}
@@ -128,19 +90,23 @@ function ApplicationPodLogsContent() {
         <div className="flex-1 min-h-0 bg-background text-foreground overflow-hidden font-mono text-xs">
           <ScrollArea className="h-full w-full">
             <div className="p-4">
+              {/* The line's stamp is kept only for resuming the stream, not shown: an application
+                  log usually carries its own time, and a second one in front would just push the
+                  text over. */}
               {logs.map((log) => (
                 <div key={log.id} className="whitespace-pre-wrap break-all">
                   {log.text}
                 </div>
               ))}
+              {error && <div className="text-destructive italic">{error}</div>}
+              {status === "ended" && !error && (
+                <div className="text-muted-foreground italic">{t("pods.logEnded")}</div>
+              )}
               {/* Blinks only while the stream is connected: a cursor promises another line. */}
               {isConnected && (
                 <div aria-hidden>
                   <span className="inline-block h-[1.1em] w-2 translate-y-[0.15em] bg-foreground/70 animate-caret-blink motion-reduce:animate-none" />
                 </div>
-              )}
-              {error && logs.length === 0 && (
-                <div className="text-destructive italic">{error}</div>
               )}
             </div>
             {/* Last thing in the viewport, after the padding, so following the log lands on the

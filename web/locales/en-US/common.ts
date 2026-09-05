@@ -71,6 +71,7 @@ const common = {
   "terminal.files.renameFailed": "Rename failed",
   "terminal.files.deleteFailed": "Delete failed",
   "pods.missingEnv": "Missing env parameter",
+  "pods.logEnded": "Log ended: the container has exited",
   "common.error": "Error",
 }
 

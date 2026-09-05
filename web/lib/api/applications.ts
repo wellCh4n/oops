@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
-import { watchSse, SseWatchOptions } from "./sse"
-import { ActiveDeployment, Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, Page, LastSuccessfulPipelineInfo } from "./types"
+import { watchSse, watchSseUntilEnd, SseEndingStreamHandlers, SseWatchOptions } from "./sse"
+import { ActiveDeployment, Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, LogBatch, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -396,6 +396,31 @@ export const watchApplicationStatus = (
     url: `/api/namespaces/${namespace}/applications/${name}/status/watch?environment=${encodeURIComponent(env)}`,
     ...options,
   })
+}
+
+export interface PodLogHandlers extends SseEndingStreamHandlers {
+  onLog: (batch: LogBatch) => void
+  // A message from the server saying why there is nothing to show (the pod is gone…).
+  onError: (message: string) => void
+}
+
+// Tails a pod's log and follows it until the container's output ends. A dropped connection is
+// the browser's own reconnect, resuming from the last event id, so nothing is replayed.
+export const streamPodLog = (
+  namespace: string,
+  name: string,
+  podName: string,
+  env: string,
+  handlers: PodLogHandlers
+): (() => void) => {
+  return watchSseUntilEnd<{ log: LogBatch; error: string }>(
+    `/api/namespaces/${namespace}/applications/${name}/pods/${podName}/log?environment=${encodeURIComponent(env)}`,
+    {
+      log: handlers.onLog,
+      error: handlers.onError,
+    },
+    handlers
+  )
 }
 
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {

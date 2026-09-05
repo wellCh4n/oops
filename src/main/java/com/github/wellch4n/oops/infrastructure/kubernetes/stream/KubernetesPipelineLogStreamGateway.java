@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -43,11 +42,9 @@ import org.springframework.stereotype.Component;
  * <p>The events are {@code steps} (container names, once), {@code status} (a
  * {@link PipelineStepsSnapshot}, on every change), {@code log} (a batch of {@code {time, text}}
  * lines, id = the last stamped time in the batch), {@code error} (a message, when there is nothing
- * more to show) and {@code end}. Lines are batched rather than sent one per event because a build
- * writes tens of thousands of them, most only a few bytes long — git and buildah redraw progress with
- * a bare carriage return, which the reader ends a line on — so the per-event envelope would otherwise
- * outweigh the log itself. A batch is flushed as soon as the reader has nothing more buffered, so a
- * live step still shows each line the moment it arrives; only a replay of finished output fills them.
+ * more to show) and {@code end}. Lines travel in a {@link LogBatch}, flushed as soon as the reader
+ * has nothing more buffered, so a live step still shows each line the moment it arrives; only a
+ * replay of finished output fills them.
  */
 @Slf4j
 @Component
@@ -59,8 +56,6 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
     private static final String LOG_EVENT = "log";
     private static final String ERROR_EVENT = "error";
     private static final String END_EVENT = "end";
-    private static final int MAX_BATCH_LINES = 500;
-    private static final int MAX_BATCH_BYTES = 64 * 1024;
     private static final int MAX_LOG_RETRIES = 10;
     private static final long POD_WAIT_MINUTES = 5;
 
@@ -189,7 +184,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
             if (!awaitContainerStarted(client, workNamespace, podName, container, sink, handle)) {
                 return;
             }
-            streamLines(client, workNamespace, podName, container, parseInstant(lastEventId), sink, handle);
+            streamLines(client, workNamespace, podName, container, TimestampedLogLine.parseInstant(lastEventId), sink, handle);
             finish(sink, handle);
         } catch (Exception exception) {
             failQuietly(sink, handle, "Failed to read pipeline log: " + exception.getMessage());
@@ -279,7 +274,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
                         if (logLine.time() != null) {
                             lastTime = logLine.time();
                         }
-                        if (skipThrough != null && isAtOrBefore(lastTime, skipThrough)) {
+                        if (skipThrough != null && TimestampedLogLine.isAtOrBefore(lastTime, skipThrough)) {
                             continue;
                         }
                         batch.add(lastTime, logLine.text());
@@ -296,7 +291,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
                 }
                 retries++;
                 if (lastTime != null) {
-                    skipThrough = parseInstant(lastTime);
+                    skipThrough = TimestampedLogLine.parseInstant(lastTime);
                 }
                 Pod refreshedPod = client.pods().inNamespace(workNamespace).withName(podName).get();
                 if (refreshedPod == null) {
@@ -316,7 +311,7 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
         if (batch.isEmpty()) {
             return;
         }
-        sendEvent(sink, LOG_EVENT, batch.lastTime, Map.of("lines", batch.lines));
+        sendEvent(sink, LOG_EVENT, batch.lastTime(), Map.of("lines", batch.lines()));
         batch.clear();
     }
 
@@ -405,50 +400,4 @@ public class KubernetesPipelineLogStreamGateway implements PipelineLogStreamGate
                 || status == PipelineStatus.BUILD_SUCCEEDED;
     }
 
-    private static Instant parseInstant(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Instant.parse(value);
-        } catch (DateTimeParseException _) {
-            return null;
-        }
-    }
-
-    private static boolean isAtOrBefore(String time, Instant threshold) {
-        Instant instant = parseInstant(time);
-        return instant != null && !instant.isAfter(threshold);
-    }
-
-    /** One {@code log} event in the making: the lines read since the last flush. */
-    private static final class LogBatch {
-        private final List<LogLine> lines = new ArrayList<>();
-        private int bytes;
-        private String lastTime;
-
-        void add(String time, String text) {
-            lines.add(new LogLine(time, text));
-            bytes += text.length();
-            if (time != null) {
-                lastTime = time;
-            }
-        }
-
-        boolean isFull() {
-            return lines.size() >= MAX_BATCH_LINES || bytes >= MAX_BATCH_BYTES;
-        }
-
-        boolean isEmpty() {
-            return lines.isEmpty();
-        }
-
-        void clear() {
-            lines.clear();
-            bytes = 0;
-        }
-    }
-
-    private record LogLine(String time, String text) {
-    }
 }
