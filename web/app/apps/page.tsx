@@ -39,8 +39,11 @@ function AppsContent() {
   const { namespaces } = useNamespaces()
   // The namespace filter lives in the URL and nowhere else: absent means every namespace.
   const selectedNamespace = searchParams.get("namespace") || ALL_NAMESPACES
+  // The keyword lives in the URL too, so coming back from an application lands on the same
+  // search. The input holds a draft that only reaches the URL when the search is submitted.
+  const keyword = searchParams.get("keyword") ?? ""
 
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState(keyword)
   const [loading, setLoading] = useState(false)
   const [applications, setApplications] = useState<Application[]>([])
   const [totalPages, setTotalPages] = useState(0)
@@ -77,10 +80,15 @@ function AppsContent() {
     router.replace(`/apps?${params.toString()}`)
   }, [router, searchParams])
 
+  // Browser navigation (back, a shared link) changes the keyword under the input: follow it.
+  useEffect(() => {
+    setSearchQuery(keyword)
+  }, [keyword])
+
   useEffect(() => {
     fetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNamespace, page, size, ownerOnly])
+  }, [selectedNamespace, keyword, page, size, ownerOnly])
 
   // The deploying marks refresh on their own, independently of the application list: a poll
   // that fails is simply skipped, leaving the marks that are already on screen in place.
@@ -109,14 +117,19 @@ function AppsContent() {
   }, [fetchActiveDeployments])
 
   const handleSearch = () => {
-    updateParams({ page: "1" })
-    fetchData()
+    const nextKeyword = searchQuery.trim()
+    if (nextKeyword === keyword && page === 1) {
+      // Nothing in the URL would change, so the effect above will not run: refresh by hand.
+      fetchData()
+      return
+    }
+    updateParams({ keyword: nextKeyword, page: "1" })
   }
 
   const fetchData = async () => {
     setLoading(true)
     try {
-      const res = await getApplications(selectedNamespace, searchQuery || undefined, page, size, ownerOnly)
+      const res = await getApplications(selectedNamespace, keyword || undefined, page, size, ownerOnly)
       if (res.data) {
         setApplications(res.data.data)
         setTotalPages(res.data.totalPages)
