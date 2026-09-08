@@ -378,7 +378,8 @@ def test_cluster_facing_reads_answer_for_a_deployed_application(
     workload and each needs the same expensive deploy to exist first.
     """
     from test_deploy import configure_for_build, git_strategy
-    from test_deploy import DEPLOY_TIMEOUT, TERMINAL_STATUSES
+    from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES,
+                             require_successful_deploy)
     from oops_client import wait_until
 
     configure_for_build(client, namespace, application, environment)
@@ -391,8 +392,7 @@ def test_cluster_facing_reads_answer_for_a_deployed_application(
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    if pipeline["status"] != "SUCCEEDED":
-        pytest.skip(f"deploy ended as {pipeline['status']}")
+    require_successful_deploy(pipeline, "the workload these reads describe")
 
     reads = {
         "/status": "pod status",

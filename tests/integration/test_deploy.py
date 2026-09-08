@@ -36,6 +36,21 @@ PUBLIC_IMAGE_TAG = os.environ.get("OOPS_TEST_IMAGE_TAG", "alpine")
 DEPLOY_TIMEOUT = int(os.environ.get("OOPS_TEST_DEPLOY_TIMEOUT", "900"))
 
 
+def require_successful_deploy(pipeline: dict, needed_for: str) -> dict:
+    """The setup deploy a scenario does for itself has to succeed, or it fails.
+
+    Skipping instead takes the whole scenario out of the run without a sound,
+    and the endpoints only it reaches are then reported by the coverage test as
+    covered by no scenario at all — a red build naming the wrong file, twenty
+    minutes after the deploy that actually broke. The pipeline's own message is
+    the part worth reading, so carry it into the failure.
+    """
+    if pipeline["status"] == "SUCCEEDED":
+        return pipeline
+    pytest.fail(f"the deploy this scenario needs for {needed_for} ended as "
+                f"{pipeline['status']}: {pipeline.get('message') or 'no message'}")
+
+
 def configure_for_build(client, namespace, application, environment):
     """Give an application the minimum it needs to build and serve.
 

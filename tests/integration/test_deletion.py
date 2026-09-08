@@ -16,7 +16,7 @@ import pytest
 
 from oops_client import wait_until
 from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES, configure_for_build,
-                         git_strategy)
+                         git_strategy, require_successful_deploy)
 
 
 def deploy_and_wait(client, namespace, application, environment) -> str:
@@ -30,8 +30,7 @@ def deploy_and_wait(client, namespace, application, environment) -> str:
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish before deleting it")
-    if pipeline["status"] != "SUCCEEDED":
-        pytest.skip(f"deploy ended as {pipeline['status']}, nothing to delete")
+    require_successful_deploy(pipeline, "the workload to delete")
     return pipeline_id
 
 

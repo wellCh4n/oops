@@ -21,7 +21,7 @@ import pytest
 
 from oops_client import read_until_closed, wait_until
 from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES, configure_for_build,
-                         git_strategy)
+                         git_strategy, require_successful_deploy)
 
 pytestmark = pytest.mark.cluster
 
@@ -48,9 +48,7 @@ def deployed_application(client, namespace, environment):
 
         pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                               description="the fixture deploy to finish")
-        if pipeline["status"] != "SUCCEEDED":
-            pytest.skip(
-                f"fixture deploy ended as {pipeline['status']}, cannot stream")
+        require_successful_deploy(pipeline, "the pipeline and pod to stream")
         yield application, pipeline_id
     finally:
         try:

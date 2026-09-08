@@ -23,7 +23,7 @@ import pytest
 
 from oops_client import wait_until
 from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES, configure_for_build,
-                         git_strategy)
+                         git_strategy, require_successful_deploy)
 from test_streams import first_running_pod
 
 pytestmark = pytest.mark.cluster
@@ -113,9 +113,7 @@ def pod_files(client, namespace, environment):
 
         pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                               description="the fixture deploy to finish")
-        if pipeline["status"] != "SUCCEEDED":
-            pytest.skip(f"fixture deploy ended as {pipeline['status']}, so there "
-                        f"is no container to browse")
+        require_successful_deploy(pipeline, "the container to browse")
 
         pod = wait_until(
             lambda: first_running_pod(client, namespace, application, environment),
