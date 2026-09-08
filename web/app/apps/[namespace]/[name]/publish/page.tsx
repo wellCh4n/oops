@@ -61,7 +61,8 @@ export default function PublishPage({ params }: PageProps) {
   const [publishRepository, setPublishRepository] = useState<string>("")
   // IMAGE source: the image name is the application's build config, only the tag is chosen here.
   const [imageRepository, setImageRepository] = useState<string>("")
-  const [imageTag, setImageTag] = useState<string>("")
+  // `latest` until a previous image publish names a tag, the way the branch defaults to `main`.
+  const [imageTag, setImageTag] = useState<string>("latest")
   const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | null>(null)
@@ -139,7 +140,7 @@ export default function PublishPage({ params }: PageProps) {
             setPublishRepository(normalizeText(lastPublishConfig.objectKey) || normalizeText(lastPublishConfig.url))
           }
           if (currentSourceType === "IMAGE" && lastPublishConfig?.type === "IMAGE") {
-            setImageTag(normalizeText(lastPublishConfig.tag))
+            setImageTag(normalizeText(lastPublishConfig.tag) || "latest")
           }
         }
       } catch {
