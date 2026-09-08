@@ -159,8 +159,8 @@ public class ApplicationService {
         exist.changeProfile(request.description(), normalizeOwner(request.owner()), request.icon());
         exist.changeCollaborators(normalizeCollaborators(request.collaborators(), exist.getOwner()));
         // The basic-info editor saves the profile and the environment bindings as one form, so they
-        // are one request and one transaction. A caller that omits the field (the CLI's `app update`)
-        // leaves the bindings alone; `PUT .../environments` remains for changing them on their own.
+        // are one request and one transaction. An OpenAPI caller that omits the field leaves the
+        // bindings alone; `PUT .../environments` remains for changing them on their own.
         if (request.environments() != null) {
             exist.bindEnvironments(toEnvironmentDomains(request.environments()));
         }
