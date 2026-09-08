@@ -124,7 +124,7 @@ export default function PublishPage({ params }: PageProps) {
         if (buildConfigRes.data?.sourceType) {
           setSourceType(buildConfigRes.data.sourceType)
         }
-        setImageRepository(buildConfigRes.data?.repository ?? "")
+        setImageRepository(buildConfigRes.data?.image ?? "")
         if (runtimeSpecRes.data) {
           setRuntimeSpec(runtimeSpecRes.data)
         }

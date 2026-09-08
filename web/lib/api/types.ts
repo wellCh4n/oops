@@ -107,8 +107,11 @@ export interface ApplicationBuildConfig {
   namespace: string
   applicationName: string
   sourceType?: ApplicationSourceType
-  // Git URL for GIT, image name without a tag for IMAGE (the tag is chosen per publish).
+  // Git URL, used when sourceType is GIT.
   repository?: string
+  // Image name without a tag, used when sourceType is IMAGE (the tag is chosen per publish).
+  // Separate from repository so switching source keeps both values.
+  image?: string
   dockerFileConfig?: DockerFileConfig
   buildImage?: string
   environmentConfigs?: ApplicationBuildEnvironmentConfig[]

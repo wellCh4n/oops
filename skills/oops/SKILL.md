@@ -140,10 +140,10 @@ Without any `--build-command` the existing commands are left as they are; to cle
 ```bash
 python skills/oops/scripts/oops.py app build set -n <ns> <app> \
     --source image \
-    --repository "ghcr.io/owner/app"
+    --image "ghcr.io/owner/app"
 ```
 
-`--repository` is the image name **without a tag or digest** — the tag is chosen at each deploy
+`--image` is the image name **without a tag or digest** — the tag is chosen at each deploy
 (step 7). Dockerfile, build image and build commands do not apply and are dropped. Only images
 pullable without credentials are supported.
 

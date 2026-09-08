@@ -19,17 +19,25 @@ public class ApplicationBuildConfig extends BaseDomainObject {
     private List<EnvironmentConfig> environmentConfigs;
 
     /**
-     * Where the source lives: the Git repository URL for GIT, the image name (without tag) for IMAGE,
-     * {@code null} for ZIP. Convenience accessor over {@link #sourceConfig}; named without a {@code get}
-     * prefix so Jackson does not treat it as a bean property during entity/domain mapping.
+     * The Git repository URL, or {@code null} for any other source. Convenience accessor over
+     * {@link #sourceConfig}; named without a {@code get} prefix so Jackson does not treat it as a
+     * bean property during entity/domain mapping.
+     *
+     * <p>Deliberately not "the source location, whatever the type": a caller that wants the Git URL
+     * and a caller that wants the image name want different things, and one accessor serving both
+     * is how a Git URL ends up being deployed as an image name.
      */
     public String repository() {
-        return switch (sourceConfig) {
-            case GitSourceConfig gitSourceConfig -> gitSourceConfig.repository();
-            case ImageSourceConfig imageSourceConfig -> imageSourceConfig.repository();
-            case ZipSourceConfig ignored -> null;
-            case null -> null;
-        };
+        return sourceConfig instanceof GitSourceConfig gitSourceConfig
+                ? gitSourceConfig.repository()
+                : null;
+    }
+
+    /** The image name without a tag, or {@code null} for any other source. See {@link #repository()}. */
+    public String image() {
+        return sourceConfig instanceof ImageSourceConfig imageSourceConfig
+                ? imageSourceConfig.image()
+                : null;
     }
 
     @Data

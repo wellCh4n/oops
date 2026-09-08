@@ -147,7 +147,7 @@ def configure_for_image(client, namespace, application, environment):
         "namespace": namespace,
         "applicationName": application,
         "sourceType": "IMAGE",
-        "repository": PUBLIC_IMAGE,
+        "image": PUBLIC_IMAGE,
     })
 
 

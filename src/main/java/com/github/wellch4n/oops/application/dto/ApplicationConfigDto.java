@@ -55,8 +55,13 @@ public final class ApplicationConfigDto {
             String namespace,
             String applicationName,
             ApplicationSourceType sourceType,
-            /** Git URL for GIT, image name without a tag for IMAGE, unused for ZIP. */
+            /** Git URL, used when sourceType is GIT. */
             String repository,
+            /**
+             * Image name without a tag, used when sourceType is IMAGE. Separate from
+             * {@code repository} so an application that switches between the two sources keeps both.
+             */
+            String image,
             DockerFileConfig dockerFileConfig,
             String buildImage,
             List<BuildEnvironmentConfig> environmentConfigs
@@ -72,6 +77,7 @@ public final class ApplicationConfigDto {
                     config.getApplicationName(),
                     config.getSourceType(),
                     config.repository(),
+                    config.image(),
                     DockerFileConfig.from(config.getDockerFileConfig()),
                     config.getBuildImage(),
                     map(config.getEnvironmentConfigs(), BuildEnvironmentConfig::from)
@@ -88,7 +94,7 @@ public final class ApplicationConfigDto {
             config.setSourceConfig(switch (sourceType != null ? sourceType : ApplicationSourceType.GIT) {
                 case GIT -> new GitSourceConfig(repository);
                 case ZIP -> new ZipSourceConfig();
-                case IMAGE -> new ImageSourceConfig(repository);
+                case IMAGE -> new ImageSourceConfig(image);
             });
             config.setDockerFileConfig(dockerFileConfig != null ? dockerFileConfig.toDomain() : null);
             config.setBuildImage(buildImage);

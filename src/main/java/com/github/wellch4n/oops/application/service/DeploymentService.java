@@ -130,7 +130,7 @@ public class DeploymentService {
                                 DeployMode deployMode,
                                 String operatorUserId) {
         ImagePublishConfig publishConfig = deployStrategyPolicy.resolveImagePublishConfig(
-                buildConfig != null ? buildConfig.repository() : null, strategy.tag());
+                buildConfig != null ? buildConfig.image() : null, strategy.tag());
         Pipeline pipeline = pipelineRepository.save(Pipeline.initializeWithArtifact(
                 application.getNamespace(),
                 application.getName(),

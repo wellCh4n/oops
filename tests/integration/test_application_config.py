@@ -124,7 +124,7 @@ def test_image_build_config_keeps_only_the_image(client, namespace, application,
         "namespace": namespace,
         "applicationName": application,
         "sourceType": "IMAGE",
-        "repository": "ghcr.io/example/service",
+        "image": "ghcr.io/example/service",
         "buildImage": "node:20-slim",
         "dockerFileConfig": {"type": "USER", "content": "FROM alpine:3.20\n"},
         "environmentConfigs": [
@@ -135,7 +135,7 @@ def test_image_build_config_keeps_only_the_image(client, namespace, application,
     stored = client.get(
         f"/api/namespaces/{namespace}/applications/{application}/build/config").data
     assert stored["sourceType"] == "IMAGE"
-    assert stored["repository"] == "ghcr.io/example/service"
+    assert stored["image"] == "ghcr.io/example/service"
     assert not stored.get("buildImage")
     assert not stored.get("dockerFileConfig")
 
@@ -150,7 +150,7 @@ def test_image_build_config_rejects_a_tag_in_the_image_name(client, namespace,
             "namespace": namespace,
             "applicationName": application,
             "sourceType": "IMAGE",
-            "repository": image,
+            "image": image,
         }, expect_success=False)
         assert response.success is False, f"{image!r} should have been rejected"
     # a registry port is not a tag
@@ -158,7 +158,7 @@ def test_image_build_config_rejects_a_tag_in_the_image_name(client, namespace,
         "namespace": namespace,
         "applicationName": application,
         "sourceType": "IMAGE",
-        "repository": "registry.local:5000/example/service",
+        "image": "registry.local:5000/example/service",
     })
 
 

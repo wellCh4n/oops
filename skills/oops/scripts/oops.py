@@ -251,6 +251,7 @@ def cmd_app_build_get(client: Client, args: argparse.Namespace) -> None:
     def human(c):
         print(f"Source:      {dash(c.get('sourceType'))}")
         print(f"Repository:  {dash(c.get('repository'))}")
+        print(f"Image:       {dash(c.get('image'))}")
         print(f"Build image: {dash(c.get('buildImage'))}")
         df = c.get("dockerFileConfig") or {}
         print(f"Dockerfile:  type={dash(df.get('type'))}, path={dash(df.get('path'))}")
@@ -282,7 +283,10 @@ def cmd_app_build_set(client: Client, args: argparse.Namespace) -> None:
         "namespace": args.namespace,
         "applicationName": args.name,
         "sourceType": args.source.upper(),
+        # Both travel every time: the Git URL and the image name are separate fields, so an
+        # application that switches source keeps the one it is not using.
         "repository": args.repository or "",
+        "image": args.image or "",
         "dockerFileConfig": {
             "type": args.dockerfile_type.upper(),
             "path": args.dockerfile_path,
@@ -636,8 +640,9 @@ def build_parser() -> argparse.ArgumentParser:
     build_set.add_argument("-n", "--namespace", required=True)
     build_set.add_argument("name")
     build_set.add_argument("--source", default="git", choices=["git", "zip", "image"])
-    build_set.add_argument("--repository", default="",
-                           help="Git URL for --source git; image name without a tag for --source image")
+    build_set.add_argument("--repository", default="", help="Git URL, for --source git")
+    build_set.add_argument("--image", default="",
+                           help="image name without a tag, for --source image")
     build_set.add_argument("--dockerfile-type", default="user", choices=["builtin", "user"], dest="dockerfile_type")
     build_set.add_argument("--dockerfile-path", default="Dockerfile", dest="dockerfile_path")
     build_set.add_argument("--dockerfile-content", dest="dockerfile_content")

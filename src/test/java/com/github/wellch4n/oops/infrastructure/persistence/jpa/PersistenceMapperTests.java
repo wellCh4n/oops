@@ -55,7 +55,7 @@ class PersistenceMapperTests {
 
         assertInstanceOf(ImageSourceConfig.class, entity.getSourceConfig());
         assertEquals(ApplicationSourceType.IMAGE, roundTrip.getSourceType());
-        assertEquals("nginx", roundTrip.repository());
+        assertEquals("nginx", roundTrip.image());
     }
 
     @Test
@@ -63,8 +63,8 @@ class PersistenceMapperTests {
         SourceConfigConverter converter = new SourceConfigConverter();
 
         String imageJson = converter.convertToDatabaseColumn(new ImageSourceConfig("nginx"));
-        assertEquals("{\"type\":\"IMAGE\",\"repository\":\"nginx\"}", imageJson);
-        assertEquals("nginx", ((ImageSourceConfig) converter.convertToEntityAttribute(imageJson)).repository());
+        assertEquals("{\"type\":\"IMAGE\",\"image\":\"nginx\"}", imageJson);
+        assertEquals("nginx", ((ImageSourceConfig) converter.convertToEntityAttribute(imageJson)).image());
 
         String gitJson = converter.convertToDatabaseColumn(new GitSourceConfig("git@example.com:repo.git"));
         assertInstanceOf(GitSourceConfig.class, converter.convertToEntityAttribute(gitJson));

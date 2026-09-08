@@ -11,10 +11,13 @@ public class ApplicationBuildConfigPolicy {
     }
 
     /**
-     * {@code repository} is the Git URL for GIT and the image name for IMAGE; ZIP carries none.
+     * {@code repository} is the Git URL and {@code image} the image name; they are separate fields
+     * so that switching an application between the two sources keeps both, and only the one the
+     * chosen source uses is validated.
      */
     public void validate(ApplicationSourceType sourceType,
                          String repository,
+                         String image,
                          DockerFileType dockerFileType,
                          String dockerFileContent) {
         ApplicationSourceType normalized = normalizeSourceType(sourceType);
@@ -22,7 +25,7 @@ public class ApplicationBuildConfigPolicy {
             throw new BizException("Repository is required when source type is GIT");
         }
         if (normalized == ApplicationSourceType.IMAGE) {
-            ensureImageRepositoryWithoutTag(repository);
+            ensureImageWithoutTag(image);
         }
         if (normalized != ApplicationSourceType.IMAGE
                 && dockerFileType == DockerFileType.USER && isBlank(dockerFileContent)) {
@@ -30,11 +33,11 @@ public class ApplicationBuildConfigPolicy {
         }
     }
 
-    public SourceConfig buildSourceConfig(ApplicationSourceType sourceType, String repository) {
+    public SourceConfig buildSourceConfig(ApplicationSourceType sourceType, String repository, String image) {
         return switch (normalizeSourceType(sourceType)) {
             case GIT -> new GitSourceConfig(repository);
             case ZIP -> new ZipSourceConfig();
-            case IMAGE -> new ImageSourceConfig(repository.trim());
+            case IMAGE -> new ImageSourceConfig(image.trim());
         };
     }
 
@@ -43,20 +46,20 @@ public class ApplicationBuildConfigPolicy {
      * either be silently doubled or override what the operator picks. The check looks only past the
      * last {@code /} because a registry host may legitimately carry a port ({@code host:5000/app}).
      */
-    private void ensureImageRepositoryWithoutTag(String repository) {
-        if (isBlank(repository)) {
-            throw new BizException("Image repository is required when source type is IMAGE");
+    private void ensureImageWithoutTag(String image) {
+        if (isBlank(image)) {
+            throw new BizException("Image is required when source type is IMAGE");
         }
-        String trimmed = repository.trim();
+        String trimmed = image.trim();
         if (trimmed.chars().anyMatch(Character::isWhitespace)) {
-            throw new BizException("Image repository must not contain whitespace");
+            throw new BizException("Image must not contain whitespace");
         }
         String lastSegment = trimmed.substring(trimmed.lastIndexOf('/') + 1);
         if (lastSegment.isEmpty()) {
-            throw new BizException("Image repository must not end with '/'");
+            throw new BizException("Image must not end with '/'");
         }
         if (lastSegment.indexOf(':') >= 0 || lastSegment.indexOf('@') >= 0) {
-            throw new BizException("Image repository must not include a tag or digest; the tag is chosen when publishing");
+            throw new BizException("Image must not include a tag or digest; the tag is chosen when publishing");
         }
     }
 

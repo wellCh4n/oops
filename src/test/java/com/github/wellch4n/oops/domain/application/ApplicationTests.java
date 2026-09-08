@@ -160,7 +160,7 @@ class ApplicationTests {
 
         ApplicationBuildConfig stored = application.getBuildConfig();
         assertEquals(ApplicationSourceType.IMAGE, application.sourceType());
-        assertEquals("ghcr.io/org/app", stored.repository());
+        assertEquals("ghcr.io/org/app", stored.image());
         assertNull(stored.getBuildImage());
         assertNull(stored.getDockerFileConfig());
         assertNull(stored.getEnvironmentConfigs());

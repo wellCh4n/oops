@@ -62,6 +62,7 @@ export default function ApplicationsDocPage() {
             rows={[
               { name: "sourceType", type: "string", required: true, descriptionKey: "doc.applications.build.body.sourceType" },
               { name: "repository", type: "string", descriptionKey: "doc.applications.build.body.repository" },
+              { name: "image", type: "string", descriptionKey: "doc.applications.build.body.image" },
               { name: "dockerFileConfig.type", type: "string", descriptionKey: "doc.applications.build.body.dockerfileType" },
               { name: "dockerFileConfig.path", type: "string", descriptionKey: "doc.applications.build.body.dockerfilePath" },
               { name: "dockerFileConfig.content", type: "string", descriptionKey: "doc.applications.build.body.dockerfileContent" },

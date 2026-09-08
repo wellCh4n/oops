@@ -59,6 +59,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     defaultValues: {
       sourceType: initialBuildConfig?.sourceType || "GIT",
       repository: initialBuildConfig?.repository ?? "",
+      image: initialBuildConfig?.image ?? "",
       dockerFileConfig: normalizedDockerFileConfig,
       buildImage: initialBuildConfig?.buildImage ?? "",
       environmentConfigs: initialEnvConfigs.map((config) => ({
@@ -117,6 +118,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
+    image: values.image ?? "",
     dockerFileConfig: values.dockerFileConfig ?? { type: "BUILTIN", path: "Dockerfile" },
     buildImage: values.buildImage ?? "",
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
@@ -181,8 +183,10 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       // the rest of the build settings.
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
-        // Git URL or image name, depending on the source; ZIP has neither.
-        repository: data.sourceType === "ZIP" ? undefined : data.repository?.trim() || undefined,
+        // Both travel on every save: the backend keeps only the one its source uses, and sending
+        // the other back unchanged is what lets a switch between GIT and IMAGE keep both values.
+        repository: data.repository?.trim() || undefined,
+        image: data.image?.trim() || undefined,
         dockerFileConfig: normalizedDockerFileConfig,
         buildImage: data.buildImage ?? undefined,
         environmentConfigs: data.sourceType === "IMAGE"
@@ -300,7 +304,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
             ) : sourceType === "IMAGE" ? (
               <FormField
                 control={form.control}
-                name="repository"
+                name="image"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center gap-1"><Container className="size-3.5" />{t("apps.build.imageRepository")}</FormLabel>

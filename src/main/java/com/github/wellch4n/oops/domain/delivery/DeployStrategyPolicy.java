@@ -59,9 +59,9 @@ public class DeployStrategyPolicy {
      * request — the publish only names the tag, and the tag must be an OCI tag on its own, so a caller
      * cannot smuggle a different image (or a digest) in through it.
      */
-    public ImagePublishConfig resolveImagePublishConfig(String repository, String tag) {
-        if (repository == null || repository.isBlank()) {
-            throw new BizException("Image repository is required for IMAGE publish");
+    public ImagePublishConfig resolveImagePublishConfig(String image, String tag) {
+        if (image == null || image.isBlank()) {
+            throw new BizException("Image is required for IMAGE publish");
         }
         String normalizedTag = blankToNull(tag == null ? null : tag.trim());
         if (normalizedTag == null) {
@@ -70,7 +70,7 @@ public class DeployStrategyPolicy {
         if (!IMAGE_TAG.matcher(normalizedTag).matches()) {
             throw new BizException("Invalid image tag: " + normalizedTag);
         }
-        return new ImagePublishConfig(repository.trim(), normalizedTag);
+        return new ImagePublishConfig(image.trim(), normalizedTag);
     }
 
     private static String blankToNull(String value) {
