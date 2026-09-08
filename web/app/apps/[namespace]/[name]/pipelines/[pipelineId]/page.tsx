@@ -23,7 +23,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns, imageTag } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2, Container, Loader2, X, Radio } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2, Loader2, X, Radio } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -409,17 +409,6 @@ export default function PipelineDetailPage({ params }: PageProps) {
               {/* With the build log gone, this badge is the only thing on the page saying why. The
                   header is already a dense row of labelled badges, so the source id stays in the
                   tooltip and the badge itself links to it. */}
-              {/* Same role as the rollback badge: with no build log on the page, this is what
-                  says which image went out and why there is nothing to watch. */}
-              {isImagePublish && pipeline?.artifact && (
-                <span className="flex items-center gap-2 whitespace-nowrap">
-                  <Badge variant="outline" className="gap-1 whitespace-nowrap">
-                    <Container className="size-3" />
-                    {t("pipelines.col.imageTag")}
-                  </Badge>
-                  <Badge variant="outline"><Copyable value={pipeline.artifact} maxLength={Infinity} /></Badge>
-                </span>
-              )}
               {isRollback && (
                 pipeline?.rollbackFromPipelineId ? (
                   <Tooltip>
