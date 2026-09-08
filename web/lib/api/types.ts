@@ -79,6 +79,8 @@ export interface Application {
   collaboratorNames?: Record<string, string>
   sourceType?: ApplicationSourceType
   createdTime?: string
+  // Update only: the environment bindings, saved with the profile in one request. Omitted means unchanged.
+  environments?: ApplicationEnvironment[]
 }
 
 // An in-flight pipeline, fetched for a whole namespace scope at once so the application

@@ -95,10 +95,6 @@ public class Application extends BaseAggregateRoot {
         }
     }
 
-    public void updateBuildEnvironmentConfigs(List<ApplicationBuildConfig.EnvironmentConfig> configs) {
-        ensureBuildConfig().setEnvironmentConfigs(configs);
-    }
-
     public void updateRuntimeSpec(
             ApplicationRuntimeSpec request,
             HealthCheckPolicy healthCheckPolicy
@@ -108,17 +104,6 @@ public class Application extends BaseAggregateRoot {
                 ? request.getEnvironmentConfigs()
                 : Collections.emptyList());
         target.setHealthCheck(normalizeHealthCheck(request.getHealthCheck(), healthCheckPolicy));
-    }
-
-    public void updateRuntimeEnvironmentConfigs(
-            List<ApplicationRuntimeSpec.EnvironmentConfig> configs,
-            HealthCheckPolicy healthCheckPolicy
-    ) {
-        ApplicationRuntimeSpec target = ensureRuntimeSpec();
-        ApplicationRuntimeSpec request = new ApplicationRuntimeSpec();
-        request.setEnvironmentConfigs(configs);
-        request.setHealthCheck(target.getHealthCheck());
-        updateRuntimeSpec(request, healthCheckPolicy);
     }
 
     public void bindEnvironments(List<ApplicationEnvironment> configs) {
@@ -188,13 +173,6 @@ public class Application extends BaseAggregateRoot {
                 .filter(config -> environmentName != null && environmentName.equals(config.getEnvironment()))
                 .findFirst()
                 .orElseGet(ApplicationExpertConfig.EnvironmentConfig::new);
-    }
-
-    public List<ApplicationBuildConfig.EnvironmentConfig> buildEnvironmentConfigs() {
-        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
-            return Collections.emptyList();
-        }
-        return buildConfig.getEnvironmentConfigs();
     }
 
     public List<ApplicationRuntimeSpec.EnvironmentConfig> runtimeEnvironmentConfigs() {

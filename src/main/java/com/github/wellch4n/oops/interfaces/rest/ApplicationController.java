@@ -148,42 +148,10 @@ public class ApplicationController {
         return Result.success(applicationService.updateApplicationBuildConfig(namespace, name, request));
     }
 
-    @GetMapping("/{name}/environments/build/configs")
-    public Result<List<ApplicationConfigDto.BuildEnvironmentConfig>> getApplicationBuildEnvironmentConfigs(
-            @PathVariable String namespace,
-            @PathVariable String name
-    ) {
-        return Result.success(applicationService.getApplicationBuildEnvironmentConfigs(namespace, name));
-    }
-
-    @GetMapping("/{name}/environments/runtime-specs")
-    public Result<List<ApplicationConfigDto.RuntimeEnvironmentConfig>> getApplicationRuntimeSpecEnvironmentConfigs(
-            @PathVariable String namespace,
-            @PathVariable String name
-    ) {
-        return Result.success(applicationService.getApplicationRuntimeSpecEnvironmentConfigs(namespace, name));
-    }
-
     @GetMapping("/{name}/runtime-spec")
     public Result<ApplicationConfigDto.RuntimeSpec> getApplicationRuntimeSpec(@PathVariable String namespace,
                                                                              @PathVariable String name) {
         return Result.success(applicationService.getApplicationRuntimeSpec(namespace, name));
-    }
-
-    @PutMapping("/{name}/environments/build/configs")
-    @PreAuthorize("isAuthenticated()")
-    public Result<Boolean> updateApplicationBuildEnvironmentConfigs(@PathVariable String namespace,
-                                                                    @PathVariable String name,
-                                                                    @RequestBody List<ApplicationConfigDto.BuildEnvironmentConfig> configs) {
-        return Result.success(applicationService.updateApplicationBuildEnvironmentConfigs(namespace, name, configs));
-    }
-
-    @PutMapping("/{name}/environments/runtime-specs")
-    @PreAuthorize("isAuthenticated()")
-    public Result<Boolean> updateApplicationRuntimeSpecEnvironmentConfigs(@PathVariable String namespace,
-                                                                          @PathVariable String name,
-                                                                          @RequestBody List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs) {
-        return Result.success(applicationService.updateApplicationRuntimeSpecEnvironmentConfigs(namespace, name, configs));
     }
 
     @PutMapping("/{name}/runtime-spec")

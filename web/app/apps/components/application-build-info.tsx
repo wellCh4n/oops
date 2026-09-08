@@ -20,8 +20,8 @@ import dynamic from "next/dynamic"
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
-import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
+import { ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
+import { updateApplicationBuildConfig } from "@/lib/api/applications"
 import { GitBranch, FileCode, Box, Container, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
@@ -33,23 +33,19 @@ import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
-  initialEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   applicationId?: string
   applicationName?: string
   namespace?: string
-  onSaved?: (
-    buildConfig: ApplicationBuildConfig,
-    envConfigs: ApplicationBuildEnvironmentConfig[]
-  ) => void
+  onSaved?: (buildConfig: ApplicationBuildConfig) => void
 }
 
 export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, ApplicationBuildInfoProps>(function ApplicationBuildInfo({
   initialBuildConfig,
-  initialEnvConfigs = [],
   applicationName,
   namespace,
   onSaved,
 }: ApplicationBuildInfoProps, ref) {
+  const initialEnvConfigs = initialBuildConfig?.environmentConfigs ?? []
   const normalizedDockerFileConfig = initialBuildConfig?.dockerFileConfig
     ? {
         type: initialBuildConfig.dockerFileConfig.type,
@@ -180,32 +176,28 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
           }
         : undefined
 
-      // 1. Save global build config
+      // The whole tab is one request: the per-environment build commands travel inside the build
+      // config. An image application has nothing to build, so the backend drops them along with
+      // the rest of the build settings.
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
         // Git URL or image name, depending on the source; ZIP has neither.
         repository: data.sourceType === "ZIP" ? undefined : data.repository?.trim() || undefined,
         dockerFileConfig: normalizedDockerFileConfig,
         buildImage: data.buildImage ?? undefined,
+        environmentConfigs: data.sourceType === "IMAGE"
+          ? []
+          : data.environmentConfigs.map((config) => ({
+              environment: config.environment,
+              buildCommand: config.buildCommand ?? undefined,
+            })),
         namespace,
         applicationName,
       }
       await updateApplicationBuildConfig(namespace, applicationName, buildConfigPayload)
 
-      // 2. Save environment configs. An image application has nothing to build, so its per-environment
-      //    build commands are dropped by the backend along with the rest of the build settings.
-      const envConfigs: ApplicationBuildEnvironmentConfig[] = data.sourceType === "IMAGE"
-        ? []
-        : data.environmentConfigs.map((config) => ({
-            environment: config.environment,
-            buildCommand: config.buildCommand ?? undefined,
-          }))
-      if (data.sourceType !== "IMAGE") {
-        await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
-      }
-
       toast.success(t("apps.build.saveSuccess"))
-      onSaved?.(buildConfigPayload, envConfigs)
+      onSaved?.(buildConfigPayload)
       form.reset(data)
       return true
     } catch (error) {

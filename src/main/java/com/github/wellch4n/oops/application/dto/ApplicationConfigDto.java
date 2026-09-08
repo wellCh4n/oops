@@ -20,6 +20,11 @@ public final class ApplicationConfigDto {
     private ApplicationConfigDto() {
     }
 
+    /**
+     * @param environments the environment bindings, saved together with the profile because the
+     *                     basic-info editor edits both on one form. {@code null} on update means
+     *                     "leave the bindings as they are"; ignored on create.
+     */
     public record Profile(
             String id,
             LocalDateTime createdTime,
@@ -28,7 +33,8 @@ public final class ApplicationConfigDto {
             String icon,
             String namespace,
             String owner,
-            List<String> collaborators
+            List<String> collaborators,
+            List<EnvironmentBinding> environments
     ) {
         public Application toDomain() {
             Application application = new Application();

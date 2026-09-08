@@ -163,18 +163,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
-    "key": "GET /api/namespaces/{}/applications/{}/environments/build/configs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "GET",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
-    "key": "GET /api/namespaces/{}/applications/{}/environments/runtime-specs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "GET",
     "path": "/api/namespaces/{namespace}/applications/{name}/events",
     "key": "GET /api/namespaces/{}/applications/{}/events",
     "controller": "ApplicationController"
@@ -585,18 +573,6 @@
     "method": "PUT",
     "path": "/api/namespaces/{namespace}/applications/{name}/environments",
     "key": "PUT /api/namespaces/{}/applications/{}/environments",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
-    "key": "PUT /api/namespaces/{}/applications/{}/environments/build/configs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
-    "key": "PUT /api/namespaces/{}/applications/{}/environments/runtime-specs",
     "controller": "ApplicationController"
   },
   {

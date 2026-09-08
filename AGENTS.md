@@ -204,6 +204,8 @@ Deployment triggering logic lives in `DeploymentService` (not `PipelineService`)
 
 The K8s client is created per-task and closed via try-with-resources in `ArtifactDeployTask.call()`.
 
+**One editor tab, one request**: every tab of the application editor saves through exactly one endpoint, in one transaction — the build tab's per-environment build commands ride inside `PUT .../build/config` as `environmentConfigs`, and the basic-info tab's environment bindings ride inside `PUT .../applications/{name}` as `environments` (omitted means unchanged, so a CLI `app update` cannot wipe them; `PUT .../environments` still exists for changing the bindings alone). Never chain a second request to save part of a form: the first call can wipe what the second restores, and a failed second call leaves a half-saved record behind a generic error toast.
+
 **Per-application config entities**:
 - `ApplicationBuildConfig`: Stores source type (`GIT`/`ZIP`/`IMAGE`), repository or image name (`SourceConfig` JSON blob: `GitSourceConfig`, `ZipSourceConfig`, `ImageSourceConfig`), build image/commands, and Dockerfile config (`BUILTIN` path or inline `USER` content). Frontend: `application-build-info.tsx`; the publish page renders the IMAGE tag as a prefixed input (`components/ui/input-group.tsx`) with the image name fixed in front of it.
 - `ApplicationServiceConfig`: Stores container `port` and per-environment hostname/HTTPS overrides (`List<EnvironmentConfig>` as JSON blob). Frontend: `application-service-info.tsx`.

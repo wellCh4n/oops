@@ -158,6 +158,12 @@ public class ApplicationService {
         Application exist = requireAggregate(namespace, name);
         exist.changeProfile(request.description(), normalizeOwner(request.owner()), request.icon());
         exist.changeCollaborators(normalizeCollaborators(request.collaborators(), exist.getOwner()));
+        // The basic-info editor saves the profile and the environment bindings as one form, so they
+        // are one request and one transaction. A caller that omits the field (the CLI's `app update`)
+        // leaves the bindings alone; `PUT .../environments` remains for changing them on their own.
+        if (request.environments() != null) {
+            exist.bindEnvironments(toEnvironmentDomains(request.environments()));
+        }
         applicationRepository.saveAggregate(exist);
         return true;
     }
@@ -315,52 +321,12 @@ public class ApplicationService {
         return ApplicationConfigDto.BuildConfig.from(buildConfig);
     }
 
-    public List<ApplicationConfigDto.BuildEnvironmentConfig> getApplicationBuildEnvironmentConfigs(String namespace, String name) {
-        Application application = applicationRepository.findAggregate(namespace, name);
-        return application != null
-                ? application.buildEnvironmentConfigs().stream().map(ApplicationConfigDto.BuildEnvironmentConfig::from).toList()
-                : Collections.emptyList();
-    }
-
-    public List<ApplicationConfigDto.RuntimeEnvironmentConfig> getApplicationRuntimeSpecEnvironmentConfigs(String namespace, String name) {
-        Application application = applicationRepository.findAggregate(namespace, name);
-        return application != null
-                ? application.runtimeEnvironmentConfigs().stream().map(ApplicationConfigDto.RuntimeEnvironmentConfig::from).toList()
-                : Collections.emptyList();
-    }
-
     public ApplicationConfigDto.RuntimeSpec getApplicationRuntimeSpec(String namespace, String name) {
         Application application = applicationRepository.findAggregate(namespace, name);
         if (application == null) {
             return ApplicationConfigDto.RuntimeSpec.from(defaultRuntimeSpec(namespace, name));
         }
         return ApplicationConfigDto.RuntimeSpec.from(application.runtimeSpecOrDefault(healthCheckPolicy));
-    }
-
-    @Transactional
-    public Boolean updateApplicationBuildEnvironmentConfigs(
-            String namespace,
-            String appName,
-            List<ApplicationConfigDto.BuildEnvironmentConfig> configs
-    ) {
-        Application application = requireAggregate(namespace, appName);
-        application.updateBuildEnvironmentConfigs(toBuildEnvironmentConfigDomains(configs));
-        applicationRepository.saveAggregate(application);
-        return true;
-    }
-
-    public Boolean updateApplicationRuntimeSpecEnvironmentConfigs(
-            String namespace,
-            String appName,
-            List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs
-    ) {
-        Application application = requireAggregate(namespace, appName);
-        List<ApplicationRuntimeSpec.EnvironmentConfig> existingConfigs = application.runtimeEnvironmentConfigs();
-        application.updateRuntimeEnvironmentConfigs(toRuntimeEnvironmentConfigDomains(configs), healthCheckPolicy);
-        applicationRepository.saveAggregate(application);
-        applyRuntimeSpecEnvironmentConfigUpdates(
-                namespace, appName, application.runtimeEnvironmentConfigs(), existingConfigs);
-        return true;
     }
 
     public Boolean updateApplicationRuntimeSpec(String namespace, String appName, ApplicationConfigDto.RuntimeSpec request) {
@@ -739,28 +705,6 @@ public class ApplicationService {
             throw new BizException("Application not found");
         }
         return application;
-    }
-
-    private List<ApplicationBuildConfig.EnvironmentConfig> toBuildEnvironmentConfigDomains(
-            List<ApplicationConfigDto.BuildEnvironmentConfig> configs
-    ) {
-        if (configs == null) {
-            return null;
-        }
-        return configs.stream()
-                .map(ApplicationConfigDto.BuildEnvironmentConfig::toDomain)
-                .toList();
-    }
-
-    private List<ApplicationRuntimeSpec.EnvironmentConfig> toRuntimeEnvironmentConfigDomains(
-            List<ApplicationConfigDto.RuntimeEnvironmentConfig> configs
-    ) {
-        if (configs == null) {
-            return null;
-        }
-        return configs.stream()
-                .map(ApplicationConfigDto.RuntimeEnvironmentConfig::toDomain)
-                .toList();
     }
 
     private List<ApplicationEnvironment> toEnvironmentDomains(List<ApplicationConfigDto.EnvironmentBinding> configs) {

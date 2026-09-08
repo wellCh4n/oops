@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { ApplicationBasicFormValues, getApplicationBasicSchema } from "../schema"
 import { Application, Environment, ApplicationEnvironment } from "@/lib/api/types"
-import { updateApplication, getApplicationEnvironments, updateApplicationEnvironments } from "@/lib/api/applications"
+import { updateApplication, getApplicationEnvironments } from "@/lib/api/applications"
 import { fetchNamespaces } from "@/lib/api/namespaces"
 import { fetchEnvironments } from "@/lib/api/environments"
 import { fetchUsers, User } from "@/lib/api/users"
@@ -126,21 +126,17 @@ export const ApplicationBasicInfo = forwardRef<ApplicationTabHandle, Application
 
   async function submitForm(data: ApplicationBasicFormValues) {
     try {
-      const payload = {
+      // The profile and the environment bindings are one form, so they go in one request.
+      const environments: ApplicationEnvironment[] = selectedEnvNames.map(envName => ({
+        namespace: data.namespace,
+        applicationName: data.name,
+        environment: envName,
+      }))
+      await updateApplication({
         ...data,
-        workspaceId: data.namespace
-      }
-      
-      await updateApplication(payload)
-
-      if (initialData) {
-        const envPayload: ApplicationEnvironment[] = selectedEnvNames.map(envName => ({
-            namespace: data.namespace,
-            applicationName: data.name,
-            environment: envName
-        }))
-        await updateApplicationEnvironments(data.namespace, data.name, envPayload)
-      }
+        workspaceId: data.namespace,
+        environments,
+      })
 
       toast.success(t("apps.basic.updateSuccess"))
       if (initialData) {
