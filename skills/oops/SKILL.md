@@ -124,6 +124,29 @@ python skills/oops/scripts/oops.py app build set -n <ns> <app> \
 
 `builtin` reads the real Dockerfile from the repository.
 
+Per-environment build commands are set with `--build-command <env>=<command>` (repeatable):
+
+```bash
+python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+    --source git --repository "https://github.com/owner/repo.git" \
+    --build-command "dev=npm ci && npm run build" \
+    --build-command "prod=npm ci && npm run build -- --mode production"
+```
+
+Without any `--build-command` the existing commands are left as they are; to clear them all, pass `--build-command ""`.
+
+#### Image source (prebuilt image, nothing is built)
+
+```bash
+python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+    --source image \
+    --repository "ghcr.io/owner/app"
+```
+
+`--repository` is the image name **without a tag or digest** — the tag is chosen at each deploy
+(step 7). Dockerfile, build image and build commands do not apply and are dropped. Only images
+pullable without credentials are supported.
+
 ### Step 4 — Bind to environments
 
 ```bash
@@ -184,6 +207,16 @@ python skills/oops/scripts/oops.py deploy git -n <ns> <app> --env <env> --branch
 ```
 
 Uses the repository configured in step 3; `--branch` is optional.
+
+#### Image mode
+
+```bash
+python skills/oops/scripts/oops.py deploy image -n <ns> <app> --env <env> --tag 1.2.3 --wait
+```
+
+Deploys `<repository>:<tag>` with the image name from step 3; `--tag` defaults to `latest`. No
+build runs, so `--wait` only follows the rollout. A tag that does not exist fails the rollout as
+`ImagePullBackOff`, not at trigger time, and re-deploying the same tag changes nothing.
 
 ### Step 8 — Verify
 
