@@ -9,6 +9,7 @@ import { createApplicationBuildSourceUpload, getApplication, getApplicationBuild
 import { Application, ApplicationEnvironment, ApplicationRuntimeSpec, ApplicationSourceType, DeployMode, DeployStrategyParam, LastSuccessfulPipelineInfo } from "@/lib/api/types"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog,
@@ -28,6 +29,9 @@ import Link from "next/link"
 import { useRecentAppStore } from "@/store/recent-app"
 import { useFeaturesStore } from "@/store/features"
 import { cn } from "@/lib/utils"
+
+// OCI distribution tag grammar; the backend applies the same rule.
+const IMAGE_TAG_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/
 
 interface PageProps {
   params: Promise<{
@@ -55,6 +59,9 @@ export default function PublishPage({ params }: PageProps) {
   const [resolvedBranch, setResolvedBranch] = useState<GitBranch | null>(null)
   const [branchesLoading, setBranchesLoading] = useState(false)
   const [publishRepository, setPublishRepository] = useState<string>("")
+  // IMAGE source: the image name is the application's build config, only the tag is chosen here.
+  const [imageRepository, setImageRepository] = useState<string>("")
+  const [imageTag, setImageTag] = useState<string>("")
   const [lastSuccessfulPipeline, setLastSuccessfulPipeline] = useState<LastSuccessfulPipelineInfo | null>(null)
   const [deployMode, setDeployMode] = useState<DeployMode>("MANUAL")
   const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | null>(null)
@@ -71,6 +78,9 @@ export default function PublishPage({ params }: PageProps) {
 
   const lastGitBranch = lastSuccessfulPipeline?.publishConfig?.type === "GIT"
     ? normalizeText(lastSuccessfulPipeline.publishConfig.branch)
+    : ""
+  const lastImageTag = lastSuccessfulPipeline?.publishConfig?.type === "IMAGE"
+    ? normalizeText(lastSuccessfulPipeline.publishConfig.tag)
     : ""
 
   useEffect(() => {
@@ -113,6 +123,7 @@ export default function PublishPage({ params }: PageProps) {
         if (buildConfigRes.data?.sourceType) {
           setSourceType(buildConfigRes.data.sourceType)
         }
+        setImageRepository(buildConfigRes.data?.repository ?? "")
         if (runtimeSpecRes.data) {
           setRuntimeSpec(runtimeSpecRes.data)
         }
@@ -126,6 +137,9 @@ export default function PublishPage({ params }: PageProps) {
           }
           if (currentSourceType === "ZIP" && lastPublishConfig?.type === "ZIP") {
             setPublishRepository(normalizeText(lastPublishConfig.objectKey) || normalizeText(lastPublishConfig.url))
+          }
+          if (currentSourceType === "IMAGE" && lastPublishConfig?.type === "IMAGE") {
+            setImageTag(normalizeText(lastPublishConfig.tag))
           }
         }
       } catch {
@@ -143,6 +157,20 @@ export default function PublishPage({ params }: PageProps) {
     if (sourceType === "ZIP" && !publishRepository.trim()) {
       toast.error(t("apps.publish.zipRequired"))
       return
+    }
+    if (sourceType === "IMAGE") {
+      if (!imageRepository) {
+        toast.error(t("apps.publish.imageRepositoryMissing"))
+        return
+      }
+      if (!imageTag.trim()) {
+        toast.error(t("apps.publish.imageTagRequired"))
+        return
+      }
+      if (!IMAGE_TAG_PATTERN.test(imageTag.trim())) {
+        toast.error(t("apps.publish.imageTagInvalid"))
+        return
+      }
     }
 
     // Re-fetch the runtime spec so the replica check reflects the latest
@@ -181,7 +209,9 @@ export default function PublishPage({ params }: PageProps) {
         ? (zipSource.startsWith("http://") || zipSource.startsWith("https://")
             ? { type: "ZIP", url: zipSource }
             : { type: "ZIP", objectKey: zipSource })
-        : { type: "GIT", branch: branch.trim() || "main" }
+        : sourceType === "IMAGE"
+          ? { type: "IMAGE", tag: imageTag.trim() }
+          : { type: "GIT", branch: branch.trim() || "main" }
       const res = await deployApplication(
         namespace,
         name,
@@ -448,6 +478,60 @@ export default function PublishPage({ params }: PageProps) {
                 </>
               )}
             </div>
+          </div>
+        )}
+
+        {sourceType === "IMAGE" && (
+          <div className="grid gap-2">
+            <Label htmlFor="image-tag">
+              {t("apps.publish.imageTag")}
+              {lastImageTag && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageTag(lastImageTag)
+                  }}
+                  className="ml-2 text-sm text-primary hover:text-primary/80 cursor-pointer"
+                >
+                  {t("apps.publish.lastImageTag")}{lastImageTag}
+                </button>
+              )}
+            </Label>
+            {imageRepository ? (
+              <>
+                {/* The image name is fixed by the build config, so it is shown as a prefix the
+                    operator cannot edit: what is decided here is only which tag goes out. */}
+                <InputGroup>
+                  <InputGroupAddon title={imageRepository}>
+                    <span className="truncate">{imageRepository}:</span>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="image-tag"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={imageTag}
+                    onChange={(e) => setImageTag(e.target.value)}
+                    placeholder={lastImageTag || t("apps.publish.imageTagPlaceholder")}
+                  />
+                </InputGroup>
+                <p className="flex h-4 min-w-0 items-center gap-1 text-xs text-muted-foreground">
+                  <span className="shrink-0">{t("apps.publish.imageWillDeploy")}</span>
+                  <span className="truncate font-mono">{imageTag.trim() ? `${imageRepository}:${imageTag.trim()}` : "—"}</span>
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-destructive">
+                {t("apps.publish.imageRepositoryMissingPrefix")}
+                <Link
+                  href={`/apps/${namespace}/${name}?tab=build-config`}
+                  className="inline-flex items-center gap-0.5 text-primary ml-1 mr-1"
+                >
+                  <span className="hover:underline">{t("apps.publish.imageRepositoryMissingLink")}</span>
+                  <ExternalLink className="size-3" />
+                </Link>
+                {t("apps.publish.imageRepositoryMissingSuffix")}
+              </p>
+            )}
           </div>
         )}
 

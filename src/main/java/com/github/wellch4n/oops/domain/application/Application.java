@@ -74,16 +74,25 @@ public class Application extends BaseAggregateRoot {
         ApplicationBuildConfig target = ensureBuildConfig();
         var dockerFileConfig = request.getDockerFileConfig();
         ApplicationSourceType sourceType = buildConfigPolicy.normalizeSourceType(request.getSourceType());
+        String repository = request.repository();
         buildConfigPolicy.validate(
                 sourceType,
-                request.repository(),
+                repository,
                 dockerFileConfig != null ? dockerFileConfig.getType() : null,
                 dockerFileConfig != null ? dockerFileConfig.getContent() : null);
         target.setSourceType(sourceType);
-        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, request.repository()));
-        target.setDockerFileConfig(dockerFileConfig);
-        target.setBuildImage(request.getBuildImage());
-        target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, repository));
+        if (sourceType == ApplicationSourceType.IMAGE) {
+            // Nothing is built, so a Dockerfile, build image or build command would be dead configuration
+            // that the editor hides — drop it rather than carry it around invisibly.
+            target.setDockerFileConfig(null);
+            target.setBuildImage(null);
+            target.setEnvironmentConfigs(null);
+        } else {
+            target.setDockerFileConfig(dockerFileConfig);
+            target.setBuildImage(request.getBuildImage());
+            target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+        }
     }
 
     public void updateBuildEnvironmentConfigs(List<ApplicationBuildConfig.EnvironmentConfig> configs) {

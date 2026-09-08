@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.application.GitSourceConfig;
+import com.github.wellch4n.oops.domain.application.ImageSourceConfig;
 import com.github.wellch4n.oops.domain.application.ZipSourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
@@ -48,6 +49,7 @@ public final class ApplicationConfigDto {
             String namespace,
             String applicationName,
             ApplicationSourceType sourceType,
+            /** Git URL for GIT, image name without a tag for IMAGE, unused for ZIP. */
             String repository,
             DockerFileConfig dockerFileConfig,
             String buildImage,
@@ -77,9 +79,11 @@ public final class ApplicationConfigDto {
             config.setNamespace(namespace);
             config.setApplicationName(applicationName);
             config.setSourceType(sourceType);
-            config.setSourceConfig(sourceType == ApplicationSourceType.ZIP
-                    ? new ZipSourceConfig()
-                    : new GitSourceConfig(repository));
+            config.setSourceConfig(switch (sourceType != null ? sourceType : ApplicationSourceType.GIT) {
+                case GIT -> new GitSourceConfig(repository);
+                case ZIP -> new ZipSourceConfig();
+                case IMAGE -> new ImageSourceConfig(repository);
+            });
             config.setDockerFileConfig(dockerFileConfig != null ? dockerFileConfig.toDomain() : null);
             config.setBuildImage(buildImage);
             config.setEnvironmentConfigs(map(environmentConfigs, BuildEnvironmentConfig::toDomain));

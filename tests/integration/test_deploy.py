@@ -29,6 +29,10 @@ STATUS_ORDER = ["INITIALIZED", "RUNNING", "BUILD_SUCCEEDED", "DEPLOYING",
 SOURCE_REPOSITORY = os.environ.get(
     "OOPS_TEST_REPOSITORY", "https://github.com/docker/welcome-to-docker.git")
 SOURCE_BRANCH = os.environ.get("OOPS_TEST_BRANCH", "main")
+# A small public image for the image-publish path, split into the name the build
+# config stores and the tag a publish names. Override for an offline cluster.
+PUBLIC_IMAGE = os.environ.get("OOPS_TEST_IMAGE", "nginx")
+PUBLIC_IMAGE_TAG = os.environ.get("OOPS_TEST_IMAGE_TAG", "alpine")
 DEPLOY_TIMEOUT = int(os.environ.get("OOPS_TEST_DEPLOY_TIMEOUT", "900"))
 
 
@@ -85,6 +89,22 @@ def configure_for_build(client, namespace, application, environment):
 
 def git_strategy(branch: str = SOURCE_BRANCH) -> dict:
     return {"type": "GIT", "branch": branch}
+
+
+def configure_for_image(client, namespace, application, environment):
+    """Like `configure_for_build`, for an application that deploys a prebuilt
+    image: the build config carries only the image name, the tag comes per deploy."""
+    configure_for_build(client, namespace, application, environment)
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "IMAGE",
+        "repository": PUBLIC_IMAGE,
+    })
+
+
+def image_strategy(tag: str = PUBLIC_IMAGE_TAG) -> dict:
+    return {"type": "IMAGE", "tag": tag}
 
 
 def poll_pipeline(client, namespace, application, pipeline_id, seen: list) -> dict:
@@ -237,6 +257,73 @@ def test_manual_mode_stops_at_build_succeeded(client, namespace, application,
 
     assert pipeline["status"] == "BUILD_SUCCEEDED", (
         f"MANUAL mode should hold at BUILD_SUCCEEDED, got {pipeline['status']}")
+
+
+def test_image_publish_deploys_without_a_build(client, namespace, application,
+                                               environment):
+    """An image publish has its artifact before it starts: no build job, so the
+    pipeline never passes through RUNNING, and what reaches the cluster is the
+    configured image name joined with the tag the publish named."""
+    configure_for_image(client, namespace, application, environment)
+    pipeline_id = client.deploy(namespace, application, environment,
+                                strategy=image_strategy())
+    seen: list[str] = []
+
+    def finished():
+        pipeline = poll_pipeline(client, namespace, application, pipeline_id, seen)
+        return pipeline if pipeline["status"] in TERMINAL_STATUSES else None
+
+    pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
+                          description=f"image pipeline {pipeline_id} to reach a terminal state")
+
+    assert pipeline["status"] == "SUCCEEDED", (
+        f"image publish ended as {pipeline['status']} after passing through {seen}: "
+        f"{pipeline.get('message')}")
+    assert "RUNNING" not in seen, f"an image publish must not build, but passed through {seen}"
+    assert pipeline["artifact"] == f"{PUBLIC_IMAGE}:{PUBLIC_IMAGE_TAG}"
+    assert pipeline["publishType"] == "IMAGE"
+    assert pipeline["publishConfig"] == {
+        "type": "IMAGE", "repository": PUBLIC_IMAGE, "tag": PUBLIC_IMAGE_TAG}
+    assert pipeline["triggerType"] == "RELEASE"
+
+    status = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/status"
+        f"?environment={environment}").data
+    images = {container["image"] for pod in status for container in pod.get("containers", [])}
+    # The runtime reports the reference it resolved, so a bare `nginx:alpine` comes back as
+    # `docker.io/library/nginx:alpine`; only the trailing name:tag is ours to check.
+    published = f"{PUBLIC_IMAGE}:{PUBLIC_IMAGE_TAG}"
+    assert any(image == published or image.endswith("/" + published) for image in images), (
+        f"the running pods should carry the published image {published}; saw {images}")
+
+
+def test_image_publish_in_manual_mode_waits_for_the_deploy_call(
+        client, namespace, application, environment):
+    configure_for_image(client, namespace, application, environment)
+    pipeline_id = client.deploy(namespace, application, environment,
+                                deploy_mode="MANUAL", strategy=image_strategy())
+
+    pipeline = client.get_pipeline(namespace, application, pipeline_id)
+    assert pipeline["status"] == "BUILD_SUCCEEDED", (
+        f"a MANUAL image publish should park at BUILD_SUCCEEDED at once, got {pipeline['status']}")
+
+    client.put(f"/api/namespaces/{namespace}/applications/{application}"
+               f"/pipelines/{pipeline_id}/deploy")
+    pipeline = wait_for_terminal(client, namespace, application, pipeline_id,
+                                 "the manually deployed image publish to finish")
+    assert pipeline["status"] == "SUCCEEDED", pipeline.get("message")
+
+
+def test_image_publish_requires_a_tag_and_matching_strategy(
+        client, namespace, application, environment):
+    configure_for_image(client, namespace, application, environment)
+    for strategy in (image_strategy(""), image_strategy("other/image:1.0"),
+                     image_strategy("1.0@sha256:abc"), git_strategy()):
+        response = client.post(
+            f"/api/namespaces/{namespace}/applications/{application}/deployments",
+            {"environment": environment, "deployMode": "IMMEDIATE", "strategy": strategy},
+            expect_success=False)
+        assert response.success is False, f"{strategy} should have been rejected"
 
 
 def test_pipeline_listing_accepts_the_all_scope(client, namespace, application,

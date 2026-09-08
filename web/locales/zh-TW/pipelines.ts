@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.currentVersion": "目前版本",
   "pipelines.col.deployMode": "發布方式",
   "pipelines.col.rollbackTag": "回滾",
+  "pipelines.col.imageTag": "映像檔發布",
   "pipelines.col.rollbackFrom": "回滾自: ",
   "pipelines.col.rollbackBtn": "回滾",
   "pipelines.rollbackSuccess": "已觸發回滾",

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Copyable } from "@/components/ui/copyable"
 import { AppIdentityMark } from "@/components/app-identity-mark"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
-import { Eye, Ban, Rocket, Undo2, CircleDot, LayoutGrid } from "lucide-react"
+import { Eye, Ban, Rocket, Undo2, Container, CircleDot, LayoutGrid } from "lucide-react"
 
 export const getPipelineColumns = (
   t: (key: string) => string,
@@ -73,10 +73,21 @@ export const getPipelineColumns = (
         ? <span className="text-muted-foreground">-</span>
         : deployMode === "IMMEDIATE" ? t("apps.pipeline.modeImmediate") : t("apps.pipeline.modeManual")
       const isRollback = row.original.triggerType === "ROLLBACK"
+      const isImagePublish = row.original.publishType === "IMAGE"
       const fromId = row.original.rollbackFromPipelineId
       return (
         <span className="inline-flex items-center gap-1 whitespace-nowrap">
           {modeLabel}
+          {/* An image publish ran no build either; the tooltip names the image it deployed. */}
+          {isImagePublish && (
+            <Tooltip>
+              <TooltipTrigger render={<Container className="size-3.5 text-muted-foreground cursor-help" />}></TooltipTrigger>
+              <TooltipContent>
+                {t("pipelines.col.imageTag")}
+                {row.original.artifact && <> · <span className="font-mono">{row.original.artifact}</span></>}
+              </TooltipContent>
+            </Tooltip>
+          )}
           {isRollback && (
             <Tooltip>
               <TooltipTrigger render={<Undo2 className="size-3.5 text-muted-foreground cursor-help" />}></TooltipTrigger>

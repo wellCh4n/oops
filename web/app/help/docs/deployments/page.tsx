@@ -84,6 +84,20 @@ export default function DeploymentsDocPage() {
   "strategy": { "type": "ZIP", "objectKey": "uploads/build-2025-12-01.zip" }
 }`}</CodeBlock>
         </DocSubSection>
+        <DocSubSection titleKey="doc.deployments.trigger.image.title">
+          <DocParagraph textKey="doc.deployments.trigger.image.p1" />
+          <FieldTable
+            rows={[
+              { name: "strategy.type", type: "string", required: true, descriptionKey: "doc.deployments.trigger.image.type" },
+              { name: "strategy.tag", type: "string", required: true, descriptionKey: "doc.deployments.trigger.image.tag" },
+            ]}
+          />
+          <CodeBlock language="json">{`{
+  "environment": "prod",
+  "deployMode": "IMMEDIATE",
+  "strategy": { "type": "IMAGE", "tag": "1.27.0" }
+}`}</CodeBlock>
+        </DocSubSection>
       </DocSection>
     </DocLayout>
   )

@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.currentVersion": "当前版本",
   "pipelines.col.deployMode": "发布方式",
   "pipelines.col.rollbackTag": "回滚",
+  "pipelines.col.imageTag": "镜像发布",
   "pipelines.col.rollbackFrom": "回滚自: ",
   "pipelines.col.rollbackBtn": "回滚",
   "pipelines.rollbackSuccess": "已触发回滚",

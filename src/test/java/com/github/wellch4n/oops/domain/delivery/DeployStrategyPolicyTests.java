@@ -89,4 +89,31 @@ class DeployStrategyPolicyTests {
         assertEquals("uploads/a.zip", config.objectKey());
         assertNull(config.url());
     }
+
+    @Test
+    void resolveImageJoinsRepositoryAndTag() {
+        ImagePublishConfig config = policy.resolveImagePublishConfig("ghcr.io/org/app", " 1.2.3 ");
+        assertEquals("ghcr.io/org/app", config.repository());
+        assertEquals("1.2.3", config.tag());
+        assertEquals("ghcr.io/org/app:1.2.3", config.artifact());
+    }
+
+    @Test
+    void resolveImageRequiresTag() {
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("ghcr.io/org/app", null));
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("ghcr.io/org/app", "  "));
+    }
+
+    @Test
+    void resolveImageRequiresRepositoryFromBuildConfig() {
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig(null, "1.0"));
+    }
+
+    @Test
+    void resolveImageRejectsTagsThatSmuggleAnotherImage() {
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("app", "other/image:1.0"));
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("app", "1.0@sha256:abc"));
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("app", ".hidden"));
+        assertThrows(BizException.class, () -> policy.resolveImagePublishConfig("app", "a".repeat(129)));
+    }
 }

@@ -5,6 +5,7 @@ import { FieldErrors } from "react-hook-form"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -21,7 +22,7 @@ import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
+import { GitBranch, FileCode, Box, Container, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useTheme } from "next-themes"
@@ -182,7 +183,8 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       // 1. Save global build config
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
-        repository: data.sourceType === "GIT" ? data.repository ?? undefined : undefined,
+        // Git URL or image name, depending on the source; ZIP has neither.
+        repository: data.sourceType === "ZIP" ? undefined : data.repository?.trim() || undefined,
         dockerFileConfig: normalizedDockerFileConfig,
         buildImage: data.buildImage ?? undefined,
         namespace,
@@ -190,12 +192,17 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       }
       await updateApplicationBuildConfig(namespace, applicationName, buildConfigPayload)
 
-      // 2. Save environment configs
-      const envConfigs: ApplicationBuildEnvironmentConfig[] = data.environmentConfigs.map((config) => ({
-        environment: config.environment,
-        buildCommand: config.buildCommand ?? undefined,
-      }))
-      await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
+      // 2. Save environment configs. An image application has nothing to build, so its per-environment
+      //    build commands are dropped by the backend along with the rest of the build settings.
+      const envConfigs: ApplicationBuildEnvironmentConfig[] = data.sourceType === "IMAGE"
+        ? []
+        : data.environmentConfigs.map((config) => ({
+            environment: config.environment,
+            buildCommand: config.buildCommand ?? undefined,
+          }))
+      if (data.sourceType !== "IMAGE") {
+        await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
+      }
 
       toast.success(t("apps.build.saveSuccess"))
       onSaved?.(buildConfigPayload, envConfigs)
@@ -268,6 +275,9 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                         <TabsTrigger value="ZIP" className="px-6 cursor-pointer">
                           {t("apps.build.sourceZip")}
                         </TabsTrigger>
+                        <TabsTrigger value="IMAGE" className="px-6 cursor-pointer">
+                          {t("apps.build.sourceImage")}
+                        </TabsTrigger>
                       </TabsList>
                     </Tabs>
                   </FormControl>
@@ -295,11 +305,32 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   </FormItem>
                 )}
               />
+            ) : sourceType === "IMAGE" ? (
+              <FormField
+                control={form.control}
+                name="repository"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Container className="size-3.5" />{t("apps.build.imageRepository")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        autoComplete="off"
+                        placeholder={t("apps.build.imageRepositoryPlaceholder")}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>{t("apps.build.imageRepositoryHint")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             ) : (
               <div className="text-sm text-muted-foreground">{t("apps.build.zipConfiguredInPublish")}</div>
             )}
 
-            <div className="grid gap-2">
+            {/* An image application is never built, so the Dockerfile has nothing to apply to. */}
+            <div className={sourceType === "IMAGE" ? "hidden" : "grid gap-2"}>
               <Label className="flex items-center gap-1">
                 <FileCode className="size-3.5" />
                 {t("apps.build.dockerfile")}
@@ -398,7 +429,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className={sourceType === "IMAGE" ? "hidden" : "border rounded-lg overflow-hidden"}>
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
               <Hammer className="size-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.build.envConfig")}</span>

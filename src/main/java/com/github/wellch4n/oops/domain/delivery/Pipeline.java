@@ -67,6 +67,30 @@ public class Pipeline extends BaseAggregateRoot {
         return pipeline;
     }
 
+    /**
+     * An image publish: the artifact is known up front and no build job runs, so the pipeline is born with
+     * it and, like a rollback, goes from {@link PipelineStatus#INITIALIZED} straight to deploying (or parks in
+     * {@link PipelineStatus#BUILD_SUCCEEDED} under {@link DeployMode#MANUAL}).
+     */
+    public static Pipeline initializeWithArtifact(
+            String namespace,
+            String applicationName,
+            String environment,
+            ImagePublishConfig publishConfig,
+            DeployMode deployMode,
+            String operatorId
+    ) {
+        Pipeline pipeline = initialize(namespace, applicationName, environment,
+                ApplicationSourceType.IMAGE, deployMode, operatorId);
+        pipeline.setPublishConfig(publishConfig);
+        pipeline.setArtifact(publishConfig.artifact());
+        return pipeline;
+    }
+
+    public boolean hasBuild() {
+        return triggerType != PipelineTriggerType.ROLLBACK && publishType != ApplicationSourceType.IMAGE;
+    }
+
     public String getName() {
         return String.format("%s-pipeline-%s", applicationName, getId());
     }
@@ -74,6 +98,11 @@ public class Pipeline extends BaseAggregateRoot {
     public void startBuild(String artifact) {
         this.artifact = artifact;
         transitionTo(PipelineStatus.RUNNING);
+    }
+
+    /** MANUAL-mode image publish: nothing to build, park where a built pipeline waits for its deploy. */
+    public void markReadyToDeploy() {
+        transitionTo(PipelineStatus.BUILD_SUCCEEDED);
     }
 
     public void markBuildSucceeded() {

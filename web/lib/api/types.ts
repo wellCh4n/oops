@@ -105,13 +105,14 @@ export interface ApplicationBuildConfig {
   namespace: string
   applicationName: string
   sourceType?: ApplicationSourceType
+  // Git URL for GIT, image name without a tag for IMAGE (the tag is chosen per publish).
   repository?: string
   dockerFileConfig?: DockerFileConfig
   buildImage?: string
   environmentConfigs?: ApplicationBuildEnvironmentConfig[]
 }
 
-export type ApplicationSourceType = 'GIT' | 'ZIP'
+export type ApplicationSourceType = 'GIT' | 'ZIP' | 'IMAGE'
 
 interface GitDeployStrategyParam {
   type: 'GIT'
@@ -122,6 +123,11 @@ interface ZipDeployStrategyParam {
   type: 'ZIP'
   objectKey?: string
   url?: string
+}
+
+interface ImageDeployStrategyParam {
+  type: 'IMAGE'
+  tag: string
 }
 
 export interface GitPublishConfig {
@@ -136,9 +142,15 @@ export interface ZipPublishConfig {
   url?: string | null
 }
 
-export type PublishConfig = GitPublishConfig | ZipPublishConfig
+export interface ImagePublishConfig {
+  type: 'IMAGE'
+  repository?: string | null
+  tag?: string | null
+}
 
-export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam
+export type PublishConfig = GitPublishConfig | ZipPublishConfig | ImagePublishConfig
+
+export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam | ImageDeployStrategyParam
 
 export interface DeployRequest {
   environment: string

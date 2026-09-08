@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.currentVersion": "稼働中",
   "pipelines.col.deployMode": "公開方法",
   "pipelines.col.rollbackTag": "ロールバック",
+  "pipelines.col.imageTag": "イメージ公開",
   "pipelines.col.rollbackFrom": "ロールバック元: ",
   "pipelines.col.rollbackBtn": "ロールバック",
   "pipelines.rollbackSuccess": "ロールバックを開始しました",

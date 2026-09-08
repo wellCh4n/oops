@@ -15,8 +15,11 @@ public class PipelineStateMachine {
             new EnumMap<>(PipelineStatus.class);
 
     static {
+        // BUILD_SUCCEEDED straight from INITIALIZED is the MANUAL-mode image publish: it has no build, so
+        // it parks where a built pipeline parks and waits for the same deploy call.
         ALLOWED_TRANSITIONS.put(PipelineStatus.INITIALIZED, EnumSet.of(
                 PipelineStatus.RUNNING,
+                PipelineStatus.BUILD_SUCCEEDED,
                 PipelineStatus.DEPLOYING,
                 PipelineStatus.ERROR,
                 PipelineStatus.STOPPED

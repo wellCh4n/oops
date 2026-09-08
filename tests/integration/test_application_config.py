@@ -84,6 +84,53 @@ def test_build_config_round_trips(client, namespace, application, environment):
         f"the per-environment build command was lost; got {commands}")
 
 
+def test_image_build_config_keeps_only_the_image(client, namespace, application,
+                                                environment):
+    """An IMAGE source names the image without its tag — the tag travels per
+    deploy — and is never built, so the build-only settings sent along with it
+    are dropped rather than stored invisibly."""
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "IMAGE",
+        "repository": "ghcr.io/example/service",
+        "buildImage": "node:20-slim",
+        "dockerFileConfig": {"type": "USER", "content": "FROM alpine:3.20\n"},
+        "environmentConfigs": [
+            {"environment": environment, "buildCommand": "npm run build"},
+        ],
+    })
+
+    stored = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert stored["sourceType"] == "IMAGE"
+    assert stored["repository"] == "ghcr.io/example/service"
+    assert not stored.get("buildImage")
+    assert not stored.get("dockerFileConfig")
+
+    listed = client.get_application(namespace, application).data
+    assert listed["sourceType"] == "IMAGE"
+
+
+def test_image_build_config_rejects_a_tag_in_the_image_name(client, namespace,
+                                                            application):
+    for image in ("nginx:1.27", "ghcr.io/example/service@sha256:0123", " ", "ghcr.io/example/"):
+        response = client.put_build_config(namespace, application, {
+            "namespace": namespace,
+            "applicationName": application,
+            "sourceType": "IMAGE",
+            "repository": image,
+        }, expect_success=False)
+        assert response.success is False, f"{image!r} should have been rejected"
+    # a registry port is not a tag
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "IMAGE",
+        "repository": "registry.local:5000/example/service",
+    })
+
+
 def test_per_environment_build_configs_can_be_written_separately(
         client, namespace, application, environment):
     """The per-environment collection has its own endpoint as well as riding

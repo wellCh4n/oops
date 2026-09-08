@@ -64,4 +64,33 @@ class ApplicationBuildConfigPolicyTests {
     void buildSourceConfigDefaultsNullToGit() {
         assertInstanceOf(GitSourceConfig.class, policy.buildSourceConfig(null, "repo"));
     }
+
+    @Test
+    void validateRequiresImageRepositoryWithoutTagForImage() {
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, " ", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, "nginx:1.27", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, "nginx@sha256:abc", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, "ghcr.io/org/", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, "ghcr.io/org/app x", null, null));
+        // a registry port is not a tag
+        policy.validate(ApplicationSourceType.IMAGE, "registry.local:5000/org/app", null, null);
+        policy.validate(ApplicationSourceType.IMAGE, "nginx", null, null);
+    }
+
+    @Test
+    void validateIgnoresDockerfileForImage() {
+        policy.validate(ApplicationSourceType.IMAGE, "nginx", DockerFileType.USER, "  ");
+    }
+
+    @Test
+    void buildSourceConfigReturnsImageConfigTrimmed() {
+        SourceConfig config = policy.buildSourceConfig(ApplicationSourceType.IMAGE, " ghcr.io/org/app ");
+        ImageSourceConfig imageConfig = assertInstanceOf(ImageSourceConfig.class, config);
+        assertEquals("ghcr.io/org/app", imageConfig.repository());
+    }
 }

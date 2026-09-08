@@ -39,6 +39,7 @@ const pipelines = {
   "pipelines.col.currentVersion": "Live",
   "pipelines.col.deployMode": "Deploy Mode",
   "pipelines.col.rollbackTag": "Rollback",
+  "pipelines.col.imageTag": "Image publish",
   "pipelines.col.rollbackFrom": "Rolled back from: ",
   "pipelines.col.rollbackBtn": "Rollback",
   "pipelines.rollbackSuccess": "Rollback triggered",

@@ -1,6 +1,5 @@
 package com.github.wellch4n.oops.application.service;
 
-import com.github.wellch4n.oops.application.port.ArtifactDeploymentExecutor;
 import com.github.wellch4n.oops.application.port.PipelineJobGateway;
 import com.github.wellch4n.oops.application.port.EventStreamSink;
 import com.github.wellch4n.oops.application.port.PipelineLogStreamGateway;
@@ -8,9 +7,6 @@ import com.github.wellch4n.oops.application.port.repository.ApplicationRepositor
 import com.github.wellch4n.oops.application.port.repository.PipelineRepository;
 import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationAccessPolicy;
-import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
-import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
-import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
 import com.github.wellch4n.oops.domain.delivery.PipelineStateMachine;
@@ -45,7 +41,7 @@ public class PipelineService {
     private final ApplicationRepository applicationRepository;
     private final UserService userService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ArtifactDeploymentExecutor artifactDeploymentExecutor;
+    private final ArtifactDeployRunner artifactDeployRunner;
     private final PipelineJobGateway pipelineJobGateway;
     private final PipelineLogStreamGateway pipelineLogStreamGateway;
     private final PipelineStateMachine pipelineStateMachine;
@@ -56,7 +52,7 @@ public class PipelineService {
                            ApplicationRepository applicationRepository,
                            UserService userService,
                            ApplicationEventPublisher eventPublisher,
-                           ArtifactDeploymentExecutor artifactDeploymentExecutor,
+                           ArtifactDeployRunner artifactDeployRunner,
                            PipelineJobGateway pipelineJobGateway,
                            PipelineLogStreamGateway pipelineLogStreamGateway,
                            PipelineStateMachine pipelineStateMachine,
@@ -67,7 +63,7 @@ public class PipelineService {
         this.applicationRepository = applicationRepository;
         this.userService = userService;
         this.eventPublisher = eventPublisher;
-        this.artifactDeploymentExecutor = artifactDeploymentExecutor;
+        this.artifactDeployRunner = artifactDeployRunner;
         this.pipelineJobGateway = pipelineJobGateway;
         this.pipelineLogStreamGateway = pipelineLogStreamGateway;
         this.pipelineStateMachine = pipelineStateMachine;
@@ -213,42 +209,8 @@ public class PipelineService {
         deploymentConcurrencyPolicy.ensureNoActivePipeline(pipelineRepository.existsByNamespaceAndApplicationNameAndStatusIn(
                 namespace, applicationName, deploymentConcurrencyPolicy.activePipelineStatuses()
         ));
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
-
-        int claimed = pipelineRepository.updateStatusIfMatch(pipeline.getId(), PipelineStatus.BUILD_SUCCEEDED, PipelineStatus.DEPLOYING);
-        if (claimed == 0) {
-            throw new BizException("Pipeline state changed concurrently, please retry");
-        }
-        pipeline.markDeploying();
-        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                pipeline, PipelineNotificationType.DEPLOYING, "发布任务已进入部署阶段。"
-        ));
-
-        try {
-            Environment environment = requireEnvironment(pipeline.getEnvironment());
-            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
-                    application.runtimeEnvironmentConfigOrDefault(pipeline.getEnvironment());
-            ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
-            ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
-            ApplicationExpertConfig.EnvironmentConfig expertConfig =
-                    application.expertEnvironmentConfigOrDefault(pipeline.getEnvironment());
-
-            artifactDeploymentExecutor.deploy(pipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
-
-            completeDeployPhase(pipeline, "正在等待新版本发布生效…");
-        } catch (Exception exception) {
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            String message = StringUtils.defaultIfBlank(exception.getMessage(), "发布任务执行失败，请查看日志。");
-            int failed = pipelineRepository.updateStatusAndMessageIfMatch(
-                    pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
-            if (failed > 0) {
-                pipeline.markFailed(message);
-                eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                        pipeline, PipelineNotificationType.FAILED, message
-                ));
-            }
-            throw new BizException("Deploy failed: " + exception.getMessage(), exception);
-        }
+        artifactDeployRunner.run(pipeline, application, PipelineStatus.BUILD_SUCCEEDED, new ArtifactDeployRunner.Messages(
+                "发布任务已进入部署阶段。", "正在等待新版本发布生效…", "发布任务执行失败，请查看日志。", "Deploy failed: "));
         return true;
     }
 
@@ -274,41 +236,8 @@ public class PipelineService {
                 rollbackPipeline, PipelineNotificationType.CREATED, "回滚任务已创建。"
         ));
 
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.INITIALIZED, PipelineStatus.DEPLOYING);
-        int claimed = pipelineRepository.updateStatusIfMatch(rollbackPipeline.getId(), PipelineStatus.INITIALIZED, PipelineStatus.DEPLOYING);
-        if (claimed == 0) {
-            throw new BizException("Pipeline state changed concurrently, please retry");
-        }
-        rollbackPipeline.markDeploying();
-        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                rollbackPipeline, PipelineNotificationType.DEPLOYING, "回滚任务已进入部署阶段。"
-        ));
-
-        try {
-            Environment environment = requireEnvironment(rollbackPipeline.getEnvironment());
-            ApplicationRuntimeSpec.EnvironmentConfig runtimeSpec =
-                    application.runtimeEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
-            ApplicationRuntimeSpec.HealthCheck healthCheck = application.healthCheckOrDefault();
-            ApplicationServiceConfig serviceConfig = application.serviceConfigOrDefault();
-            ApplicationExpertConfig.EnvironmentConfig expertConfig =
-                    application.expertEnvironmentConfigOrDefault(rollbackPipeline.getEnvironment());
-
-            artifactDeploymentExecutor.deploy(rollbackPipeline, application, environment, runtimeSpec, healthCheck, serviceConfig, expertConfig);
-
-            completeDeployPhase(rollbackPipeline, "正在等待回滚版本发布生效…");
-        } catch (Exception exception) {
-            pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ERROR);
-            String message = StringUtils.defaultIfBlank(exception.getMessage(), "回滚任务执行失败，请查看日志。");
-            int failed = pipelineRepository.updateStatusAndMessageIfMatch(
-                    rollbackPipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ERROR, message);
-            if (failed > 0) {
-                rollbackPipeline.markFailed(message);
-                eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                        rollbackPipeline, PipelineNotificationType.FAILED, message
-                ));
-            }
-            throw new BizException("Rollback failed: " + exception.getMessage(), exception);
-        }
+        artifactDeployRunner.run(rollbackPipeline, application, PipelineStatus.INITIALIZED, new ArtifactDeployRunner.Messages(
+                "回滚任务已进入部署阶段。", "正在等待回滚版本发布生效…", "回滚任务执行失败，请查看日志。", "Rollback failed: "));
         return rollbackPipeline.getId();
     }
 
@@ -339,27 +268,6 @@ public class PipelineService {
                 pipeline, PipelineNotificationType.STOPPED, "发布任务已被手动停止。"
         ));
         return true;
-    }
-
-    /**
-     * Completes the deploy phase after the artifact has been applied. The pipeline moves to ROLLING_OUT; the
-     * scan job later reads Kubernetes rollout status and decides SUCCEEDED/ERROR.
-     */
-    private void completeDeployPhase(Pipeline pipeline, String rollingOutDetail) {
-        pipelineStateMachine.ensureCanTransition(PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
-        int updated = pipelineRepository.updateStatusIfMatch(
-                pipeline.getId(), PipelineStatus.DEPLOYING, PipelineStatus.ROLLING_OUT);
-        if (updated == 0) {
-            // The pipeline was moved while its artifact was being applied — a stop is the only legal way — so the
-            // rollout is no longer this pipeline's to report on. The workload is updated regardless: a stop cannot
-            // take back an artifact that has already been applied.
-            log.info("Pipeline {} left DEPLOYING while its artifact was applied; not entering rollout", pipeline.getId());
-            return;
-        }
-        pipeline.markRollingOut();
-        eventPublisher.publishEvent(PipelineNotificationEvent.of(
-                pipeline, PipelineNotificationType.ROLLING_OUT, rollingOutDetail
-        ));
     }
 
     private Environment requireEnvironment(String environmentName) {

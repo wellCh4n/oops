@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.Arrays;
 import java.util.List;
@@ -134,5 +135,34 @@ class ApplicationTests {
         buildConfig.setSourceType(ApplicationSourceType.ZIP);
         application.setBuildConfig(buildConfig);
         assertEquals(ApplicationSourceType.ZIP, application.sourceType());
+    }
+
+    @Test
+    void updateBuildConfigToImageDropsBuildOnlySettings() {
+        Application application = application("owner-1");
+        ApplicationBuildConfig gitRequest = new ApplicationBuildConfig();
+        gitRequest.setSourceType(ApplicationSourceType.GIT);
+        gitRequest.setSourceConfig(new GitSourceConfig("git@host:repo.git"));
+        gitRequest.setBuildImage("maven:3");
+        ApplicationBuildConfig.DockerFileConfig dockerFile = new ApplicationBuildConfig.DockerFileConfig();
+        dockerFile.setType(DockerFileType.USER);
+        dockerFile.setContent("FROM scratch");
+        gitRequest.setDockerFileConfig(dockerFile);
+        application.updateBuildConfig(gitRequest, new ApplicationBuildConfigPolicy());
+
+        ApplicationBuildConfig imageRequest = new ApplicationBuildConfig();
+        imageRequest.setSourceType(ApplicationSourceType.IMAGE);
+        imageRequest.setSourceConfig(new ImageSourceConfig("ghcr.io/org/app"));
+        // a stale Dockerfile on the request is ignored for IMAGE, not validated and not kept
+        imageRequest.setDockerFileConfig(dockerFile);
+        imageRequest.setBuildImage("maven:3");
+        application.updateBuildConfig(imageRequest, new ApplicationBuildConfigPolicy());
+
+        ApplicationBuildConfig stored = application.getBuildConfig();
+        assertEquals(ApplicationSourceType.IMAGE, application.sourceType());
+        assertEquals("ghcr.io/org/app", stored.repository());
+        assertNull(stored.getBuildImage());
+        assertNull(stored.getDockerFileConfig());
+        assertNull(stored.getEnvironmentConfigs());
     }
 }
