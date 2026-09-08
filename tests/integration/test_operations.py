@@ -89,7 +89,8 @@ def test_a_pod_can_be_restarted(client, namespace, environment, application,
     a call that quietly did nothing.
     """
     from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES,
-                             configure_for_build, git_strategy)
+                             configure_for_build, git_strategy,
+                             require_successful_deploy)
     from test_streams import first_running_pod
 
     configure_for_build(client, namespace, application, environment)
@@ -136,7 +137,8 @@ def test_an_application_can_be_moved_to_another_namespace(
     namespace while its StatefulSet kept running under the old one.
     """
     from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES,
-                             configure_for_build, git_strategy)
+                             configure_for_build, git_strategy,
+                             require_successful_deploy)
 
     application = application_factory(prefix="migrate")
     target = f"{namespace}-target"
