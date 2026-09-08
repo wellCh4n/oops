@@ -7,7 +7,6 @@ import { ApplicationForm } from "@/app/apps/application-form"
 import {
   getApplication,
   getApplicationBuildConfig,
-  getApplicationBuildEnvConfigs,
   getApplicationRuntimeSpec,
   getApplicationService,
   getApplicationExpertConfig
@@ -15,7 +14,6 @@ import {
 import {
   Application,
   ApplicationBuildConfig,
-  ApplicationBuildEnvironmentConfig,
   ApplicationRuntimeSpec,
   ApplicationServiceConfig,
   ApplicationExpertConfig
@@ -34,7 +32,6 @@ export default function EditAppPage() {
 
   const [application, setApplication] = useState<Application | null>(null)
   const [buildConfig, setBuildConfig] = useState<ApplicationBuildConfig | undefined>(undefined)
-  const [buildEnvConfigs, setBuildEnvConfigs] = useState<ApplicationBuildEnvironmentConfig[]>([])
   const [runtimeSpec, setRuntimeSpec] = useState<ApplicationRuntimeSpec | undefined>(undefined)
   const [serviceConfig, setServiceConfig] = useState<ApplicationServiceConfig | undefined>(undefined)
   const [expertConfig, setExpertConfig] = useState<ApplicationExpertConfig | undefined>(undefined)
@@ -46,10 +43,9 @@ export default function EditAppPage() {
   useEffect(() => {
     const fetchApp = async () => {
       try {
-        const [appRes, buildConfigRes, buildEnvRes, runtimeSpecRes, serviceRes, expertRes] = await Promise.all([
+        const [appRes, buildConfigRes, runtimeSpecRes, serviceRes, expertRes] = await Promise.all([
           getApplication(namespace, name),
           getApplicationBuildConfig(namespace, name),
-          getApplicationBuildEnvConfigs(namespace, name),
           getApplicationRuntimeSpec(namespace, name),
           getApplicationService(namespace, name),
           getApplicationExpertConfig(namespace, name),
@@ -68,10 +64,6 @@ export default function EditAppPage() {
         
         if (buildConfigRes.data) {
             setBuildConfig(buildConfigRes.data)
-        }
-
-        if (buildEnvRes.data) {
-            setBuildEnvConfigs(buildEnvRes.data)
         }
 
         if (runtimeSpecRes.data) {
@@ -112,7 +104,6 @@ export default function EditAppPage() {
           loading={loading}
           initialData={application ?? undefined}
           initialBuildConfig={buildConfig}
-          initialBuildEnvConfigs={buildEnvConfigs}
           initialRuntimeSpec={runtimeSpec}
           initialServiceConfig={serviceConfig}
           initialExpertConfig={expertConfig}

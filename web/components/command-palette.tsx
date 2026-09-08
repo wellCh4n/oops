@@ -210,7 +210,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         router.push(`/apps/${app.namespace}/${app.name}/publish`)
         break
       case "ide":
-        if (app.sourceType === "ZIP") {
+        if (app.sourceType && app.sourceType !== "GIT") {
           toast.error(t("ide.zipUnsupported"))
           return
         }

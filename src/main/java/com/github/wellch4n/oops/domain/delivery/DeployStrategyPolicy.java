@@ -2,8 +2,12 @@ package com.github.wellch4n.oops.domain.delivery;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import java.util.regex.Pattern;
 
 public class DeployStrategyPolicy {
+
+    /** OCI distribution tag grammar: {@code [A-Za-z0-9_][A-Za-z0-9_.-]{0,127}}. */
+    private static final Pattern IMAGE_TAG = Pattern.compile("[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}");
 
     public void ensureStrategyMatches(ApplicationSourceType configuredSourceType,
                                       ApplicationSourceType requestedPublishType) {
@@ -48,6 +52,25 @@ public class DeployStrategyPolicy {
             }
         }
         return new ZipPublishConfig(objectKey, url);
+    }
+
+    /**
+     * Resolves the IMAGE publish config. The image name comes from the build config, never from the
+     * request — the publish only names the tag, and the tag must be an OCI tag on its own, so a caller
+     * cannot smuggle a different image (or a digest) in through it.
+     */
+    public ImagePublishConfig resolveImagePublishConfig(String image, String tag) {
+        if (image == null || image.isBlank()) {
+            throw new BizException("Image is required for IMAGE publish");
+        }
+        String normalizedTag = blankToNull(tag == null ? null : tag.trim());
+        if (normalizedTag == null) {
+            throw new BizException("Image tag is required for IMAGE publish");
+        }
+        if (!IMAGE_TAG.matcher(normalizedTag).matches()) {
+            throw new BizException("Invalid image tag: " + normalizedTag);
+        }
+        return new ImagePublishConfig(image.trim(), normalizedTag);
     }
 
     private static String blankToNull(String value) {

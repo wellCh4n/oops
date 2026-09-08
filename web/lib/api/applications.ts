@@ -1,6 +1,6 @@
 import { apiFetch } from "./client"
 import { watchSse, watchSseUntilEnd, SseEndingStreamHandlers, SseWatchOptions } from "./sse"
-import { ActiveDeployment, Application, ApiResponse, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, LogBatch, Page, LastSuccessfulPipelineInfo } from "./types"
+import { ActiveDeployment, Application, ApiResponse, ApplicationBuildConfig, ApplicationRuntimeSpec, ApplicationExpertConfig, ApplicationResource, PodMetric, PodMetricHistory, ApplicationEnvironment, ApplicationPodStatus, ApplicationEvent, ConfigMap, ApplicationServiceConfig, ClusterDomainInfo, DeployRequest, LogBatch, Page, LastSuccessfulPipelineInfo } from "./types"
 
 export interface BuildSourceUploadRequest {
   fileName: string
@@ -186,14 +186,6 @@ export const createApplicationBuildSourceUpload = async (
   return response.json() as Promise<ApiResponse<BuildSourceUploadResponse>>
 }
 
-export const getApplicationBuildEnvConfigs = async (namespace: string, name: string): Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/build/configs`)
-  if (!response.ok) {
-    throw new Error("Failed to fetch application build environment configs")
-  }
-  return response.json() as Promise<ApiResponse<ApplicationBuildEnvironmentConfig[]>>
-}
-
 export const getApplicationRuntimeSpec = async (namespace: string, name: string): Promise<ApiResponse<ApplicationRuntimeSpec>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/runtime-spec`)
   if (!response.ok) {
@@ -290,22 +282,6 @@ export const updateApplicationConfigMaps = async (namespace: string, name: strin
   return response.json() as Promise<ApiResponse<boolean>>
 }
 
-export const updateApplicationBuildEnvConfigs = async (
-  namespace: string,
-  name: string,
-  configs: ApplicationBuildEnvironmentConfig[]
-): Promise<ApiResponse<boolean>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments/build/configs`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(configs),
-  })
-  if (!response.ok) {
-    throw new Error("Failed to save application build environment configs")
-  }
-  return response.json() as Promise<ApiResponse<boolean>>
-}
-
 export const updateApplicationRuntimeSpec = async (
   namespace: string,
   name: string,
@@ -318,22 +294,6 @@ export const updateApplicationRuntimeSpec = async (
   })
   if (!response.ok) {
     throw new Error("Failed to save application runtime spec")
-  }
-  return response.json() as Promise<ApiResponse<boolean>>
-}
-
-export const updateApplicationEnvironments = async (
-  namespace: string,
-  name: string,
-  configs: ApplicationEnvironment[]
-): Promise<ApiResponse<boolean>> => {
-  const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/environments`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(configs),
-  })
-  if (!response.ok) {
-    throw new Error("Failed to save application environments")
   }
   return response.json() as Promise<ApiResponse<boolean>>
 }

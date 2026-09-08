@@ -1,6 +1,6 @@
 "use client"
 
-import { Application, ApplicationBuildConfig, ApplicationBuildEnvironmentConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig, ApplicationExpertConfig as ApplicationExpertConfigType } from "@/lib/api/types"
+import { Application, ApplicationBuildConfig, ApplicationRuntimeSpec as ApplicationRuntimeSpecType, ApplicationServiceConfig, ApplicationExpertConfig as ApplicationExpertConfigType } from "@/lib/api/types"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { RefObject, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { getUserId, isAdmin } from "@/lib/auth"
@@ -31,7 +31,6 @@ interface ApplicationFormProps {
   loading?: boolean
   initialData?: Application
   initialBuildConfig?: ApplicationBuildConfig
-  initialBuildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   initialRuntimeSpec?: ApplicationRuntimeSpecType
   initialServiceConfig?: ApplicationServiceConfig
   initialExpertConfig?: ApplicationExpertConfigType
@@ -49,7 +48,6 @@ type ApplicationTab =
 interface ApplicationFormState {
   application?: Application
   buildConfig?: ApplicationBuildConfig
-  buildEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   runtimeSpec?: ApplicationRuntimeSpecType
   serviceConfig?: ApplicationServiceConfig
   expertConfig?: ApplicationExpertConfigType
@@ -79,7 +77,6 @@ function ApplicationFormContent({
   loading,
   initialData,
   initialBuildConfig,
-  initialBuildEnvConfigs,
   initialRuntimeSpec,
   initialServiceConfig,
   initialExpertConfig
@@ -111,7 +108,6 @@ function ApplicationFormContent({
   const formState = useMemo<ApplicationFormState>(() => ({
     application: initialData,
     buildConfig: initialBuildConfig,
-    buildEnvConfigs: initialBuildEnvConfigs,
     runtimeSpec: initialRuntimeSpec,
     serviceConfig: initialServiceConfig,
     expertConfig: initialExpertConfig,
@@ -119,7 +115,6 @@ function ApplicationFormContent({
   }), [
     formStateOverrides,
     initialBuildConfig,
-    initialBuildEnvConfigs,
     initialData,
     initialRuntimeSpec,
     initialServiceConfig,
@@ -255,15 +250,9 @@ function ApplicationFormContent({
             <ApplicationBuildInfo
               ref={buildInfoRef}
               initialBuildConfig={formState.buildConfig}
-              initialEnvConfigs={formState.buildEnvConfigs}
               applicationName={formState.application?.name}
               namespace={formState.application?.namespace}
-              onSaved={(nextBuildConfig, nextBuildEnvConfigs) => {
-                updateFormState({
-                  buildConfig: nextBuildConfig,
-                  buildEnvConfigs: nextBuildEnvConfigs,
-                })
-              }}
+              onSaved={(nextBuildConfig) => updateFormState({ buildConfig: nextBuildConfig })}
             />
           )}
         </TabsContent>

@@ -74,20 +74,32 @@ public class Application extends BaseAggregateRoot {
         ApplicationBuildConfig target = ensureBuildConfig();
         var dockerFileConfig = request.getDockerFileConfig();
         ApplicationSourceType sourceType = buildConfigPolicy.normalizeSourceType(request.getSourceType());
+        String repository = request.repository();
+        String image = request.image();
         buildConfigPolicy.validate(
                 sourceType,
-                request.repository(),
+                repository,
+                image,
                 dockerFileConfig != null ? dockerFileConfig.getType() : null,
                 dockerFileConfig != null ? dockerFileConfig.getContent() : null);
         target.setSourceType(sourceType);
-        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, request.repository()));
-        target.setDockerFileConfig(dockerFileConfig);
-        target.setBuildImage(request.getBuildImage());
-        target.setEnvironmentConfigs(request.getEnvironmentConfigs());
-    }
-
-    public void updateBuildEnvironmentConfigs(List<ApplicationBuildConfig.EnvironmentConfig> configs) {
-        ensureBuildConfig().setEnvironmentConfigs(configs);
+        target.setSourceConfig(buildConfigPolicy.buildSourceConfig(sourceType, repository, image));
+        if (sourceType == ApplicationSourceType.IMAGE) {
+            // Nothing is built, so a Dockerfile, build image or build command would be dead configuration
+            // that the editor hides — drop it rather than carry it around invisibly.
+            target.setDockerFileConfig(null);
+            target.setBuildImage(null);
+            target.setEnvironmentConfigs(null);
+        } else {
+            target.setDockerFileConfig(dockerFileConfig);
+            target.setBuildImage(request.getBuildImage());
+            // The editor always sends the full list; an OpenAPI caller that leaves the field out
+            // (the CLI's `app build set` without --build-command) is not asking to clear the
+            // per-environment build commands, so absent means unchanged.
+            if (request.getEnvironmentConfigs() != null) {
+                target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+            }
+        }
     }
 
     public void updateRuntimeSpec(
@@ -99,17 +111,6 @@ public class Application extends BaseAggregateRoot {
                 ? request.getEnvironmentConfigs()
                 : Collections.emptyList());
         target.setHealthCheck(normalizeHealthCheck(request.getHealthCheck(), healthCheckPolicy));
-    }
-
-    public void updateRuntimeEnvironmentConfigs(
-            List<ApplicationRuntimeSpec.EnvironmentConfig> configs,
-            HealthCheckPolicy healthCheckPolicy
-    ) {
-        ApplicationRuntimeSpec target = ensureRuntimeSpec();
-        ApplicationRuntimeSpec request = new ApplicationRuntimeSpec();
-        request.setEnvironmentConfigs(configs);
-        request.setHealthCheck(target.getHealthCheck());
-        updateRuntimeSpec(request, healthCheckPolicy);
     }
 
     public void bindEnvironments(List<ApplicationEnvironment> configs) {
@@ -179,13 +180,6 @@ public class Application extends BaseAggregateRoot {
                 .filter(config -> environmentName != null && environmentName.equals(config.getEnvironment()))
                 .findFirst()
                 .orElseGet(ApplicationExpertConfig.EnvironmentConfig::new);
-    }
-
-    public List<ApplicationBuildConfig.EnvironmentConfig> buildEnvironmentConfigs() {
-        if (buildConfig == null || buildConfig.getEnvironmentConfigs() == null) {
-            return Collections.emptyList();
-        }
-        return buildConfig.getEnvironmentConfigs();
     }
 
     public List<ApplicationRuntimeSpec.EnvironmentConfig> runtimeEnvironmentConfigs() {

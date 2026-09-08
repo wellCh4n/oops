@@ -25,8 +25,9 @@ export const getCreateApplicationSchema = (t?: (key: string) => string) => z.obj
 })
 
 export const applicationBuildSchema = z.object({
-  sourceType: z.enum(["GIT", "ZIP"]),
+  sourceType: z.enum(["GIT", "ZIP", "IMAGE"]),
   repository: z.string().nullish(),
+  image: z.string().nullish(),
   dockerFileConfig: z.object({
     type: z.enum(["BUILTIN", "USER"]),
     path: z.string().nullish(),
@@ -41,7 +42,18 @@ export const applicationBuildSchema = z.object({
   if (value.sourceType === "GIT" && !value.repository?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
   }
-  if (value.dockerFileConfig?.type === "USER" && !value.dockerFileConfig?.content?.trim()) {
+  if (value.sourceType === "IMAGE") {
+    // The image has its own field, so switching source keeps both values. The tag is chosen when
+    // publishing, and a registry port before the first "/" is not a tag.
+    const image = value.image?.trim() ?? ""
+    const lastSegment = image.slice(image.lastIndexOf("/") + 1)
+    if (!image) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["image"], message: "Image is required" })
+    } else if (/\s/.test(image) || !lastSegment || /[:@]/.test(lastSegment)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["image"], message: "Image must not include a tag or digest" })
+    }
+  }
+  if (value.sourceType !== "IMAGE" && value.dockerFileConfig?.type === "USER" && !value.dockerFileConfig?.content?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dockerFileConfig", "content"], message: "Dockerfile content is required" })
   }
 })

@@ -251,10 +251,31 @@ def cmd_app_build_get(client: Client, args: argparse.Namespace) -> None:
     def human(c):
         print(f"Source:      {dash(c.get('sourceType'))}")
         print(f"Repository:  {dash(c.get('repository'))}")
+        print(f"Image:       {dash(c.get('image'))}")
         print(f"Build image: {dash(c.get('buildImage'))}")
         df = c.get("dockerFileConfig") or {}
         print(f"Dockerfile:  type={dash(df.get('type'))}, path={dash(df.get('path'))}")
+        for item in c.get("environmentConfigs") or []:
+            print(f"Build cmd:   {item.get('environment')}={dash(item.get('buildCommand'))}")
     render(args.json, config, human)
+
+
+def parse_build_commands(values: Optional[List[str]]) -> Optional[List[Dict[str, str]]]:
+    """`ENV=COMMAND` pairs → environmentConfigs. None (flag absent) leaves the stored commands
+    alone; a lone empty string clears them all."""
+    if values is None:
+        return None
+    if values == [""]:
+        return []
+    configs = []
+    for value in values:
+        if "=" not in value:
+            die(f"--build-command expects ENV=COMMAND, got {value!r}")
+        env, command = value.split("=", 1)
+        if not env.strip():
+            die(f"--build-command has an empty environment name: {value!r}")
+        configs.append({"environment": env.strip(), "buildCommand": command})
+    return configs
 
 
 def cmd_app_build_set(client: Client, args: argparse.Namespace) -> None:
@@ -262,7 +283,10 @@ def cmd_app_build_set(client: Client, args: argparse.Namespace) -> None:
         "namespace": args.namespace,
         "applicationName": args.name,
         "sourceType": args.source.upper(),
+        # Both travel every time: the Git URL and the image name are separate fields, so an
+        # application that switches source keeps the one it is not using.
         "repository": args.repository or "",
+        "image": args.image or "",
         "dockerFileConfig": {
             "type": args.dockerfile_type.upper(),
             "path": args.dockerfile_path,
@@ -270,6 +294,9 @@ def cmd_app_build_set(client: Client, args: argparse.Namespace) -> None:
         },
         "buildImage": args.build_image or "",
     }
+    build_commands = parse_build_commands(args.build_commands)
+    if build_commands is not None:
+        body["environmentConfigs"] = build_commands
     client.put(f"/openapi/namespaces/{args.namespace}/applications/{args.name}/build/config", body)
     render(args.json, {"updated": True}, lambda _: print(f"Build config updated for {args.namespace}/{args.name}"))
 
@@ -544,6 +571,12 @@ def cmd_deploy_zip(client: Client, args: argparse.Namespace) -> None:
     _trigger_deploy(client, args.namespace, args.name, args.env, args.mode, strategy, args.wait, args.json)
 
 
+def cmd_deploy_image(client: Client, args: argparse.Namespace) -> None:
+    # Nothing is built: the image name comes from the build config and only the tag is chosen here.
+    strategy = {"type": "IMAGE", "tag": args.tag}
+    _trigger_deploy(client, args.namespace, args.name, args.env, args.mode, strategy, args.wait, args.json)
+
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -606,12 +639,17 @@ def build_parser() -> argparse.ArgumentParser:
     build_set = build_sub.add_parser("set")
     build_set.add_argument("-n", "--namespace", required=True)
     build_set.add_argument("name")
-    build_set.add_argument("--source", default="git", choices=["git", "zip"])
-    build_set.add_argument("--repository", default="")
+    build_set.add_argument("--source", default="git", choices=["git", "zip", "image"])
+    build_set.add_argument("--repository", default="", help="Git URL, for --source git")
+    build_set.add_argument("--image", default="",
+                           help="image name without a tag, for --source image")
     build_set.add_argument("--dockerfile-type", default="user", choices=["builtin", "user"], dest="dockerfile_type")
     build_set.add_argument("--dockerfile-path", default="Dockerfile", dest="dockerfile_path")
     build_set.add_argument("--dockerfile-content", dest="dockerfile_content")
     build_set.add_argument("--build-image", dest="build_image")
+    build_set.add_argument("--build-command", action="append", dest="build_commands", metavar="ENV=COMMAND",
+                           help="per-environment build command (repeatable); omit to keep the existing ones, "
+                                "pass an empty string to clear them all")
 
     # app service
     service_p = app_sub.add_parser("service")
@@ -736,6 +774,14 @@ def build_parser() -> argparse.ArgumentParser:
     dz.add_argument("--mode", default="immediate", choices=["immediate", "manual"])
     dz.add_argument("--wait", action="store_true", default=False)
 
+    di = deploy_sub.add_parser("image")
+    di.add_argument("-n", "--namespace", required=True)
+    di.add_argument("name")
+    di.add_argument("--env", required=True)
+    di.add_argument("--tag", default="latest", help="tag of the image configured in the build config")
+    di.add_argument("--mode", default="immediate", choices=["immediate", "manual"])
+    di.add_argument("--wait", action="store_true", default=False)
+
     return root
 
 
@@ -793,6 +839,7 @@ def main() -> None:
         ("pipeline", "watch"): lambda: cmd_pipeline_watch(client, args),
         ("deploy", "git"): lambda: cmd_deploy_git(client, args),
         ("deploy", "zip"): lambda: cmd_deploy_zip(client, args),
+        ("deploy", "image"): lambda: cmd_deploy_image(client, args),
     }
 
     if args.command == "app":

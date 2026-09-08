@@ -10,7 +10,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = GitPublishConfig.class, name = "GIT"),
-        @JsonSubTypes.Type(value = ZipPublishConfig.class, name = "ZIP")
+        @JsonSubTypes.Type(value = ZipPublishConfig.class, name = "ZIP"),
+        @JsonSubTypes.Type(value = ImagePublishConfig.class, name = "IMAGE")
 })
-public sealed interface PublishConfig permits GitPublishConfig, ZipPublishConfig {
+public sealed interface PublishConfig permits GitPublishConfig, ZipPublishConfig, ImagePublishConfig {
 }

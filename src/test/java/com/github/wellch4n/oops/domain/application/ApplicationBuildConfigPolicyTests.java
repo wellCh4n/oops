@@ -22,34 +22,34 @@ class ApplicationBuildConfigPolicyTests {
     @Test
     void validateRequiresRepositoryForGit() {
         assertThrows(BizException.class,
-                () -> policy.validate(ApplicationSourceType.GIT, "  ", null, null));
+                () -> policy.validate(ApplicationSourceType.GIT, "  ", null, null, null));
         assertThrows(BizException.class,
-                () -> policy.validate(null, null, null, null));
+                () -> policy.validate(null, null, null, null, null));
         // valid git
-        policy.validate(ApplicationSourceType.GIT, "git@host:repo.git", null, null);
+        policy.validate(ApplicationSourceType.GIT, "git@host:repo.git", null, null, null);
     }
 
     @Test
     void validateDoesNotRequireRepositoryForZip() {
-        policy.validate(ApplicationSourceType.ZIP, null, null, null);
+        policy.validate(ApplicationSourceType.ZIP, null, null, null, null);
     }
 
     @Test
     void validateRequiresContentForUserDockerfile() {
         assertThrows(BizException.class,
-                () -> policy.validate(ApplicationSourceType.ZIP, null, DockerFileType.USER, "  "));
+                () -> policy.validate(ApplicationSourceType.ZIP, null, null, DockerFileType.USER, "  "));
         // with content it is fine
-        policy.validate(ApplicationSourceType.ZIP, null, DockerFileType.USER, "FROM scratch");
+        policy.validate(ApplicationSourceType.ZIP, null, null, DockerFileType.USER, "FROM scratch");
     }
 
     @Test
     void validateAllowsBuiltinDockerfileWithoutContent() {
-        policy.validate(ApplicationSourceType.GIT, "repo", DockerFileType.BUILTIN, null);
+        policy.validate(ApplicationSourceType.GIT, "repo", null, DockerFileType.BUILTIN, null);
     }
 
     @Test
     void buildSourceConfigReturnsGitConfigWithRepository() {
-        SourceConfig config = policy.buildSourceConfig(ApplicationSourceType.GIT, "repo-url");
+        SourceConfig config = policy.buildSourceConfig(ApplicationSourceType.GIT, "repo-url", null);
         GitSourceConfig gitConfig = assertInstanceOf(GitSourceConfig.class, config);
         assertEquals("repo-url", gitConfig.repository());
     }
@@ -57,11 +57,40 @@ class ApplicationBuildConfigPolicyTests {
     @Test
     void buildSourceConfigReturnsZipConfig() {
         assertInstanceOf(ZipSourceConfig.class,
-                policy.buildSourceConfig(ApplicationSourceType.ZIP, null));
+                policy.buildSourceConfig(ApplicationSourceType.ZIP, null, null));
     }
 
     @Test
     void buildSourceConfigDefaultsNullToGit() {
-        assertInstanceOf(GitSourceConfig.class, policy.buildSourceConfig(null, "repo"));
+        assertInstanceOf(GitSourceConfig.class, policy.buildSourceConfig(null, "repo", null));
+    }
+
+    @Test
+    void validateRequiresImageRepositoryWithoutTagForImage() {
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, null, " ", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, null, "nginx:1.27", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, null, "nginx@sha256:abc", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, null, "ghcr.io/org/", null, null));
+        assertThrows(BizException.class,
+                () -> policy.validate(ApplicationSourceType.IMAGE, null, "ghcr.io/org/app x", null, null));
+        // a registry port is not a tag
+        policy.validate(ApplicationSourceType.IMAGE, null, "registry.local:5000/org/app", null, null);
+        policy.validate(ApplicationSourceType.IMAGE, null, "nginx", null, null);
+    }
+
+    @Test
+    void validateIgnoresDockerfileForImage() {
+        policy.validate(ApplicationSourceType.IMAGE, null, "nginx", DockerFileType.USER, "  ");
+    }
+
+    @Test
+    void buildSourceConfigReturnsImageConfigTrimmed() {
+        SourceConfig config = policy.buildSourceConfig(ApplicationSourceType.IMAGE, null, " ghcr.io/org/app ");
+        ImageSourceConfig imageConfig = assertInstanceOf(ImageSourceConfig.class, config);
+        assertEquals("ghcr.io/org/app", imageConfig.image());
     }
 }

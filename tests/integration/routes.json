@@ -163,18 +163,6 @@
   },
   {
     "method": "GET",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
-    "key": "GET /api/namespaces/{}/applications/{}/environments/build/configs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "GET",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
-    "key": "GET /api/namespaces/{}/applications/{}/environments/runtime-specs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "GET",
     "path": "/api/namespaces/{namespace}/applications/{name}/events",
     "key": "GET /api/namespaces/{}/applications/{}/events",
     "controller": "ApplicationController"
@@ -256,6 +244,12 @@
     "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/files/download",
     "key": "GET /api/namespaces/{}/applications/{}/pods/{}/files/download",
     "controller": "PodFileSystemController"
+  },
+  {
+    "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/log",
+    "key": "GET /api/namespaces/{}/applications/{}/pods/{}/log",
+    "controller": "ApplicationController"
   },
   {
     "method": "GET",
@@ -585,18 +579,6 @@
     "method": "PUT",
     "path": "/api/namespaces/{namespace}/applications/{name}/environments",
     "key": "PUT /api/namespaces/{}/applications/{}/environments",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/build/configs",
-    "key": "PUT /api/namespaces/{}/applications/{}/environments/build/configs",
-    "controller": "ApplicationController"
-  },
-  {
-    "method": "PUT",
-    "path": "/api/namespaces/{namespace}/applications/{name}/environments/runtime-specs",
-    "key": "PUT /api/namespaces/{}/applications/{}/environments/runtime-specs",
     "controller": "ApplicationController"
   },
   {

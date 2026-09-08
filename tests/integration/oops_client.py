@@ -158,9 +158,11 @@ class OopsClient:
     def get_application(self, namespace: str, name: str, **kwargs) -> Response:
         return self.get(f"/api/namespaces/{namespace}/applications/{name}", **kwargs)
 
-    def put_build_config(self, namespace: str, name: str, config: dict) -> Response:
+    def put_build_config(self, namespace: str, name: str, config: dict,
+                         **kwargs) -> Response:
         return self.put(
-            f"/api/namespaces/{namespace}/applications/{name}/build/config", config)
+            f"/api/namespaces/{namespace}/applications/{name}/build/config", config,
+            **kwargs)
 
     def put_service_config(self, namespace: str, name: str, config: dict) -> Response:
         return self.put(

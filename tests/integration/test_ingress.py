@@ -25,7 +25,7 @@ import pytest
 
 from oops_client import wait_until
 from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES, configure_for_build,
-                         git_strategy)
+                         git_strategy, require_successful_deploy)
 
 pytestmark = pytest.mark.cluster
 
@@ -79,8 +79,7 @@ def deploy_with_host(client, namespace, application, environment, host,
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    if pipeline["status"] != "SUCCEEDED":
-        pytest.skip(f"deploy ended as {pipeline['status']}, nothing was exposed")
+    require_successful_deploy(client, pipeline, "the routes to inspect")
     return pipeline
 
 

@@ -79,6 +79,8 @@ export interface Application {
   collaboratorNames?: Record<string, string>
   sourceType?: ApplicationSourceType
   createdTime?: string
+  // Update only: the environment bindings, saved with the profile in one request. Omitted means unchanged.
+  environments?: ApplicationEnvironment[]
 }
 
 // An in-flight pipeline, fetched for a whole namespace scope at once so the application
@@ -105,13 +107,17 @@ export interface ApplicationBuildConfig {
   namespace: string
   applicationName: string
   sourceType?: ApplicationSourceType
+  // Git URL, used when sourceType is GIT.
   repository?: string
+  // Image name without a tag, used when sourceType is IMAGE (the tag is chosen per publish).
+  // Separate from repository so switching source keeps both values.
+  image?: string
   dockerFileConfig?: DockerFileConfig
   buildImage?: string
   environmentConfigs?: ApplicationBuildEnvironmentConfig[]
 }
 
-export type ApplicationSourceType = 'GIT' | 'ZIP'
+export type ApplicationSourceType = 'GIT' | 'ZIP' | 'IMAGE'
 
 interface GitDeployStrategyParam {
   type: 'GIT'
@@ -122,6 +128,11 @@ interface ZipDeployStrategyParam {
   type: 'ZIP'
   objectKey?: string
   url?: string
+}
+
+interface ImageDeployStrategyParam {
+  type: 'IMAGE'
+  tag: string
 }
 
 export interface GitPublishConfig {
@@ -136,9 +147,15 @@ export interface ZipPublishConfig {
   url?: string | null
 }
 
-export type PublishConfig = GitPublishConfig | ZipPublishConfig
+export interface ImagePublishConfig {
+  type: 'IMAGE'
+  repository?: string | null
+  tag?: string | null
+}
 
-export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam
+export type PublishConfig = GitPublishConfig | ZipPublishConfig | ImagePublishConfig
+
+export type DeployStrategyParam = GitDeployStrategyParam | ZipDeployStrategyParam | ImageDeployStrategyParam
 
 export interface DeployRequest {
   environment: string

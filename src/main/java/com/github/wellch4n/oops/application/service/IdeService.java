@@ -45,8 +45,9 @@ public class IdeService {
         ApplicationSourceType sourceType = applicationBuildConfig != null && applicationBuildConfig.getSourceType() != null
                 ? applicationBuildConfig.getSourceType()
                 : ApplicationSourceType.GIT;
-        if (sourceType == ApplicationSourceType.ZIP) {
-            throw new BizException("IDE is not supported for ZIP source applications");
+        if (sourceType != ApplicationSourceType.GIT) {
+            // The IDE clones the application's repository into its workspace; ZIP and IMAGE have none.
+            throw new BizException("IDE is only supported for GIT source applications");
         }
         return ideGateway.create(namespace, applicationName, environment, application, applicationBuildConfig, request);
     }

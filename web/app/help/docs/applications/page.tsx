@@ -40,6 +40,7 @@ export default function ApplicationsDocPage() {
               { name: "namespace", type: "string", descriptionKey: "doc.applications.crud.create.body.namespace" },
               { name: "owner", type: "string", descriptionKey: "doc.applications.crud.create.body.owner" },
               { name: "collaborators", type: "array", descriptionKey: "doc.applications.crud.create.body.collaborators" },
+              { name: "environments", type: "array", descriptionKey: "doc.applications.crud.update.body.environments" },
             ]}
           />
           <CodeBlock language="json">{`{
@@ -61,24 +62,15 @@ export default function ApplicationsDocPage() {
             rows={[
               { name: "sourceType", type: "string", required: true, descriptionKey: "doc.applications.build.body.sourceType" },
               { name: "repository", type: "string", descriptionKey: "doc.applications.build.body.repository" },
+              { name: "image", type: "string", descriptionKey: "doc.applications.build.body.image" },
               { name: "dockerFileConfig.type", type: "string", descriptionKey: "doc.applications.build.body.dockerfileType" },
               { name: "dockerFileConfig.path", type: "string", descriptionKey: "doc.applications.build.body.dockerfilePath" },
               { name: "dockerFileConfig.content", type: "string", descriptionKey: "doc.applications.build.body.dockerfileContent" },
               { name: "buildImage", type: "string", descriptionKey: "doc.applications.build.body.buildImage" },
+              { name: "environmentConfigs", type: "array", descriptionKey: "doc.applications.build.body.environmentConfigs" },
             ]}
           />
         </DocSubSection>
-
-        <Endpoint
-          method="GET"
-          path={`${PATH_PREFIX}/{name}/environments/build/configs`}
-          summaryKey="doc.applications.build.envGet.summary"
-        />
-        <Endpoint
-          method="PUT"
-          path={`${PATH_PREFIX}/{name}/environments/build/configs`}
-          summaryKey="doc.applications.build.envPut.summary"
-        />
         <DocSubSection titleKey="doc.applications.build.envBody.title">
           <FieldTable
             rows={[
@@ -123,17 +115,6 @@ export default function ApplicationsDocPage() {
             ]}
           />
         </DocSubSection>
-
-        <Endpoint
-          method="GET"
-          path={`${PATH_PREFIX}/{name}/environments/runtime-specs`}
-          summaryKey="doc.applications.runtime.envGet.summary"
-        />
-        <Endpoint
-          method="PUT"
-          path={`${PATH_PREFIX}/{name}/environments/runtime-specs`}
-          summaryKey="doc.applications.runtime.envPut.summary"
-        />
       </DocSection>
 
       <DocSection titleKey="doc.applications.environments.title">

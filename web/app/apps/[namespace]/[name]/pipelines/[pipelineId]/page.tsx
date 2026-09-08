@@ -136,9 +136,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const [clusterDomain, setClusterDomain] = useState<ClusterDomainInfo | null>(null)
   const { t } = useLanguage()
 
-  // A rollback reuses a historic artifact and runs no build job, so it has neither steps nor build logs.
+  // A rollback reuses a historic artifact and an image publish deploys one the operator named; neither
+  // runs a build job, so neither has steps or build logs.
   const isRollback = pipeline?.triggerType === "ROLLBACK"
-  const buildLogAvailable = pipeline !== null && !isRollback
+  const isImagePublish = pipeline?.publishType === "IMAGE"
+  const hasBuild = pipeline !== null && !isRollback && !isImagePublish
+  const buildLogAvailable = hasBuild
 
   const fetchPipeline = useCallback(async () => {
     try {
@@ -483,8 +486,8 @@ export default function PipelineDetailPage({ params }: PageProps) {
             panel on the guess and pulling it away a moment later reads as a glitch. */}
         {pipeline && (
           <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
-            {/* Left column: steps + logs — a rollback runs no build job, so it has no log stream */}
-            {!isRollback && (
+            {/* Left column: steps + logs — a rollback or image publish runs no build job, so it has no log stream */}
+            {hasBuild && (
               <div className="flex-1 flex flex-col gap-3 overflow-hidden min-h-0">
                 {/* Steps Progress Bar — driven by the build pod's container statuses, not by which
                     log happens to be arriving, so every step reads right even when its log is not loaded. */}

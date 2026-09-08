@@ -172,7 +172,7 @@ function IDEPageContent() {
 
   const openCreateDialog = async () => {
     if (!activeNamespace || !selectedApp || !activeEnv) return
-    if (sourceType === "ZIP") {
+    if (sourceType !== "GIT") {
       toast.error(t("ide.zipUnsupported"))
       return
     }
@@ -193,7 +193,7 @@ function IDEPageContent() {
 
   const handleCreate = async () => {
     if (!activeNamespace || !selectedApp || !activeEnv) return
-    if (sourceType === "ZIP") {
+    if (sourceType !== "GIT") {
       toast.error(t("ide.zipUnsupported"))
       return
     }
@@ -323,7 +323,7 @@ function IDEPageContent() {
                   <Button
                     size="sm"
                     onClick={openCreateDialog}
-                    disabled={!activeNamespace || !selectedApp || !activeEnv || sourceType === "ZIP"}
+                    disabled={!activeNamespace || !selectedApp || !activeEnv || sourceType !== "GIT"}
                   >
                     <Plus className="size-4" />
                     {t("ide.create")}
@@ -331,7 +331,7 @@ function IDEPageContent() {
                 </div>
               </div>
 
-              {sourceType === "ZIP" && (
+              {sourceType !== "GIT" && (
                 <div className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
                   {t("ide.zipUnsupportedDesc")}
                 </div>

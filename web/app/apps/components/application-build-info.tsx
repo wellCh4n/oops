@@ -5,6 +5,7 @@ import { FieldErrors } from "react-hook-form"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -19,9 +20,9 @@ import dynamic from "next/dynamic"
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ApplicationBuildEnvironmentConfig, ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
-import { updateApplicationBuildEnvConfigs, updateApplicationBuildConfig } from "@/lib/api/applications"
-import { GitBranch, FileCode, Box, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
+import { ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
+import { updateApplicationBuildConfig } from "@/lib/api/applications"
+import { GitBranch, FileCode, Box, Container, Terminal, PackageSearch, Settings2, Hammer, FolderOpen, SlidersHorizontal } from "lucide-react"
 import { toast } from "sonner"
 import { ApplicationEnvironmentSelector } from "./application-environment-selector"
 import { useTheme } from "next-themes"
@@ -32,23 +33,19 @@ import { ApplicationEditorTabSkeleton } from "./application-editor-skeleton"
 
 interface ApplicationBuildInfoProps {
   initialBuildConfig?: ApplicationBuildConfig
-  initialEnvConfigs?: ApplicationBuildEnvironmentConfig[]
   applicationId?: string
   applicationName?: string
   namespace?: string
-  onSaved?: (
-    buildConfig: ApplicationBuildConfig,
-    envConfigs: ApplicationBuildEnvironmentConfig[]
-  ) => void
+  onSaved?: (buildConfig: ApplicationBuildConfig) => void
 }
 
 export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, ApplicationBuildInfoProps>(function ApplicationBuildInfo({
   initialBuildConfig,
-  initialEnvConfigs = [],
   applicationName,
   namespace,
   onSaved,
 }: ApplicationBuildInfoProps, ref) {
+  const initialEnvConfigs = initialBuildConfig?.environmentConfigs ?? []
   const normalizedDockerFileConfig = initialBuildConfig?.dockerFileConfig
     ? {
         type: initialBuildConfig.dockerFileConfig.type,
@@ -62,6 +59,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     defaultValues: {
       sourceType: initialBuildConfig?.sourceType || "GIT",
       repository: initialBuildConfig?.repository ?? "",
+      image: initialBuildConfig?.image ?? "",
       dockerFileConfig: normalizedDockerFileConfig,
       buildImage: initialBuildConfig?.buildImage ?? "",
       environmentConfigs: initialEnvConfigs.map((config) => ({
@@ -120,6 +118,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
   const buildSnapshot = useCallback((values: ApplicationBuildFormValues = form.getValues()) => JSON.stringify({
     sourceType: values.sourceType,
     repository: values.repository ?? "",
+    image: values.image ?? "",
     dockerFileConfig: values.dockerFileConfig ?? { type: "BUILTIN", path: "Dockerfile" },
     buildImage: values.buildImage ?? "",
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
@@ -179,26 +178,30 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
           }
         : undefined
 
-      // 1. Save global build config
+      // The whole tab is one request: the per-environment build commands travel inside the build
+      // config. An image application has nothing to build, so the backend drops them along with
+      // the rest of the build settings.
       const buildConfigPayload: ApplicationBuildConfig = {
         sourceType: data.sourceType,
-        repository: data.sourceType === "GIT" ? data.repository ?? undefined : undefined,
+        // Both travel on every save: the backend keeps only the one its source uses, and sending
+        // the other back unchanged is what lets a switch between GIT and IMAGE keep both values.
+        repository: data.repository?.trim() || undefined,
+        image: data.image?.trim() || undefined,
         dockerFileConfig: normalizedDockerFileConfig,
         buildImage: data.buildImage ?? undefined,
+        environmentConfigs: data.sourceType === "IMAGE"
+          ? []
+          : data.environmentConfigs.map((config) => ({
+              environment: config.environment,
+              buildCommand: config.buildCommand ?? undefined,
+            })),
         namespace,
         applicationName,
       }
       await updateApplicationBuildConfig(namespace, applicationName, buildConfigPayload)
 
-      // 2. Save environment configs
-      const envConfigs: ApplicationBuildEnvironmentConfig[] = data.environmentConfigs.map((config) => ({
-        environment: config.environment,
-        buildCommand: config.buildCommand ?? undefined,
-      }))
-      await updateApplicationBuildEnvConfigs(namespace, applicationName, envConfigs)
-
       toast.success(t("apps.build.saveSuccess"))
-      onSaved?.(buildConfigPayload, envConfigs)
+      onSaved?.(buildConfigPayload)
       form.reset(data)
       return true
     } catch (error) {
@@ -268,6 +271,9 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                         <TabsTrigger value="ZIP" className="px-6 cursor-pointer">
                           {t("apps.build.sourceZip")}
                         </TabsTrigger>
+                        <TabsTrigger value="IMAGE" className="px-6 cursor-pointer">
+                          {t("apps.build.sourceImage")}
+                        </TabsTrigger>
                       </TabsList>
                     </Tabs>
                   </FormControl>
@@ -295,11 +301,32 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                   </FormItem>
                 )}
               />
+            ) : sourceType === "IMAGE" ? (
+              <FormField
+                control={form.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-1"><Container className="size-3.5" />{t("apps.build.imageRepository")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        autoComplete="off"
+                        placeholder={t("apps.build.imageRepositoryPlaceholder")}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>{t("apps.build.imageRepositoryHint")}</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             ) : (
               <div className="text-sm text-muted-foreground">{t("apps.build.zipConfiguredInPublish")}</div>
             )}
 
-            <div className="grid gap-2">
+            {/* An image application is never built, so the Dockerfile has nothing to apply to. */}
+            <div className={sourceType === "IMAGE" ? "hidden" : "grid gap-2"}>
               <Label className="flex items-center gap-1">
                 <FileCode className="size-3.5" />
                 {t("apps.build.dockerfile")}
@@ -398,7 +425,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className={sourceType === "IMAGE" ? "hidden" : "border rounded-lg overflow-hidden"}>
             <div className="flex items-center gap-2 px-4 py-3 bg-muted/50 border-b">
               <Hammer className="size-4 text-muted-foreground" />
               <span className="text-sm font-semibold">{t("apps.build.envConfig")}</span>

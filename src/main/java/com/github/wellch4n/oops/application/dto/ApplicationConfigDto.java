@@ -7,6 +7,7 @@ import com.github.wellch4n.oops.domain.application.ApplicationExpertConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationRuntimeSpec;
 import com.github.wellch4n.oops.domain.application.ApplicationServiceConfig;
 import com.github.wellch4n.oops.domain.application.GitSourceConfig;
+import com.github.wellch4n.oops.domain.application.ImageSourceConfig;
 import com.github.wellch4n.oops.domain.application.ZipSourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
@@ -19,6 +20,11 @@ public final class ApplicationConfigDto {
     private ApplicationConfigDto() {
     }
 
+    /**
+     * @param environments the environment bindings, saved together with the profile because the
+     *                     basic-info editor edits both on one form. {@code null} on update means
+     *                     "leave the bindings as they are"; ignored on create.
+     */
     public record Profile(
             String id,
             LocalDateTime createdTime,
@@ -27,7 +33,8 @@ public final class ApplicationConfigDto {
             String icon,
             String namespace,
             String owner,
-            List<String> collaborators
+            List<String> collaborators,
+            List<EnvironmentBinding> environments
     ) {
         public Application toDomain() {
             Application application = new Application();
@@ -48,7 +55,13 @@ public final class ApplicationConfigDto {
             String namespace,
             String applicationName,
             ApplicationSourceType sourceType,
+            /** Git URL, used when sourceType is GIT. */
             String repository,
+            /**
+             * Image name without a tag, used when sourceType is IMAGE. Separate from
+             * {@code repository} so an application that switches between the two sources keeps both.
+             */
+            String image,
             DockerFileConfig dockerFileConfig,
             String buildImage,
             List<BuildEnvironmentConfig> environmentConfigs
@@ -64,6 +77,7 @@ public final class ApplicationConfigDto {
                     config.getApplicationName(),
                     config.getSourceType(),
                     config.repository(),
+                    config.image(),
                     DockerFileConfig.from(config.getDockerFileConfig()),
                     config.getBuildImage(),
                     map(config.getEnvironmentConfigs(), BuildEnvironmentConfig::from)
@@ -77,9 +91,11 @@ public final class ApplicationConfigDto {
             config.setNamespace(namespace);
             config.setApplicationName(applicationName);
             config.setSourceType(sourceType);
-            config.setSourceConfig(sourceType == ApplicationSourceType.ZIP
-                    ? new ZipSourceConfig()
-                    : new GitSourceConfig(repository));
+            config.setSourceConfig(switch (sourceType != null ? sourceType : ApplicationSourceType.GIT) {
+                case GIT -> new GitSourceConfig(repository);
+                case ZIP -> new ZipSourceConfig();
+                case IMAGE -> new ImageSourceConfig(image);
+            });
             config.setDockerFileConfig(dockerFileConfig != null ? dockerFileConfig.toDomain() : null);
             config.setBuildImage(buildImage);
             config.setEnvironmentConfigs(map(environmentConfigs, BuildEnvironmentConfig::toDomain));

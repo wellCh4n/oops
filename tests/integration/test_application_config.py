@@ -75,29 +75,91 @@ def test_build_config_round_trips(client, namespace, application, environment):
     assert stored["repository"] == "https://example.invalid/team/service.git"
     assert stored["buildImage"] == "node:20-slim"
 
-    per_environment = client.get(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/build/configs").data
     commands = {item["environment"]: item["buildCommand"]
-                for item in per_environment}
+                for item in stored["environmentConfigs"]}
     assert commands.get(environment) == "npm run build", (
         f"the per-environment build command was lost; got {commands}")
 
 
-def test_per_environment_build_configs_can_be_written_separately(
+def test_build_config_without_environment_configs_keeps_the_commands(
         client, namespace, application, environment):
-    """The per-environment collection has its own endpoint as well as riding
-    along inside the build config, and both have to agree."""
-    client.put(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/build/configs",
-        [{"environment": environment, "buildCommand": "make release"}])
+    """An OpenAPI caller that leaves `environmentConfigs` out (the CLI's
+    `app build set` without --build-command) is not asking to clear the
+    per-environment build commands; only an explicit empty list does that."""
+    base = {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "GIT",
+        "repository": "https://example.invalid/team/service.git",
+    }
+    client.put_build_config(namespace, application, {
+        **base,
+        "environmentConfigs": [
+            {"environment": environment, "buildCommand": "make release"},
+        ],
+    })
+
+    client.put_build_config(namespace, application, {**base, "buildImage": "node:22-slim"})
+    stored = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert stored["buildImage"] == "node:22-slim"
+    commands = {item["environment"]: item["buildCommand"]
+                for item in stored["environmentConfigs"] or []}
+    assert commands.get(environment) == "make release", (
+        "a build config update without environmentConfigs wiped the build commands")
+
+    client.put_build_config(namespace, application, {**base, "environmentConfigs": []})
+    stored = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert not stored["environmentConfigs"], (
+        "an explicit empty environmentConfigs must clear the build commands")
+
+
+def test_image_build_config_keeps_only_the_image(client, namespace, application,
+                                                environment):
+    """An IMAGE source names the image without its tag — the tag travels per
+    deploy — and is never built, so the build-only settings sent along with it
+    are dropped rather than stored invisibly."""
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "IMAGE",
+        "image": "ghcr.io/example/service",
+        "buildImage": "node:20-slim",
+        "dockerFileConfig": {"type": "USER", "content": "FROM alpine:3.20\n"},
+        "environmentConfigs": [
+            {"environment": environment, "buildCommand": "npm run build"},
+        ],
+    })
 
     stored = client.get(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/build/configs").data
-    commands = {item["environment"]: item["buildCommand"] for item in stored}
-    assert commands.get(environment) == "make release"
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert stored["sourceType"] == "IMAGE"
+    assert stored["image"] == "ghcr.io/example/service"
+    assert not stored.get("buildImage")
+    assert not stored.get("dockerFileConfig")
+
+    listed = client.get_application(namespace, application).data
+    assert listed["sourceType"] == "IMAGE"
+
+
+def test_image_build_config_rejects_a_tag_in_the_image_name(client, namespace,
+                                                            application):
+    for image in ("nginx:1.27", "ghcr.io/example/service@sha256:0123", " ", "ghcr.io/example/"):
+        response = client.put_build_config(namespace, application, {
+            "namespace": namespace,
+            "applicationName": application,
+            "sourceType": "IMAGE",
+            "image": image,
+        }, expect_success=False)
+        assert response.success is False, f"{image!r} should have been rejected"
+    # a registry port is not a tag
+    client.put_build_config(namespace, application, {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "IMAGE",
+        "image": "registry.local:5000/example/service",
+    })
 
 
 def test_service_config_round_trips(client, namespace, application, environment):
@@ -149,11 +211,6 @@ def test_runtime_spec_round_trips(client, namespace, application, environment):
         "the memory limit was rewritten in storage; it must round trip as the "
         "bare number the caller sent")
 
-    per_environment = client.get(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/runtime-specs").data
-    assert any(item["environment"] == environment for item in per_environment)
-
 
 @pytest.mark.cluster
 def test_saving_a_runtime_spec_before_the_first_deploy_is_quiet(
@@ -201,22 +258,6 @@ def test_saving_a_runtime_spec_before_the_first_deploy_is_quiet(
         "not supposed to deploy it")
 
 
-def test_per_environment_runtime_specs_can_be_written_separately(
-        client, namespace, application, environment):
-    client.put(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/runtime-specs",
-        [{"environment": environment, "replicas": 3,
-          "cpuRequest": "50m", "cpuLimit": "500m",
-          "memoryRequest": "64", "memoryLimit": "256"}])
-
-    stored = client.get(
-        f"/api/namespaces/{namespace}/applications/{application}"
-        f"/environments/runtime-specs").data
-    configs = {item["environment"]: item for item in stored}
-    assert configs[environment]["replicas"] == 3
-
-
 def test_expert_config_round_trips(client, namespace, application, environment):
     """Service account, priority and the scheduled restart cron."""
     client.put(
@@ -260,6 +301,36 @@ def test_environment_bindings_round_trip(client, namespace, application,
         "which clusters to clean up")
 
 
+def test_profile_update_carries_the_environment_bindings(
+        client, namespace, application, environment):
+    """The basic-info editor saves the profile and the bindings as one request.
+
+    `environments` on the profile replaces the bindings in the same
+    transaction; leaving the field out keeps them, so a CLI `app update` that
+    knows nothing about bindings cannot wipe them.
+    """
+    profile_path = f"/api/namespaces/{namespace}/applications/{application}"
+    profile = client.get(profile_path).data
+
+    client.put(profile_path, {
+        **profile,
+        "description": "bound through the profile",
+        "environments": [{"environment": environment}],
+    })
+    bound = client.get(f"{profile_path}/environments").data
+    assert [item["environment"] for item in bound] == [environment]
+    assert client.get(profile_path).data["description"] == "bound through the profile"
+
+    client.put(profile_path, {**profile, "description": "bindings untouched"})
+    bound = client.get(f"{profile_path}/environments").data
+    assert [item["environment"] for item in bound] == [environment], (
+        "a profile update without `environments` must leave the bindings alone")
+
+    client.put(profile_path, {**profile, "environments": []})
+    assert client.get(f"{profile_path}/environments").data == [], (
+        "an empty `environments` list must unbind every environment")
+
+
 def test_reading_an_unconfigured_application_is_empty_not_an_error(
         client, namespace, application):
     """Every config surface has to answer for an application with nothing set.
@@ -268,8 +339,7 @@ def test_reading_an_unconfigured_application_is_empty_not_an_error(
     the blob column is null and nobody checked.
     """
     for suffix in ("/build/config", "/service", "/runtime-spec", "/expert-config",
-                   "/environments", "/environments/build/configs",
-                   "/environments/runtime-specs", "/last-successful-pipeline"):
+                   "/environments", "/last-successful-pipeline"):
         result = client.get(
             f"/api/namespaces/{namespace}/applications/{application}{suffix}",
             expect_success=False)
@@ -308,7 +378,8 @@ def test_cluster_facing_reads_answer_for_a_deployed_application(
     workload and each needs the same expensive deploy to exist first.
     """
     from test_deploy import configure_for_build, git_strategy
-    from test_deploy import DEPLOY_TIMEOUT, TERMINAL_STATUSES
+    from test_deploy import (DEPLOY_TIMEOUT, TERMINAL_STATUSES,
+                             require_successful_deploy)
     from oops_client import wait_until
 
     configure_for_build(client, namespace, application, environment)
@@ -321,8 +392,7 @@ def test_cluster_facing_reads_answer_for_a_deployed_application(
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    if pipeline["status"] != "SUCCEEDED":
-        pytest.skip(f"deploy ended as {pipeline['status']}")
+    require_successful_deploy(client, pipeline, "the workload these reads describe")
 
     reads = {
         "/status": "pod status",

@@ -11,7 +11,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = GitSourceConfig.class, name = "GIT"),
-        @JsonSubTypes.Type(value = ZipSourceConfig.class, name = "ZIP")
+        @JsonSubTypes.Type(value = ZipSourceConfig.class, name = "ZIP"),
+        @JsonSubTypes.Type(value = ImageSourceConfig.class, name = "IMAGE")
 })
-public sealed interface SourceConfig permits GitSourceConfig, ZipSourceConfig {
+public sealed interface SourceConfig permits GitSourceConfig, ZipSourceConfig, ImageSourceConfig {
 }

@@ -18,6 +18,12 @@ class PipelineStateMachineTests {
     }
 
     @Test
+    void allowsInitializedToBuildSucceededForManualImagePublish() {
+        assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
+                PipelineStatus.INITIALIZED, PipelineStatus.BUILD_SUCCEEDED));
+    }
+
+    @Test
     void stillAllowsNormalBuildPath() {
         assertDoesNotThrow(() -> stateMachine.ensureCanTransition(
                 PipelineStatus.INITIALIZED, PipelineStatus.RUNNING));
@@ -62,7 +68,7 @@ class PipelineStateMachineTests {
         assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
                 PipelineStatus.INITIALIZED, PipelineStatus.SUCCEEDED));
         assertThrows(BizException.class, () -> stateMachine.ensureCanTransition(
-                PipelineStatus.INITIALIZED, PipelineStatus.BUILD_SUCCEEDED));
+                PipelineStatus.INITIALIZED, PipelineStatus.ROLLING_OUT));
     }
 
     @Test

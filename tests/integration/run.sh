@@ -69,7 +69,9 @@ usage: ./run.sh [options] [-- pytest arguments]
   --contract             every module, but only the tests that need no cluster
   --keep                 leave the stack running afterwards
   --                     everything after this goes straight to pytest
-                         (e.g. -- -k basic_auth -x)
+                         (e.g. -- -k basic_auth)
+
+  The run stops at the first failure. Pass -- --maxfail=0 to see every one.
 
   ./run.sh                          the whole suite
   ./run.sh --module ingress         iterate on one module
@@ -328,6 +330,12 @@ step_done
 
 PYTEST_ARGS=(-p no:cacheprovider -p "no:randomly"
              -p "pytest_steps"
+             # Stop at the first failure. A full run is half an hour of real
+             # builds, and once one has failed the rest is time spent on a
+             # result nobody will act on before that failure is fixed. Anything
+             # after `--` comes later on the command line and wins, so
+             # `-- --maxfail=0` still runs the suite out.
+             -x
              --tb=short
              --html="${REPORTS}/report-${STAMP}.html" --self-contained-html
              --junitxml="${REPORTS}/junit-${STAMP}.xml")
@@ -402,6 +410,9 @@ if [ "$SUMMARY" -ne 0 ] || [ "$STATUS" -ne 0 ]; then
   # Only the failures, not the whole log.
   sed -n '/=\{5,\} FAILURES/,/=\{5,\} \(warnings\|short test summary\)/p' \
     "${LOGS}/pytest.log" | head -60
+  # Say it, because the counts above are of what ran, not of the suite.
+  printf "%sstopped at the first failure; the rest of the suite did not run.%s\n" \
+    "$DIM" "$RESET"
   printf "%sfull output: %s%s\n" "$DIM" "${REPORTS}/report-${STAMP}.html" "$RESET"
   printf "%slogs:        %s%s\n" "$DIM" "$LOGS" "$RESET"
   exit 1

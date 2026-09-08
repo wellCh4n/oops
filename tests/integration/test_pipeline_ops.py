@@ -12,7 +12,8 @@ import pytest
 
 from oops_client import wait_until
 from test_deploy import (ACTIVE_STATUSES, DEPLOY_TIMEOUT, TERMINAL_STATUSES,
-                         configure_for_build, git_strategy)
+                         configure_for_build, git_strategy,
+                         require_successful_deploy)
 
 pytestmark = pytest.mark.cluster
 
@@ -84,7 +85,7 @@ def test_a_manual_build_is_deployed_on_request(client, namespace, application,
     status = wait_until(built, timeout=DEPLOY_TIMEOUT,
                         description="the manual build to finish")
     if status != "BUILD_SUCCEEDED":
-        pytest.skip(f"the manual build ended as {status}")
+        pytest.fail(f"the manual build this scenario deploys ended as {status}")
 
     client.put(f"/api/namespaces/{namespace}/applications/{application}"
                f"/pipelines/{pipeline_id}/deploy")
@@ -105,8 +106,7 @@ def test_a_successful_pipeline_can_be_rolled_back(client, namespace, application
     """
     pipeline_id = deploy(client, namespace, application, environment)
     first = wait_for_terminal(client, namespace, application, pipeline_id)
-    if first["status"] != "SUCCEEDED":
-        pytest.skip(f"the first deploy ended as {first['status']}, nothing to roll back")
+    require_successful_deploy(client, first, "the release to roll back to")
 
     rollback_id = client.post(
         f"/api/namespaces/{namespace}/applications/{application}"
