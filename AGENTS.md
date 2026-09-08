@@ -422,6 +422,12 @@ OOPS uses Flyway to apply schema and data migrations automatically during applic
   `environmentName` JSON keys to `environment`. Its column renames are guarded on
   `information_schema`, because a database that ran the 3.0 Go release already carries the new
   names while its `flyway_schema_history` stopped at V21 — the migration must be a no-op there
+- `V23__widen_enum_columns_to_varchar.sql` turns the `@Enumerated(STRING)` columns
+  (`source_type`, `publish_type`, `cert_mode`, `provider`, `role`) into `varchar(255)`. A database
+  that predates Flyway got them from Hibernate's DDL as native MySQL `ENUM(...)` columns frozen at
+  the constants of the day, so adding a constant (`IMAGE`) failed with "Data truncated for column"
+  and rolled the save back, even though `V1__baseline_schema.sql` documents them as varchar. Never
+  declare a new enum-backed column as `ENUM`, for the same reason
 
 ## Configuration Notes
 

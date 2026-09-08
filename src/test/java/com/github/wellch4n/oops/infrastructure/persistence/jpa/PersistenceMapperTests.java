@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.github.wellch4n.oops.domain.application.GitSourceConfig;
+import com.github.wellch4n.oops.domain.application.ImageSourceConfig;
 import com.github.wellch4n.oops.domain.application.ZipSourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DomainCertMode;
@@ -43,8 +44,27 @@ class PersistenceMapperTests {
     }
 
     @Test
+    void mapsImageSourceConfigBetweenDomainAndEntity() {
+        com.github.wellch4n.oops.domain.application.ApplicationBuildConfig domain =
+                new com.github.wellch4n.oops.domain.application.ApplicationBuildConfig();
+        domain.setSourceType(ApplicationSourceType.IMAGE);
+        domain.setSourceConfig(new ImageSourceConfig("nginx"));
+
+        ApplicationBuildConfig entity = PersistenceMapper.toEntity(domain);
+        var roundTrip = PersistenceMapper.toDomain(entity);
+
+        assertInstanceOf(ImageSourceConfig.class, entity.getSourceConfig());
+        assertEquals(ApplicationSourceType.IMAGE, roundTrip.getSourceType());
+        assertEquals("nginx", roundTrip.repository());
+    }
+
+    @Test
     void sourceConfigConverterRoundTripsBothVariants() {
         SourceConfigConverter converter = new SourceConfigConverter();
+
+        String imageJson = converter.convertToDatabaseColumn(new ImageSourceConfig("nginx"));
+        assertEquals("{\"type\":\"IMAGE\",\"repository\":\"nginx\"}", imageJson);
+        assertEquals("nginx", ((ImageSourceConfig) converter.convertToEntityAttribute(imageJson)).repository());
 
         String gitJson = converter.convertToDatabaseColumn(new GitSourceConfig("git@example.com:repo.git"));
         assertInstanceOf(GitSourceConfig.class, converter.convertToEntityAttribute(gitJson));
