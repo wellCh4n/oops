@@ -247,6 +247,12 @@
   },
   {
     "method": "GET",
+    "path": "/api/namespaces/{namespace}/applications/{name}/pods/{pod}/log",
+    "key": "GET /api/namespaces/{}/applications/{}/pods/{}/log",
+    "controller": "ApplicationController"
+  },
+  {
+    "method": "GET",
     "path": "/api/namespaces/{namespace}/applications/{name}/resources",
     "key": "GET /api/namespaces/{}/applications/{}/resources",
     "controller": "ApplicationController"
