@@ -189,53 +189,54 @@ def test_pipeline_step_log_of_an_unknown_step_is_an_error_then_end(
     assert "no-such-step" in events[0].data, events[0].data
 
 
-def test_pod_log_socket_answers_ping_with_pong(client, namespace, environment,
-                                              deployed_application):
+def pod_log_path(namespace, application, pod, environment):
+    return (f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log"
+            f"?environment={environment}")
+
+
+def test_pod_log_stream_replays_stamped_batches(client, namespace, environment,
+                                                deployed_application):
+    """The pod log is the same SSE shape as a pipeline step log, but a running
+    pod's stream follows the container and never ends on its own, so read the
+    first batch and hang up the way a browser leaving the page would."""
     application, _ = deployed_application
     pod = wait_until(
         lambda: first_running_pod(client, namespace, application, environment),
         timeout=180, interval=5, description="a running pod to appear")
 
-    socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log"
-        f"?environment={environment}")
-    try:
-        socket.send("ping")
-        frames_seen = []
-        for frame in read_until_closed(socket, timeout=15):
-            frames_seen.append(frame)
-            if frame == "pong":
-                break
-        assert "pong" in frames_seen, (
-            "the pod log socket did not answer a text ping with pong; the browser "
-            f"keepalive depends on it. Frames seen: {frames_seen[:5]}")
-    finally:
-        socket.close()
-
-
-def test_pod_log_socket_streams_text_lines(client, namespace, environment,
-                                           deployed_application):
-    application, _ = deployed_application
-    pod = wait_until(
-        lambda: first_running_pod(client, namespace, application, environment),
-        timeout=180, interval=5, description="a running pod to appear")
-
-    socket = client.websocket(
-        f"/api/namespaces/{namespace}/applications/{application}/pods/{pod}/log"
-        f"?environment={environment}")
-    try:
-        frames = [frame for _, frame in zip(range(3), read_until_closed(socket, 20))]
-    finally:
-        socket.close()
+    first_batch = None
+    for event in client.sse(pod_log_path(namespace, application, pod, environment),
+                            timeout=30):
+        assert event.event != "error", f"the pod log stream failed: {event.data}"
+        if event.event == "log":
+            first_batch = event
+            break
+    assert first_batch is not None, "the pod log stream delivered no log batch"
 
     # Content depends on the image, so assert the transport rather than the text:
-    # lines arrive as text frames and are split, never glued together by a redraw.
-    assert frames, "the pod log socket delivered nothing"
-    for frame in frames:
-        assert isinstance(frame, str)
-        assert "\n" not in frame.rstrip("\n"), (
-            f"a log frame carried an embedded newline, lines are not being split: "
-            f"{frame[:200]!r}")
+    # stamped lines, split on newlines, with the batch id set to the last stamp so
+    # a reconnect can resume after it.
+    lines = json.loads(first_batch.data)["lines"]
+    assert lines, "an empty log batch was sent"
+    for line in lines:
+        assert set(line) >= {"time", "text"}, line
+        assert "\n" not in line["text"], (
+            f"a log line carried an embedded newline, lines are not being split: "
+            f"{line['text'][:200]!r}")
+    assert first_batch.id == lines[-1]["time"], (first_batch.id, lines[-1])
+
+
+def test_pod_log_stream_of_an_unknown_pod_is_an_error_then_end(
+        client, namespace, environment, deployed_application):
+    """A pod that is gone gets a reason and an `end`, so the browser's
+    EventSource does not keep reconnecting to a log that will never exist."""
+    application, _ = deployed_application
+    events = [event for event in client.sse(
+        pod_log_path(namespace, application, "no-such-pod", environment), timeout=30)
+        if event.event != "heartbeat"]
+
+    assert [event.event for event in events] == ["error", "end"], events
+    assert "no-such-pod" in events[0].data, events[0].data
 
 
 def test_terminal_socket_does_not_answer_ping(client, namespace, environment,
