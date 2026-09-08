@@ -81,6 +81,40 @@ def test_build_config_round_trips(client, namespace, application, environment):
         f"the per-environment build command was lost; got {commands}")
 
 
+def test_build_config_without_environment_configs_keeps_the_commands(
+        client, namespace, application, environment):
+    """An OpenAPI caller that leaves `environmentConfigs` out (the CLI's
+    `app build set` without --build-command) is not asking to clear the
+    per-environment build commands; only an explicit empty list does that."""
+    base = {
+        "namespace": namespace,
+        "applicationName": application,
+        "sourceType": "GIT",
+        "repository": "https://example.invalid/team/service.git",
+    }
+    client.put_build_config(namespace, application, {
+        **base,
+        "environmentConfigs": [
+            {"environment": environment, "buildCommand": "make release"},
+        ],
+    })
+
+    client.put_build_config(namespace, application, {**base, "buildImage": "node:22-slim"})
+    stored = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert stored["buildImage"] == "node:22-slim"
+    commands = {item["environment"]: item["buildCommand"]
+                for item in stored["environmentConfigs"] or []}
+    assert commands.get(environment) == "make release", (
+        "a build config update without environmentConfigs wiped the build commands")
+
+    client.put_build_config(namespace, application, {**base, "environmentConfigs": []})
+    stored = client.get(
+        f"/api/namespaces/{namespace}/applications/{application}/build/config").data
+    assert not stored["environmentConfigs"], (
+        "an explicit empty environmentConfigs must clear the build commands")
+
+
 def test_image_build_config_keeps_only_the_image(client, namespace, application,
                                                 environment):
     """An IMAGE source names the image without its tag — the tag travels per

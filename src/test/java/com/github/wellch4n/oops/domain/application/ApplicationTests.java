@@ -165,4 +165,34 @@ class ApplicationTests {
         assertNull(stored.getDockerFileConfig());
         assertNull(stored.getEnvironmentConfigs());
     }
+
+    @Test
+    void updateBuildConfigWithoutEnvironmentConfigsKeepsTheStoredOnes() {
+        Application application = application("owner-1");
+        ApplicationBuildConfig.EnvironmentConfig devCommand = new ApplicationBuildConfig.EnvironmentConfig();
+        devCommand.setEnvironment("dev");
+        devCommand.setBuildCommand("make release");
+        ApplicationBuildConfig first = new ApplicationBuildConfig();
+        first.setSourceType(ApplicationSourceType.GIT);
+        first.setSourceConfig(new GitSourceConfig("git@host:repo.git"));
+        first.setEnvironmentConfigs(List.of(devCommand));
+        application.updateBuildConfig(first, new ApplicationBuildConfigPolicy());
+
+        // an OpenAPI caller that leaves the list out is not asking to clear it
+        ApplicationBuildConfig withoutList = new ApplicationBuildConfig();
+        withoutList.setSourceType(ApplicationSourceType.GIT);
+        withoutList.setSourceConfig(new GitSourceConfig("git@host:repo.git"));
+        withoutList.setBuildImage("node:22");
+        application.updateBuildConfig(withoutList, new ApplicationBuildConfigPolicy());
+        assertEquals("node:22", application.getBuildConfig().getBuildImage());
+        assertEquals(List.of(devCommand), application.getBuildConfig().getEnvironmentConfigs());
+
+        // an explicit empty list does clear it
+        ApplicationBuildConfig emptyList = new ApplicationBuildConfig();
+        emptyList.setSourceType(ApplicationSourceType.GIT);
+        emptyList.setSourceConfig(new GitSourceConfig("git@host:repo.git"));
+        emptyList.setEnvironmentConfigs(List.of());
+        application.updateBuildConfig(emptyList, new ApplicationBuildConfigPolicy());
+        assertTrue(application.getBuildConfig().getEnvironmentConfigs().isEmpty());
+    }
 }

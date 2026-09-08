@@ -87,7 +87,7 @@ const doc = {
   "doc.applications.build.body.dockerfilePath": "Dockerfile 在仓库中的相对路径。",
   "doc.applications.build.body.dockerfileContent": "内联 Dockerfile 内容（与 path 二选一）。",
   "doc.applications.build.body.buildImage": "用于构建步骤的镜像。",
-  "doc.applications.build.body.environmentConfigs": "每个环境的构建命令数组，元素结构见下方 BuildEnvironmentConfig；与构建配置一起整体保存。",
+  "doc.applications.build.body.environmentConfigs": "每个环境的构建命令数组，元素结构见下方 BuildEnvironmentConfig；与构建配置一起整体保存。不传该字段则已有构建命令保持不变。",
   "doc.applications.build.envBody.title": "environmentConfigs 元素 (BuildEnvironmentConfig)",
   "doc.applications.build.envBody.buildCommand": "该环境下的自定义构建命令。",
   "doc.applications.runtime.title": "运行时配置",

@@ -87,7 +87,7 @@ const doc = {
   "doc.applications.build.body.dockerfilePath": "リポジトリ内の Dockerfile への相対パス。",
   "doc.applications.build.body.dockerfileContent": "インラインの Dockerfile 内容（path とはどちらか一方）。",
   "doc.applications.build.body.buildImage": "ビルドステップに使用するイメージ。",
-  "doc.applications.build.body.environmentConfigs": "環境ごとのビルドコマンドの配列。要素の構造は下の BuildEnvironmentConfig を参照してください。ビルド設定と一緒に保存されます。",
+  "doc.applications.build.body.environmentConfigs": "環境ごとのビルドコマンドの配列。要素の構造は下の BuildEnvironmentConfig を参照してください。ビルド設定と一緒に保存されます。省略すると既存のコマンドは維持されます。",
   "doc.applications.build.envBody.title": "environmentConfigs の要素 (BuildEnvironmentConfig)",
   "doc.applications.build.envBody.buildCommand": "この環境向けのカスタムビルドコマンド。",
   "doc.applications.runtime.title": "ランタイム設定",

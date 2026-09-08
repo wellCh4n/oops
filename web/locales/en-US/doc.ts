@@ -87,7 +87,7 @@ const doc = {
   "doc.applications.build.body.dockerfilePath": "Path to the Dockerfile relative to the repository root.",
   "doc.applications.build.body.dockerfileContent": "Inline Dockerfile content; mutually exclusive with path.",
   "doc.applications.build.body.buildImage": "Image used for the build step.",
-  "doc.applications.build.body.environmentConfigs": "Array of per-environment build commands; see BuildEnvironmentConfig below for the element shape. Saved as part of the build config.",
+  "doc.applications.build.body.environmentConfigs": "Array of per-environment build commands; see BuildEnvironmentConfig below for the element shape. Saved as part of the build config. Omitted means the existing commands are kept.",
   "doc.applications.build.envBody.title": "environmentConfigs element (BuildEnvironmentConfig)",
   "doc.applications.build.envBody.buildCommand": "Custom build command for this environment.",
   "doc.applications.runtime.title": "Runtime config",

@@ -91,7 +91,12 @@ public class Application extends BaseAggregateRoot {
         } else {
             target.setDockerFileConfig(dockerFileConfig);
             target.setBuildImage(request.getBuildImage());
-            target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+            // The editor always sends the full list; an OpenAPI caller that leaves the field out
+            // (the CLI's `app build set` without --build-command) is not asking to clear the
+            // per-environment build commands, so absent means unchanged.
+            if (request.getEnvironmentConfigs() != null) {
+                target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+            }
         }
     }
 

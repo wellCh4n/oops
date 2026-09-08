@@ -87,7 +87,7 @@ const doc = {
   "doc.applications.build.body.dockerfilePath": "Dockerfile 在儲存庫中的相對路徑。",
   "doc.applications.build.body.dockerfileContent": "內嵌 Dockerfile 內容（與 path 二擇一）。",
   "doc.applications.build.body.buildImage": "用於建置步驟的鏡像。",
-  "doc.applications.build.body.environmentConfigs": "每個環境的建置命令陣列，元素結構見下方 BuildEnvironmentConfig；與建置設定一起整體儲存。",
+  "doc.applications.build.body.environmentConfigs": "每個環境的建置命令陣列，元素結構見下方 BuildEnvironmentConfig；與建置設定一起整體儲存。不傳該欄位則既有建置命令保持不變。",
   "doc.applications.build.envBody.title": "environmentConfigs 元素 (BuildEnvironmentConfig)",
   "doc.applications.build.envBody.buildCommand": "該環境下的自訂建置命令。",
   "doc.applications.runtime.title": "執行階段設定",
