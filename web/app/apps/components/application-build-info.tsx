@@ -5,7 +5,6 @@ import { FieldErrors } from "react-hook-form"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -316,7 +315,6 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                         value={field.value ?? ""}
                       />
                     </FormControl>
-                    <FormDescription>{t("apps.build.imageRepositoryHint")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
