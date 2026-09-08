@@ -8,6 +8,7 @@ observable behaviour without caring how the workloads get created.
 
 from __future__ import annotations
 
+import json
 import os
 
 import pytest
@@ -36,19 +37,51 @@ PUBLIC_IMAGE_TAG = os.environ.get("OOPS_TEST_IMAGE_TAG", "alpine")
 DEPLOY_TIMEOUT = int(os.environ.get("OOPS_TEST_DEPLOY_TIMEOUT", "900"))
 
 
-def require_successful_deploy(pipeline: dict, needed_for: str) -> dict:
+def build_log_tail(client, pipeline: dict, lines: int = 30) -> str:
+    """The tail of every build step's log, for a failure message.
+
+    A failed build stores only "look at the pipeline log", and by the time
+    anyone reads CI the cluster has been torn down — so the reason has to
+    travel with the failure or it is gone. Best effort throughout: a build that
+    failed before its pod existed has no log to fetch, and that must never
+    replace the real failure with an error raised in here.
+    """
+    base = (f"/api/namespaces/{pipeline['namespace']}/applications/"
+            f"{pipeline['applicationName']}/pipelines/{pipeline['id']}")
+    try:
+        steps = next((json.loads(event.data)
+                      for event in client.sse(f"{base}/steps/watch", timeout=60)
+                      if event.event == "steps"), [])
+    except Exception as error:
+        return f"(could not list the build steps: {error})"
+
+    sections = []
+    for step in steps:
+        try:
+            tail = [line["text"]
+                    for event in client.sse(f"{base}/log?container={step}", timeout=60)
+                    if event.event == "log"
+                    for line in json.loads(event.data)["lines"]][-lines:]
+        except Exception as error:
+            tail = [f"(could not read this step's log: {error})"]
+        if tail:
+            sections.append(f"--- {step} ---\n" + "\n".join(tail))
+    return "\n".join(sections) or "(the build produced no log at all)"
+
+
+def require_successful_deploy(client, pipeline: dict, needed_for: str) -> dict:
     """The setup deploy a scenario does for itself has to succeed, or it fails.
 
     Skipping instead takes the whole scenario out of the run without a sound,
     and the endpoints only it reaches are then reported by the coverage test as
     covered by no scenario at all — a red build naming the wrong file, twenty
-    minutes after the deploy that actually broke. The pipeline's own message is
-    the part worth reading, so carry it into the failure.
+    minutes after the deploy that actually broke.
     """
     if pipeline["status"] == "SUCCEEDED":
         return pipeline
     pytest.fail(f"the deploy this scenario needs for {needed_for} ended as "
-                f"{pipeline['status']}: {pipeline.get('message') or 'no message'}")
+                f"{pipeline['status']}: {pipeline.get('message') or 'no message'}\n"
+                f"{build_log_tail(client, pipeline)}")
 
 
 def configure_for_build(client, namespace, application, environment):

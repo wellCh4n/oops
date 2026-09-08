@@ -48,7 +48,7 @@ def deployed_application(client, namespace, environment):
 
         pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                               description="the fixture deploy to finish")
-        require_successful_deploy(pipeline, "the pipeline and pod to stream")
+        require_successful_deploy(client, pipeline, "the pipeline and pod to stream")
         yield application, pipeline_id
     finally:
         try:

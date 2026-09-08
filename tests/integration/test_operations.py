@@ -102,7 +102,7 @@ def test_a_pod_can_be_restarted(client, namespace, environment, application,
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    require_successful_deploy(pipeline, "the pods to restart")
+    require_successful_deploy(client, pipeline, "the pods to restart")
 
     original = wait_until(
         lambda: first_running_pod(client, namespace, application, environment),
@@ -156,7 +156,7 @@ def test_an_application_can_be_moved_to_another_namespace(
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    require_successful_deploy(pipeline, "the workload to migrate")
+    require_successful_deploy(client, pipeline, "the workload to migrate")
 
     result = client.post(
         f"/api/namespaces/{namespace}/applications/{application}"

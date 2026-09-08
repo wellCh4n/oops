@@ -30,7 +30,7 @@ def deploy_and_wait(client, namespace, application, environment) -> str:
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish before deleting it")
-    require_successful_deploy(pipeline, "the workload to delete")
+    require_successful_deploy(client, pipeline, "the workload to delete")
     return pipeline_id
 
 

@@ -392,7 +392,7 @@ def test_cluster_facing_reads_answer_for_a_deployed_application(
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    require_successful_deploy(pipeline, "the workload these reads describe")
+    require_successful_deploy(client, pipeline, "the workload these reads describe")
 
     reads = {
         "/status": "pod status",

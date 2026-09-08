@@ -106,7 +106,7 @@ def test_a_successful_pipeline_can_be_rolled_back(client, namespace, application
     """
     pipeline_id = deploy(client, namespace, application, environment)
     first = wait_for_terminal(client, namespace, application, pipeline_id)
-    require_successful_deploy(first, "the release to roll back to")
+    require_successful_deploy(client, first, "the release to roll back to")
 
     rollback_id = client.post(
         f"/api/namespaces/{namespace}/applications/{application}"

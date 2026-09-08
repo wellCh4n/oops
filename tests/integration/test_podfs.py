@@ -113,7 +113,7 @@ def pod_files(client, namespace, environment):
 
         pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                               description="the fixture deploy to finish")
-        require_successful_deploy(pipeline, "the container to browse")
+        require_successful_deploy(client, pipeline, "the container to browse")
 
         pod = wait_until(
             lambda: first_running_pod(client, namespace, application, environment),

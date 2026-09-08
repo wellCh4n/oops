@@ -79,7 +79,7 @@ def deploy_with_host(client, namespace, application, environment, host,
 
     pipeline = wait_until(finished, timeout=DEPLOY_TIMEOUT,
                           description="the deploy to finish")
-    require_successful_deploy(pipeline, "the routes to inspect")
+    require_successful_deploy(client, pipeline, "the routes to inspect")
     return pipeline
 
 
