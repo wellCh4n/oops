@@ -23,7 +23,7 @@ import { DataTable } from "@/components/ui/data-table"
 import { getPipelineStatusColumns, imageTag } from "../columns"
 import { toast } from "sonner"
 import dayjs from "dayjs"
-import { AlertTriangle, ExternalLink, Check, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2, Loader2, X, Radio } from "lucide-react"
+import { AlertTriangle, ExternalLink, Check, CircleCheck, ArrowUpRight, Rocket, Ban, FileText, ChevronDown, Undo2, Loader2, X, Radio } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import Link from "next/link"
 import { useLanguage } from "@/contexts/language-context"
@@ -68,10 +68,32 @@ function followedStepOf(steps: PipelineStepStatus[]): string | null {
   return lastSucceeded?.name ?? null
 }
 
+// Seconds as "1h2m3s" / "2m40s" / "12s": a step lasts anywhere from a moment to many minutes, and
+// "160s" makes the reader do the division.
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const rest = seconds % 60
+  return `${hours > 0 ? `${hours}h` : ""}${hours > 0 || minutes > 0 ? `${minutes}m` : ""}${rest}s`
+}
+
+function secondsBetween(startedAt?: string | null, finishedAt?: string | null): number | null {
+  if (!startedAt || !finishedAt) return null
+  const seconds = Math.round((new Date(finishedAt).getTime() - new Date(startedAt).getTime()) / 1000)
+  return Number.isNaN(seconds) || seconds < 0 ? null : seconds
+}
+
 function stepDuration(step: PipelineStepStatus): string {
-  if (!step.startedAt || !step.finishedAt) return ""
-  const seconds = Math.round((new Date(step.finishedAt).getTime() - new Date(step.startedAt).getTime()) / 1000)
-  return Number.isNaN(seconds) || seconds < 0 ? "" : `${seconds}s`
+  const seconds = secondsBetween(step.startedAt, step.finishedAt)
+  return seconds === null ? "" : formatDuration(seconds)
+}
+
+// The build's wall time: its first step starting to its last step finishing, gaps included.
+function buildDuration(steps: PipelineStepStatus[]): string {
+  const starts = steps.map((step) => step.startedAt).filter((time): time is string => Boolean(time)).sort()
+  const ends = steps.map((step) => step.finishedAt).filter((time): time is string => Boolean(time)).sort()
+  const seconds = secondsBetween(starts[0], ends[ends.length - 1])
+  return seconds === null ? "" : formatDuration(seconds)
 }
 
 // Kubernetes stamps each line in UTC; a build is read in the timezone of whoever is watching it.
@@ -114,6 +136,33 @@ interface PageProps {
     name: string
     pipelineId: string
   }>
+}
+
+// The confirm-and-deploy control for a MANUAL pipeline parked in BUILD_SUCCEEDED. It sits in the
+// build summary card when there is a build, and in the header when there is none (an image
+// publish has no left column to hold the card).
+function DeployDialog({ environment, onConfirm }: { environment: string; onConfirm: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger render={<Button variant="default" size="sm" />}>
+        <Rocket className="size-4" />
+        {t("apps.pipeline.deployBtn")}
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("apps.pipeline.confirmTitle")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("apps.pipeline.confirmDescPrefix")}<strong>{environment}</strong>{t("apps.pipeline.confirmDescSuffix")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t("apps.pipeline.confirm")}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
 }
 
 export default function PipelineDetailPage({ params }: PageProps) {
@@ -214,6 +263,12 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const buildFinished = buildPhase === "Succeeded" || buildPhase === "Failed"
   const followedStep = useMemo(() => followedStepOf(stepStatuses), [stepStatuses])
   const viewedStep = pinnedStep ?? followedStep
+  // The trailing `done` container is the last step, and the one whose log says nothing: reached by
+  // following the build or by clicking it, it shows the build summary instead of a log.
+  const lastStep = stepStatuses[stepStatuses.length - 1]
+  const showSummary =
+    lastStep !== undefined && viewedStep === lastStep.name && (lastStep.state === "RUNNING" || lastStep.state === "SUCCEEDED")
+  const ranSteps = useMemo(() => stepStatuses.filter((step) => step.state === "SUCCEEDED" && stepDuration(step) !== ""), [stepStatuses])
   const logRows = stepLog?.step === viewedStep ? stepLog.rows : NO_ROWS
   const logError = stepLog?.step === viewedStep ? stepLog.error : null
 
@@ -236,7 +291,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   // One log stream at a time, for the step being viewed. Switching steps closes the old stream
   // and opens a new one; the server replays a finished step at once and follows a running one.
   useEffect(() => {
-    if (!buildLogAvailable || !viewedStep) return
+    if (!buildLogAvailable || !viewedStep || showSummary) return
     const step = viewedStep
     const streamId = ++streamIdRef.current
     return streamPipelineStepLog(namespace, name, pipelineId, step, {
@@ -251,7 +306,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
         setStepLog((prev) => (prev?.streamId === streamId ? { ...prev, error: message } : { streamId, step, rows: [], error: message })),
       onTerminate: () => setStreamLost(true),
     })
-  }, [namespace, name, pipelineId, buildLogAvailable, viewedStep])
+  }, [namespace, name, pipelineId, buildLogAvailable, viewedStep, showSummary])
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -438,25 +493,10 @@ export default function PipelineDetailPage({ params }: PageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {pipeline?.status === "BUILD_SUCCEEDED" && (
-              <AlertDialog>
-                <AlertDialogTrigger render={<Button variant="default" size="sm" />}>
-                  <Rocket className="size-4" />
-                  {t("apps.pipeline.deployBtn")}
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("apps.pipeline.confirmTitle")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("apps.pipeline.confirmDescPrefix")}<strong>{pipeline.environment}</strong>{t("apps.pipeline.confirmDescSuffix")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeploy}>{t("apps.pipeline.confirm")}</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            {/* With a build, the deploy control is in the build summary card; only a pipeline
+                without one (an image publish) keeps it up here. */}
+            {pipeline?.status === "BUILD_SUCCEEDED" && !hasBuild && (
+              <DeployDialog environment={pipeline.environment} onConfirm={handleDeploy} />
             )}
             {(pipeline?.status === "RUNNING" || pipeline?.status === "DEPLOYING" || pipeline?.status === "BUILD_SUCCEEDED") && (
               <AlertDialog>
@@ -541,11 +581,82 @@ export default function PipelineDetailPage({ params }: PageProps) {
                     })}
                   </div>
                 )}
-                {/* Logs Area */}
+                {/* Logs Area — or, on the `done` step, the build summary in the same panel, so the
+                    page keeps its shape. */}
                 <div className="flex-1 bg-console text-console-foreground border border-console-border rounded-md font-mono text-sm overflow-hidden flex flex-col min-h-0">
+                  {showSummary && pipeline && (
+                    <div className="flex-1 min-h-0 overflow-auto font-sans">
+                      <div className="flex flex-col gap-4 p-5">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+                            <Check className="size-3.5" />
+                          </div>
+                          <span className="text-base font-medium">{t("apps.pipeline.summary.title")}</span>
+                          {buildDuration(stepStatuses) && (
+                            <span className="text-console-muted">· {t("apps.pipeline.summary.duration")} {buildDuration(stepStatuses)}</span>
+                          )}
+                        </div>
+                        {(pipeline.artifact || ranSteps.length > 0) && (
+                          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
+                            {pipeline.artifact && (
+                              <>
+                                <dt className="text-console-muted whitespace-nowrap">{t("apps.pipeline.summary.artifact")}</dt>
+                                <dd className="min-w-0 font-mono"><Copyable value={pipeline.artifact} maxLength={Infinity} className="break-all" /></dd>
+                              </>
+                            )}
+                            {ranSteps.length > 0 && (
+                              <>
+                                <dt className="text-console-muted whitespace-nowrap">{t("apps.pipeline.summary.steps")}</dt>
+                                <dd className="flex flex-wrap gap-x-3 gap-y-1 font-mono">
+                                  {ranSteps.map((step) => (
+                                    <span key={step.name}>
+                                      {step.name} <span className="text-console-muted">{stepDuration(step)}</span>
+                                    </span>
+                                  ))}
+                                </dd>
+                              </>
+                            )}
+                          </dl>
+                        )}
+                        <div className="border-t border-console-border" />
+                        {/* Where the release is now. The pipeline is polled, so this row moves on by itself. */}
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          {pipeline.status === "BUILD_SUCCEEDED" ? (
+                            <>
+                              <span className="flex items-center gap-2">
+                                <Rocket className="size-4 text-console-muted" />
+                                {t("apps.pipeline.summary.awaitingDeploy")}
+                              </span>
+                              <DeployDialog environment={pipeline.environment} onConfirm={handleDeploy} />
+                            </>
+                          ) : pipeline.status === "SUCCEEDED" ? (
+                            <span className="flex items-center gap-2">
+                              <CircleCheck className="size-4 text-primary" />
+                              {t("apps.pipeline.summary.released")}
+                            </span>
+                          ) : pipeline.status === "ERROR" ? (
+                            <span className="flex items-center gap-2">
+                              <AlertTriangle className="size-4 text-destructive" />
+                              {t(statusLabel.ERROR)}
+                            </span>
+                          ) : pipeline.status === "STOPPED" ? (
+                            <span className="flex items-center gap-2">
+                              <Ban className="size-4 text-console-muted" />
+                              {t(statusLabel.STOPPED)}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="size-4 animate-spin text-console-muted" />
+                              {t(statusLabel[pipeline.status] ?? pipeline.status)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {/* Fixed height with the content centred in it: the follow button comes and
                       goes, and the header must neither change height nor shift its text with it. */}
-                  {viewedStep && (
+                  {!showSummary && viewedStep && (
                     <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-4 border-b border-console-border font-sans text-xs">
                       <span className="text-console-muted leading-none">
                         {t("apps.pipeline.stepLogTitle")} <span className="font-mono text-console-foreground">{viewedStep}</span>
@@ -563,6 +674,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                   {/* The padding lives inside the scroll viewport so it scrolls away with the lines,
                       as on the pod log page; outside it, it is a fixed blank band that half-scrolled
                       lines get clipped against. */}
+                  {!showSummary && (
                   <div ref={logContainerRef} className="flex-1 min-h-0 overflow-auto whitespace-pre">
                     <div className="p-4">
                     {logRows.map((row) => {
@@ -590,6 +702,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
                     )}
                     </div>
                   </div>
+                  )}
                 </div>
               </div>
             )}

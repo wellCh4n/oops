@@ -424,6 +424,12 @@ const apps = {
   "apps.pipeline.stepLogTitle": "步骤日志",
   "apps.pipeline.modeImmediate": "立即发布",
   "apps.pipeline.modeManual": "手动发布",
+  "apps.pipeline.summary.title": "构建完成",
+  "apps.pipeline.summary.duration": "耗时",
+  "apps.pipeline.summary.artifact": "产物镜像",
+  "apps.pipeline.summary.steps": "步骤耗时",
+  "apps.pipeline.summary.awaitingDeploy": "构建产物已就绪，等待发布",
+  "apps.pipeline.summary.released": "发布成功",
 }
 
 export default apps
