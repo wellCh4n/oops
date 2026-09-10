@@ -424,6 +424,12 @@ const apps = {
   "apps.pipeline.stepLogTitle": "Step log",
   "apps.pipeline.modeImmediate": "Immediate",
   "apps.pipeline.modeManual": "Manual",
+  "apps.pipeline.summary.title": "Build complete",
+  "apps.pipeline.summary.duration": "took",
+  "apps.pipeline.summary.artifact": "Artifact",
+  "apps.pipeline.summary.steps": "Steps",
+  "apps.pipeline.summary.awaitingDeploy": "The artifact is ready to deploy",
+  "apps.pipeline.summary.released": "Deployed",
 }
 
 export default apps

@@ -424,6 +424,12 @@ const apps = {
   "apps.pipeline.stepLogTitle": "ステップログ",
   "apps.pipeline.modeImmediate": "即時公開",
   "apps.pipeline.modeManual": "手動公開",
+  "apps.pipeline.summary.title": "ビルド完了",
+  "apps.pipeline.summary.duration": "所要時間",
+  "apps.pipeline.summary.artifact": "成果物イメージ",
+  "apps.pipeline.summary.steps": "ステップ所要時間",
+  "apps.pipeline.summary.awaitingDeploy": "成果物の準備ができました。公開を待っています",
+  "apps.pipeline.summary.released": "公開完了",
 }
 
 export default apps
