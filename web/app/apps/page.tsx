@@ -168,20 +168,6 @@ function AppsContent() {
                   <button
                     type="button"
                     onClick={() => {
-                      setOwnerOnly(false)
-                      updateParams({ ownerOnly: "false", page: "1" })
-                    }}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
-                      !ownerOnly
-                        ? "bg-background shadow-sm text-foreground"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {t("apps.ownerAll")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
                       setOwnerOnly(true)
                       updateParams({ ownerOnly: "true", page: "1" })
                     }}
@@ -192,6 +178,20 @@ function AppsContent() {
                     }`}
                   >
                     {t("apps.ownerMine")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOwnerOnly(false)
+                      updateParams({ ownerOnly: "false", page: "1" })
+                    }}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all cursor-pointer ${
+                      !ownerOnly
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {t("apps.ownerAll")}
                   </button>
                 </div>
               </div>

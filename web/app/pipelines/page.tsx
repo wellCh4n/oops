@@ -324,7 +324,7 @@ function PipelinesContent() {
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium leading-none whitespace-nowrap flex items-center gap-1.5"><User className="size-4" />{t("pipelines.operatorFilter")}</span>
                 <div className="inline-flex rounded-lg border bg-muted p-0.5 h-9">
-                  {[false, true].map((mineOption) => (
+                  {[true, false].map((mineOption) => (
                     <button
                       key={String(mineOption)}
                       type="button"
