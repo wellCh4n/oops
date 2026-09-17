@@ -2,6 +2,7 @@ package com.github.wellch4n.oops.domain.application;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.BaseDomainObject;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.util.List;
 import lombok.Data;
@@ -40,6 +41,19 @@ public class ApplicationBuildConfig extends BaseDomainObject {
                 : null;
     }
 
+    /** The build variables of one environment, in the order they were entered; empty when it has none. */
+    public List<BuildVariable> buildVariablesOf(String environmentName) {
+        if (environmentConfigs == null || environmentName == null) {
+            return List.of();
+        }
+        for (EnvironmentConfig config : environmentConfigs) {
+            if (config != null && environmentName.equals(config.getEnvironment())) {
+                return config.getBuildVariables() != null ? config.getBuildVariables() : List.of();
+            }
+        }
+        return List.of();
+    }
+
     @Data
     public static class DockerFileConfig {
         private DockerFileType type;
@@ -51,5 +65,11 @@ public class ApplicationBuildConfig extends BaseDomainObject {
     public static class EnvironmentConfig {
         private String environment;
         private String buildCommand;
+        /**
+         * Handed to every build step as environment variables and to the image build as
+         * {@code --build-arg}s. {@code null} in a request means "not sent", which
+         * {@code Application.updateBuildConfig} reads as unchanged.
+         */
+        private List<BuildVariable> buildVariables;
     }
 }

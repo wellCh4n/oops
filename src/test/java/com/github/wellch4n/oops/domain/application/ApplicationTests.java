@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.shared.exception.BizException;
 import java.util.Arrays;
@@ -194,5 +195,61 @@ class ApplicationTests {
         emptyList.setEnvironmentConfigs(List.of());
         application.updateBuildConfig(emptyList, new ApplicationBuildConfigPolicy());
         assertTrue(application.getBuildConfig().getEnvironmentConfigs().isEmpty());
+    }
+
+    @Test
+    void updateBuildConfigKeepsBuildVariablesACallerDidNotSend() {
+        Application application = application("owner-1");
+        application.updateBuildConfig(
+                gitBuildConfig(buildEnvironment("dev", "make", List.of(new BuildVariable(" API_URL ", null)))),
+                new ApplicationBuildConfigPolicy());
+        assertEquals(List.of(new BuildVariable("API_URL", "")),
+                application.getBuildConfig().buildVariablesOf("dev"));
+
+        // a client that predates build variables changes the command and sends no variables at all
+        application.updateBuildConfig(
+                gitBuildConfig(buildEnvironment("dev", "make release", null)),
+                new ApplicationBuildConfigPolicy());
+        assertEquals("make release", application.getBuildConfig().getEnvironmentConfigs().getFirst().getBuildCommand());
+        assertEquals(List.of(new BuildVariable("API_URL", "")),
+                application.getBuildConfig().buildVariablesOf("dev"));
+
+        // an explicit empty list clears them
+        application.updateBuildConfig(
+                gitBuildConfig(buildEnvironment("dev", "make release", List.of())),
+                new ApplicationBuildConfigPolicy());
+        assertTrue(application.getBuildConfig().buildVariablesOf("dev").isEmpty());
+        assertTrue(application.getBuildConfig().buildVariablesOf("prod").isEmpty());
+    }
+
+    @Test
+    void updateBuildConfigRefusesMalformedOrDuplicateBuildVariables() {
+        Application application = application("owner-1");
+        for (String name : List.of("", "1ST", "WITH-DASH", "WITH SPACE", "A=B")) {
+            assertThrows(BizException.class, () -> application.updateBuildConfig(
+                    gitBuildConfig(buildEnvironment("dev", "make", List.of(new BuildVariable(name, "x")))),
+                    new ApplicationBuildConfigPolicy()), name);
+        }
+        assertThrows(BizException.class, () -> application.updateBuildConfig(
+                gitBuildConfig(buildEnvironment("dev", "make",
+                        List.of(new BuildVariable("SAME", "1"), new BuildVariable("SAME", "2")))),
+                new ApplicationBuildConfigPolicy()));
+    }
+
+    private static ApplicationBuildConfig gitBuildConfig(ApplicationBuildConfig.EnvironmentConfig environmentConfig) {
+        ApplicationBuildConfig buildConfig = new ApplicationBuildConfig();
+        buildConfig.setSourceType(ApplicationSourceType.GIT);
+        buildConfig.setSourceConfig(new GitSourceConfig("git@host:repo.git"));
+        buildConfig.setEnvironmentConfigs(List.of(environmentConfig));
+        return buildConfig;
+    }
+
+    private static ApplicationBuildConfig.EnvironmentConfig buildEnvironment(
+            String environment, String buildCommand, List<BuildVariable> buildVariables) {
+        ApplicationBuildConfig.EnvironmentConfig environmentConfig = new ApplicationBuildConfig.EnvironmentConfig();
+        environmentConfig.setEnvironment(environment);
+        environmentConfig.setBuildCommand(buildCommand);
+        environmentConfig.setBuildVariables(buildVariables);
+        return environmentConfig;
     }
 }

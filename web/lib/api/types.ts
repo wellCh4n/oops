@@ -163,9 +163,21 @@ export interface DeployRequest {
   strategy: DeployStrategyParam
 }
 
+/** An environment variable of every build step, and a `--build-arg` of the image build. */
+export interface BuildVariable {
+  name: string
+  value: string
+}
+
 export interface ApplicationBuildEnvironmentConfig {
   environment: string
   buildCommand?: string
+  buildVariables?: BuildVariable[] | null
+}
+
+/** What a pipeline's build was started with, captured when the pipeline was created. */
+export interface PipelineBuildConfig {
+  buildVariables: BuildVariable[]
 }
 
 export interface ApplicationEnvironment {
@@ -304,6 +316,8 @@ export interface Pipeline {
   environment: string
   publishType?: ApplicationSourceType | null
   publishConfig?: PublishConfig | null
+  /** Absent on a pipeline that ran no build (rollback, image publish) or predates the snapshot. */
+  buildConfig?: PipelineBuildConfig | null
   createdTime: string
   deployMode?: DeployMode
   operatorId?: string

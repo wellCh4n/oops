@@ -7,6 +7,9 @@ import org.apache.commons.lang3.StringUtils;
 
 public class GitCloneStrategy implements CloneStrategy<GitCloneParam> {
 
+    private static final String SHOW_HEAD_COMMIT =
+            "echo && git -C /workspace --no-pager log -1 --date=iso --format='commit %H%nAuthor: %an <%ae>%nDate:   %ad%n%n    %s'";
+
     @Override
     public boolean supports(CloneStrategyParam param) {
         return param instanceof GitCloneParam;
@@ -35,6 +38,8 @@ public class GitCloneStrategy implements CloneStrategy<GitCloneParam> {
 
         args.add(param.repository());
         args.add("/workspace");
-        return String.join(" ", args);
+        // The branch is all a publish names, so the log says which commit it resolved to. `&&` keeps a
+        // failed clone failing the step; --no-pager because a pager would wait on a terminal nobody has.
+        return String.join(" ", args) + " && " + SHOW_HEAD_COMMIT;
     }
 }

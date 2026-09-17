@@ -14,6 +14,7 @@ import com.github.wellch4n.oops.domain.delivery.Pipeline;
 import com.github.wellch4n.oops.domain.delivery.ZipPublishConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
 import com.github.wellch4n.oops.infrastructure.kubernetes.pod.PipelineBuildPod;
@@ -76,7 +77,14 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         List<Container> initContainers = new ArrayList<>();
 
+        // From the pipeline's own snapshot, not the application's config: the summary shows the
+        // snapshot, so the job has to run on the very same values. Every step that does real work
+        // sees them — fetch (git and curl both take their settings from the environment), compile,
+        // and publish, which also hands them to the image build as --build-arg.
+        List<BuildVariable> buildVariables = pipeline.buildVariables();
+
         CloneContainer clone = new CloneContainer(application, buildCloneStrategyParam());
+        clone.addBuildVariables(buildVariables);
         clone.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts());
         initContainers.add(clone);
 
@@ -89,6 +97,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
 
         if (StringUtils.isNotEmpty(applicationBuildConfig.getBuildImage()) && StringUtils.isNotEmpty(buildCommand)) {
             CompileContainer build = new CompileContainer(application, applicationBuildConfig, buildCommand);
+            build.addBuildVariables(buildVariables);
             build.addVolumeMounts(workspaceVolume.getVolumeMounts());
             initContainers.add(build);
         }
@@ -103,6 +112,7 @@ public class PipelineExecuteTask implements Callable<PipelineBuildPod> {
         );
         push.addVolumeMounts(workspaceVolume.getVolumeMounts(), secretVolume.getVolumeMounts(),
                 containerStorageVolume.getVolumeMounts());
+        push.addBuildVariables(buildVariables);
         initContainers.add(push);
         String artifact = push.getArtifact();
 
