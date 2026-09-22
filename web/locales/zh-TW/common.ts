@@ -72,6 +72,17 @@ const common = {
   "terminal.files.deleteFailed": "刪除失敗",
   "pods.missingEnv": "缺少 env 參數",
   "pods.logEnded": "日誌已結束：容器已退出",
+  "pods.download": "下載日誌",
+  "pods.downloadDesc": "下載指定時間段內的日誌，開始和結束時間均必填。",
+  "pods.downloadRangeRequired": "請選擇開始和結束時間",
+  "pods.retentionLoading": "正在讀取節點日誌保留限制…",
+  "pods.retentionHint": "該 Pod 所在節點的 kubelet 單個日誌檔案最大 {size}",
+  "pods.retentionUnknown": "無法讀取節點的日誌保留限制（需要 nodes/proxy 權限），能下載多久取決於 kubelet 的 containerLogMaxSize。",
+  "pods.downloadSince": "開始時間",
+  "pods.downloadUntil": "結束時間",
+  "pods.downloadConfirm": "下載",
+  "pods.downloadInvalidRange": "結束時間早於開始時間",
+  "pods.downloadFailed": "下載失敗",
   "common.error": "操作失敗",
 }
 

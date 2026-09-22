@@ -383,6 +383,48 @@ export const streamPodLog = (
   )
 }
 
+// Fetches one pod's log between two instants (either optional) as a text blob for saving; the
+// file name comes from the server's Content-Disposition so it matches what the API named it.
+export const downloadPodLog = async (
+  namespace: string,
+  name: string,
+  podName: string,
+  env: string,
+  window: { since?: Date; until?: Date }
+): Promise<{ blob: Blob; fileName: string }> => {
+  const search = new URLSearchParams({ environment: env })
+  if (window.since) search.set("since", window.since.toISOString())
+  if (window.until) search.set("until", window.until.toISOString())
+  const response = await apiFetch(
+    `/api/namespaces/${namespace}/applications/${name}/pods/${podName}/log/download?${search.toString()}`
+  )
+  if (!response.ok) {
+    throw new Error("Failed to download pod log")
+  }
+  const contentType = response.headers.get("content-type") ?? ""
+  if (contentType.includes("application/json")) {
+    const body = (await response.json()) as ApiResponse<unknown>
+    throw new Error(body.message || "Failed to download pod log")
+  }
+  const disposition = response.headers.get("content-disposition") ?? ""
+  const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(disposition)
+  const fileName = match ? decodeURIComponent(match[1] ?? match[2]) : `${podName}.log`
+  return { blob: await response.blob(), fileName }
+}
+
+export interface PodLogRetention {
+  maxFileSize: string | null
+  maxFiles: number | null
+}
+
+export const getPodLogRetention = async (namespace: string, name: string, podName: string, env: string): Promise<PodLogRetention> => {
+  const response = await apiFetch(
+    `/api/namespaces/${namespace}/applications/${name}/pods/${podName}/log/retention?environment=${encodeURIComponent(env)}`
+  )
+  const body = (await response.json()) as ApiResponse<PodLogRetention>
+  return body.data ?? { maxFileSize: null, maxFiles: null }
+}
+
 export const restartApplicationPod = async (namespace: string, name: string, podName: string, env: string): Promise<ApiResponse<boolean>> => {
   const response = await apiFetch(`/api/namespaces/${namespace}/applications/${name}/pods/${podName}/restart?environment=${env}`, {
     method: "PUT",

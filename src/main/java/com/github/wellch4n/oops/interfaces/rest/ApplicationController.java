@@ -9,6 +9,7 @@ import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.LastSuccessfulPipelineDto;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodLogRetention;
 import com.github.wellch4n.oops.application.dto.PodMetricHistory;
 import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.NamespaceMigrationCommand;
@@ -24,7 +25,14 @@ import com.github.wellch4n.oops.application.service.PipelineService;
 import com.github.wellch4n.oops.application.service.PodMetricHistoryService;
 import com.github.wellch4n.oops.interfaces.sse.SseEventStream;
 import com.github.wellch4n.oops.shared.util.ResourceNameChecker;
+import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -294,6 +302,46 @@ public class ApplicationController {
         SseEventStream stream = new SseEventStream();
         stream.attach(applicationService.streamPodLog(namespace, pod, environment, lastEventId, stream));
         return stream.emitter();
+    }
+
+    /**
+     * The lines one pod logged between {@code since} and {@code until} (RFC3339 instants, either
+     * optional) as a plain-text attachment, each line keeping the kubelet's own timestamp in front.
+     */
+    @GetMapping("/{name}/pods/{pod}/log/download")
+    public void downloadPodLog(@PathVariable String namespace,
+                               @PathVariable String name,
+                               @PathVariable String pod,
+                               @RequestParam String environment,
+                               @RequestParam(required = false) Instant since,
+                               @RequestParam(required = false) Instant until,
+                               HttpServletResponse response) throws Exception {
+        String fileName = pod + "_" + stampForFileName(since) + "_" + stampForFileName(until) + ".log";
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build();
+        response.setContentType(MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, disposition.toString());
+        applicationService.downloadPodLog(namespace, pod, environment, since, until, response.getOutputStream());
+    }
+
+    /** UTC, since the server has no idea what wall clock the caller lives in; the browser renames in its own. */
+    private static final DateTimeFormatter FILE_NAME_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmm'Z'").withZone(ZoneOffset.UTC);
+
+    private static String stampForFileName(Instant instant) {
+        if (instant == null) {
+            return "any";
+        }
+        return FILE_NAME_STAMP.format(instant);
+    }
+
+    /** The node's kubelet log rotation for this pod, so the download dialog can say how far back a download can reach. */
+    @GetMapping("/{name}/pods/{pod}/log/retention")
+    public Result<PodLogRetention> getPodLogRetention(@PathVariable String namespace,
+                                                      @PathVariable String name,
+                                                      @PathVariable String pod,
+                                                      @RequestParam String environment) {
+        return Result.success(applicationService.getPodLogRetention(namespace, pod, environment));
     }
 
     @PutMapping("/{name}/pods/{pod}/restart")

@@ -72,6 +72,17 @@ const common = {
   "terminal.files.deleteFailed": "Delete failed",
   "pods.missingEnv": "Missing env parameter",
   "pods.logEnded": "Log ended: the container has exited",
+  "pods.download": "Download log",
+  "pods.downloadDesc": "Download the lines logged in a time window; both start and end are required.",
+  "pods.downloadRangeRequired": "Pick both a start and an end time",
+  "pods.retentionLoading": "Reading the node's log retention…",
+  "pods.retentionHint": "The kubelet on this pod's node caps each log file at {size}",
+  "pods.retentionUnknown": "The node's log retention could not be read (needs nodes/proxy); how far back a download reaches depends on the kubelet's containerLogMaxSize.",
+  "pods.downloadSince": "Start time",
+  "pods.downloadUntil": "End time",
+  "pods.downloadConfirm": "Download",
+  "pods.downloadInvalidRange": "End time is before start time",
+  "pods.downloadFailed": "Download failed",
   "common.error": "Error",
 }
 
