@@ -8,6 +8,7 @@ import { ConnectionLostBanner } from "@/components/connection-lost-banner"
 import { streamPodLog } from "@/lib/api/applications"
 import { useLanguage } from "@/contexts/language-context"
 import { ContentPage } from "@/components/content-page"
+import { PodLogDownloadDialog } from "./pod-log-download-dialog"
 
 interface LogRow {
   id: number
@@ -70,6 +71,7 @@ function ApplicationPodLogsContent() {
       bodyClassName="flex flex-1 min-h-0 flex-col pt-0 pb-0 overflow-hidden"
       actions={
         <div className="flex items-center gap-3">
+          <PodLogDownloadDialog namespace={namespace} name={name} pod={pod} env={env} />
           <span
             className={`size-2 rounded-full ${isConnected ? "bg-success" : "bg-muted-foreground"}`}
           />

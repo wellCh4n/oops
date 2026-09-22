@@ -1,10 +1,13 @@
 package com.github.wellch4n.oops.infrastructure.kubernetes.stream;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.wellch4n.oops.application.dto.PodLogRetention;
 import com.github.wellch4n.oops.application.port.EventStreamSink;
 import com.github.wellch4n.oops.application.port.PodLogStreamGateway;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.infrastructure.kubernetes.KubernetesClients;
+import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import io.fabric8.kubernetes.client.dsl.Loggable;
@@ -12,6 +15,9 @@ import io.fabric8.kubernetes.client.dsl.PodResource;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Map;
@@ -40,6 +46,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class KubernetesPodLogStreamGateway implements PodLogStreamGateway {
     private static final int TAIL_LINES = 2000;
+    private static final String DEFAULT_CONTAINER_LOG_MAX_SIZE = "10Mi";
+    private static final int DEFAULT_CONTAINER_LOG_MAX_FILES = 5;
     private static final String LOG_EVENT = "log";
     private static final String ERROR_EVENT = "error";
     private static final String END_EVENT = "end";
@@ -53,6 +61,80 @@ public class KubernetesPodLogStreamGateway implements PodLogStreamGateway {
         Instant resumeAfter = TimestampedLogLine.parseInstant(lastEventId);
         executorService.submit(() -> stream(environment, namespace, podName, resumeAfter, sink, handle));
         return handle;
+    }
+
+    /**
+     * The window is cut twice: the kubelet's {@code sinceTime} narrows what it sends to the second,
+     * and the exact comparison below trims the rest of that second and everything past
+     * {@code until}. Reading stops at the first line past the window, since the log is in order.
+     */
+    @Override
+    public void download(
+            Environment environment,
+            String namespace,
+            String podName,
+            Instant since,
+            Instant until,
+            OutputStream output
+    ) throws IOException {
+        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
+            PodResource podResource = client.pods().inNamespace(namespace).withName(podName);
+            if (podResource.get() == null) {
+                throw new IOException("Pod not found: " + podName);
+            }
+            Loggable loggable = since == null
+                    ? podResource.usingTimestamps()
+                    : podResource.usingTimestamps().sinceTime(since.toString());
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(loggable.getLogInputStream(), StandardCharsets.UTF_8));
+                 Writer writer = new OutputStreamWriter(output, StandardCharsets.UTF_8)) {
+                String lastTime = null;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    TimestampedLogLine logLine = TimestampedLogLine.parse(line);
+                    if (logLine.time() != null) {
+                        lastTime = logLine.time();
+                    }
+                    Instant stamped = TimestampedLogLine.parseInstant(lastTime);
+                    if (stamped != null && since != null && stamped.isBefore(since)) {
+                        continue;
+                    }
+                    if (stamped != null && until != null && stamped.isAfter(until)) {
+                        break;
+                    }
+                    writer.write(line);
+                    writer.write('\n');
+                }
+            }
+        }
+    }
+
+    /**
+     * Reads the kubelet's live configuration through the API server's node proxy. A kubelet that
+     * never had the two values set leaves them out of its configz, so the kubelet defaults are
+     * filled in; a proxy the token may not use answers with nulls rather than an error, since the
+     * download itself works either way.
+     */
+    @Override
+    public PodLogRetention retention(Environment environment, String namespace, String podName) {
+        try (KubernetesClient client = KubernetesClients.from(environment.getKubernetesApiServer())) {
+            Pod pod = client.pods().inNamespace(namespace).withName(podName).get();
+            if (pod == null || pod.getSpec() == null || pod.getSpec().getNodeName() == null) {
+                return new PodLogRetention(null, null);
+            }
+            String url = client.getMasterUrl().toString().replaceAll("/+$", "")
+                    + "/api/v1/nodes/" + pod.getSpec().getNodeName() + "/proxy/configz";
+            String body = client.raw(url);
+            if (body == null) {
+                return new PodLogRetention(null, null);
+            }
+            JsonNode kubeletConfig = objectMapper.readTree(body).path("kubeletconfig");
+            String maxFileSize = kubeletConfig.path("containerLogMaxSize").asText(DEFAULT_CONTAINER_LOG_MAX_SIZE);
+            int maxFiles = kubeletConfig.path("containerLogMaxFiles").asInt(DEFAULT_CONTAINER_LOG_MAX_FILES);
+            return new PodLogRetention(maxFileSize, maxFiles);
+        } catch (Exception exception) {
+            log.debug("Could not read kubelet log retention for {}/{}", namespace, podName, exception);
+            return new PodLogRetention(null, null);
+        }
     }
 
     private void stream(

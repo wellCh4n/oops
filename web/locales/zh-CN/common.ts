@@ -72,6 +72,17 @@ const common = {
   "terminal.files.deleteFailed": "删除失败",
   "pods.missingEnv": "缺少 env 参数",
   "pods.logEnded": "日志已结束：容器已退出",
+  "pods.download": "下载日志",
+  "pods.downloadDesc": "下载指定时间段内的日志，开始和结束时间均必填。",
+  "pods.downloadRangeRequired": "请选择开始和结束时间",
+  "pods.retentionLoading": "正在读取节点日志保留限制…",
+  "pods.retentionHint": "该 Pod 所在节点的 kubelet 单个日志文件最大 {size}",
+  "pods.retentionUnknown": "无法读取节点的日志保留限制（需要 nodes/proxy 权限），能下载多久取决于 kubelet 的 containerLogMaxSize。",
+  "pods.downloadSince": "开始时间",
+  "pods.downloadUntil": "结束时间",
+  "pods.downloadConfirm": "下载",
+  "pods.downloadInvalidRange": "结束时间早于开始时间",
+  "pods.downloadFailed": "下载失败",
   "common.error": "操作失败",
 }
 

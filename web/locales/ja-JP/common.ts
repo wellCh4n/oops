@@ -72,6 +72,17 @@ const common = {
   "terminal.files.deleteFailed": "削除に失敗しました",
   "pods.missingEnv": "env パラメータがありません",
   "pods.logEnded": "ログが終了しました：コンテナが終了しています",
+  "pods.download": "ログをダウンロード",
+  "pods.downloadDesc": "指定した期間のログをダウンロードします。開始時刻と終了時刻は必須です。",
+  "pods.downloadRangeRequired": "開始時刻と終了時刻を選択してください",
+  "pods.retentionLoading": "ノードのログ保持設定を読み込み中…",
+  "pods.retentionHint": "この Pod のノードの kubelet はログファイル 1 つを最大 {size} に制限しています",
+  "pods.retentionUnknown": "ノードのログ保持設定を読み取れません（nodes/proxy 権限が必要）。ダウンロード可能な範囲は kubelet の containerLogMaxSize に依存します。",
+  "pods.downloadSince": "開始時刻",
+  "pods.downloadUntil": "終了時刻",
+  "pods.downloadConfirm": "ダウンロード",
+  "pods.downloadInvalidRange": "終了時刻が開始時刻より前です",
+  "pods.downloadFailed": "ダウンロードに失敗しました",
   "common.error": "エラーが発生しました",
 }
 

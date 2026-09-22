@@ -28,12 +28,15 @@ import com.github.wellch4n.oops.shared.util.CronSchedule;
 import com.github.wellch4n.oops.application.dto.ApplicationEventView;
 import com.github.wellch4n.oops.application.dto.ApplicationPodStatusView;
 import com.github.wellch4n.oops.application.dto.ApplicationResourceView;
+import com.github.wellch4n.oops.application.dto.PodLogRetention;
 import com.github.wellch4n.oops.application.dto.PodMetricSnapshot;
 import com.github.wellch4n.oops.application.dto.ApplicationDto;
 import com.github.wellch4n.oops.application.dto.ApplicationConfigDto;
 import com.github.wellch4n.oops.application.dto.ClusterDomainView;
 import com.github.wellch4n.oops.application.dto.ServiceHostConflictView;
 import com.github.wellch4n.oops.application.dto.Page;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.Instant;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -661,6 +664,26 @@ public class ApplicationService {
             throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
         }
         return podLogStreamGateway.stream(environment, namespace, podName, lastEventId, sink);
+    }
+
+    /** Writes one pod's log lines inside {@code [since, until]} to the output; either bound may be null. */
+    public void downloadPodLog(String namespace, String podName, String environmentName, Instant since, Instant until, OutputStream output) throws IOException {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        if (since != null && until != null && until.isBefore(since)) {
+            throw new BizException("Log window end is before its start");
+        }
+        podLogStreamGateway.download(environment, namespace, podName, since, until, output);
+    }
+
+    public PodLogRetention getPodLogRetention(String namespace, String podName, String environmentName) {
+        Environment environment = environmentRepository.findFirstByName(environmentName);
+        if (environment == null) {
+            throw new IllegalArgumentException(ENVIRONMENT_NOT_FOUND + environmentName);
+        }
+        return podLogStreamGateway.retention(environment, namespace, podName);
     }
 
     public Boolean restartApplication(String namespace, String name, String podName, String environmentName) {
