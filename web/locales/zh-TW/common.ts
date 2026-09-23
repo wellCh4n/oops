@@ -82,6 +82,7 @@ const common = {
   "pods.downloadUntil": "結束時間",
   "pods.downloadConfirm": "下載",
   "pods.downloadInvalidRange": "結束時間早於開始時間",
+  "pods.downloadEmpty": "該時間段內無日誌，或日誌已被輪轉清理",
   "pods.downloadFailed": "下載失敗",
   "common.error": "操作失敗",
 }

@@ -82,6 +82,7 @@ const common = {
   "pods.downloadUntil": "End time",
   "pods.downloadConfirm": "Download",
   "pods.downloadInvalidRange": "End time is before start time",
+  "pods.downloadEmpty": "No log in this window, or it has been rotated away",
   "pods.downloadFailed": "Download failed",
   "common.error": "Error",
 }

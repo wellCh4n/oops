@@ -71,6 +71,12 @@ export function PodLogDownloadDialog({ namespace, name, pod, env }: Props) {
     setDownloading(true)
     try {
       const { blob } = await downloadPodLog(namespace, name, pod, env, { since: sinceDate, until: untilDate })
+      // An empty file is worse than no file: the viewer opens it and wonders whether the download
+      // broke. Nothing in the window means the pod logged nothing then, or the node rotated it out.
+      if (blob.size === 0) {
+        toast.info(t("pods.downloadEmpty"))
+        return
+      }
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement("a")
       anchor.href = url

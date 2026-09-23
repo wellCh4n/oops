@@ -82,6 +82,7 @@ const common = {
   "pods.downloadUntil": "終了時刻",
   "pods.downloadConfirm": "ダウンロード",
   "pods.downloadInvalidRange": "終了時刻が開始時刻より前です",
+  "pods.downloadEmpty": "この期間のログはないか、ローテーションで削除されています",
   "pods.downloadFailed": "ダウンロードに失敗しました",
   "common.error": "エラーが発生しました",
 }
