@@ -18,6 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import dynamic from "next/dynamic"
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false })
 import { ApplicationBuildFormValues, applicationBuildSchema } from "../schema"
+import { BuildVariablesEditor } from "./build-variables-editor"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ApplicationBuildConfig, ApplicationEnvironment } from "@/lib/api/types"
 import { updateApplicationBuildConfig } from "@/lib/api/applications"
@@ -64,6 +65,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
       environmentConfigs: initialEnvConfigs.map((config) => ({
         environment: config.environment,
         buildCommand: config.buildCommand ?? "",
+        buildVariables: config.buildVariables ?? [],
       })),
     },
     mode: "onChange",
@@ -105,7 +107,8 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
 
   const reportValidationErrors = useCallback((errors: FieldErrors<ApplicationBuildFormValues>) => {
     const flattened = flattenErrors(errors)
-    const firstMessage = flattened[0]?.message || t("apps.build.validationError")
+    // t() falls back to the key, so the schema's plain English messages pass through untouched.
+    const firstMessage = flattened[0]?.message ? t(flattened[0].message) : t("apps.build.validationError")
     console.error("[ApplicationBuildInfo] validation failed", {
       errors,
       flattened,
@@ -123,6 +126,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
     environmentConfigs: (values.environmentConfigs ?? []).map((config) => ({
       environment: config.environment,
       buildCommand: config.buildCommand ?? "",
+      buildVariables: (config.buildVariables ?? []).map((variable) => [variable.name, variable.value]),
     })),
   }), [form])
 
@@ -137,6 +141,7 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
         existing || {
           environment: env.environment,
           buildCommand: "",
+          buildVariables: [],
         }
       )
     })
@@ -193,6 +198,12 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
           : data.environmentConfigs.map((config) => ({
               environment: config.environment,
               buildCommand: config.buildCommand ?? undefined,
+              // Always a list, never omitted: the backend reads a missing list as "unchanged",
+              // which would make removing the last variable impossible.
+              buildVariables: config.buildVariables.map((variable) => ({
+                name: variable.name.trim(),
+                value: variable.value,
+              })),
             })),
         namespace,
         applicationName,
@@ -448,23 +459,33 @@ export const ApplicationBuildInfo = forwardRef<ApplicationTabHandle, Application
                 )}
               />
 
-              <div className="grid gap-2">
+              {/* Everything below the selector belongs to the environment it shows. */}
+              <div className="w-full">
+                <ApplicationEnvironmentSelector
+                  namespace={namespace}
+                  applicationName={applicationName}
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  onEnvironmentsLoaded={handleEnvironmentsLoaded}
+                  onLoadingChange={setEnvsLoading}
+                  className="w-full"
+                />
+              </div>
+
+              {activeEnvironmentIndex >= 0 && (
+                <BuildVariablesEditor
+                  key={activeEnvironmentIndex}
+                  control={form.control}
+                  environmentIndex={activeEnvironmentIndex}
+                />
+              )}
+
+              {activeEnvironmentIndex >= 0 && (
                 <Label className="flex items-center gap-1">
                   <Terminal className="size-3.5" />
                   {t("apps.build.buildCommand")}
                 </Label>
-                <div className="w-full">
-                  <ApplicationEnvironmentSelector
-                    namespace={namespace}
-                    applicationName={applicationName}
-                    value={activeTab}
-                    onValueChange={setActiveTab}
-                    onEnvironmentsLoaded={handleEnvironmentsLoaded}
-                    onLoadingChange={setEnvsLoading}
-                    className="w-full"
-                  />
-                </div>
-              </div>
+              )}
 
               {activeEnvironmentIndex >= 0 && (
                 <FormField

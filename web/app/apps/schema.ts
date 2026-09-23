@@ -24,6 +24,12 @@ export const getCreateApplicationSchema = (t?: (key: string) => string) => z.obj
   icon: z.string().optional(),
 })
 
+// This schema is built once, outside any component, so it cannot call t(). These two messages are
+// translation keys instead; whoever shows them passes them through t(), which leaves the plain
+// English messages of the other rules untouched because it falls back to the key.
+const BUILD_VARIABLE_NAME_INVALID = "apps.build.variableNameInvalid"
+const BUILD_VARIABLE_NAME_DUPLICATE = "apps.build.variableNameDuplicate"
+
 export const applicationBuildSchema = z.object({
   sourceType: z.enum(["GIT", "ZIP", "IMAGE"]),
   repository: z.string().nullish(),
@@ -37,8 +43,29 @@ export const applicationBuildSchema = z.object({
   environmentConfigs: z.array(z.object({
     environment: z.string(),
     buildCommand: z.string().nullish(),
+    buildVariables: z.array(z.object({
+      name: z.string(),
+      value: z.string(),
+    })),
   })),
 }).superRefine((value, ctx) => {
+  // The name has to work both as a shell environment variable and as a Dockerfile ARG. An IMAGE
+  // application hides the whole section and saves none of it, so a half-typed row left behind
+  // there must not block the save.
+  const checkedConfigs = value.sourceType === "IMAGE" ? [] : value.environmentConfigs
+  checkedConfigs.forEach((config, configIndex) => {
+    const seen = new Set<string>()
+    config.buildVariables.forEach((variable, variableIndex) => {
+      const name = variable.name.trim()
+      const path = ["environmentConfigs", configIndex, "buildVariables", variableIndex, "name"]
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: BUILD_VARIABLE_NAME_INVALID })
+      } else if (seen.has(name)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: BUILD_VARIABLE_NAME_DUPLICATE })
+      }
+      seen.add(name)
+    })
+  })
   if (value.sourceType === "GIT" && !value.repository?.trim()) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["repository"], message: "Repository is required" })
   }

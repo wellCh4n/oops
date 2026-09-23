@@ -37,6 +37,7 @@ export default function PipelinesDocPage() {
               { name: "environment", type: "string" },
               { name: "publishType", type: "string", descriptionKey: "doc.pipelines.list.item.publishType" },
               { name: "publishConfig", type: "object", descriptionKey: "doc.pipelines.list.item.publishConfig" },
+              { name: "buildConfig", type: "object", descriptionKey: "doc.pipelines.list.item.buildConfig" },
               { name: "deployMode", type: "string", descriptionKey: "doc.pipelines.list.item.deployMode" },
               { name: "operatorId", type: "string", descriptionKey: "doc.pipelines.list.item.operatorId" },
               { name: "operatorName", type: "string" },

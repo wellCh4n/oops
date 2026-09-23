@@ -4,11 +4,14 @@ import com.github.wellch4n.oops.domain.application.Application;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig;
 import com.github.wellch4n.oops.domain.application.ApplicationBuildConfig.DockerFileConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -56,17 +59,35 @@ public class PublishContainer extends BaseContainer {
         // image size times the layer count. The store is on the emptyDir that
         // ContainerStorageVolume mounts here — on the container's own writable layer, where it
         // would otherwise sit, every write additionally pays an overlayfs copy-up.
+        //
+        // The build variables follow the three fixed arguments, one NAME=value each. Rewriting "$@"
+        // in place is the one way POSIX sh has of building an argument list, so a value reaches
+        // buildah byte for byte whatever quotes, spaces or newlines it holds.
         String command = """
+                artifact="$1"
+                dockerfile="$2"
                 printf '%s' "$3" | base64 -d > /tmp/registries.conf
-                buildah bud --storage-driver=overlay --tls-verify=false --isolation chroot --registries-conf /tmp/registries.conf -t "$1" -f "$2" /workspace
-                buildah push --storage-driver=overlay --tls-verify=false --registries-conf /tmp/registries.conf "$1"
+                shift 3
+                count=$#
+                for variable in "$@"; do
+                    set -- "$@" --build-arg "$variable"
+                done
+                shift "$count"
+                buildah bud --storage-driver=overlay --tls-verify=false --isolation chroot --registries-conf /tmp/registries.conf "$@" -t "$artifact" -f "$dockerfile" /workspace
+                buildah push --storage-driver=overlay --tls-verify=false --registries-conf /tmp/registries.conf "$artifact"
                 """;
+
+        List<String> containerCommand = new ArrayList<>(List.of(
+                "sh", "-eu", "-c", command, "publish", this.artifact, dockerFile, registriesConfEncoded));
+        for (BuildVariable buildVariable : pipeline.buildVariables()) {
+            containerCommand.add(buildVariable.name() + "=" + StringUtils.defaultString(buildVariable.value()));
+        }
 
         ContainerBuilder builder = new ContainerBuilder()
                 .withName("publish")
                 .withImage(image)
                 .withWorkingDir("/workspace")
-                .withCommand("sh", "-eu", "-c", command, "publish", this.artifact, dockerFile, registriesConfEncoded);
+                .withCommand(containerCommand);
 
         builder.addNewEnv()
                 .withName("REGISTRY_AUTH_FILE")

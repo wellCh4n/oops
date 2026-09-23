@@ -76,6 +76,7 @@ export default function ApplicationsDocPage() {
             rows={[
               { name: "environment", type: "string", required: true },
               { name: "buildCommand", type: "string", descriptionKey: "doc.applications.build.envBody.buildCommand" },
+              { name: "buildVariables", type: "array<{name, value}>", descriptionKey: "doc.applications.build.envBody.buildVariables" },
             ]}
           />
         </DocSubSection>

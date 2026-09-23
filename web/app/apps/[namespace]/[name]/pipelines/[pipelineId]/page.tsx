@@ -268,6 +268,7 @@ export default function PipelineDetailPage({ params }: PageProps) {
   const lastStep = stepStatuses[stepStatuses.length - 1]
   const showSummary =
     lastStep !== undefined && viewedStep === lastStep.name && (lastStep.state === "RUNNING" || lastStep.state === "SUCCEEDED")
+  const buildVariables = pipeline?.buildConfig?.buildVariables ?? []
   const ranSteps = useMemo(() => stepStatuses.filter((step) => step.state === "SUCCEEDED" && stepDuration(step) !== ""), [stepStatuses])
   const logRows = stepLog?.step === viewedStep ? stepLog.rows : NO_ROWS
   const logError = stepLog?.step === viewedStep ? stepLog.error : null
@@ -596,12 +597,31 @@ export default function PipelineDetailPage({ params }: PageProps) {
                             <span className="text-console-muted">· {t("apps.pipeline.summary.duration")} {buildDuration(stepStatuses)}</span>
                           )}
                         </div>
-                        {(pipeline.artifact || ranSteps.length > 0) && (
+                        {(pipeline.artifact || buildVariables.length > 0 || ranSteps.length > 0) && (
                           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
                             {pipeline.artifact && (
                               <>
                                 <dt className="text-console-muted whitespace-nowrap">{t("apps.pipeline.summary.artifact")}</dt>
                                 <dd className="min-w-0 font-mono"><Copyable value={pipeline.artifact} maxLength={Infinity} className="break-all" /></dd>
+                              </>
+                            )}
+                            {/* The pipeline's own snapshot, not the application's current config: this is
+                                what the build ran with, whatever has been edited since. */}
+                            {buildVariables.length > 0 && (
+                              <>
+                                <dt className="text-console-muted whitespace-nowrap">{t("apps.pipeline.summary.variables")}</dt>
+                                <dd className="min-w-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono">
+                                  {buildVariables.map((variable) => (
+                                    <Fragment key={variable.name}>
+                                      <span className="text-console-muted whitespace-nowrap">{variable.name}</span>
+                                      <span className="min-w-0">
+                                        {variable.value
+                                          ? <Copyable value={variable.value} maxLength={Infinity} className="break-all" />
+                                          : <span className="text-console-muted">{t("apps.pipeline.summary.variableEmpty")}</span>}
+                                      </span>
+                                    </Fragment>
+                                  ))}
+                                </dd>
                               </>
                             )}
                             {ranSteps.length > 0 && (
