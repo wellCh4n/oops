@@ -309,7 +309,7 @@ All REST controllers are namespaced under `/api/namespaces/{namespace}/...`. App
 
 **Two parallel API surfaces:**
 - `/api/**` — UI-facing, authenticated by `JwtAuthFilter` (Bearer JWT or `?token=` query param for WebSocket).
-- `/openapi/**` — Machine/CLI-facing, authenticated by `OpenApiAuthFilter` using `Authorization: Bearer <user access token>` (not the UI JWT). `ApplicationController`, `DeploymentController`, `PipelineController`, `ConfigMapController`, and `SandboxController` expose selected dual mappings; `OpenApiDiscoveryController` serves discovery under `/openapi`. The repo-vendored deploy CLI (`skills/oops/scripts/oops.py`) targets this surface. Methods annotated `@OpenApiHidden` return 405 on `/openapi/**`; currently application deletion is hidden while sandbox instance teardown remains available because it is part of the sandbox lifecycle.
+- `/openapi/**` — Machine/CLI-facing, authenticated by `OpenApiAuthFilter` using `Authorization: Bearer <user access token>` (not the UI JWT). `ApplicationController`, `DeploymentController`, `PipelineController`, `ConfigMapController`, and `SandboxController` expose selected dual mappings; `OpenApiDiscoveryController` serves discovery under `/openapi`. The repo-vendored deploy CLI (`skills/oops/scripts/launcher.py`) targets this surface. Methods annotated `@OpenApiHidden` return 405 on `/openapi/**`; currently application deletion is hidden while sandbox instance teardown remains available because it is part of the sandbox lifecycle.
 
 **Exceptions to namespacing:**
 - `GET /api/health` — health check, no auth required (explicitly permitted in `SecurityConfig`)
@@ -468,7 +468,7 @@ The project has focused backend tests under `src/test/java/com/github/wellch4n/o
 
 ## Repo-Vendored Deploy CLI
 
-`skills/oops/SKILL.md` ships a Python CLI (`skills/oops/scripts/oops.py`) that wraps the OOPS REST API for end-to-end deploys: create app → configure build → bind env → set service → set runtime → trigger pipeline → wait for rollout. It targets the `/openapi/**` surface and is the preferred entry point when an agent needs to drive OOPS programmatically — prefer it over hand-rolled curl chains. The skill enforces a per-step confirmation policy for write actions.
+`skills/oops/SKILL.md` ships a Python launcher (`skills/oops/scripts/launcher.py`) for end-to-end deploys: create app → configure build → bind env → set service → set runtime → trigger pipeline → wait for rollout. The business CLI lives in `src/main/resources/skill/oops.py` and ships inside the backend JAR; change that file when adding commands. `SkillScriptController` serves its SHA-256 at `GET /openapi/skill/oops.py/hash` and its exact source bytes at `GET /openapi/skill/oops.py`, both authenticated with the normal OpenAPI token and marked `no-store`. Before every business command, the launcher checks the hash, downloads changed source, verifies it and atomically caches it by endpoint under `~/.oops/cache/skill/`; update failures stop execution instead of using stale code. Only local `auth set/status` and unconfigured bootstrap help skip the check. Existing skill installations must adopt the launcher once; later business-script changes follow the connected server automatically. The launcher protocol and local auth/config format are stable compatibility contracts. It targets the `/openapi/**` surface and is the preferred entry point when an agent needs to drive OOPS programmatically — prefer it over hand-rolled curl chains. The skill enforces a per-step confirmation policy for write actions.
 
 ## Collaboration
 

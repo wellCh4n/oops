@@ -6,7 +6,7 @@ description: Deploy applications to Kubernetes via OOPS PaaS using the Python CL
 # OOPS — Deploy applications to Kubernetes via CLI
 
 OOPS is a Kubernetes-based PaaS. This skill teaches the agent how to use the
-repo-vendored Python script `skills/oops/scripts/oops.py` to drive the end-to-end
+Python launcher `skills/oops/scripts/launcher.py` to drive the end-to-end
 loop: create app → configure build → bind env → set service → set runtime →
 trigger pipeline → wait for rollout.
 
@@ -14,9 +14,20 @@ trigger pipeline → wait for rollout.
 
 **This is a production deployment system. Confirm with the user before executing every write step.**
 
-Before running any write command (create, set, deploy, stop), use the `AskUserQuestion` tool to show the user exactly what you are about to do and wait for explicit approval. Do not batch multiple steps into a single confirmation — confirm each step individually. Only proceed after the user approves.
+Before running any write command (create, set, deploy, rollback, stop), show the
+command and its target server, namespace, application and environment where
+applicable. Redact tokens and other secrets. Ask for explicit approval of that step
+and wait for the user's reply before executing it. Do not batch multiple steps
+into a single confirmation, or ask again for an unchanged step the user has
+already explicitly approved.
 
-Example confirmation question: "Run the following command?" with the full command as the option label.
+Use the host agent's user-confirmation tool only if it is available and permits
+approval requests in the current mode. Otherwise, ask in ordinary chat and wait
+for the user's explicit reply. This skill does not require a specific tool name;
+an unavailable tool, an unanswered prompt or a timeout is not approval.
+
+Example: "Deploy `<app>` in namespace `<namespace>` to environment `<environment>`
+on `<server>` using the following command?" Show the command in a code block.
 
 Read-only commands (`ls`, `get`, `status`) do not require confirmation.
 
@@ -38,13 +49,31 @@ this skill.
 
 ### 1. Locate the script
 
-The CLI is a single Python script (`skills/oops/scripts/oops.py`) with no third-party dependencies. Invoke from the repo root:
+The launcher requires Python 3.8+ and no third-party dependencies. Invoke from the repo root
+(or use the installed skill's absolute script path):
 
 ```bash
-python skills/oops/scripts/oops.py <subcommand>
+python skills/oops/scripts/launcher.py <subcommand>
 ```
 
 No compilation, no `pip install`, no build step needed.
+
+Before each business command, the launcher authenticates to the configured server and
+compares `GET /openapi/skill/oops.py/hash` (plain SHA-256 hex) with the local cached
+script. If missing or different, it downloads `GET /openapi/skill/oops.py` (Python
+source), verifies the hash, and atomically replaces the cache. Both endpoints use
+the same Bearer access token as the CLI. The implementation ships with the backend,
+so commands match the connected server, including after a server rollback.
+
+The cache lives under `~/.oops/cache/skill/<endpoint-sha256>/oops.py`; always invoke
+the launcher, never the cached script directly. An update/authentication failure
+stops the command; it does not fall back to stale code. `auth set` and `auth status`
+work locally without contacting the server. With credentials configured, `--help`
+also loads the server's current CLI; consult it when the examples below differ from
+the connected version. Use a trusted OOPS endpoint; its Python code runs locally.
+
+Existing installations need this launcher once. Subsequent business-script updates
+are automatic; the launcher and this instruction file are not themselves updated.
 
 ### 2. Authentication
 
@@ -52,7 +81,7 @@ The script **only accepts a pre-issued access token** — no username/password
 login. Tokens look like `sk-oops-xxxxxxxxxxxxxxxx` and are issued by the
 user in the OOPS UI ("Reset Access Token").
 
-Three ways to pass it (highest precedence first):
+Three ways to pass it (flags override environment variables, then saved config):
 
 ```bash
 # A. Environment variables (recommended for one session)
@@ -60,11 +89,11 @@ export OOPS_ENDPOINT=http://localhost:8080
 export OOPS_TOKEN=sk-oops-...
 
 # B. Per-invocation flags
-python skills/oops/scripts/oops.py --endpoint http://localhost:8080 --token sk-oops-... ns ls
+python skills/oops/scripts/launcher.py --endpoint http://localhost:8080 --token sk-oops-... ns ls
 
 # C. Persist to ~/.oops/config.toml
-python skills/oops/scripts/oops.py auth set --endpoint http://localhost:8080 --token sk-oops-...
-python skills/oops/scripts/oops.py auth status   # verify
+python skills/oops/scripts/launcher.py auth set --endpoint http://localhost:8080 --token sk-oops-...
+python skills/oops/scripts/launcher.py auth status   # verify
 ```
 
 **If the user has not provided a token, stop and ask** — do not guess an
@@ -78,9 +107,9 @@ breaks the deploy in subtle ways.
 ### Step 1 — Discover namespace, environment, domain
 
 ```bash
-python skills/oops/scripts/oops.py ns ls       # list namespaces
-python skills/oops/scripts/oops.py env ls      # list environments (redacted — no K8s token leaked)
-python skills/oops/scripts/oops.py domain ls   # list managed domains for service exposure
+python skills/oops/scripts/launcher.py ns ls       # list namespaces
+python skills/oops/scripts/launcher.py env ls      # list environments (redacted — no K8s token leaked)
+python skills/oops/scripts/launcher.py domain ls   # list managed domains for service exposure
 ```
 
 Note down the target namespace (e.g. `default`) and environment (e.g.
@@ -89,18 +118,18 @@ Note down the target namespace (e.g. `default`) and environment (e.g.
 ### Step 2 — Create the application
 
 ```bash
-python skills/oops/scripts/oops.py app create -n <namespace> <app-name> --description "<one-line summary>"
+python skills/oops/scripts/launcher.py app create -n <namespace> <app-name> --description "<one-line summary>"
 ```
 
 - `<app-name>` must follow Kubernetes naming (lowercase alphanum + dashes).
-- If the app already exists the command errors out. **Use `python skills/oops/scripts/oops.py app get -n <ns> <app-name>` first to check.**
+- If the app already exists the command errors out. **Use `python skills/oops/scripts/launcher.py app get -n <ns> <app-name>` first to check.**
 
 ### Step 3 — Configure build (most common pitfall)
 
 #### ZIP source (most common)
 
 ```bash
-python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app build set -n <ns> <app> \
     --source zip \
     --dockerfile-type user \
     --dockerfile-content "$(cat path/to/Dockerfile)"
@@ -114,7 +143,7 @@ deploy, so the ZIP itself does **not** need to contain a Dockerfile.
 #### Git source
 
 ```bash
-python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app build set -n <ns> <app> \
     --source git \
     --repository "https://github.com/owner/repo.git" \
     --build-image "maven:3.9-eclipse-temurin-21-alpine" \
@@ -127,7 +156,7 @@ python skills/oops/scripts/oops.py app build set -n <ns> <app> \
 Per-environment build commands are set with `--build-command <env>=<command>` (repeatable):
 
 ```bash
-python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app build set -n <ns> <app> \
     --source git --repository "https://github.com/owner/repo.git" \
     --build-command "dev=npm ci && npm run build" \
     --build-command "prod=npm ci && npm run build -- --mode production"
@@ -138,7 +167,7 @@ Without any `--build-command` the existing commands are left as they are; to cle
 #### Image source (prebuilt image, nothing is built)
 
 ```bash
-python skills/oops/scripts/oops.py app build set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app build set -n <ns> <app> \
     --source image \
     --image "ghcr.io/owner/app"
 ```
@@ -150,7 +179,7 @@ pullable without credentials are supported.
 ### Step 4 — Bind to environments
 
 ```bash
-python skills/oops/scripts/oops.py app env set -n <ns> <app> --env <env-name>
+python skills/oops/scripts/launcher.py app env set -n <ns> <app> --env <env-name>
 # multi-env: --env dev --env prod
 ```
 
@@ -159,13 +188,13 @@ Without an env binding, deploy fails.
 ### Step 5 — Configure service exposure
 
 ```bash
-python skills/oops/scripts/oops.py app service set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app service set -n <ns> <app> \
     --port <container-port> \
     --env-host <env>=<host>[:https]
 # example: --env-host dev=hello.example.com:https
 ```
 
-The host should be a subdomain under a managed domain from `python skills/oops/scripts/oops.py domain ls`.
+The host should be a subdomain under a managed domain from `python skills/oops/scripts/launcher.py domain ls`.
 For example if `example.com` is managed, set the host to `hello.example.com`.
 Each managed domain belongs to one environment (the ENVIRONMENT column) — pick a domain whose
 environment matches the `<env>` you are configuring, or the save is rejected.
@@ -173,7 +202,7 @@ environment matches the `<env>` you are configuring, or the save is rejected.
 ### Step 6 — Configure runtime (**easy to forget; replicas default to 0**)
 
 ```bash
-python skills/oops/scripts/oops.py app runtime set -n <ns> <app> \
+python skills/oops/scripts/launcher.py app runtime set -n <ns> <app> \
     --env "<env>=cpu:1/2,mem:64/128,replicas:1" \
     --health --health-path /health
 ```
@@ -193,7 +222,7 @@ most common cause of "deploy succeeded but I can't reach the app".
 cd path/to/source && zip -r /tmp/<app>.zip .
 
 # One shot: upload + trigger + wait for rollout
-python skills/oops/scripts/oops.py deploy zip -n <ns> <app> --env <env> --file /tmp/<app>.zip --wait
+python skills/oops/scripts/launcher.py deploy zip -n <ns> <app> --env <env> --file /tmp/<app>.zip --wait
 ```
 
 `--wait` polls pipeline status until `SUCCEEDED` / `BUILD_SUCCEEDED` / `ERROR` / `STOPPED`.
@@ -203,7 +232,7 @@ does not surface the build result.
 #### Git mode
 
 ```bash
-python skills/oops/scripts/oops.py deploy git -n <ns> <app> --env <env> --branch main --wait
+python skills/oops/scripts/launcher.py deploy git -n <ns> <app> --env <env> --branch main --wait
 ```
 
 Uses the repository configured in step 3; `--branch` is optional.
@@ -211,7 +240,7 @@ Uses the repository configured in step 3; `--branch` is optional.
 #### Image mode
 
 ```bash
-python skills/oops/scripts/oops.py deploy image -n <ns> <app> --env <env> --tag 1.2.3 --wait
+python skills/oops/scripts/launcher.py deploy image -n <ns> <app> --env <env> --tag 1.2.3 --wait
 ```
 
 Deploys `<repository>:<tag>` with the image name from step 3; `--tag` defaults to `latest`. No
@@ -221,14 +250,14 @@ build runs, so `--wait` only follows the rollout. A tag that does not exist fail
 ### Step 8 — Verify
 
 ```bash
-python skills/oops/scripts/oops.py pipeline ls -n <ns> <app>   # recent runs
-python skills/oops/scripts/oops.py app get -n <ns> <app>       # app summary
+python skills/oops/scripts/launcher.py pipeline ls -n <ns> <app>   # recent runs
+python skills/oops/scripts/launcher.py app get -n <ns> <app>       # app summary
 ```
 
 ### Roll back to a previous successful pipeline
 
 ```bash
-python skills/oops/scripts/oops.py pipeline rollback -n <ns> <app> <pipeline-id> --wait
+python skills/oops/scripts/launcher.py pipeline rollback -n <ns> <app> <pipeline-id> --wait
 ```
 
 Rollback is a write action. Confirm with the user first, and prefer showing
@@ -237,13 +266,13 @@ Rollback is a write action. Confirm with the user first, and prefer showing
 ## Read-only inspection commands
 
 ```bash
-python skills/oops/scripts/oops.py app build get -n <ns> <app>                # build config
-python skills/oops/scripts/oops.py app service get -n <ns> <app>              # service config
-python skills/oops/scripts/oops.py app runtime get -n <ns> <app>              # runtime spec
-python skills/oops/scripts/oops.py app env ls -n <ns> <app>                   # env bindings
-python skills/oops/scripts/oops.py app config get -n <ns> <app> --env <env>   # ConfigMap entries
-python skills/oops/scripts/oops.py pipeline get -n <ns> <app> <pipeline-id>   # single pipeline detail
-python skills/oops/scripts/oops.py pipeline watch -n <ns> <app> <pipeline-id> # poll status until terminal
+python skills/oops/scripts/launcher.py app build get -n <ns> <app>                # build config
+python skills/oops/scripts/launcher.py app service get -n <ns> <app>              # service config
+python skills/oops/scripts/launcher.py app runtime get -n <ns> <app>              # runtime spec
+python skills/oops/scripts/launcher.py app env ls -n <ns> <app>                   # env bindings
+python skills/oops/scripts/launcher.py app config get -n <ns> <app> --env <env>   # ConfigMap entries
+python skills/oops/scripts/launcher.py pipeline get -n <ns> <app> <pipeline-id>   # single pipeline detail
+python skills/oops/scripts/launcher.py pipeline watch -n <ns> <app> <pipeline-id> # poll status until terminal
 ```
 
 ## Output format
@@ -252,7 +281,7 @@ All commands default to human-readable tables. For programmatic parsing
 pass `--json`:
 
 ```bash
-python skills/oops/scripts/oops.py --json app ls -n default | jq '.[].name'
+python skills/oops/scripts/launcher.py --json app ls -n default | jq '.[].name'
 ```
 
 `--json` is a **global flag** and must appear before the subcommand.
