@@ -1,6 +1,7 @@
 package com.github.wellch4n.oops.application.dto;
 
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.PipelineBuildConfig;
 import com.github.wellch4n.oops.domain.delivery.PublishConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
@@ -19,6 +20,8 @@ public record PipelineDto(
         String environment,
         ApplicationSourceType publishType,
         PublishConfig publishConfig,
+        /** What the build was started with; {@code null} when the pipeline ran no build or predates the snapshot. */
+        PipelineBuildConfig buildConfig,
         DeployMode deployMode,
         String operatorId,
         String operatorName,
@@ -40,6 +43,7 @@ public record PipelineDto(
                 pipeline.getEnvironment(),
                 pipeline.getPublishType(),
                 pipeline.getPublishConfig(),
+                pipeline.getBuildConfig(),
                 pipeline.getDeployMode(),
                 pipeline.getOperatorId(),
                 operatorName,

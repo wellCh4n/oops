@@ -2,9 +2,11 @@ package com.github.wellch4n.oops.domain.delivery;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.BaseAggregateRoot;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -20,6 +22,7 @@ public class Pipeline extends BaseAggregateRoot {
     private String environment;
     private ApplicationSourceType publishType;
     private PublishConfig publishConfig;
+    private PipelineBuildConfig buildConfig;
     private DeployMode deployMode;
     private String operatorId;
     private String message;
@@ -85,6 +88,15 @@ public class Pipeline extends BaseAggregateRoot {
         pipeline.setPublishConfig(publishConfig);
         pipeline.setArtifact(publishConfig.artifact());
         return pipeline;
+    }
+
+    /**
+     * The build variables this pipeline's build runs with; empty when it has none or runs no build.
+     * Named without a {@code get} prefix so Jackson does not treat it as a bean property during
+     * entity/domain mapping.
+     */
+    public List<BuildVariable> buildVariables() {
+        return buildConfig != null ? buildConfig.buildVariables() : List.of();
     }
 
     public boolean hasBuild() {

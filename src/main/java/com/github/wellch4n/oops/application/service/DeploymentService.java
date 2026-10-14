@@ -12,6 +12,7 @@ import com.github.wellch4n.oops.domain.delivery.DeploymentConcurrencyPolicy;
 import com.github.wellch4n.oops.domain.delivery.GitPublishConfig;
 import com.github.wellch4n.oops.domain.delivery.ImagePublishConfig;
 import com.github.wellch4n.oops.domain.delivery.Pipeline;
+import com.github.wellch4n.oops.domain.delivery.PipelineBuildConfig;
 import com.github.wellch4n.oops.domain.environment.Environment;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
@@ -24,6 +25,7 @@ import com.github.wellch4n.oops.application.dto.DeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.GitDeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.ImageDeployStrategyParam;
 import com.github.wellch4n.oops.application.dto.ZipDeployStrategyParam;
+import java.util.List;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
@@ -107,6 +109,10 @@ public class DeploymentService {
                 request.deployMode(),
                 operatorUserId);
         applyDeployStrategy(pipeline, request.strategy(), buildConfig);
+        // Captured before the build is submitted: the job reads its variables from the pipeline, so
+        // what the build summary later shows is what the build ran with, whatever is edited meanwhile.
+        pipeline.setBuildConfig(new PipelineBuildConfig(
+                buildConfig != null ? buildConfig.buildVariablesOf(environment.getName()) : List.of()));
         pipeline = pipelineRepository.save(pipeline);
         eventPublisher.publishEvent(PipelineNotificationEvent.of(
                 pipeline, PipelineNotificationType.CREATED, "发布流程已经启动，正在构建镜像。"

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.wellch4n.oops.domain.application.SourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.SourceConfigConverter;
 import jakarta.persistence.AttributeConverter;
@@ -62,6 +63,8 @@ public class ApplicationBuildConfig extends BaseDataObject {
         private String environment;
 
         private String buildCommand;
+
+        private List<BuildVariable> buildVariables;
     }
 
     @Converter

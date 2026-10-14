@@ -1,10 +1,18 @@
 package com.github.wellch4n.oops.domain.application;
 
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import com.github.wellch4n.oops.shared.exception.BizException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 public class ApplicationBuildConfigPolicy {
+
+    private static final Pattern BUILD_VARIABLE_NAME = Pattern.compile("[A-Za-z_][A-Za-z0-9_]*");
 
     public ApplicationSourceType normalizeSourceType(ApplicationSourceType sourceType) {
         return sourceType != null ? sourceType : ApplicationSourceType.GIT;
@@ -39,6 +47,35 @@ public class ApplicationBuildConfigPolicy {
             case ZIP -> new ZipSourceConfig();
             case IMAGE -> new ImageSourceConfig(image.trim());
         };
+    }
+
+    /**
+     * Cleans one environment's build variables: names trimmed, a {@code null} value stored as empty.
+     * The name grammar is the shell's, because the same name has to work as an environment variable
+     * of the build steps and as a Dockerfile {@code ARG}; a duplicate is refused rather than
+     * resolved, since which of the two values wins would otherwise depend on the consumer.
+     */
+    public List<BuildVariable> normalizeBuildVariables(String environment, List<BuildVariable> buildVariables) {
+        if (buildVariables == null) {
+            return null;
+        }
+        List<BuildVariable> normalized = new ArrayList<>();
+        Set<String> names = new HashSet<>();
+        for (BuildVariable buildVariable : buildVariables) {
+            if (buildVariable == null) {
+                continue;
+            }
+            String name = buildVariable.name() == null ? "" : buildVariable.name().trim();
+            if (!BUILD_VARIABLE_NAME.matcher(name).matches()) {
+                throw new BizException("Invalid build variable name '" + name + "' for environment " + environment
+                        + ": use letters, digits and underscores, not starting with a digit");
+            }
+            if (!names.add(name)) {
+                throw new BizException("Duplicate build variable '" + name + "' for environment " + environment);
+            }
+            normalized.add(new BuildVariable(name, buildVariable.value() == null ? "" : buildVariable.value()));
+        }
+        return normalized;
     }
 
     /**

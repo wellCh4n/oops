@@ -97,9 +97,31 @@ public class Application extends BaseAggregateRoot {
             // (the CLI's `app build set` without --build-command) is not asking to clear the
             // per-environment build commands, so absent means unchanged.
             if (request.getEnvironmentConfigs() != null) {
-                target.setEnvironmentConfigs(request.getEnvironmentConfigs());
+                target.setEnvironmentConfigs(mergeBuildEnvironmentConfigs(
+                        target, request.getEnvironmentConfigs(), buildConfigPolicy));
             }
         }
+    }
+
+    /**
+     * The same "absent means unchanged" one level down: a caller that lists an environment without
+     * its build variables (a CLI that predates them setting a build command) keeps the stored ones,
+     * and only an explicit list — empty included — replaces them.
+     */
+    private static List<ApplicationBuildConfig.EnvironmentConfig> mergeBuildEnvironmentConfigs(
+            ApplicationBuildConfig stored,
+            List<ApplicationBuildConfig.EnvironmentConfig> requested,
+            ApplicationBuildConfigPolicy buildConfigPolicy
+    ) {
+        for (ApplicationBuildConfig.EnvironmentConfig config : requested) {
+            if (config == null) {
+                continue;
+            }
+            config.setBuildVariables(config.getBuildVariables() != null
+                    ? buildConfigPolicy.normalizeBuildVariables(config.getEnvironment(), config.getBuildVariables())
+                    : stored.buildVariablesOf(config.getEnvironment()));
+        }
+        return requested;
     }
 
     public void updateRuntimeSpec(

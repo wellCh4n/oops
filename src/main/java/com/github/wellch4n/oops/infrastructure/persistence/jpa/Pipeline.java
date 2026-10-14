@@ -1,10 +1,12 @@
 package com.github.wellch4n.oops.infrastructure.persistence.jpa;
 
+import com.github.wellch4n.oops.domain.delivery.PipelineBuildConfig;
 import com.github.wellch4n.oops.domain.delivery.PublishConfig;
 import com.github.wellch4n.oops.domain.shared.DeployMode;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
 import com.github.wellch4n.oops.domain.shared.PipelineStatus;
 import com.github.wellch4n.oops.domain.shared.PipelineTriggerType;
+import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.PipelineBuildConfigConverter;
 import com.github.wellch4n.oops.infrastructure.persistence.jpa.converter.PublishConfigConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -40,6 +42,10 @@ public class Pipeline extends BaseDataObject {
     @Column(name = "publish_config", columnDefinition = "TEXT")
     @Convert(converter = PublishConfigConverter.class)
     private PublishConfig publishConfig;
+
+    @Column(name = "build_config", columnDefinition = "TEXT")
+    @Convert(converter = PipelineBuildConfigConverter.class)
+    private PipelineBuildConfig buildConfig;
 
     private DeployMode deployMode;
 

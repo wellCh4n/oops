@@ -10,6 +10,7 @@ import com.github.wellch4n.oops.domain.application.GitSourceConfig;
 import com.github.wellch4n.oops.domain.application.ImageSourceConfig;
 import com.github.wellch4n.oops.domain.application.ZipSourceConfig;
 import com.github.wellch4n.oops.domain.shared.ApplicationSourceType;
+import com.github.wellch4n.oops.domain.shared.BuildVariable;
 import com.github.wellch4n.oops.domain.shared.DockerFileType;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -126,19 +127,23 @@ public final class ApplicationConfigDto {
 
     public record BuildEnvironmentConfig(
             String environment,
-            String buildCommand
+            String buildCommand,
+            /** {@code null} when the caller did not send the field, which an update reads as unchanged. */
+            List<BuildVariable> buildVariables
     ) {
         public static BuildEnvironmentConfig from(ApplicationBuildConfig.EnvironmentConfig config) {
             if (config == null) {
                 return null;
             }
-            return new BuildEnvironmentConfig(config.getEnvironment(), config.getBuildCommand());
+            return new BuildEnvironmentConfig(
+                    config.getEnvironment(), config.getBuildCommand(), config.getBuildVariables());
         }
 
         public ApplicationBuildConfig.EnvironmentConfig toDomain() {
             ApplicationBuildConfig.EnvironmentConfig config = new ApplicationBuildConfig.EnvironmentConfig();
             config.setEnvironment(environment);
             config.setBuildCommand(buildCommand);
+            config.setBuildVariables(buildVariables);
             return config;
         }
     }

@@ -32,7 +32,18 @@ class CloneStrategyTests {
         assertTrue(command.contains("git clone --progress"));
         assertTrue(command.contains("--depth 1"));
         assertTrue(command.contains("-b develop"));
-        assertTrue(command.endsWith("https://host/repo.git /workspace"));
+        assertTrue(command.contains("https://host/repo.git /workspace && "));
+    }
+
+    @Test
+    void gitPrintsTheCommitItCheckedOutOnlyAfterASuccessfulClone() {
+        String command = gitStrategy.buildCommand(application(),
+                new GitCloneParam("img", "https://host/repo.git", "develop", true));
+        int clone = command.indexOf("git clone");
+        int log = command.indexOf("git -C /workspace --no-pager log -1");
+        assertTrue(clone >= 0 && log > clone);
+        // `;` instead of `&&` would let the log's exit status hide a failed clone.
+        assertFalse(command.contains(";"));
     }
 
     @Test
